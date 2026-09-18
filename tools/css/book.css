@@ -1,0 +1,26 @@
+/* Bartleby book HTML/EPUB stylesheet. Font is set separately via a
+   generated font-override CSS file (see compile.vim) rather than a CSS
+   custom property, since Pandoc doesn't inject metadata into CSS. */
+body {
+  font-family: Georgia, serif;
+  line-height: 1.5;
+  max-width: 40em;
+  margin: 0 auto;
+  padding: 1em;
+}
+
+h1, h2 {
+  text-align: center;
+  margin-top: 2em;
+}
+
+p {
+  text-indent: 1.5em;
+  margin: 0;
+}
+
+/* First paragraph after a chapter heading is flush, not indented -
+   standard typeset-book convention. */
+h1 + p, h2 + p {
+  text-indent: 0;
+}

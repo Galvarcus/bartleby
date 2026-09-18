@@ -1,0 +1,72 @@
+*bartleby.txt*	A Scrivener-style writing environment for Vim
+
+Bartleby                                                       *bartleby*
+
+A binder, corkboard, outliner, and compile pipeline for long-form prose
+and screenplays, built entirely on Vim9script classes.
+
+==============================================================================
+CONTENTS                                                *bartleby-contents*
+
+    1. Commands .......................... |bartleby-commands|
+    2. Mappings ........................... |bartleby-mappings|
+    3. Global Variables .................. |bartleby-globals|
+
+==============================================================================
+1. Commands                                             *bartleby-commands*
+
+:BartlebyOpen {name}                                       *:BartlebyOpen*
+    Opens an existing scrive (writing project) by name.
+
+:BartlebyNewScrive {name}                              *:BartlebyNewScrive*
+    Creates a new scrive, prompting for its type.
+
+:BartlebyToggleBinder                              *:BartlebyToggleBinder*
+    Toggles the Binder sidebar.
+
+:BartlebySearch                                          *:BartlebySearch*
+    Project-wide text search via the quickfix list.
+
+:BartlebyToggleInspector                        *:BartlebyToggleInspector*
+    Toggles the Inspector split for the current document.
+
+:BartlebyFocus[!] [dim]                                    *:BartlebyFocus*
+    Distraction-free composition mode. Bang forces it off.
+
+:BartlebySpotlight[!] [mode-name|coefficient]          *:BartlebySpotlight*
+    Paragraph/pattern-based prose highlighting.
+
+:BartlebyQuill [detect|off|hard|soft|toggle]                *:BartlebyQuill*
+    Buffer-local word-processing wrap mode.
+
+:BartlebyProfile                                          *:BartlebyProfile*
+    Edits the global author/contact profile.
+
+:BartlebyProjectInfo                                  *:BartlebyProjectInfo*
+    Edits the current scrive's profile override.
+
+:BartlebyCompile                                          *:BartlebyCompile*
+    Opens the Compile pipeline for the current scrive.
+
+==============================================================================
+2. Mappings                                             *bartleby-mappings*
+
+<leader>bi          Toggle Inspector
+<leader>bz          Toggle Focus mode
+<leader>bl          Toggle Spotlight
+<leader>bL           Open Spotlight's mode picker
+<leader>bp          Toggle Quill
+
+==============================================================================
+3. Global Variables                                       *bartleby-globals*
+
+g:bartleby_binder_root                     Root folder housing scrives.
+g:bartleby_focus_*                          Focus mode layout/behavior.
+g:bartleby_spotlight_*                      Spotlight dimming/mode behavior.
+g:bartleby_quill_*                          Quill wrap-mode behavior.
+g:bartleby_compile_*                        Compile pipeline behavior.
+
+See |plugin/bartleby.vim| for the full, current list and defaults - each
+is set via a one-line get() near the top of that file.
+
+vim:tw=78:ts=8:ft=help:norl:

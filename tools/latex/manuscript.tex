@@ -1,0 +1,51 @@
+% Bartleby manuscript template (Pandoc + sffms).
+%
+% sffms (CTAN: macros/latex/contrib/sffms) is purpose-built for fiction
+% submission-manuscript format - double-spaced, 12pt monospace, 1in
+% margins, running header, title page with contact block + word count -
+% so this replaces the earlier hand-rolled report-class template
+% wholesale rather than reimplementing what sffms already does.
+%
+% Real deviations from the rest of this project's compile pipeline,
+% all stemming directly from sffms's own documented design - flag
+% these first if a real-environment test turns up trouble:
+%   - pdflatex, NOT xelatex. sffms is documented/tested against
+%     pdflatex's own font handling (the `courier` class option), not
+%     fontspec/mainfont. g:bartleby_compile_manuscript_font is
+%     therefore interpreted as a courier/not-courier switch here (see
+%     compile.vim's ManuscriptMetadataArgs), not an arbitrary font
+%     name - a real constraint of building on sffms, not an oversight.
+%   - No paragraph-indent-after-heading toggle. Real manuscript
+%     submissions indent every paragraph uniformly, including a
+%     chapter's opening paragraph - unlike typeset books, which is
+%     what g:bartleby_compile_indent_paragraphs governs for the Book
+%     template. sffms's own default handles this correctly already.
+%   - Single-spacing override is a best-effort \singlespacing call
+%     after \begin{document}, overriding sffms's internal
+%     \doublespacing via setspace (a supported setspace pattern) -
+%     sffms itself has no documented single-spacing toggle, since
+%     double-spacing is the submission format's defining trait.
+\documentclass[$if(isnovel)$novel,$endif$$if(usecourier)$courier,$endif$smart]{sffms}
+
+% Pandoc always emits \hypertarget/\label for headings, standalone or
+% not - hyperref is what provides those, loaded last per its own
+% convention. hidelinks suppresses the colored-box link styling, which
+% has no place on a plain-text submission manuscript.
+\usepackage[hidelinks]{hyperref}
+
+\title{$title$}
+$if(runningtitle)$\runningtitle{$runningtitle$}$endif$
+\author{$if(author)$$author$$else$Author Name$endif$}
+$if(realname)$\authorname{$realname$}$endif$
+
+\address{$if(address)$$address$\\$endif$$if(citystateline)$$citystateline$\\$endif$$if(phonenumber)$$phonenumber$\\$endif$$if(email)$$email$$endif$}
+
+\wordcount{$wordcount$}
+
+\begin{document}
+
+$if(singlespaced)$\singlespacing$endif$
+
+$body$
+
+\end{document}

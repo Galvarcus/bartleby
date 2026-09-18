@@ -1,0 +1,66 @@
+% Bartleby book template (Pandoc + xelatex).
+% Typeset reading-copy layout: styled chapter openings, running headers
+% (author verso / title recto), optional full-page cover image, table
+% of contents.
+\documentclass[11pt]{book}
+
+% Pandoc always emits \hypertarget/\label for headings, standalone or
+% not - hyperref is what provides those.
+\usepackage[hidelinks]{hyperref}
+
+\usepackage{fontspec}
+\setmainfont{$mainfont$}
+\usepackage{graphicx}
+
+\usepackage[margin=1in]{geometry}
+
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[LE]{\textsc{$author$}}
+\fancyhead[RO]{\textsc{$title$}}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
+
+$if(indentparagraphs)$
+\setlength{\parindent}{1.5em}
+$else$
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+$endif$
+% No \usepackage{indentfirst} - the first paragraph after \chapter stays
+% flush, per the requested convention.
+
+\usepackage{titlesec}
+\usepackage{fmtcount}
+\makeatletter
+\newcommand{\bartlebychapternum}{$if(chapterspelled)$\Numberstring{chapter}$else$\arabic{chapter}$endif$}
+\newcommand{\bartlebypartnum}{$if(partspelled)$\Numberstring{part}$else$\arabic{part}$endif$}
+\makeatother
+\titleformat{\chapter}[display]{\centering\normalfont\Huge\bfseries}
+  {$if(chapterbare)$$else$\chaptertitlename\ $endif$\bartlebychapternum}{20pt}{\Huge}
+\titleformat{\part}[display]{\centering\normalfont\huge\bfseries}
+  {$if(partbare)$$else$\partname\ $endif$\bartlebypartnum}{20pt}{\huge}
+
+\begin{document}
+
+$if(cover-image)$
+\begin{titlepage}
+\centering
+\includegraphics[width=\textwidth,height=\textheight,keepaspectratio]{$cover-image$}
+\end{titlepage}
+$else$
+\begin{titlepage}
+\centering
+\vspace*{2in}
+{\Huge\bfseries $title$}\\[24pt]
+{\Large $author$}
+\end{titlepage}
+$endif$
+
+\tableofcontents
+\clearpage
+
+$body$
+
+\end{document}
