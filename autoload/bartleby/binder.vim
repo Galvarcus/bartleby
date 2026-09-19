@@ -36,6 +36,10 @@ var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 var binderShowRoleLabels: bool = g:bartleby_binder_show_role_labels
 
 const BUF_NAME: string = 'Bartleby-Binder'
+# The title line (project name) added by Render() before the tree
+# content - every place that maps a cursor line number to a tree row
+# index needs to account for this offset.
+const HEADER_LINES: number = 1
 const INDENT: string = '  '
 
 def RenderLines(rows: list<T.Row>, binderRoot: string, collapsed: dict<bool>): list<string>
@@ -79,14 +83,14 @@ enddef
 def Render(project: Pj.Project): void
   var previousRows: list<T.Row> = get(b:, 'bartleby_rows', [])
   var previousLine: number = line('.')
-  var previousId: string = previousLine >= 1 && previousLine <= len(previousRows)
-    ? previousRows[previousLine - 1].item.id : ''
+  var previousId: string = previousLine > HEADER_LINES && previousLine <= len(previousRows) + HEADER_LINES
+    ? previousRows[previousLine - 1 - HEADER_LINES].item.id : ''
 
   var collapsed: dict<bool> = get(b:, 'bartleby_collapsed', {})
   var rows: list<T.Row> = T.Flatten(project, collapsed)
   setlocal modifiable
   deletebufline('%', 1, '$')
-  setline(1, RenderLines(rows, project.BinderRoot(), collapsed))
+  setline(1, [$'{project.name}'] + RenderLines(rows, project.BinderRoot(), collapsed))
   setlocal nomodifiable
   b:bartleby_rows = rows
   b:bartleby_project = project
@@ -96,17 +100,19 @@ def Render(project: Pj.Project): void
   # (possibly shifted) new line, whenever that item still exists.
   var newIdx: number = previousId ==# '' ? -1 : T.IndexOfRowById(rows, previousId)
   if newIdx >= 0
-    cursor(newIdx + 1, 1)
+    cursor(newIdx + 1 + HEADER_LINES, 1)
   endif
 enddef
 
 # Common prologue for every cursor-driven command below: the buffer's
-# project, its rows, and the row under the cursor (null_object if none).
+# project, its rows, and the row under the cursor (null_object if none -
+# including when the cursor sits on the title line).
 def CursorContext(): dict<any>
   var project: Pj.Project = get(b:, 'bartleby_project', null_object)
   var rows: list<T.Row> = get(b:, 'bartleby_rows', [])
   var lineNr: number = line('.')
-  var row: T.Row = lineNr >= 1 && lineNr <= len(rows) ? rows[lineNr - 1] : null_object
+  var row: T.Row = lineNr > HEADER_LINES && lineNr <= len(rows) + HEADER_LINES
+    ? rows[lineNr - 1 - HEADER_LINES] : null_object
   return {project: project, rows: rows, row: row, lineNr: lineNr}
 enddef
 
@@ -323,9 +329,27 @@ def DeleteUnderCursor(): void
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
-  var prompt: string = ctx.row.item.IsFolder() && ctx.row.item.ChildCount() > 0
-    ? $'Delete "{ctx.row.item.title}" and everything inside it?'
-    : $'Delete "{ctx.row.item.title}"?'
+  var item: BI.BinderItem = ctx.row.item
+
+  if M.IsImmutableFolder(item)
+    if item.ChildCount() == 0
+      log.Info($'"{item.title}" is already empty')
+      return
+    endif
+    var clearPrompt: string = $'Clear all contents of "{item.title}"? The folder itself will remain.'
+    if confirm(clearPrompt, "&Yes\n&No", 2) != 1
+      return
+    endif
+    M.ClearChildren(item)
+    log.Info($'cleared "{item.title}" - any files on disk were left untouched')
+    ctx.project.Save()
+    Render(ctx.project)
+    return
+  endif
+
+  var prompt: string = item.IsFolder() && item.ChildCount() > 0
+    ? $'Delete "{item.title}" and everything inside it?'
+    : $'Delete "{item.title}"?'
   if confirm(prompt, "&Yes\n&No", 2) != 1
     return
   endif
@@ -338,6 +362,10 @@ enddef
 def RenameUnderCursor(): void
   var ctx: dict<any> = CursorContext()
   if ctx.project is null_object || ctx.row is null_object
+    return
+  endif
+  if M.IsImmutableFolder(ctx.row.item)
+    log.Info($'"{ctx.row.item.title}" cannot be renamed')
     return
   endif
   var oldTitle: string = ctx.row.item.title

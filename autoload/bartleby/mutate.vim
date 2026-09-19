@@ -99,12 +99,30 @@ enddef
 # another Part); ROLE_CUSTOM may only live at the root. Everything else
 # (front-matter/characters/research/back-matter/'', and all documents,
 # which never carry a structural role) is unrestricted.
+# Folders the user should never restructure or lose entirely - Front
+# Matter/Manuscript/Back Matter/Characters/Research. dd on one of these
+# clears its contents instead of removing the folder itself (see
+# binder.vim's DeleteUnderCursor); rename and indent/outdent are simply
+# refused.
+export def IsImmutableFolder(item: BI.BinderItem): bool
+  return item.structureRole ==# BI.ROLE_FRONT_MATTER
+    || item.structureRole ==# BI.ROLE_MANUSCRIPT
+    || item.structureRole ==# BI.ROLE_BACK_MATTER
+    || item.structureRole ==# BI.ROLE_CHARACTERS
+    || item.structureRole ==# BI.ROLE_RESEARCH
+enddef
+
 def RoleAllowedUnder(role: string, parent: BI.BinderItem): bool
   if role ==# BI.ROLE_PART || role ==# BI.ROLE_CHAPTER
     return parent isnot null_object
       && (parent.structureRole ==# BI.ROLE_MANUSCRIPT || parent.structureRole ==# BI.ROLE_PART)
   endif
   if role ==# BI.ROLE_CUSTOM
+    return parent is null_object
+  endif
+  if role ==# BI.ROLE_FRONT_MATTER || role ==# BI.ROLE_MANUSCRIPT
+      || role ==# BI.ROLE_BACK_MATTER || role ==# BI.ROLE_CHARACTERS
+      || role ==# BI.ROLE_RESEARCH
     return parent is null_object
   endif
   return true
@@ -144,6 +162,14 @@ export def Remove(project: Pj.Project, row: T.Row): void
   else
     row.ownerItem.RemoveChildAt(row.ownerItem.IndexOfChild(row.item.id))
   endif
+enddef
+
+# Empties `item`'s children without removing `item` itself - for the 5
+# immutable structural folders, where dd clears contents rather than
+# deleting the folder. Matches Remove()'s own convention: files on disk
+# are left untouched, only the binder tree changes.
+export def ClearChildren(item: BI.BinderItem): void
+  item.SetChildren([])
 enddef
 
 # Swaps `row`'s item with its next/previous sibling in the same owner list.

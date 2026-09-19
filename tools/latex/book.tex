@@ -42,6 +42,13 @@ $endif$
 \titleformat{\part}[display]{\centering\normalfont\huge\bfseries}
   {$if(partbare)$$else$\partname\ $endif$\bartlebypartnum}{20pt}{\huge}
 
+% Pandoc emits \tightlist for any list without blank lines between
+% items (the common case) - only pandoc's own default template defines
+% it, so any custom template must provide it too or compilation fails
+% outright the first time real content includes a list.
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
 \begin{document}
 
 $if(cover-image)$

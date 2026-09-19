@@ -521,14 +521,106 @@ def WalkBook(items: list<BI.BinderItem>, target: CompileTarget, binderRoot: stri
   return JoinSiblingBlocks(blocks, separator)
 enddef
 
+# Front Matter/Back Matter content, for both Manuscript and Book: each
+# direct document gets its own unnumbered heading (Pandoc's `{-}`
+# attribute, which becomes \chapter*{} in LaTeX output regardless of
+# document class) rather than being flattened in as plain, headingless
+# content - a book's front/back matter is conventionally a sequence of
+# distinct unnumbered pieces (dedication, acknowledgments, ...), not one
+# undifferentiated block. Nested folders are walked but don't get a
+# heading of their own; only documents do.
+def WalkFrontOrBackMatter(items: list<BI.BinderItem>, target: CompileTarget,
+    binderRoot: string, separator: string): list<string>
+  var blocks: list<list<string>> = []
+  for item in items
+    if item.IsDocument()
+      if index(target.includedIds, item.id) >= 0
+        blocks->add(['# ' .. item.title .. ' {-}', ''] + ReadDocLines(item, binderRoot))
+      endif
+    else
+      blocks->add(WalkFrontOrBackMatter(item.children, target, binderRoot, separator))
+    endif
+  endfor
+  return JoinSiblingBlocks(blocks, separator)
+enddef
+
+# Front Matter/Manuscript/Back Matter are always direct root-level
+# siblings (never nested), so finding one by role is a flat scan, not a
+# recursive tree search.
+def FindTopLevelItem(items: list<BI.BinderItem>, role: string): BI.BinderItem
+  for item in items
+    if item.structureRole ==# role
+      return item
+    endif
+  endfor
+  return null_object
+enddef
+
+# A Pandoc raw-LaTeX block: passed through to the LaTeX output verbatim,
+# regardless of output format - how Book's \frontmatter/\mainmatter/
+# \backmatter (plain `book` class commands, no package needed) get into
+# a compile that's otherwise built entirely from Markdown.
+def RawLatex(cmd: string): list<string>
+  return ['```{=latex}', cmd, '```', '']
+enddef
+
 export def ConcatenateManuscript(project: Pj.Project, target: CompileTarget): list<string>
-  return WalkManuscript(project.items, target, project.BinderRoot(), target.separator)
+  var blocks: list<list<string>> = []
+  var frontMatter: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_FRONT_MATTER)
+  var manuscript: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_MANUSCRIPT)
+  var backMatter: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_BACK_MATTER)
+  var binderRoot: string = project.BinderRoot()
+
+  if frontMatter isnot null_object
+    blocks->add(WalkFrontOrBackMatter(frontMatter.children, target, binderRoot, target.separator))
+  endif
+  if manuscript isnot null_object
+    blocks->add(WalkManuscript(manuscript.children, target, binderRoot, target.separator))
+  endif
+  if backMatter isnot null_object
+    blocks->add(WalkFrontOrBackMatter(backMatter.children, target, binderRoot, target.separator))
+  endif
+  return JoinSiblingBlocks(blocks, target.separator)
 enddef
 
 export def ConcatenateBook(project: Pj.Project, target: CompileTarget): list<string>
-  var hasPart: bool = HasIncludedPart(project.items, target.includedIds)
-  return WalkBook(project.items, target, project.BinderRoot(), target.separator,
-    '#', hasPart ? '##' : '#')
+  var blocks: list<list<string>> = []
+  var frontMatter: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_FRONT_MATTER)
+  var manuscript: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_MANUSCRIPT)
+  var backMatter: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_BACK_MATTER)
+  var binderRoot: string = project.BinderRoot()
+  var hasPart: bool = manuscript isnot null_object
+    && HasIncludedPart(manuscript.children, target.includedIds)
+  var partLevel: string = '#'
+  var chapterLevel: string = hasPart ? '##' : '#'
+
+  var frontBody: list<string> = frontMatter isnot null_object
+    ? WalkFrontOrBackMatter(frontMatter.children, target, binderRoot, target.separator) : []
+  if !empty(frontBody)
+    blocks->add(RawLatex('\frontmatter') + frontBody)
+  endif
+
+  var mainBody: list<string> = manuscript isnot null_object
+    ? WalkBook(manuscript.children, target, binderRoot, target.separator, partLevel, chapterLevel)
+    : []
+  if !empty(mainBody)
+    blocks->add((empty(frontBody) ? [] : RawLatex('\mainmatter')) + mainBody)
+  endif
+
+  var backBody: list<string> = backMatter isnot null_object
+    ? WalkFrontOrBackMatter(backMatter.children, target, binderRoot, target.separator) : []
+  if !empty(backBody)
+    blocks->add(RawLatex('\backmatter') + backBody)
+  endif
+
+  # No separator here (unlike every other JoinSiblingBlocks call): these
+  # three blocks are structural transitions - \frontmatter/\mainmatter/
+  # \backmatter already provide their own page-level separation, so a
+  # "* * *" scene-break style separator between them would be a stray
+  # mark with no relationship to the actual prose. StartsWithHeading()
+  # can't detect this itself, since each block starts with a raw-LaTeX
+  # line rather than a heading.
+  return JoinSiblingBlocks(blocks, '')
 enddef
 
 # Joins only the non-empty parts of `parts` with `sep` - blank pieces are

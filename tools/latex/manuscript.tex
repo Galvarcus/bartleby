@@ -42,6 +42,13 @@ $if(realname)$\authorname{$realname$}$endif$
 
 \wordcount{$wordcount$}
 
+% Pandoc emits \tightlist for any list without blank lines between
+% items (the common case) - only pandoc's own default template defines
+% it, so any custom template must provide it too or compilation fails
+% outright the first time real content includes a list.
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+
 \begin{document}
 
 $if(singlespaced)$\singlespacing$endif$
