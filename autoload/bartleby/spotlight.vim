@@ -73,6 +73,19 @@ const MODE_DIALOGUE: string = 'Dialogue'
 var mode_handlers: dict<func(): string> = {}
 var mode_order: list<string> = []
 
+var dialogue_cache: dict<list<any>> = {}
+const SPOTLIGHT_DIALOGUE_WINDOW_MARGIN: number = 200
+
+# Same shared regex used by syntax/fountain.vim's fountainCharacter and
+# fountainSceneHeading rules - keep the two in sync if either changes.
+const FOUNTAIN_CHARACTER_PATTERN: string = '^\L*$'
+const FOUNTAIN_SCENE_HEADING_PATTERN: string = '^\c\(int\|ext\|est\|i\/e\)\([.\/]\| \)\|^\.\a'
+
+const GRAY_CONVERTER: dict<number> = {0: 231, 7: 254, 15: 256, 16: 231, 231: 256}
+
+var current_mode: string = MODE_PARAGRAPH
+var current_coeff: float = -1.0
+
 def RegisterMode(name: string, Handler: func(): string): void
   if !has_key(mode_handlers, name)
     mode_order->add(name)
@@ -129,27 +142,41 @@ enddef
 # Override the quote pattern itself via g:bartleby_spotlight_dialogue_
 # pattern for other quoting conventions (e.g. guillemets, single quotes).
 #
-# Cached per-buffer by b:changedtick, since this is a full-buffer scan
-# and would otherwise re-run on every single cursor move for no reason -
-# unlike Paragraph, nothing here depends on cursor position.
-var dialogue_cache: dict<list<any>> = {}
+# Windowed to the visible viewport (+ a margin) rather than the whole
+# buffer: a full-buffer scan builds one regex alternative per span, and
+# on a large file this either crawls or hits E339 (pattern too long)
+# outright - confirmed on a 10,000-line file. The existing CursorMoved
+# re-application (see On()) already recomputes on every cursor move,
+# including scrolls, so windowing loses nothing visible in practice -
+# by the time text outside the margin would matter, the recompute has
+# already caught up. Cached per-buffer by [changedtick, window range],
+# since recomputing on every single cursor move within the SAME window
+# would be pure waste - unlike Paragraph, nothing here depends on the
+# exact cursor position, only on what's roughly in view.
+
+def VisibleLineRange(): list<number>
+  return [max([1, line('w0') - SPOTLIGHT_DIALOGUE_WINDOW_MARGIN]),
+    min([line('$'), line('w$') + SPOTLIGHT_DIALOGUE_WINDOW_MARGIN])]
+enddef
 
 def DialoguePattern(): string
   var bufNr: number = bufnr('%')
+  var [first: number, last: number] = VisibleLineRange()
   var cached: list<any> = get(dialogue_cache, bufNr, [])
-  if len(cached) == 2 && cached[0] ==# b:changedtick
-    return cached[1]
+  if len(cached) == 4 && cached[0] ==# b:changedtick && cached[1] == first && cached[2] == last
+    return cached[3]
   endif
 
-  var result: string = &filetype ==# 'fountain' ? FountainDialoguePattern() : ProseDialoguePattern()
-  dialogue_cache[bufNr] = [b:changedtick, result]
+  var result: string = &filetype ==# 'fountain' ?
+    FountainDialoguePattern(first, last) : ProseDialoguePattern(first, last)
+  dialogue_cache[bufNr] = [b:changedtick, first, last, result]
   return result
 enddef
 
-def ProseDialoguePattern(): string
+def ProseDialoguePattern(first: number, last: number): string
   var quotePattern: string = spotlightdialoguepattern
   var patterns: list<string> = []
-  for lnum in range(1, line('$'))
+  for lnum in range(first, last)
     var text: string = getline(lnum)
     var searchFrom: number = 0
     var lastEnd: number = 0
@@ -176,11 +203,6 @@ enddef
 # (an all-caps line, optionally with trailing parentheticals like
 # "(V.O.)", that isn't itself a scene heading) is followed by one or
 # more unquoted lines of spoken dialogue, ending at the next blank line.
-# Same shared regex used by syntax/fountain.vim's fountainCharacter
-# rule for what counts as a character cue - keep the two in sync if
-# either changes.
-const FOUNTAIN_CHARACTER_PATTERN: string = '^[A-Z][A-Z0-9 .''\-]*\(\s*([A-Za-z0-9.'' ]*)\)*\s*$'
-const FOUNTAIN_SCENE_HEADING_PATTERN: string = '^\c\(int\|ext\|est\|i\/e\)[.\/]\|^\.\a'
 
 def IsFountainCharacterCue(text: string): bool
   if text ==# '' || text =~# FOUNTAIN_SCENE_HEADING_PATTERN
@@ -189,14 +211,36 @@ def IsFountainCharacterCue(text: string): bool
   return text =~# FOUNTAIN_CHARACTER_PATTERN
 enddef
 
-def FountainDialoguePattern(): string
+def FountainDialoguePattern(first: number, last: number): string
   var patterns: list<string> = []
   var total: number = line('$')
-  var lnum: number = 1
-  while lnum <= total
+
+  # A dialogue block is stateful across lines (cue, then its following
+  # non-blank lines) - starting the window mid-block would otherwise
+  # misclassify those lines as narration, since the scan never sees the
+  # cue that opened it. Look backward from `first` to check.
+  var lnum: number = first
+  var back: number = first - 1
+  while back >= 1 && getline(back) !=# ''
+    if IsFountainCharacterCue(getline(back))
+      # `first` starts inside this cue's dialogue block - skip to its
+      # end without re-adding the cue line itself (outside the window).
+      var dEnd: number = back + 1
+      while dEnd <= total && getline(dEnd) !=# ''
+        dEnd += 1
+      endwhile
+      lnum = dEnd
+      break
+    endif
+    back -= 1
+  endwhile
+
+  while lnum <= last
     if IsFountainCharacterCue(getline(lnum))
       # The cue line itself dims (it's not spoken dialogue); the block
-      # of non-blank lines right after it is the lit dialogue.
+      # of non-blank lines right after it is the lit dialogue. This
+      # inner scan may run a little past `last` to find the block's
+      # real end - harmless, and needed for a correct boundary.
       patterns->add($'\%{lnum}l.')
       var dEnd: number = lnum + 1
       while dEnd <= total && getline(dEnd) !=# ''
@@ -220,8 +264,6 @@ RegisterMode(MODE_DIALOGUE, DialoguePattern)
 # bg-colored) for a smooth true-color/256-color dim, rather than just
 # swapping in a fixed highlight group.
 # ---------------------------------------------------------------------
-
-const GRAY_CONVERTER: dict<number> = {0: 231, 7: 254, 15: 256, 16: 231, 231: 256}
 
 def Hex2Rgb(str: string): list<number>
   var hex: string = substitute(str, '^#', '', '')
@@ -348,9 +390,6 @@ endclass
 # ---------------------------------------------------------------------
 # Session state and lifecycle.
 # ---------------------------------------------------------------------
-
-var current_mode: string = MODE_PARAGRAPH
-var current_coeff: float = -1.0
 
 def CurrentHandler(): func(): string
   return get(mode_handlers, current_mode, mode_handlers[MODE_PARAGRAPH])

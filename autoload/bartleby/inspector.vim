@@ -7,24 +7,23 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# inspector.vim - a right-hand split showing the current editor document's
-# synopsis and keywords, editable in place and synced back to its
-# .meta.json sidecar as you type (TextChanged/TextChangedI) and on :w
-# (BufWriteCmd - buftype=acwrite, so :w doesn't try to write the scratch
-# buffer itself to disk). A plain buffer, not a popup - synopsis text can
-# run long and wants normal Vim editing.
+# inspector.vim - a right-hand, read-only split showing the current
+# editor document's Title/Label/Status/Keywords/Synopsis.
+#
+# Read-only, not editable-in-place: an earlier design let Keywords and
+# Synopsis be edited by typing directly into the buffer (synced back via
+# TextChanged/BufWriteCmd). Replaced with a single `e` key that opens
+# the right popup for whichever field the cursor is on - Label/Status
+# reuse picker.vim's PickOne, the same widget Binder uses for the same
+# job; Keywords gets a single-line PromptText, the same widget Binder's
+# rename (`r`) uses; Synopsis gets PromptMultiline, since it can run to
+# several paragraphs and a single-line prompt would lose that. Title
+# isn't editable here at all - renaming lives in Binder's own `r`.
 #
 # While open, it follows whichever document the editor window shows -
 # opening a different one (from Binder, Corkboard, Outliner, or plain :e)
 # refreshes the Inspector for it automatically, via a BufEnter autocmd
 # that ignores Bartleby's own chrome windows (windows.vim#IsChromeBuffer).
-#
-# Title/Label/Status are shown for context but are NOT synced back -
-# editing those lines has no effect. Renaming lives in the Binder's own
-# `r`, and Label/Status already have their own pickers there (and in the
-# Outliner) - this only owns the two fields that don't have one yet.
-# Custom metadata isn't shown here either; it has no editing UI anywhere
-# yet, so there's nothing meaningful to sync.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -33,54 +32,38 @@ import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as Pj
 import autoload 'bartleby/state.vim' as St
 import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/picker.vim' as Pk
+import autoload 'bartleby/inputpopup.vim' as IP
 import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 
 const BUF_NAME: string = 'Bartleby-Inspector'
-const KEYWORDS_PREFIX: string = 'Keywords:'
-const SYNOPSIS_HEADER: string = 'Synopsis:'
+const FRAME_TITLE: string = '::Inspector::'
+# line numbers within RenderContent()'s own output - kept as named
+# constants since EditUnderCursor() needs to know exactly which line is
+# which without re-deriving it from the rendered text.
+const LINE_TITLE: number = 2
+const LINE_LABEL: number = 3
+const LINE_STATUS: number = 4
+const LINE_KEYWORDS: number = 6
+const LINE_SYNOPSIS_HEADER: number = 8
 
 def RenderContent(item: BI.BinderItem, meta: D.DocMeta): list<string>
   var lines: list<string> = [
+    FRAME_TITLE,
     $'Title: {item.title}',
     $'Label: {meta.label}',
     $'Status: {meta.status}',
     '',
-    $'{KEYWORDS_PREFIX} {join(meta.keywords, ", ")}',
+    $'Keywords: {join(meta.keywords, ", ")}',
     '',
-    SYNOPSIS_HEADER,
+    'Synopsis:',
   ]
   if meta.synopsis !=# ''
     lines += split(meta.synopsis, "\n")
   endif
   return lines
-enddef
-
-def Sync(): void
-  var project: Pj.Project = get(b:, 'bartleby_inspector_project', null_object)
-  var item: BI.BinderItem = get(b:, 'bartleby_inspector_item', null_object)
-  if project is null_object || item is null_object
-    return
-  endif
-
-  var lines: list<string> = getline(1, '$')
-  var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-
-  for l in lines
-    if l =~# '^' .. KEYWORDS_PREFIX
-      var rest: string = trim(strpart(l, len(KEYWORDS_PREFIX)))
-      meta.SetKeywords(rest ==# '' ? [] : split(rest, ',\s*'))
-    endif
-  endfor
-
-  var synopsisIdx: number = index(lines, SYNOPSIS_HEADER)
-  if synopsisIdx >= 0
-    meta.SetSynopsis(trim(join(lines[synopsisIdx + 1 : ], "\n")))
-  endif
-
-  meta.Save(item.MetaPath(project.BinderRoot()))
-  setlocal nomodified
 enddef
 
 # Rewrites the Inspector buffer's content for `item`, without switching
@@ -93,17 +76,70 @@ def RefreshFor(project: Pj.Project, item: BI.BinderItem): void
     return
   endif
   var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
+  setbufvar(bufNr, '&modifiable', 1)
   deletebufline(bufNr, 1, '$')
   setbufline(bufNr, 1, RenderContent(item, meta))
+  setbufvar(bufNr, '&modifiable', 0)
   setbufvar(bufNr, '&modified', 0)
   setbufvar(bufNr, 'bartleby_inspector_project', project)
   setbufvar(bufNr, 'bartleby_inspector_item', item)
 enddef
 
+def CurrentContext(): dict<any>
+  return {
+    project: get(b:, 'bartleby_inspector_project', null_object),
+    item: get(b:, 'bartleby_inspector_item', null_object),
+  }
+enddef
+
+def EditUnderCursor(): void
+  var ctx: dict<any> = CurrentContext()
+  if ctx.project is null_object || ctx.item is null_object
+    return
+  endif
+  var project: Pj.Project = ctx.project
+  var item: BI.BinderItem = ctx.item
+  var lnum: number = line('.')
+
+  if lnum == LINE_LABEL
+    var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
+    Pk.PickOne('Label', D.LABELS, (choice: string) => {
+      var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
+      m.SetLabel(choice)
+      m.Save(item.MetaPath(project.BinderRoot()))
+      RefreshFor(project, item)
+    }, meta.label)
+  elseif lnum == LINE_STATUS
+    var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
+    Pk.PickOne('Status', D.STATUSES, (choice: string) => {
+      var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
+      m.SetStatus(choice)
+      m.Save(item.MetaPath(project.BinderRoot()))
+      RefreshFor(project, item)
+    }, meta.status)
+  elseif lnum == LINE_KEYWORDS
+    var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
+    IP.PromptText('Keywords', join(meta.keywords, ', '), (text: string) => {
+      var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
+      m.SetKeywords(text ==# '' ? [] : split(text, ',\s*'))
+      m.Save(item.MetaPath(project.BinderRoot()))
+      RefreshFor(project, item)
+    })
+  elseif lnum >= LINE_SYNOPSIS_HEADER
+    var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
+    IP.PromptMultiline('Synopsis', meta.synopsis, (text: string) => {
+      var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
+      m.SetSynopsis(text)
+      m.Save(item.MetaPath(project.BinderRoot()))
+      RefreshFor(project, item)
+    })
+  endif
+enddef
+
 # Fired on every BufEnter while the Inspector is open - refreshes it for
 # whatever document just became active in a plain editor window. Ignores
-# Bartleby's own chrome buffers (Binder, Inspector itself, Outliner) and
-# anything that isn't a document in the open scrive at all.
+# Bartleby's own chrome buffers (Binder, Inspector itself) and anything
+# that isn't a document in the open scrive at all.
 def FollowEditor(): void
   if W.IsChromeBuffer(bufnr('%'))
     return
@@ -117,6 +153,10 @@ def FollowEditor(): void
     return
   endif
   RefreshFor(project, item)
+enddef
+
+def SetupKeymaps(): void
+  nnoremap <buffer> <silent> e <ScriptCmd>EditUnderCursor()<CR>
 enddef
 
 # Opens (or closes, if already open) the Inspector for whichever document
@@ -145,19 +185,16 @@ export def Toggle(): void
 
   var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
   execute 'vertical botright :40split ' .. BUF_NAME
-  setlocal buftype=acwrite bufhidden=hide noswapfile nobuflisted
+  setlocal buftype=nofile bufhidden=hide noswapfile nobuflisted
   setlocal nonumber norelativenumber nofoldenable
   setlocal filetype=bartleby-inspector
   setlocal winfixwidth
   setline(1, RenderContent(item, meta))
+  setlocal nomodifiable
   setlocal nomodified
   b:bartleby_inspector_project = project
   b:bartleby_inspector_item = item
-
-  augroup bartleby_inspector_sync
-    autocmd! * <buffer>
-    autocmd TextChanged,TextChangedI,BufWriteCmd <buffer> Sync()
-  augroup END
+  SetupKeymaps()
 
   augroup bartleby_inspector_follow
     autocmd!

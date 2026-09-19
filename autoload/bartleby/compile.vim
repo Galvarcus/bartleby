@@ -22,6 +22,12 @@ var is_loaded: bool = true
 # hand-rolled format conversion where Pandoc/LaTeX/screenplain already
 # does it (this replaces v1's StripMarkdown() - plaintext output is gone;
 # Pandoc's own `plain` writer or plain Markdown output covers that need).
+#
+# CompileTarget is defined before the functions that use it, not just
+# by convention: many of them use CompileTarget in their own parameter
+# or return type, and Vim9 resolves a function's signature eagerly at
+# definition time - unlike a class used only inside a function body,
+# which can forward-reference one defined later in the file just fine.
 # License: GNU GPL 3.0
 ##############################################################################
 

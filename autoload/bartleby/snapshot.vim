@@ -15,6 +15,12 @@ var is_loaded: bool = true
 # Stored under <scrive>/snapshots/<doc-id>/<timestamp>.json - keyed by
 # the document's own stable id (survives a rename; its relPath
 # wouldn't) rather than its file path.
+#
+# Snapshot is defined before the functions that use it, not just by
+# convention: List/Restore both use Snapshot in their own parameter or
+# return type, and Vim9 resolves a function's signature eagerly at
+# definition time - unlike a class used only inside a function body,
+# which can forward-reference one defined later in the file just fine.
 # License: GNU GPL 3.0
 ##############################################################################
 

@@ -97,6 +97,42 @@ export def PromptText(title: string, default: string, OnSubmit: func(string),
   form.Open()
 enddef
 
+# Opens `options` as a type-to-filter list titled `title` (fuzzy-matched
+# via Vim's own matchfuzzy() as the user types); calls `OnSubmit` with
+# the selected string. Not called at all if cancelled or if Enter is
+# pressed with no matches. Up/Down (or Ctrl-K/Ctrl-J) move the
+# selection within the filtered results; Enter submits directly, same
+# one-keypress feel as PickOne.
+export def PromptFilter(title: string, options: list<string>, OnSubmit: func(string),
+    maxVisible: number = 10): void
+  var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'filter',
+    options: options, maxVisible: maxVisible}]]
+  var form: InputPopup = InputPopup.new(fields, {}, {title: $' {title} ', buttons: []})
+  form.OnSubmit((values: dict<any>) => {
+    if values.choice !=# ''
+      OnSubmit(values.choice)
+    endif
+  })
+  form.Open()
+enddef
+
+# Opens a multi-line text field titled `title`, pre-filled with
+# `default` (newline-separated). Enter inserts a newline rather than
+# submitting (unlike every other single-field prompt) - use Ctrl-S or
+# the Submit button. Calls OnSubmit with the edited text, newline-
+# joined; not called at all if cancelled.
+export def PromptMultiline(title: string, default: string, OnSubmit: func(string),
+    rows: number = 5, width: number = 50): void
+  var fields: list<list<dict<any>>> = [[{name: 'text', type: 'multiline',
+    rows: rows}]]
+  var form: InputPopup = InputPopup.new(fields, {text: default},
+    {title: $' {title} (<C-s> to save) ', widths: {text: width}, buttons: []})
+  form.OnSubmit((values: dict<any>) => {
+    OnSubmit(values.text)
+  })
+  form.Open()
+enddef
+
 export class InputPopup
   var fieldRows: list<list<dict<any>>>
   var defaults: dict<any>
@@ -132,19 +168,38 @@ export class InputPopup
     for rowIdx in range(len(this.fieldRows))
       for spec in this.fieldRows[rowIdx]
         var name: string = spec.name
-        var isChoice: bool = get(spec, 'type', 'text') ==# 'choice'
+        var fieldType: string = get(spec, 'type', 'text')
         var field: dict<any> = {
           name: name,
           label: get(labels, name, name),
-          type: isChoice ? 'choice' : 'text',
+          type: fieldType,
           row: rowIdx,
         }
-        if isChoice
+        if fieldType ==# 'choice'
           var options: list<string> = get(spec, 'options', [])
           var startValue: string = get(this.defaults, name, '')
           var selectedIdx: number = max([0, index(options, startValue)])
           field.options = options
           field.selectedIdx = selectedIdx
+        elseif fieldType ==# 'filter'
+          field.value = ''
+          field.cursor = 0
+          field.offset = 0
+          field.options = get(spec, 'options', [])
+          field.maxVisible = get(spec, 'maxVisible', 10)
+          field.filtered = copy(field.options)
+          field.selectedIdx = 0
+        elseif fieldType ==# 'multiline'
+          var startText: string = get(this.defaults, name, '')
+          field.lines = split(startText, "\n", true)
+          if empty(field.lines)
+            field.lines = ['']
+          endif
+          field.rows = get(spec, 'rows', 5)
+          field.width = get(widths, name, defaultWidth)
+          field.cursorLine = 0
+          field.cursorCol = strchars(field.lines[0])
+          field.scrollOffset = 0
         else
           var raw: any = get(this.defaults, name, '')
           var isComplex: bool = type(raw) != v:t_string
@@ -213,6 +268,20 @@ export class InputPopup
   enddef
 
   def ComputeSize(): list<number>
+    if len(this.fields) == 1 && this.fields[0].type ==# 'filter'
+      var f: dict<any> = this.fields[0]
+      var w: number = 20
+      for opt in f.options
+        w = max([w, strchars(opt)])
+      endfor
+      var visibleRows: number = min([max([len(f.options), 1]), f.maxVisible])
+      return [max([w, 10]), 1 + visibleRows]
+    endif
+    if len(this.fields) == 1 && this.fields[0].type ==# 'multiline'
+      var f: dict<any> = this.fields[0]
+      return [max([f.width, 10]), f.rows + (empty(this.buttons) ? 0 : 1)]
+    endif
+
     var rowWidths: dict<number> = {}
     var rowCount: number = 0
     for f in this.fields
@@ -316,9 +385,99 @@ export class InputPopup
 
   # --- input handling -------------------------------------------------
 
+  def HandleMultilineKey(key: string): bool
+    var f: dict<any> = this.fields[this.currentIdx]
+    if key ==# "\<CR>"
+      var line: string = f.lines[f.cursorLine]
+      var before: string = strcharpart(line, 0, f.cursorCol)
+      var after: string = strcharpart(line, f.cursorCol)
+      f.lines[f.cursorLine] = before
+      insert(f.lines, after, f.cursorLine + 1)
+      f.cursorLine += 1
+      f.cursorCol = 0
+    elseif key ==# "\<Up>"
+      if f.cursorLine > 0
+        f.cursorLine -= 1
+        f.cursorCol = min([f.cursorCol, strchars(f.lines[f.cursorLine])])
+      endif
+    elseif key ==# "\<Down>"
+      if f.cursorLine < len(f.lines) - 1
+        f.cursorLine += 1
+        f.cursorCol = min([f.cursorCol, strchars(f.lines[f.cursorLine])])
+      endif
+    elseif key ==# "\<Left>"
+      if f.cursorCol > 0
+        f.cursorCol -= 1
+      elseif f.cursorLine > 0
+        f.cursorLine -= 1
+        f.cursorCol = strchars(f.lines[f.cursorLine])
+      endif
+    elseif key ==# "\<Right>"
+      if f.cursorCol < strchars(f.lines[f.cursorLine])
+        f.cursorCol += 1
+      elseif f.cursorLine < len(f.lines) - 1
+        f.cursorLine += 1
+        f.cursorCol = 0
+      endif
+    elseif key ==# "\<BS>" || key ==# "\<C-h>"
+      if f.cursorCol > 0
+        var chars: list<string> = split(f.lines[f.cursorLine], '\zs')
+        remove(chars, f.cursorCol - 1)
+        f.lines[f.cursorLine] = join(chars, '')
+        f.cursorCol -= 1
+      elseif f.cursorLine > 0
+        var prevLen: number = strchars(f.lines[f.cursorLine - 1])
+        f.lines[f.cursorLine - 1] ..= f.lines[f.cursorLine]
+        remove(f.lines, f.cursorLine)
+        f.cursorLine -= 1
+        f.cursorCol = prevLen
+      endif
+    elseif key ==# "\<Del>"
+      var line: string = f.lines[f.cursorLine]
+      if f.cursorCol < strchars(line)
+        var chars: list<string> = split(line, '\zs')
+        remove(chars, f.cursorCol)
+        f.lines[f.cursorLine] = join(chars, '')
+      elseif f.cursorLine < len(f.lines) - 1
+        f.lines[f.cursorLine] ..= f.lines[f.cursorLine + 1]
+        remove(f.lines, f.cursorLine + 1)
+      endif
+    elseif key ==# "\<Home>" || key ==# "\<C-a>"
+      f.cursorCol = 0
+    elseif key ==# "\<End>" || key ==# "\<C-e>"
+      f.cursorCol = strchars(f.lines[f.cursorLine])
+    elseif strchars(key) == 1 && char2nr(key) >= 32
+      var chars: list<string> = split(f.lines[f.cursorLine], '\zs')
+      insert(chars, key, f.cursorCol)
+      f.lines[f.cursorLine] = join(chars, '')
+      f.cursorCol += 1
+    else
+      return false
+    endif
+    return true
+  enddef
+
   def Filter(winid: number, key: string): bool
     var isButton: bool = this.IsButtonIdx(this.currentIdx)
+    var isMultiline: bool = !isButton && this.fields[this.currentIdx].type ==# 'multiline'
+
+    if isMultiline
+      if key == "\<C-s>"
+        popup_close(winid, 1)
+        return true
+      elseif key == "\<Esc>" || key == "\<C-c>"
+        popup_close(winid, 0)
+        return true
+      else
+        this.HandleMultilineKey(key)
+      endif
+      this.Render()
+      return true
+    endif
+
     var isChoice: bool = !isButton && this.fields[this.currentIdx].type ==# 'choice'
+    var isFilter: bool = !isButton && this.fields[this.currentIdx].type ==# 'filter'
+    var valueChanged: bool = false
 
     if key == "\<Tab>" || key == "\<C-n>"
       this.Focus((this.currentIdx + 1) % this.TotalControls())
@@ -341,6 +500,17 @@ export class InputPopup
       this.Focus(min([this.TotalControls() - 1, this.currentIdx + 1]))
     elseif isButton
       # buttons hold no text; ignore any other key while one has focus
+    elseif isFilter && (key == "\<Down>" || key == "\<C-j>")
+      var f: dict<any> = this.fields[this.currentIdx]
+      f.selectedIdx = min([max([len(f.filtered) - 1, 0]), f.selectedIdx + 1])
+    elseif isFilter && (key == "\<Up>" || key == "\<C-k>")
+      var f: dict<any> = this.fields[this.currentIdx]
+      f.selectedIdx = max([0, f.selectedIdx - 1])
+    elseif isFilter && key == "\<CR>"
+      if !empty(this.fields[this.currentIdx].filtered)
+        popup_close(winid, 1)
+      endif
+      return true
     elseif isChoice && key == "\<Left>"
       var f: dict<any> = this.fields[this.currentIdx]
       f.selectedIdx = max([0, f.selectedIdx - 1])
@@ -372,6 +542,7 @@ export class InputPopup
         remove(chars, f.cursor - 1)
         f.value = join(chars, '')
         f.cursor -= 1
+        valueChanged = true
       endif
     elseif key == "\<Del>"
       var f: dict<any> = this.fields[this.currentIdx]
@@ -379,10 +550,12 @@ export class InputPopup
         var chars: list<string> = split(f.value, '\zs')
         remove(chars, f.cursor)
         f.value = join(chars, '')
+        valueChanged = true
       endif
     elseif key == "\<C-u>"
       this.fields[this.currentIdx].value = ''
       this.fields[this.currentIdx].cursor = 0
+      valueChanged = true
     elseif key == "\<Left>"
       var f: dict<any> = this.fields[this.currentIdx]
       f.cursor = max([0, f.cursor - 1])
@@ -400,6 +573,13 @@ export class InputPopup
       insert(chars, key, f.cursor)
       f.value = join(chars, '')
       f.cursor += 1
+      valueChanged = true
+    endif
+
+    if valueChanged && isFilter
+      var f: dict<any> = this.fields[this.currentIdx]
+      f.filtered = f.value ==# '' ? copy(f.options) : matchfuzzy(f.options, f.value)
+      f.selectedIdx = 0
     endif
 
     this.Render()
@@ -470,6 +650,14 @@ export class InputPopup
         result[f.name] = empty(f.options) ? '' : f.options[f.selectedIdx]
         continue
       endif
+      if f.type ==# 'filter'
+        result[f.name] = empty(f.filtered) ? '' : f.filtered[f.selectedIdx]
+        continue
+      endif
+      if f.type ==# 'multiline'
+        result[f.name] = join(f.lines, "\n")
+        continue
+      endif
       var val: any = trim(f.value)
       if f.isComplex
         try
@@ -485,8 +673,99 @@ export class InputPopup
 
   # --- rendering ----------------------------------------------------------
 
+  def RenderFilter(): void
+    var f: dict<any> = this.fields[0]
+    var lines: list<string> = ['> ' .. f.value]
+    for i in range(f.maxVisible)
+      add(lines, i < len(f.filtered) ? '  ' .. f.filtered[i] : '')
+    endfor
+    if empty(f.filtered)
+      lines[1] = '  (no matches)'
+    endif
+
+    setbufline(this.bufnr, 1, lines)
+    if len(getbufline(this.bufnr, len(lines) + 1, '$')) > 0
+      deletebufline(this.bufnr, len(lines) + 1, '$')
+    endif
+
+    this.ApplyFilterHighlights(lines, f)
+  enddef
+
+  def ApplyFilterHighlights(lines: list<string>, f: dict<any>): void
+    prop_remove({type: 'InputPopupLabel', bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: 'InputPopupCursor', bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: 'InputPopupOption', bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: 'InputPopupOptionSelected', bufnr: this.bufnr}, 1, len(lines))
+
+    var inputText: string = lines[0]
+    var cursorCharIdx: number = 2 + f.cursor    # "> " prefix is 2 chars
+    var cursorByteCol: number = byteidx(inputText, cursorCharIdx) + 1
+    var nextByteCol: number = byteidx(inputText, cursorCharIdx + 1)
+    var cursorLen: number = (nextByteCol == -1 ? strlen(inputText) : nextByteCol) - (cursorByteCol - 1)
+    prop_add(1, cursorByteCol, {
+      type: 'InputPopupCursor', bufnr: this.bufnr, length: max([cursorLen, 1]),
+    })
+
+    this._fieldHit = []
+    this._optionHit = []
+    for i in range(min([len(f.filtered), f.maxVisible]))
+      var lnum: number = i + 2
+      var text: string = lines[lnum - 1]
+      var propType: string = i == f.selectedIdx ? 'InputPopupOptionSelected' : 'InputPopupOption'
+      prop_add(lnum, 1, {
+        type: propType, bufnr: this.bufnr, length: max([strlen(text), 1]),
+      })
+      add(this._optionHit, {idx: 0, optionIdx: i, lnum: lnum, startCol: 1, endCol: strlen(text)})
+    endfor
+  enddef
+
+  def RenderMultiline(): void
+    var f: dict<any> = this.fields[0]
+    if f.cursorLine < f.scrollOffset
+      f.scrollOffset = f.cursorLine
+    elseif f.cursorLine >= f.scrollOffset + f.rows
+      f.scrollOffset = f.cursorLine - f.rows + 1
+    endif
+
+    var lines: list<string> = []
+    for i in range(f.rows)
+      var lineIdx: number = f.scrollOffset + i
+      add(lines, lineIdx < len(f.lines) ? f.lines[lineIdx] : '')
+    endfor
+
+    setbufline(this.bufnr, 1, lines)
+    if len(getbufline(this.bufnr, len(lines) + 1, '$')) > 0
+      deletebufline(this.bufnr, len(lines) + 1, '$')
+    endif
+
+    this.ApplyMultilineHighlights(lines, f)
+  enddef
+
+  def ApplyMultilineHighlights(lines: list<string>, f: dict<any>): void
+    prop_remove({type: 'InputPopupCursor', bufnr: this.bufnr}, 1, len(lines))
+
+    var cursorScreenLine: number = f.cursorLine - f.scrollOffset + 1
+    if cursorScreenLine >= 1 && cursorScreenLine <= len(lines)
+      var text: string = lines[cursorScreenLine - 1]
+      var cursorByteCol: number = byteidx(text, f.cursorCol) + 1
+      var nextByteCol: number = byteidx(text, f.cursorCol + 1)
+      var cursorLen: number = (nextByteCol == -1 ? strlen(text) : nextByteCol) - (cursorByteCol - 1)
+      prop_add(cursorScreenLine, cursorByteCol, {
+        type: 'InputPopupCursor', bufnr: this.bufnr, length: max([cursorLen, 1]),
+      })
+    endif
+  enddef
+
   def Render(): void
     if this.bufnr == -1
+      return
+    endif
+    if len(this.fields) == 1 && this.fields[0].type ==# 'filter'
+      this.RenderFilter()
+      return
+    endif
+    if len(this.fields) == 1 && this.fields[0].type ==# 'multiline'
+      this.RenderMultiline()
       return
     endif
 

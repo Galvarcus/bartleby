@@ -11,6 +11,12 @@ var is_loaded: bool = true
 # phone, email). Global default + optional per-scrive override, merged
 # field-by-field (blank scrive field falls back to global). Edited via
 # formpopup.vim.
+#
+# ProjectInfo is defined before the functions that use it, not just by
+# convention: several of them use ProjectInfo in their own parameter or
+# return type, and Vim9 resolves a function's signature eagerly at
+# definition time - unlike a class used only inside a function body,
+# which can forward-reference one defined later in the file just fine.
 # License: GNU GPL 3.0
 ##############################################################################
 

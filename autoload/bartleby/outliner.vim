@@ -9,17 +9,36 @@ var is_loaded: bool = true
 # Plugin_Name: Bartleby
 # outliner.vim - a flat, indented spreadsheet-style view of one folder's
 # entire subtree: Title | Label | Status | Words | Target | Keywords, one
-# row per binder item. A real buffer (not a popup) since it's read more
-# like a table than picked from like a menu - it takes over the window
-# Binder's own <CR> would have opened a document in, the same way the
-# editor itself would. Label/Status edits reuse picker.vim, the exact
-# widget the Binder uses for the same job - no duplicate picker logic.
+# row per binder item.
+#
+# A custom popup, not a real buffer - the earlier real-buffer design took
+# over the window the editor itself would open a document into, which
+# turned out to be the root cause of a whole class of window-management
+# bugs (Outliner and a real document fighting over the same "editor
+# window" slot, GoToEditorWindow() treating Outliner inconsistently as
+# chrome or not depending on the caller). A popup sidesteps the problem
+# entirely: it never occupies a real window at all, so there's no slot
+# to fight over. buttonspopup.vim's grid doesn't fit this shape (its
+# "columns" are uniform, interchangeable buttons, not named,
+# differently-typed table columns), so this is its own popup rather
+# than built on that primitive.
 #
 # gs sorts the visible rows by a column (view-only - it does not reorder
 # the underlying binder/project.json; that's what Binder's own J/K are
 # for). Sorting necessarily drops the tree indentation, since a sorted
 # order and a parent/child grouping can't both be shown at once - picking
 # "Tree Order" again restores it.
+#
+# Label/Status/Sort edits reuse picker.vim's PickOne, the exact widget
+# Binder uses for the same job - chained on top of this popup (a higher
+# zindex), not replacing it; this popup stays open underneath and
+# refreshes once the picker closes.
+#
+# Row is defined before the functions that use it, not just by
+# convention: several of them use Row in their own parameter or return
+# type, and Vim9 resolves a function's signature eagerly at definition
+# time - unlike a class used only inside a function body, which can
+# forward-reference one defined later in the file just fine.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -34,14 +53,13 @@ import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 
-const BUF_NAME: string = 'Bartleby-Outliner'
 const HEADERS: list<string> = ['Title', 'Label', 'Status', 'Words', 'Target', 'Keywords']
 const SORT_KEYS: list<string> = ['Tree Order', 'Title', 'Label', 'Status', 'Words']
-# header line + separator line, before the first data row.
-const HEADER_LINES: number = 2
+const MAX_VISIBLE_ROWS: number = 20
+const OUTLINER_ZINDEX: number = 250
 
-# One row's column values, already stringified - RenderLines() only pads.
-class Row
+# One row's column values, already stringified - FormatRow() only pads.
+export class Row
   var item: BI.BinderItem
   var title: string
   var label: string
@@ -99,7 +117,7 @@ def Pad(text: string, width: number): string
   return text .. repeat(' ', max([0, width - strdisplaywidth(text)]))
 enddef
 
-def RenderLines(rows: list<Row>): list<string>
+def ColumnWidths(rows: list<Row>): list<number>
   var widths: list<number> = HEADERS->mapnew((_, h) => strdisplaywidth(h))
   for row in rows
     widths[0] = max([widths[0], strdisplaywidth(row.title)])
@@ -108,165 +126,239 @@ def RenderLines(rows: list<Row>): list<string>
     widths[3] = max([widths[3], strdisplaywidth(row.words)])
     widths[4] = max([widths[4], strdisplaywidth(row.target)])
   endfor
+  return widths
+enddef
 
-  def FormatRow(title: string, label: string, status: string, words: string,
-      target: string, keywords: string): string
-    return Pad(title, widths[0]) .. '  ' .. Pad(label, widths[1]) .. '  '
-      .. Pad(status, widths[2]) .. '  ' .. Pad(words, widths[3]) .. '  '
-      .. Pad(target, widths[4]) .. '  ' .. keywords
+def FormatRow(widths: list<number>, title: string, label: string, status: string,
+    words: string, target: string, keywords: string): string
+  return Pad(title, widths[0]) .. '  ' .. Pad(label, widths[1]) .. '  '
+    .. Pad(status, widths[2]) .. '  ' .. Pad(words, widths[3]) .. '  '
+    .. Pad(target, widths[4]) .. '  ' .. keywords
+enddef
+
+class OutlinerPopup
+  var project: Pj.Project
+  var folder: BI.BinderItem
+  var sortKey: string = 'Tree Order'
+  var rows: list<Row> = []
+  var widths: list<number> = []
+  var selectedIdx: number = 0
+  var scrollOffset: number = 0
+  var winid: number = -1
+  var bufnr: number = -1
+  var pendingG: bool = false
+
+  def new(this.project, this.folder)
   enddef
 
-  var header: string = FormatRow(HEADERS[0], HEADERS[1], HEADERS[2], HEADERS[3],
-    HEADERS[4], HEADERS[5])
-  var lines: list<string> = [header, repeat('-', strdisplaywidth(header))]
-  for row in rows
-    lines->add(FormatRow(row.title, row.label, row.status, row.words, row.target,
-      row.keywords))
-  endfor
-  return lines
-enddef
+  def Rebuild(): void
+    var showIndent: bool = this.sortKey ==# 'Tree Order'
+    var treeRows: list<T.Row> = FlattenFolder(this.folder)
+    var built: list<Row> = treeRows->mapnew(
+      (_, tr) => BuildRow(tr, this.project.BinderRoot(), showIndent))
+    this.rows = showIndent ? built : SortRows(built, this.sortKey)
+    this.widths = ColumnWidths(this.rows)
+    this.selectedIdx = min([this.selectedIdx, max([0, len(this.rows) - 1])])
+  enddef
 
-def Render(project: Pj.Project, folder: BI.BinderItem): void
-  var sortKey: string = get(b:, 'bartleby_outline_sort', 'Tree Order')
-  var showIndent: bool = sortKey ==# 'Tree Order'
+  def EnsurePropTypes(): void
+    if empty(prop_type_get('OutlinerHeader'))
+      prop_type_add('OutlinerHeader', {highlight: 'Title'})
+    endif
+    if empty(prop_type_get('OutlinerSelected'))
+      prop_type_add('OutlinerSelected', {highlight: 'PmenuSel'})
+    endif
+  enddef
 
-  var treeRows: list<T.Row> = FlattenFolder(folder)
-  var rows: list<Row> = treeRows->mapnew((_, tr) => BuildRow(tr, project.BinderRoot(), showIndent))
-  if !showIndent
-    rows = SortRows(rows, sortKey)
-  endif
+  def Open(): void
+    this.Rebuild()
+    this.EnsurePropTypes()
 
-  setlocal modifiable
-  deletebufline('%', 1, '$')
-  setline(1, RenderLines(rows))
-  setlocal nomodifiable
-  b:bartleby_outline_rows = rows
-  b:bartleby_outline_project = project
-  b:bartleby_outline_folder = folder
-enddef
+    this.bufnr = bufadd('')
+    setbufvar(this.bufnr, '&buftype', 'nofile')
+    setbufvar(this.bufnr, '&swapfile', false)
+    setbufvar(this.bufnr, '&bufhidden', 'wipe')
 
-def RowContext(): dict<any>
-  var rows: list<Row> = get(b:, 'bartleby_outline_rows', [])
-  var idx: number = line('.') - HEADER_LINES - 1
-  var row: Row = idx >= 0 && idx < len(rows) ? rows[idx] : null_object
-  return {
-    project: get(b:, 'bartleby_outline_project', null_object),
-    folder: get(b:, 'bartleby_outline_folder', null_object),
-    row: row,
-  }
-enddef
+    var width: number = max([WidthsSum(this.widths) + 10, 30])
+    var height: number = min([max([len(this.rows), 1]), MAX_VISIBLE_ROWS]) + 2
 
-def OpenUnderCursor(): void
-  var ctx: dict<any> = RowContext()
-  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
-    return
-  endif
-  var path: string = ctx.row.item.AbsPath(ctx.project.BinderRoot())
-  if !filereadable(path)
-    log.Error($'missing file on disk: {path}')
-    return
-  endif
-  execute 'edit ' .. fnameescape(path)
-enddef
+    this.winid = popup_create(this.bufnr, {
+      title: $' Outliner: {this.folder.title} ',
+      border: [1, 1, 1, 1],
+      padding: [0, 1, 0, 1],
+      minwidth: width,
+      maxwidth: width,
+      minheight: height,
+      maxheight: height,
+      zindex: OUTLINER_ZINDEX,
+      mapping: false,
+      filter: (id, key) => this.Filter(id, key),
+    })
+    this.Render()
+  enddef
 
-def PickLabel(): void
-  var ctx: dict<any> = RowContext()
-  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
-    return
-  endif
-  var project: Pj.Project = ctx.project
-  var folder: BI.BinderItem = ctx.folder
-  var item: BI.BinderItem = ctx.row.item
-  var currentMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-  Pk.PickOne('Label', D.LABELS, (choice: string) => {
-    var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    meta.SetLabel(choice)
-    meta.Save(item.MetaPath(project.BinderRoot()))
-    Render(project, folder)
-  }, currentMeta.label)
-enddef
+  def Close(): void
+    if this.winid != -1
+      popup_close(this.winid)
+    endif
+  enddef
 
-def PickStatus(): void
-  var ctx: dict<any> = RowContext()
-  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
-    return
-  endif
-  var project: Pj.Project = ctx.project
-  var folder: BI.BinderItem = ctx.folder
-  var item: BI.BinderItem = ctx.row.item
-  var currentMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-  Pk.PickOne('Status', D.STATUSES, (choice: string) => {
-    var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    meta.SetStatus(choice)
-    meta.Save(item.MetaPath(project.BinderRoot()))
-    Render(project, folder)
-  }, currentMeta.status)
-enddef
+  def VisibleSlice(): list<number>
+    var visibleRows: number = MAX_VISIBLE_ROWS
+    if this.selectedIdx < this.scrollOffset
+      this.scrollOffset = this.selectedIdx
+    elseif this.selectedIdx >= this.scrollOffset + visibleRows
+      this.scrollOffset = this.selectedIdx - visibleRows + 1
+    endif
+    var last: number = min([len(this.rows), this.scrollOffset + visibleRows])
+    return [this.scrollOffset, last]
+  enddef
 
-def ShowHelp(): void
-  H.Show('Outliner', [
-    ['<CR>', 'Open document under cursor'],
-    ['l', 'Set label'],
-    ['s', 'Set status'],
-    ['gs', 'Sort'],
-    ['q', 'Close Outliner'],
-    ['?', 'This help'],
-  ])
-enddef
+  def Render(): void
+    if this.bufnr == -1
+      return
+    endif
+    var header: string = FormatRow(this.widths, HEADERS[0], HEADERS[1], HEADERS[2],
+      HEADERS[3], HEADERS[4], HEADERS[5])
+    var lines: list<string> = [header, repeat('-', strdisplaywidth(header))]
 
-def PickSort(): void
-  var ctx: dict<any> = RowContext()
-  if ctx.project is null_object
-    return
-  endif
-  var project: Pj.Project = ctx.project
-  var folder: BI.BinderItem = ctx.folder
-  var currentSort: string = get(b:, 'bartleby_outline_sort', 'Tree Order')
-  Pk.PickOne('Sort by', SORT_KEYS, (choice: string) => {
-    b:bartleby_outline_sort = choice
-    Render(project, folder)
-  }, currentSort)
-enddef
+    var [first: number, last: number] = this.VisibleSlice()
+    for i in range(first, last - 1)
+      var row: Row = this.rows[i]
+      lines->add(FormatRow(this.widths, row.title, row.label, row.status, row.words,
+        row.target, row.keywords))
+    endfor
+    if empty(this.rows)
+      lines->add('(empty)')
+    endif
 
-def CloseOutliner(): void
-  var prevBuf: number = get(b:, 'bartleby_outline_prevbuf', -1)
-  if prevBuf != -1 && bufexists(prevBuf)
-    execute 'buffer ' .. prevBuf
-  endif
-enddef
+    setbufline(this.bufnr, 1, lines)
+    if len(getbufline(this.bufnr, len(lines) + 1, '$')) > 0
+      deletebufline(this.bufnr, len(lines) + 1, '$')
+    endif
 
-def SetupKeymaps(): void
-  nnoremap <buffer> <silent> <CR> <ScriptCmd>OpenUnderCursor()<CR>
-  nnoremap <buffer> <silent> q <ScriptCmd>CloseOutliner()<CR>
-  nnoremap <buffer> <silent> l <ScriptCmd>PickLabel()<CR>
-  nnoremap <buffer> <silent> s <ScriptCmd>PickStatus()<CR>
-  nnoremap <buffer> <silent> gs <ScriptCmd>PickSort()<CR>
-  nnoremap <buffer> <silent> ? <ScriptCmd>ShowHelp()<CR>
-enddef
+    prop_remove({type: 'OutlinerHeader', bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: 'OutlinerSelected', bufnr: this.bufnr}, 1, len(lines))
+    prop_add(1, 1, {type: 'OutlinerHeader', bufnr: this.bufnr, length: strlen(header)})
+    if !empty(this.rows)
+      var selLnum: number = 3 + (this.selectedIdx - first)
+      prop_add(selLnum, 1, {
+        type: 'OutlinerSelected', bufnr: this.bufnr, length: strlen(lines[selLnum - 1]),
+      })
+    endif
+  enddef
 
-# Takes over the editor window with an outliner of `folder`'s subtree -
-# the same window the editor itself would open a document into, not a
-# new split.
-export def Show(project: Pj.Project, folder: BI.BinderItem): void
-  var existingWinNr: number = bufwinnr(BUF_NAME)
-  if existingWinNr != -1
-    execute ':' .. existingWinNr .. 'wincmd w'
-  else
+  def SelectedRow(): Row
+    return empty(this.rows) ? null_object : this.rows[this.selectedIdx]
+  enddef
+
+  def OpenSelectedDoc(): void
+    var row: Row = this.SelectedRow()
+    if row is null_object || !row.item.IsDocument()
+      return
+    endif
+    var path: string = row.item.AbsPath(this.project.BinderRoot())
+    if !filereadable(path)
+      log.Error($'missing file on disk: {path}')
+      return
+    endif
+    this.Close()
     W.GoToEditorWindow()
-  endif
-  var prevBuf: number = bufnr('%')
-  var bufNr: number = bufnr(BUF_NAME)
-  if bufNr == -1
-    execute 'edit ' .. BUF_NAME
-  else
-    execute 'buffer ' .. bufNr
-  endif
-  setlocal buftype=nofile bufhidden=hide noswapfile nobuflisted
-  setlocal nowrap nonumber norelativenumber nofoldenable
-  setlocal filetype=bartleby-outline
-  if !exists('b:bartleby_outline_prevbuf')
-    b:bartleby_outline_prevbuf = prevBuf
-  endif
-  Render(project, folder)
-  SetupKeymaps()
+    execute 'edit ' .. fnameescape(path)
+  enddef
+
+  def PickLabel(): void
+    var row: Row = this.SelectedRow()
+    if row is null_object || !row.item.IsDocument()
+      return
+    endif
+    var item: BI.BinderItem = row.item
+    var currentMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
+    Pk.PickOne('Label', D.LABELS, (choice: string) => {
+      var meta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
+      meta.SetLabel(choice)
+      meta.Save(item.MetaPath(this.project.BinderRoot()))
+      this.Rebuild()
+      this.Render()
+    }, currentMeta.label)
+  enddef
+
+  def PickStatus(): void
+    var row: Row = this.SelectedRow()
+    if row is null_object || !row.item.IsDocument()
+      return
+    endif
+    var item: BI.BinderItem = row.item
+    var currentMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
+    Pk.PickOne('Status', D.STATUSES, (choice: string) => {
+      var meta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
+      meta.SetStatus(choice)
+      meta.Save(item.MetaPath(this.project.BinderRoot()))
+      this.Rebuild()
+      this.Render()
+    }, currentMeta.status)
+  enddef
+
+  def PickSort(): void
+    Pk.PickOne('Sort by', SORT_KEYS, (choice: string) => {
+      this.sortKey = choice
+      this.Rebuild()
+      this.Render()
+    }, this.sortKey)
+  enddef
+
+  def ShowHelp(): void
+    H.Show('Outliner', [
+      ['<CR>', 'Open document under cursor'],
+      ['l', 'Set label'],
+      ['s', 'Set status'],
+      ['gs', 'Sort'],
+      ['q', 'Close Outliner'],
+      ['?', 'This help'],
+    ])
+  enddef
+
+  def Filter(winid: number, key: string): bool
+    if this.pendingG
+      this.pendingG = false
+      if key ==# 's'
+        this.PickSort()
+      endif
+      return true
+    endif
+
+    if key ==# 'j' || key ==# "\<Down>"
+      this.selectedIdx = min([max([len(this.rows) - 1, 0]), this.selectedIdx + 1])
+      this.Render()
+    elseif key ==# 'k' || key ==# "\<Up>"
+      this.selectedIdx = max([0, this.selectedIdx - 1])
+      this.Render()
+    elseif key ==# "\<CR>"
+      this.OpenSelectedDoc()
+    elseif key ==# 'l'
+      this.PickLabel()
+    elseif key ==# 's'
+      this.PickStatus()
+    elseif key ==# 'g'
+      this.pendingG = true
+    elseif key ==# '?'
+      this.ShowHelp()
+    elseif key ==# 'q' || key ==# "\<Esc>"
+      this.Close()
+    endif
+    return true
+  enddef
+endclass
+
+def WidthsSum(widths: list<number>): number
+  var total: number = 0
+  for w in widths
+    total += w
+  endfor
+  return total + (len(widths) - 1) * 2
+enddef
+
+export def Show(project: Pj.Project, folder: BI.BinderItem): void
+  var popup: OutlinerPopup = OutlinerPopup.new(project, folder)
+  popup.Open()
 enddef

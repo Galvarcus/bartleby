@@ -15,6 +15,13 @@ var is_loaded: bool = true
 # Three wrap modes: off, hard (textwidth + autoformat while inserting),
 # soft (display wrap, no textwidth, gj/gk-style navigation). Detection
 # scans modelines/long lines like Pencil's own s:detect_wrap_mode().
+#
+# QuillSession is defined before the functions that use it, not just
+# by convention: several of them use QuillSession in their own
+# parameter or return type, and Vim9 resolves a function's signature
+# eagerly at definition time - unlike a class used only inside a
+# function body, which can forward-reference one defined later in the
+# file just fine.
 # License: GNU GPL 3.0
 ##############################################################################
 

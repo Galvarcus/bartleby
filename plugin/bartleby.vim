@@ -28,6 +28,8 @@ import autoload 'bartleby/snapshot.vim' as Sn
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/picker.vim' as Pk
+import autoload 'bartleby/commandpalette.vim' as CP
+import autoload 'bartleby/bartlebymenu.vim' as BM
 import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
@@ -52,8 +54,7 @@ g:bartleby_spotlight_bop = get(g:, 'bartleby_spotlight_bop', '^\s*$\n\zs')
 g:bartleby_spotlight_eop = get(g:, 'bartleby_spotlight_eop', '^\s*$')
 g:bartleby_spotlight_paragraph_span = get(g:, 'bartleby_spotlight_paragraph_span', 0)
 g:bartleby_spotlight_priority = get(g:, 'bartleby_spotlight_priority', 10)
-g:bartleby_spotlight_dialogue_pattern = get(g:, 'bartleby_spotlight_dialogue_pattern',
-  '"[^"]*"\|"[^"]*"')
+g:bartleby_spotlight_dialogue_pattern = get(g:, 'bartleby_spotlight_dialogue_pattern', '"[^"]*"\|"[^"]*"')
 g:bartleby_quill_wrap_mode_default = get(g:, 'bartleby_quill_wrap_mode_default', 'hard')
 g:bartleby_quill_textwidth = get(g:, 'bartleby_quill_textwidth', 74)
 g:bartleby_quill_autoformat = get(g:, 'bartleby_quill_autoformat', true)
@@ -234,12 +235,16 @@ def RunCompile(): void
 enddef
 
 command! -bar BartlebyCompile RunCompile()
+command! -bar BartlebyCommands CP.Open()
+command! -bar BartlebyMenu BM.Toggle()
 
 nnoremap <silent> <leader>bi <ScriptCmd>I.Toggle()<CR>
 nnoremap <silent> <leader>bz <ScriptCmd>F.Toggle()<CR>
 nnoremap <silent> <leader>bl <ScriptCmd>Sp.Toggle()<CR>
 nnoremap <silent> <leader>bL <ScriptCmd>Sp.PickMode()<CR>
 nnoremap <silent> <leader>bp <ScriptCmd>Q.Toggle()<CR>
+nnoremap <silent> <leader>b<Space> <ScriptCmd>CP.Open()<CR>
+nnoremap <silent> <leader>bm <ScriptCmd>BM.Toggle()<CR>
 
 augroup bartleby_quill_auto
   autocmd!
@@ -258,3 +263,7 @@ augroup bartleby_session
   autocmd VimLeavePre * Sess.CaptureCurrentDoc()
   autocmd VimEnter * AutoRestoreSession()
 augroup END
+
+if has('gui_running')
+  BM.RegisterNative()
+endif

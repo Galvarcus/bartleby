@@ -63,234 +63,6 @@ def ClampVal(val: number, lo: number, hi: number): number
   return min([max([val, lo]), hi])
 enddef
 
-# A parsed set of pad dimensions - width/height of the centered writing
-# column, plus xoff/yoff to shift it off-center if requested.
-class Dimensions
-  var width: number
-  var height: number
-  var xoff: number = 0
-  var yoff: number = 0
-
-  static def Default(): Dimensions
-    var dim: Dimensions = Dimensions.new()
-    dim.width = RelSize(focuswidth, &columns)
-    if focusmargintop < 0 && focusmarginbottom < 0
-      dim.height = RelSize(focusheight, &lines)
-      dim.yoff = 0
-    else
-      var top: number = max([0, RelSize(focusmargintop < 0 ? 4 : focusmargintop, &lines)])
-      var bot: number = max([0, RelSize(focusmarginbottom < 0 ? 4 : focusmarginbottom, &lines)])
-      dim.height = &lines - top - bot
-      dim.yoff = top - bot
-    endif
-    return dim
-  enddef
-
-  # Parses a Goyo-style dimension expression - "<width>[+-xoff]x<height>
-  # [+-yoff]", every part optional, layered over the global defaults
-  # above. null_object (not an error) on a malformed expression, so a
-  # mistyped :BartlebyFocus argument can just no-op rather than crash.
-  static def Parse(expr: string): Dimensions
-    var dim: Dimensions = Dimensions.Default()
-    if expr ==# ''
-      return dim
-    endif
-    var parts: list<string> = matchlist(expr,
-      '^\s*\([0-9]\+%\?\)\?\([+-][0-9]\+%\?\)\?\%(x\([0-9]\+%\?\)\?\([+-][0-9]\+%\?\)\?\)\?\s*$')
-    if empty(parts)
-      return null_object
-    endif
-    if parts[1] !=# ''
-      dim.width = RelSize(parts[1], &columns)
-    endif
-    if parts[2] !=# ''
-      dim.xoff = RelSize(parts[2], &columns)
-    endif
-    if parts[3] !=# ''
-      dim.height = RelSize(parts[3], &lines)
-    endif
-    if parts[4] !=# ''
-      dim.yoff = RelSize(parts[4], &lines)
-    endif
-    return dim
-  enddef
-
-  # Field writes from outside this class aren't allowed (E1335) - these
-  # exist so FocusSession can clamp/adjust an existing Dimensions object
-  # without needing to reconstruct one from scratch each time.
-  def ClampTo(maxWidth: number, maxHeight: number): void
-    this.width = ClampVal(this.width, 2, maxWidth)
-    this.height = ClampVal(this.height, 2, maxHeight)
-  enddef
-
-  def AdjustWidth(delta: number): void
-    this.width += delta
-  enddef
-
-  def AdjustHeight(delta: number): void
-    this.height += delta
-  enddef
-endclass
-
-# One active Focus session, living in its own tab. Mirrors Goyo's t:goyo_*
-# tab-local variables as class fields instead, stored in
-# t:bartleby_focus_session on the tab it owns.
-export class FocusSession
-  var origTab: number
-  var masterBuf: number
-  var dim: Dimensions
-  var dimExpr: string
-  var saved: dict<any>
-  var mappedKeys: list<string>
-  var pluginState: dict<bool>
-  var padBufs: dict<number> = {}
-
-  def new(this.origTab, this.masterBuf, this.dim, this.dimExpr, this.saved, this.mappedKeys,
-      this.pluginState)
-  enddef
-
-  def SetPadBufs(l: number, r: number, t: number, b: number): void
-    this.padBufs = {l: l, r: r, t: t, b: b}
-  enddef
-
-  # Bounces the user back out of a pad window the instant they wander
-  # into one (WinEnter/CursorMoved on the pad's own buffer - see
-  # SetupPad()), and treats a visibly-collapsed pad layout (someone
-  # managed to close/resize one) as reason enough to give up and exit
-  # cleanly rather than leave a broken layout on screen.
-  def Blank(repel: string): void
-    if bufwinnr(this.padBufs.r) <= bufwinnr(this.padBufs.l) + 1
-        || bufwinnr(this.padBufs.b) <= bufwinnr(this.padBufs.t) + 3
-      # Exit() changes the window layout (tabclose, tabnew, ...), which
-      # newer Vim refuses to allow synchronously from within a WinEnter
-      # autocmd (E1312). Defer it to run right after this autocmd
-      # finishes instead, when that restriction no longer applies.
-      timer_start(0, (_) => Exit())
-      return
-    endif
-    execute 'noautocmd wincmd ' .. repel
-  enddef
-
-  def HideStatusline(): void
-    setlocal statusline=\ 
-  enddef
-
-  def HideLinenr(): void
-    if !focuslinenr
-      setlocal nonumber
-      if exists('&relativenumber')
-        setlocal norelativenumber
-      endif
-    endif
-    if exists('&colorcolumn')
-      setlocal colorcolumn=
-    endif
-  enddef
-
-  # Creates one pad window via `openCmd` (e.g. 'vertical topleft new'),
-  # configures it as inert chrome, and returns to the window that was
-  # current beforehand - called four times in Enter(), once per side.
-  def InitPad(openCmd: string): number
-    execute openCmd
-    setlocal buftype=nofile bufhidden=wipe nomodifiable nobuflisted noswapfile
-    setlocal nonumber nocursorline nocursorcolumn winfixwidth winfixheight
-    setlocal statusline=\ 
-    if exists('&relativenumber')
-      setlocal norelativenumber
-    endif
-    if exists('&colorcolumn')
-      setlocal colorcolumn=
-    endif
-    var bufNr: number = winbufnr(0)
-    execute ':' .. winnr('#') .. 'wincmd w'
-    return bufNr
-  enddef
-
-  # Sizes and positions one already-created pad, and wires its
-  # Blank()/HideStatusline() autocmds. `repel` is the wincmd direction to
-  # bounce back in if the user ends up in this pad anyway.
-  def SetupPad(bufNr: number, vert: bool, size: number, repel: string): void
-    var win: number = bufwinnr(bufNr)
-    execute ':' .. win .. 'wincmd w'
-    execute (vert ? 'vertical ' : '') .. 'resize ' .. max([0, size])
-
-    augroup bartleby_focus_pad
-      execute $'autocmd WinEnter,CursorMoved <buffer> ++nested t:bartleby_focus_session.Blank({string(repel)})'
-      autocmd WinLeave <buffer> ++nested t:bartleby_focus_session.HideStatusline()
-    augroup END
-
-    # Padding out short pad windows with blank lines hides GUI scrollbars
-    # that would otherwise appear alongside an obviously-empty buffer.
-    var diff: number = winheight(0) - line('$')
-    if diff > 0
-      setlocal modifiable
-      append(0, repeat([''], diff))
-      normal! gg
-      setlocal nomodifiable
-    endif
-
-    execute ':' .. winnr('#') .. 'wincmd w'
-  enddef
-
-  def ResizePads(): void
-    augroup bartleby_focus_pad
-      autocmd!
-    augroup END
-
-    this.dim.ClampTo(&columns, &lines)
-
-    var vmargin: number = max([0, (&lines - this.dim.height) / 2 - 1])
-    var yoff: number = ClampVal(this.dim.yoff, -vmargin, vmargin)
-    var top: number = vmargin + yoff
-    var bot: number = vmargin - yoff - 1
-    this.SetupPad(this.padBufs.t, false, top, 'j')
-    this.SetupPad(this.padBufs.b, false, bot, 'k')
-
-    var nwidth: number = max([len(string(line('$'))) + 1, &numberwidth])
-    var width: number = this.dim.width + (&number ? nwidth : 0)
-    var hmargin: number = max([0, (&columns - width) / 2 - 1])
-    var xoff: number = ClampVal(this.dim.xoff, -hmargin, hmargin)
-    this.SetupPad(this.padBufs.l, true, hmargin + xoff, 'l')
-    this.SetupPad(this.padBufs.r, true, hmargin - xoff, 'h')
-  enddef
-
-  # Recolors the chrome highlight groups to blend into the background,
-  # so the pad windows and (already-blanked) statusline/vertical-split
-  # fillchars read as empty space rather than visible borders.
-  def Tranquilize(): void
-    var bg: string = synIDattr(synIDtrans(hlID('Normal')), 'bg#')
-    var gui: bool = has('gui_running') || (has('termguicolors') && &termguicolors)
-    var attr: string = gui ? 'gui' : 'cterm'
-    var groups: list<string> = ['NonText', 'FoldColumn', 'ColorColumn',
-      'VertSplit', 'StatusLine', 'StatusLineNC', 'SignColumn']
-    for grp in groups
-      if bg ==# '-1' || bg ==# ''
-        execute $'highlight {grp} {attr}fg={focusbg} {attr}bg=NONE'
-      else
-        execute $'highlight {grp} {attr}fg={bg} {attr}bg={bg}'
-      endif
-      execute $'highlight {grp} {attr}=NONE'
-    endfor
-  enddef
-
-  def AdjustWidth(delta: number): void
-    this.dim.AdjustWidth(delta)
-    this.ResizePads()
-  enddef
-
-  def AdjustHeight(delta: number): void
-    this.dim.AdjustHeight(delta)
-    this.ResizePads()
-  enddef
-
-  def ResetDimensions(expr: string): void
-    var parsed: Dimensions = Dimensions.Parse(expr)
-    if parsed isnot null_object
-      this.dim = parsed
-    endif
-    this.ResizePads()
-  enddef
-endclass
 
 # ---------------------------------------------------------------------
 # Third-party statusline plugin integration. Several popular statusline
@@ -651,3 +423,232 @@ export def Execute(bang: bool, dimExpr: string): void
     Exit()
   endif
 enddef
+
+# A parsed set of pad dimensions - width/height of the centered writing
+# column, plus xoff/yoff to shift it off-center if requested.
+class Dimensions
+  var width: number
+  var height: number
+  var xoff: number = 0
+  var yoff: number = 0
+
+  static def Default(): Dimensions
+    var dim: Dimensions = Dimensions.new()
+    dim.width = RelSize(focuswidth, &columns)
+    if focusmargintop < 0 && focusmarginbottom < 0
+      dim.height = RelSize(focusheight, &lines)
+      dim.yoff = 0
+    else
+      var top: number = max([0, RelSize(focusmargintop < 0 ? 4 : focusmargintop, &lines)])
+      var bot: number = max([0, RelSize(focusmarginbottom < 0 ? 4 : focusmarginbottom, &lines)])
+      dim.height = &lines - top - bot
+      dim.yoff = top - bot
+    endif
+    return dim
+  enddef
+
+  # Parses a Goyo-style dimension expression - "<width>[+-xoff]x<height>
+  # [+-yoff]", every part optional, layered over the global defaults
+  # above. null_object (not an error) on a malformed expression, so a
+  # mistyped :BartlebyFocus argument can just no-op rather than crash.
+  static def Parse(expr: string): Dimensions
+    var dim: Dimensions = Dimensions.Default()
+    if expr ==# ''
+      return dim
+    endif
+    var parts: list<string> = matchlist(expr,
+      '^\s*\([0-9]\+%\?\)\?\([+-][0-9]\+%\?\)\?\%(x\([0-9]\+%\?\)\?\([+-][0-9]\+%\?\)\?\)\?\s*$')
+    if empty(parts)
+      return null_object
+    endif
+    if parts[1] !=# ''
+      dim.width = RelSize(parts[1], &columns)
+    endif
+    if parts[2] !=# ''
+      dim.xoff = RelSize(parts[2], &columns)
+    endif
+    if parts[3] !=# ''
+      dim.height = RelSize(parts[3], &lines)
+    endif
+    if parts[4] !=# ''
+      dim.yoff = RelSize(parts[4], &lines)
+    endif
+    return dim
+  enddef
+
+  # Field writes from outside this class aren't allowed (E1335) - these
+  # exist so FocusSession can clamp/adjust an existing Dimensions object
+  # without needing to reconstruct one from scratch each time.
+  def ClampTo(maxWidth: number, maxHeight: number): void
+    this.width = ClampVal(this.width, 2, maxWidth)
+    this.height = ClampVal(this.height, 2, maxHeight)
+  enddef
+
+  def AdjustWidth(delta: number): void
+    this.width += delta
+  enddef
+
+  def AdjustHeight(delta: number): void
+    this.height += delta
+  enddef
+endclass
+
+# One active Focus session, living in its own tab. Mirrors Goyo's t:goyo_*
+# tab-local variables as class fields instead, stored in
+# t:bartleby_focus_session on the tab it owns.
+export class FocusSession
+  var origTab: number
+  var masterBuf: number
+  var dim: Dimensions
+  var dimExpr: string
+  var saved: dict<any>
+  var mappedKeys: list<string>
+  var pluginState: dict<bool>
+  var padBufs: dict<number> = {}
+
+  def new(this.origTab, this.masterBuf, this.dim, this.dimExpr, this.saved, this.mappedKeys,
+      this.pluginState)
+  enddef
+
+  def SetPadBufs(l: number, r: number, t: number, b: number): void
+    this.padBufs = {l: l, r: r, t: t, b: b}
+  enddef
+
+  # Bounces the user back out of a pad window the instant they wander
+  # into one (WinEnter/CursorMoved on the pad's own buffer - see
+  # SetupPad()), and treats a visibly-collapsed pad layout (someone
+  # managed to close/resize one) as reason enough to give up and exit
+  # cleanly rather than leave a broken layout on screen.
+  def Blank(repel: string): void
+    if bufwinnr(this.padBufs.r) <= bufwinnr(this.padBufs.l) + 1
+        || bufwinnr(this.padBufs.b) <= bufwinnr(this.padBufs.t) + 3
+      # Exit() changes the window layout (tabclose, tabnew, ...), which
+      # newer Vim refuses to allow synchronously from within a WinEnter
+      # autocmd (E1312). Defer it to run right after this autocmd
+      # finishes instead, when that restriction no longer applies.
+      timer_start(0, (_) => Exit())
+      return
+    endif
+    execute 'noautocmd wincmd ' .. repel
+  enddef
+
+  def HideStatusline(): void
+    setlocal statusline=\ 
+  enddef
+
+  def HideLinenr(): void
+    if !focuslinenr
+      setlocal nonumber
+      if exists('&relativenumber')
+        setlocal norelativenumber
+      endif
+    endif
+    if exists('&colorcolumn')
+      setlocal colorcolumn=
+    endif
+  enddef
+
+  # Creates one pad window via `openCmd` (e.g. 'vertical topleft new'),
+  # configures it as inert chrome, and returns to the window that was
+  # current beforehand - called four times in Enter(), once per side.
+  def InitPad(openCmd: string): number
+    execute openCmd
+    setlocal buftype=nofile bufhidden=wipe nomodifiable nobuflisted noswapfile
+    setlocal nonumber nocursorline nocursorcolumn winfixwidth winfixheight
+    setlocal statusline=\ 
+    if exists('&relativenumber')
+      setlocal norelativenumber
+    endif
+    if exists('&colorcolumn')
+      setlocal colorcolumn=
+    endif
+    var bufNr: number = winbufnr(0)
+    execute ':' .. winnr('#') .. 'wincmd w'
+    return bufNr
+  enddef
+
+  # Sizes and positions one already-created pad, and wires its
+  # Blank()/HideStatusline() autocmds. `repel` is the wincmd direction to
+  # bounce back in if the user ends up in this pad anyway.
+  def SetupPad(bufNr: number, vert: bool, size: number, repel: string): void
+    var win: number = bufwinnr(bufNr)
+    execute ':' .. win .. 'wincmd w'
+    execute (vert ? 'vertical ' : '') .. 'resize ' .. max([0, size])
+
+    augroup bartleby_focus_pad
+      execute $'autocmd WinEnter,CursorMoved <buffer> ++nested t:bartleby_focus_session.Blank({string(repel)})'
+      autocmd WinLeave <buffer> ++nested t:bartleby_focus_session.HideStatusline()
+    augroup END
+
+    # Padding out short pad windows with blank lines hides GUI scrollbars
+    # that would otherwise appear alongside an obviously-empty buffer.
+    var diff: number = winheight(0) - line('$')
+    if diff > 0
+      setlocal modifiable
+      append(0, repeat([''], diff))
+      normal! gg
+      setlocal nomodifiable
+    endif
+
+    execute ':' .. winnr('#') .. 'wincmd w'
+  enddef
+
+  def ResizePads(): void
+    augroup bartleby_focus_pad
+      autocmd!
+    augroup END
+
+    this.dim.ClampTo(&columns, &lines)
+
+    var vmargin: number = max([0, (&lines - this.dim.height) / 2 - 1])
+    var yoff: number = ClampVal(this.dim.yoff, -vmargin, vmargin)
+    var top: number = vmargin + yoff
+    var bot: number = vmargin - yoff - 1
+    this.SetupPad(this.padBufs.t, false, top, 'j')
+    this.SetupPad(this.padBufs.b, false, bot, 'k')
+
+    var nwidth: number = max([len(string(line('$'))) + 1, &numberwidth])
+    var width: number = this.dim.width + (&number ? nwidth : 0)
+    var hmargin: number = max([0, (&columns - width) / 2 - 1])
+    var xoff: number = ClampVal(this.dim.xoff, -hmargin, hmargin)
+    this.SetupPad(this.padBufs.l, true, hmargin + xoff, 'l')
+    this.SetupPad(this.padBufs.r, true, hmargin - xoff, 'h')
+  enddef
+
+  # Recolors the chrome highlight groups to blend into the background,
+  # so the pad windows and (already-blanked) statusline/vertical-split
+  # fillchars read as empty space rather than visible borders.
+  def Tranquilize(): void
+    var bg: string = synIDattr(synIDtrans(hlID('Normal')), 'bg#')
+    var gui: bool = has('gui_running') || (has('termguicolors') && &termguicolors)
+    var attr: string = gui ? 'gui' : 'cterm'
+    var groups: list<string> = ['NonText', 'FoldColumn', 'ColorColumn',
+      'VertSplit', 'StatusLine', 'StatusLineNC', 'SignColumn']
+    for grp in groups
+      if bg ==# '-1' || bg ==# ''
+        execute $'highlight {grp} {attr}fg={focusbg} {attr}bg=NONE'
+      else
+        execute $'highlight {grp} {attr}fg={bg} {attr}bg={bg}'
+      endif
+      execute $'highlight {grp} {attr}=NONE'
+    endfor
+  enddef
+
+  def AdjustWidth(delta: number): void
+    this.dim.AdjustWidth(delta)
+    this.ResizePads()
+  enddef
+
+  def AdjustHeight(delta: number): void
+    this.dim.AdjustHeight(delta)
+    this.ResizePads()
+  enddef
+
+  def ResetDimensions(expr: string): void
+    var parsed: Dimensions = Dimensions.Parse(expr)
+    if parsed isnot null_object
+      this.dim = parsed
+    endif
+    this.ResizePads()
+  enddef
+endclass

@@ -19,6 +19,13 @@ var is_loaded: bool = true
 # CaptureBinderState() called directly by binder.vim's own
 # toggle/collapse actions, since those are already explicit, infrequent
 # events with no need for a separate autocommand.
+#
+# SessionState is defined before the functions that use it, not just
+# by convention: Load/Save both use SessionState in their own
+# parameter or return type, and Vim9 resolves a function's signature
+# eagerly at definition time - unlike a class used only inside a
+# function body, which can forward-reference one defined later in the
+# file just fine.
 # License: GNU GPL 3.0
 ##############################################################################
 
