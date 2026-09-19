@@ -8,16 +8,18 @@ var is_loaded: bool = true
 ##############################################################################
 # Plugin_Name: Bartleby
 # inspector.vim - a right-hand, read-only split showing the current
-# editor document's Title/Label/Status/Keywords/Synopsis.
+# editor document's Title/Label/Status/Target/Keywords/Synopsis.
 #
 # Read-only, not editable-in-place: an earlier design let Keywords and
 # Synopsis be edited by typing directly into the buffer (synced back via
 # TextChanged/BufWriteCmd). Replaced with a single `e` key that opens
 # the right popup for whichever field the cursor is on - Label/Status
 # reuse picker.vim's PickOne, the same widget Binder uses for the same
-# job; Keywords gets a single-line PromptText, the same widget Binder's
-# rename (`r`) uses; Synopsis gets PromptMultiline, since it can run to
-# several paragraphs and a single-line prompt would lose that. Title
+# job; Target gets a plain numeric PromptText (word count, 0/blank
+# clears it); Keywords gets a single-line PromptText, the same widget
+# Binder's rename (`r`) uses; Synopsis gets PromptMultiline, since it
+# can run to several paragraphs and a single-line prompt would lose
+# that. Title
 # isn't editable here at all - renaming lives in Binder's own `r`.
 #
 # While open, it follows whichever document the editor window shows -
@@ -46,8 +48,9 @@ const FRAME_TITLE: string = '::Inspector::'
 const LINE_TITLE: number = 2
 const LINE_LABEL: number = 3
 const LINE_STATUS: number = 4
-const LINE_KEYWORDS: number = 6
-const LINE_SYNOPSIS_HEADER: number = 8
+const LINE_TARGET: number = 5
+const LINE_KEYWORDS: number = 7
+const LINE_SYNOPSIS_HEADER: number = 9
 
 def RenderContent(item: BI.BinderItem, meta: D.DocMeta): list<string>
   var lines: list<string> = [
@@ -55,6 +58,7 @@ def RenderContent(item: BI.BinderItem, meta: D.DocMeta): list<string>
     $'Title: {item.title}',
     $'Label: {meta.label}',
     $'Status: {meta.status}',
+    $'Target: {meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : "-"}',
     '',
     $'Keywords: {join(meta.keywords, ", ")}',
     '',
@@ -117,6 +121,15 @@ def EditUnderCursor(): void
       m.Save(item.MetaPath(project.BinderRoot()))
       RefreshFor(project, item)
     }, meta.status)
+  elseif lnum == LINE_TARGET
+    var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
+    var current: string = meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : ''
+    IP.PromptText('Target word count', current, (text: string) => {
+      var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
+      m.SetWordCountTarget(max([0, str2nr(text)]))
+      m.Save(item.MetaPath(project.BinderRoot()))
+      RefreshFor(project, item)
+    })
   elseif lnum == LINE_KEYWORDS
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     IP.PromptText('Keywords', join(meta.keywords, ', '), (text: string) => {
