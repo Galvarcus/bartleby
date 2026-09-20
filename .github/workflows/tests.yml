@@ -31,9 +31,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Vim
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y vim-nox
+        uses: rhysd/action-setup-vim@v1
+        with:
+          version: stable
 
       - name: Vim version
         run: vim --version
@@ -67,10 +67,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Vim, Pandoc, and LaTeX
+      - name: Install Vim
+        uses: rhysd/action-setup-vim@v1
+        with:
+          version: stable
+
+      - name: Install Pandoc and LaTeX
         run: |
           sudo apt-get update
-          sudo apt-get install -y vim-nox pandoc texlive-latex-extra texlive-fonts-recommended
+          sudo apt-get install -y pandoc texlive-latex-extra texlive-fonts-recommended
 
       - name: Checkout Logger dependency
         uses: actions/checkout@v4
