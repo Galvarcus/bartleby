@@ -1,0 +1,80 @@
+name: Tests
+on:
+  push:
+    branches:
+      - main
+      - Development
+    paths:
+      - autoload/**
+      - plugin/**
+      - syntax/**
+      - ftdetect/**
+      - tests/**
+      - .github/workflows/tests.yml
+  pull_request:
+    paths:
+      - autoload/**
+      - plugin/**
+      - syntax/**
+      - ftdetect/**
+      - tests/**
+      - .github/workflows/tests.yml
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  test:
+    name: Unit and buffer tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vim
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y vim-nox
+
+      - name: Vim version
+        run: vim --version
+
+      # Bartleby's autoload files import 'Logger/logger.vim' - a shared
+      # third-party dependency (github.com/Galvarcus/Logger), not
+      # bundled in this repo.
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v4
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      - name: Run tests
+        run: |
+          vim -es -u NONE -N \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/harness.vim' -c 'quit' || true
+          cat tests/results.txt
+          grep -qx 'All tests passed' tests/results.txt
+
+  compile-smoke:
+    name: Compile pipeline smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vim, Pandoc, and LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y vim-nox pandoc texlive-latex-extra texlive-fonts-recommended
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v4
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      - name: Run compile smoke test
+        run: |
+          vim -es -u NONE -N \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/test_compile_smoke.vim' -c 'quit'
