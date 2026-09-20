@@ -91,14 +91,14 @@ With [vim-plug](https://github.com/junegunn/vim-plug):
 
 ```vim
 Plug 'Galvarcus/Logger'
-Plug 'yourname/bartleby'
+Plug 'Galvarcus/bartleby'
 ```
 
 With Vim's native package support:
 
 ```sh
 git clone https://github.com/Galvarcus/Logger ~/.vim/pack/plugins/start/Logger
-git clone https://github.com/yourname/bartleby ~/.vim/pack/plugins/start/bartleby
+git clone https://github.com/Galvarcus/bartleby ~/.vim/pack/plugins/start/bartleby
 ```
 
 With [Lazy.nvim](https://github.com/folke/lazy.nvim) or similar (Vim9
@@ -106,7 +106,7 @@ plugins load the same way as any other plugin manager expects):
 
 ```lua
 { 'Galvarcus/Logger' },
-{ 'yourname/bartleby' }
+{ 'Galvarcus/bartleby' }
 ```
 
 Restart Vim (or run `:packloadall`) and confirm it loaded:
