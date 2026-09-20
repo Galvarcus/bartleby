@@ -6,7 +6,7 @@ screenplays, built entirely on Vim9script classes.
 
 <!-- vimdoc-ignore-start -->
 
-[![Vim](https://img.shields.io/badge/Vim-9.1%2B-019733?logo=vim)](https://www.vim.org)
+[![Vim](https://img.shields.io/badge/Vim-9.2%2B-019733?logo=vim)](https://www.vim.org)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 **Contents**
@@ -53,10 +53,18 @@ count target). The binder structure itself lives in a single
 
 ## Requirements
 
-- **Vim 9.1 or newer**, compiled with `+popupwin` and Vim9 script
-  support (this is the default in any recent Vim build). Bartleby is
-  written entirely in Vim9script and does not support Vim 8 or
-  Neovim's older Vimscript-compatibility layer.
+- **Vim 9.2 or newer**, compiled with `+popupwin` and Vim9 script
+  support. Bartleby's binder tree relies on a class field typed as a
+  list of its own class (a folder's `children`), a pattern Vim9's
+  class system only supports reliably from 9.2 onward - on 9.1 this
+  fails to load at all with `E1010: Type not recognized`. Run `vim
+  --version` to check; if your system's packaged Vim is still on 9.1
+  (common on some Linux distributions, including Ubuntu's `vim-nox`
+  as of this writing), install a newer build directly from
+  [vim.org](https://www.vim.org) or your platform's usual source for
+  current software instead. Bartleby is written entirely in Vim9script
+  and does not support Vim 8 or Neovim's older Vimscript-compatibility
+  layer.
 - **[Logger](https://github.com/Galvarcus/Logger)** - a small, shared
   Vim9script logging utility Bartleby's own code depends on directly.
   Install it the same way as Bartleby itself (see
