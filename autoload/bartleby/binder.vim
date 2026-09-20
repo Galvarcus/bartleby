@@ -1,6 +1,6 @@
 vim9script
 
-if exists('s:is_loaded') || v:version < 901 || &cp
+if exists('s:is_loaded') || v:version < 902 || &cp
   finish
 endif
 var is_loaded: bool = true

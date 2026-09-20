@@ -1,6 +1,6 @@
 vim9script
 
-if exists('s:is_loaded') || v:version < 901 || &cp
+if exists('s:is_loaded') || v:version < 902 || &cp
   finish
 endif
 var is_loaded: bool = true
@@ -54,7 +54,8 @@ g:bartleby_spotlight_bop = get(g:, 'bartleby_spotlight_bop', '^\s*$\n\zs')
 g:bartleby_spotlight_eop = get(g:, 'bartleby_spotlight_eop', '^\s*$')
 g:bartleby_spotlight_paragraph_span = get(g:, 'bartleby_spotlight_paragraph_span', 0)
 g:bartleby_spotlight_priority = get(g:, 'bartleby_spotlight_priority', 10)
-g:bartleby_spotlight_dialogue_pattern = get(g:, 'bartleby_spotlight_dialogue_pattern', '"[^"]*"\|"[^"]*"')
+g:bartleby_spotlight_dialogue_pattern = get(g:, 'bartleby_spotlight_dialogue_pattern',
+  '"[^"]*"\|"[^"]*"')
 g:bartleby_quill_wrap_mode_default = get(g:, 'bartleby_quill_wrap_mode_default', 'hard')
 g:bartleby_quill_textwidth = get(g:, 'bartleby_quill_textwidth', 74)
 g:bartleby_quill_autoformat = get(g:, 'bartleby_quill_autoformat', true)
