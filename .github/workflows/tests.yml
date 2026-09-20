@@ -30,10 +30,31 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Ubuntu's packaged vim-nox (and rhysd/action-setup-vim's "stable"
+      # on Linux, which uses the same distro package) both lag too far
+      # behind Vim9's actively-evolving class system to support a class
+      # field typed as a list of its own class (BinderItem.children:
+      # list<BinderItem>) - confirmed via a real CI run: E1010 "Type not
+      # recognized: BinderItem". Rewriting that to avoid self-reference
+      # isn't the right fix either - it's a pervasive, load-bearing
+      # pattern throughout the whole binder tree architecture, not
+      # something to compromise for one old CI Vim build.
+      #
+      # Instead: download a prebuilt AppImage directly from
+      # vim/vim-appimage - the official Vim project's own repo, which
+      # publishes a build straight from upstream HEAD roughly daily.
+      # No compilation, and always current enough to include the
+      # self-reference fix (confirmed: this exact sequence resolves the
+      # error and the full test suite passes end to end).
       - name: Install Vim
         run: |
-          sudo apt-get update
-          sudo apt-get install -y vim-nox
+          url=$(curl -s https://api.github.com/repos/vim/vim-appimage/releases/latest \
+            | jq -r '.assets[] | select(.name | test("^Vim-v.*-x86_64\\.AppImage$")) | .browser_download_url')
+          curl -sL -o /tmp/vim.appimage "$url"
+          chmod +x /tmp/vim.appimage
+          cd /tmp && ./vim.appimage --appimage-extract
+          ln -s /tmp/squashfs-root/AppRun /tmp/squashfs-root/vim
+          echo "/tmp/squashfs-root" >> "$GITHUB_PATH"
 
       - name: Vim version
         run: vim --version
@@ -67,10 +88,22 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Vim, Pandoc, and LaTeX
+      # See the "test" job's own Install Vim step for why this uses a
+      # prebuilt AppImage rather than apt or rhysd/action-setup-vim.
+      - name: Install Vim
+        run: |
+          url=$(curl -s https://api.github.com/repos/vim/vim-appimage/releases/latest \
+            | jq -r '.assets[] | select(.name | test("^Vim-v.*-x86_64\\.AppImage$")) | .browser_download_url')
+          curl -sL -o /tmp/vim.appimage "$url"
+          chmod +x /tmp/vim.appimage
+          cd /tmp && ./vim.appimage --appimage-extract
+          ln -s /tmp/squashfs-root/AppRun /tmp/squashfs-root/vim
+          echo "/tmp/squashfs-root" >> "$GITHUB_PATH"
+
+      - name: Install Pandoc and LaTeX
         run: |
           sudo apt-get update
-          sudo apt-get install -y vim-nox pandoc texlive-latex-extra texlive-fonts-recommended
+          sudo apt-get install -y pandoc texlive-latex-extra texlive-fonts-recommended
 
       - name: Checkout Logger dependency
         uses: actions/checkout@v4
