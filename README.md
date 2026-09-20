@@ -57,6 +57,10 @@ count target). The binder structure itself lives in a single
   support (this is the default in any recent Vim build). Bartleby is
   written entirely in Vim9script and does not support Vim 8 or
   Neovim's older Vimscript-compatibility layer.
+- **[Logger](https://github.com/Galvarcus/Logger)** - a small, shared
+  Vim9script logging utility Bartleby's own code depends on directly.
+  Install it the same way as Bartleby itself (see
+  [Installation](#installation)); it needs no separate configuration.
 - **Compiling manuscripts and books** additionally needs:
   - [Pandoc](https://pandoc.org) (tested against Pandoc 3.x)
   - A LaTeX distribution with `pdflatex` (for Manuscript targets, via
@@ -72,15 +76,20 @@ count target). The binder structure itself lives in a single
 
 ## Installation
 
+Bartleby needs [Logger](https://github.com/Galvarcus/Logger) installed
+alongside it - install both the same way:
+
 With [vim-plug](https://github.com/junegunn/vim-plug):
 
 ```vim
+Plug 'Galvarcus/Logger'
 Plug 'yourname/bartleby'
 ```
 
 With Vim's native package support:
 
 ```sh
+git clone https://github.com/Galvarcus/Logger ~/.vim/pack/plugins/start/Logger
 git clone https://github.com/yourname/bartleby ~/.vim/pack/plugins/start/bartleby
 ```
 
@@ -88,6 +97,7 @@ With [Lazy.nvim](https://github.com/folke/lazy.nvim) or similar (Vim9
 plugins load the same way as any other plugin manager expects):
 
 ```lua
+{ 'Galvarcus/Logger' },
 { 'yourname/bartleby' }
 ```
 
