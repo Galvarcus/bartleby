@@ -49,9 +49,14 @@ jobs:
 
       - name: Run tests
         run: |
-          vim -es -u NONE -N \
+          vim -es -u NONE -N -V20/tmp/vim.log \
             -c 'set rtp+=.,deps/Logger' \
             -c 'source tests/harness.vim' -c 'quit' || true
+          if [ ! -f tests/results.txt ]; then
+            echo "::error::tests/results.txt was never created - Vim likely failed before finishing. Verbose log follows:"
+            cat /tmp/vim.log
+            exit 1
+          fi
           cat tests/results.txt
           grep -qx 'All tests passed' tests/results.txt
 
@@ -75,6 +80,13 @@ jobs:
 
       - name: Run compile smoke test
         run: |
-          vim -es -u NONE -N \
+          vim -es -u NONE -N -V20/tmp/vim.log \
             -c 'set rtp+=.,deps/Logger' \
-            -c 'source tests/test_compile_smoke.vim' -c 'quit'
+            -c 'source tests/test_compile_smoke.vim' -c 'quit' || true
+          if [ ! -f tests/smoke_results.txt ]; then
+            echo "::error::tests/smoke_results.txt was never created - Vim likely failed before finishing. Verbose log follows:"
+            cat /tmp/vim.log
+            exit 1
+          fi
+          cat tests/smoke_results.txt
+          grep -qx 'All smoke tests passed' tests/smoke_results.txt
