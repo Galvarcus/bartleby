@@ -30,6 +30,7 @@ import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/picker.vim' as Pk
 import autoload 'bartleby/commandpalette.vim' as CP
 import autoload 'bartleby/bartlebymenu.vim' as BM
+import autoload 'bartleby/scrivelist.vim' as SL
 import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
@@ -100,7 +101,7 @@ g:bartleby_compile_extra_args = get(g:, 'bartleby_compile_extra_args', [])
 def PromptProjectType(): string
   var choice: number = confirm(
     'Scrive type?',
-    "&Novel\nNovel with &Parts\n&Short Story\n&Screenplay",
+    "&Novel\nNovel with &Parts\n&Short Story\nSc&reenplay",
     1)
   if choice == 2
     return Pj.TYPE_NOVEL_PARTS
@@ -159,6 +160,7 @@ enddef
 # is confirmed against the 9.2 test target - flag if you'd like it sooner.
 command! -bar -nargs=? BartlebyOpen OpenScrive(<q-args>)
 command! -bar -nargs=1 BartlebyNewScrive NewScrive(<q-args>)
+command! -bar BartlebyList SL.Show()
 command! -bar BartlebyToggleBinder ToggleBinder()
 command! -bar BartlebySearch RunSearch()
 command! -bar BartlebyToggleInspector I.Toggle()

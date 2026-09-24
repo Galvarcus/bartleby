@@ -30,6 +30,7 @@ import autoload 'bartleby/spotlight.vim' as Sp
 
 # Display name -> Ex command (no argument needed).
 const COMMANDS: dict<string> = {
+  'List Scrives': 'BartlebyList',
   'Toggle Binder': 'BartlebyToggleBinder',
   'Search Scrive': 'BartlebySearch',
   'Toggle Inspector': 'BartlebyToggleInspector',

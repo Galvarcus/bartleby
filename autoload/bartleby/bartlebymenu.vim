@@ -49,6 +49,7 @@ def BuildMenu(): M.Menu
   var m: M.Menu = M.Menu.new('bartleby', 'Bartleby')
 
   var scrive: M.MenuItem = m.AddItem('Scrive')
+  scrive.AddItem('List...', RunEx('BartlebyList'))
   scrive.AddItem('Open...', PromptThenEx('Open Scrive', 'BartlebyOpen'))
   scrive.AddItem('New...', PromptThenEx('New Scrive', 'BartlebyNewScrive'))
 

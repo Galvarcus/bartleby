@@ -44,8 +44,8 @@ const BUF_NAME: string = 'Bartleby-Inspector'
 const FRAME_TITLE: string = '::Inspector::'
 # line numbers within RenderContent()'s own output - kept as named
 # constants since EditUnderCursor() needs to know exactly which line is
-# which without re-deriving it from the rendered text.
-const LINE_TITLE: number = 2
+# which without re-deriving it from the rendered text. Line 2 (Title)
+# has no constant: Title is not editable here (see the header comment).
 const LINE_LABEL: number = 3
 const LINE_STATUS: number = 4
 const LINE_TARGET: number = 5

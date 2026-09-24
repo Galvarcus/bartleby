@@ -1,6 +1,6 @@
 # Bartleby
 
-A Scrivener-style writing environment for Vim: a binder, corkboard,
+A structured writing environment for Vim: a binder, corkboard,
 outliner, and a full compile pipeline for long-form prose and
 screenplays, built entirely on Vim9script classes.
 
@@ -37,7 +37,7 @@ plugin authors), see [Users_Guide.md](Users_Guide.md).
 
 ## What is Bartleby?
 
-Bartleby brings a Scrivener-like writing workflow into Vim: a project
+Bartleby brings a binder-organized writing workflow into Vim: a project
 ("scrive") is a tree of folders and documents you build and reorganize
 in a sidebar, an index-card corkboard for shuffling scenes, a flat
 spreadsheet-style outline, and a compile step that turns your binder
@@ -140,7 +140,8 @@ From there:
   manuscript, book, or screenplay file.
 
 `:BartlebyOpen` with no argument reopens whichever scrive you had open
-last.
+last. `:BartlebyList` shows every scrive with its title and type; select
+one and press `<CR>` to open it.
 
 ## Concepts
 
@@ -303,6 +304,7 @@ exactly what ends up in the compiled output.
 | --- | --- |
 | `:BartlebyOpen {name}` | Open an existing scrive by name; with no argument, reopens the last one |
 | `:BartlebyNewScrive {name}` | Create a new scrive, prompting for its type |
+| `:BartlebyList` | List every scrive and open the selected one; if none exist, prompt to create one |
 | `:BartlebyToggleBinder` | Toggle the Binder sidebar |
 | `:BartlebyToggleInspector` | Toggle the Inspector split for the current document |
 | `:BartlebySearch` | Project-wide text search via the quickfix list |

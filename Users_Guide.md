@@ -75,6 +75,11 @@ Next time you open Vim, `:BartlebyOpen` with no name reopens whichever
 scrive you had open last. To open a different one by name, use
 `:BartlebyOpen {name}`.
 
+To choose from all your scrives instead, run `:BartlebyList`. It shows
+each scrive's title and type. Move with `j`/`k` (or the arrow keys) and
+press `<Enter>` to open the selected one. If you have no scrives yet,
+it asks for a name and creates one.
+
 ## Finding your way around the Binder
 
 The Binder is the tree on the left - every folder and document in
@@ -327,7 +332,7 @@ it.
 
 However you organized your Front Matter and Back Matter, Bartleby
 takes care of formatting them correctly for whichever kind you chose -
-each becomes its own properly separated section, distinct from your
+each becomes its own section, distinct from your
 numbered chapters, exactly as a real dedication page, copyright
 notice, or acknowledgments section should look.
 
@@ -384,6 +389,15 @@ than your usual default (a pen name, say).
 | `/` | Search everything |
 | `?` | Show this list, in Vim |
 | `q` | Close the Binder |
+
+**In the scrive list (`:BartlebyList`)**
+
+| Key | Does |
+| --- | --- |
+| `j` / `k` | Move the selection |
+| `<Enter>` | Open the selected scrive |
+| `?` | Show this list |
+| `q` | Close |
 
 **In the Inspector**
 
