@@ -56,7 +56,10 @@ def RenderLines(rows: list<T.Row>, binderRoot: string, collapsed: dict<bool>): l
       endif
     endif
     var label: string = binderShowRoleLabels ? row.item.DisplayLabel() : ''
-    return repeat(INDENT, row.depth) .. marker .. label .. row.item.title .. suffix
+    # A trailing "/" marks folders, for syntax/bartleby-binder.vim's
+    # Directory highlight. Display only - the stored title has no "/".
+    var title: string = row.item.IsFolder() ? row.item.title .. '/' : row.item.title
+    return repeat(INDENT, row.depth) .. marker .. label .. title .. suffix
   })
 enddef
 
