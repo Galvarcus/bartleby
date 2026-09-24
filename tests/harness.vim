@@ -39,6 +39,7 @@ import './test_syntax.vim' as TestSyntax
 import './test_inputpopup.vim' as TestInputPopup
 import './test_outliner.vim' as TestOutliner
 import './test_scrivelist.vim' as TestScriveList
+import './test_lexicon.vim' as TestLexicon
 
 var suites: list<func(): void> = [
   TestTree.RunAll,
@@ -50,6 +51,7 @@ var suites: list<func(): void> = [
   TestInputPopup.RunAll,
   TestOutliner.RunAll,
   TestScriveList.RunAll,
+  TestLexicon.RunAll,
 ]
 
 for RunSuite in suites

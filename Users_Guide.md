@@ -19,6 +19,7 @@ anything.
 - [Finding your way around the Binder](#finding-your-way-around-the-binder)
 - [Writing](#writing)
 - [Organizing your manuscript](#organizing-your-manuscript)
+- [Looking up words](#looking-up-words)
 - [Tracking your progress](#tracking-your-progress)
 - [Shuffling scenes on the Corkboard](#shuffling-scenes-on-the-corkboard)
 - [Seeing everything at once: the Outliner](#seeing-everything-at-once-the-outliner)
@@ -168,6 +169,43 @@ sheets, worldbuilding notes, anything you want alongside your
 manuscript but don't intend to publish. Nothing inside them is
 included when you compile unless you explicitly include it (see
 [Turning your binder into a manuscript](#turning-your-binder-into-a-manuscript)).
+
+## Looking up words
+
+Bartleby can show a word's definition and its synonyms from
+Merriam-Webster, right where you are writing - in the normal editor or
+in Focus.
+
+This needs two free API keys from Merriam-Webster, one for the
+Collegiate Dictionary and one for the Collegiate Thesaurus. Register
+at [dictionaryapi.com](https://dictionaryapi.com), then add the keys
+to your vimrc:
+
+```vim
+let g:bartleby_dictionary_api_key = 'your-dictionary-key'
+let g:bartleby_thesaurus_api_key = 'your-thesaurus-key'
+```
+
+You can set only one of them. Without a key, that lookup stays off.
+
+To look up a word, put the cursor on it and press:
+
+- **`<leader>bd`** for its definition.
+- **`<leader>bt`** for its synonyms.
+
+To look up a phrase such as "go-between", select it with `v` first,
+then press the same keys.
+
+In the synonym list, move with `j` and `k`, then press `<Enter>` to put
+the selected word in place of the original. Bartleby keeps the
+original capitalization, and `u` undoes the change. Press `a` to see
+antonyms instead, and `d` to see the definition of the selected word.
+If you misspell a word, Bartleby shows Merriam-Webster's suggestions;
+press `<Enter>` on one to look it up. Press `q` to close the list
+without a change.
+
+Bartleby remembers each lookup, so looking up the same word again is
+instant and does not use your daily allowance of requests.
 
 ## Tracking your progress
 
@@ -366,6 +404,8 @@ than your usual default (a pen name, say).
 | `<leader>bl` | Toggle Spotlight |
 | `<leader>bL` | Pick a Spotlight mode |
 | `<leader>bp` | Toggle Quill |
+| `<leader>bd` | Define the word under the cursor |
+| `<leader>bt` | Synonyms for the word under the cursor |
 | `<leader>b<Space>` | Command palette |
 | `<leader>bm` | Command menu |
 
@@ -398,6 +438,17 @@ than your usual default (a pen name, say).
 | `<Enter>` | Open the selected scrive |
 | `?` | Show this list |
 | `q` | Close |
+
+**In a synonym list (`<leader>bt`)**
+
+| Key | Does |
+| --- | --- |
+| `j` / `k` | Move the selection |
+| `<Enter>` | Replace the word in your text |
+| `a` | Switch between synonyms and antonyms |
+| `d` | Show the definition of the selected word |
+| `?` | Show this list |
+| `q` | Close without a change |
 
 **In the Inspector**
 

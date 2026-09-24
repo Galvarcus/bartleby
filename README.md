@@ -24,6 +24,7 @@ screenplays, built entirely on Vim9script classes.
 - [Fountain (screenplay) support](#fountain-screenplay-support)
 - [Command palette and menu](#command-palette-and-menu)
 - [Session, snapshots, and search](#session-snapshots-and-search)
+- [Dictionary and thesaurus](#dictionary-and-thesaurus)
 - [Compiling your manuscript](#compiling-your-manuscript)
 - [Commands](#commands)
 - [Default mappings](#default-mappings)
@@ -78,9 +79,14 @@ count target). The binder structure itself lives in a single
     distribution's package manager)
 - **Compiling screenplays** additionally needs
   [screenplain](https://github.com/vilcans/screenplain).
+- **Dictionary and thesaurus lookups** additionally need `curl` and
+  your own free [Merriam-Webster API keys](https://dictionaryapi.com)
+  (one for the Collegiate Dictionary, one for the Collegiate
+  Thesaurus). Without a key, that lookup is off.
 - None of the above are required just to write - Binder, Corkboard,
   Outliner, Focus, Spotlight, and Quill all work with nothing but Vim
-  itself. Compile is the only feature with external dependencies.
+  itself. Compile and lookups are the only features with external
+  dependencies.
 
 ## Installation
 
@@ -270,6 +276,34 @@ View/Document/Project) instead.
 - **Search**: `/` in the Binder or `:BartlebySearch` greps the whole
   scrive into the quickfix list.
 
+## Dictionary and thesaurus
+
+With Merriam-Webster API keys set (see
+[Configuration](#configuration)), `<leader>bd` shows the definition
+of the word under the cursor and `<leader>bt` shows its synonyms. In
+visual mode, both look up the selected text (one line only). Both work
+in a scrive's editor window and in Focus mode.
+
+In the thesaurus, `<CR>` replaces the word in your text with the
+selected synonym, in the same capitalization (`Quiet` becomes `Calm`).
+One `u` undoes it. `a` switches between synonyms and antonyms, and `d`
+shows the definition of the selected word. A misspelled word shows
+Merriam-Webster's suggestions; `<CR>` looks one up.
+
+`:BartlebyDefine {word}` and `:BartlebyThesaurus {word}` look up a
+typed word. In that case `<CR>` copies the synonym to the unnamed
+register instead of replacing text.
+
+Results are cached in `~/.bartleby/lexicon_cache.json` (never with
+your key), so repeat lookups make no request.
+
+Each lookup is enabled by its own key. With no key, its mapping and
+its palette and menu entries do not exist, and its command only says
+which setting is missing. Set keys in your vimrc before Bartleby
+loads, or use the `$BARTLEBY_MW_DICTIONARY_KEY` and
+`$BARTLEBY_MW_THESAURUS_KEY` environment variables to keep them out of
+a shared vimrc.
+
 ## Compiling your manuscript
 
 `:BartlebyCompile` walks through: which documents to include, a kind
@@ -318,6 +352,9 @@ exactly what ends up in the compiled output.
 | `:BartlebyCompile` | Open the Compile pipeline for the current scrive |
 | `:BartlebyCommands` | Open the fuzzy command palette |
 | `:BartlebyMenu` | Open the categorized command menu |
+| `:BartlebyDefine [word]` | Define the word under the cursor, or `word` |
+| `:BartlebyThesaurus [word]` | Show synonyms for the word under the cursor, or `word` |
+| `:BartlebyLexiconClearCache` | Delete all cached dictionary and thesaurus results |
 
 ## Default mappings
 
@@ -330,6 +367,10 @@ exactly what ends up in the compiled output.
 | `<leader>bp` | Toggle Quill |
 | `<leader>b<Space>` | Open the command palette |
 | `<leader>bm` | Open the command menu |
+| `<leader>bd` | Define the word under the cursor (or the visual selection) |
+| `<leader>bt` | Thesaurus for the word under the cursor (or the visual selection) |
+
+`<leader>bd` and `<leader>bt` exist only when that lookup has an API key.
 
 Binder, Corkboard, and Outliner each have their own buffer-local keys
 - see [The Binder](#the-binder), [Corkboard](#corkboard), and
@@ -408,6 +449,18 @@ you only need to set the ones you want to change.
 | `g:bartleby_compile_book_chapter_style` | `'numeral'` | Chapter numbering style for Book targets (`numeral` or `spelled`) |
 | `g:bartleby_compile_book_part_style` | `'numeral'` | Part numbering style for Book targets |
 | `g:bartleby_compile_extra_args` | `[]` | Extra raw arguments appended to every Pandoc invocation |
+
+**Dictionary and thesaurus**
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `g:bartleby_dictionary_api_key` | `''` | Merriam-Webster Collegiate Dictionary key; falls back to `$BARTLEBY_MW_DICTIONARY_KEY` |
+| `g:bartleby_thesaurus_api_key` | `''` | Merriam-Webster Collegiate Thesaurus key; falls back to `$BARTLEBY_MW_THESAURUS_KEY` |
+| `g:bartleby_dictionary_reference` | `'collegiate'` | Dictionary reference to use (only `collegiate` for now) |
+| `g:bartleby_thesaurus_reference` | `'thesaurus'` | Thesaurus reference to use (only `thesaurus` for now) |
+| `g:bartleby_lexicon_cache_max_entries` | `1000` | Results kept in the disk cache, oldest removed first; `0` turns the disk cache off |
+| `g:bartleby_lexicon_timeout` | `10` | Seconds to wait for Merriam-Webster |
+| `g:bartleby_lexicon_base_url` | `'https://www.dictionaryapi.com/api/v3/references'` | API address; change only for a proxy or a test server |
 
 ## License
 

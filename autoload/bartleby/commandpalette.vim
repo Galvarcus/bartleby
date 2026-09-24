@@ -27,6 +27,7 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/spotlight.vim' as Sp
+import autoload 'bartleby/lexicon.vim' as Lx
 
 # Display name -> Ex command (no argument needed).
 const COMMANDS: dict<string> = {
@@ -57,16 +58,39 @@ const DIRECT_ACTIONS: dict<string> = {
   'Pick Spotlight Mode': 'spotlight',
 }
 
+# Display name -> lexicon kind; see EnabledLookups().
+const LOOKUPS: dict<string> = {
+  'Define Word': 'dictionary',
+  'Thesaurus': 'thesaurus',
+}
+
 export def Open(): void
-  var names: list<string> = sort(keys(COMMANDS) + keys(COMMANDS_WITH_ARG) + keys(DIRECT_ACTIONS))
+  var names: list<string> = sort(keys(COMMANDS) + keys(COMMANDS_WITH_ARG)
+    + keys(DIRECT_ACTIONS) + keys(EnabledLookups()))
   IP.PromptFilter('Command Palette', names, (choice: string) => {
     Run(choice)
   })
 enddef
 
+# Lookup entries appear only for kinds that have an API key. They act on
+# the word under the cursor in the window the palette was opened from.
+def EnabledLookups(): dict<string>
+  var lookups: dict<string> = {}
+  for [name, kind] in items(LOOKUPS)
+    if Lx.IsEnabled(kind)
+      lookups[name] = kind
+    endif
+  endfor
+  return lookups
+enddef
+
 def Run(choice: string): void
   if has_key(COMMANDS, choice)
     execute COMMANDS[choice]
+    return
+  endif
+  if has_key(LOOKUPS, choice)
+    execute LOOKUPS[choice] ==# Lx.KIND_THESAURUS ? 'BartlebyThesaurus' : 'BartlebyDefine'
     return
   endif
   if has_key(COMMANDS_WITH_ARG, choice)

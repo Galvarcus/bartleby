@@ -26,6 +26,7 @@ var is_loaded: bool = true
 import autoload 'bartleby/menu.vim' as M
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/spotlight.vim' as Sp
+import autoload 'bartleby/lexicon.vim' as Lx
 
 var menu: M.Menu = null_object
 
@@ -67,6 +68,12 @@ def BuildMenu(): M.Menu
   var doc: M.MenuItem = m.AddItem('Document')
   doc.AddItem('Take Snapshot', RunEx('BartlebySnapshot'))
   doc.AddItem('View Snapshots', RunEx('BartlebySnapshots'))
+  if Lx.IsEnabled(Lx.KIND_DICTIONARY)
+    doc.AddItem('Define Word', RunEx('BartlebyDefine'))
+  endif
+  if Lx.IsEnabled(Lx.KIND_THESAURUS)
+    doc.AddItem('Thesaurus', RunEx('BartlebyThesaurus'))
+  endif
 
   var project: M.MenuItem = m.AddItem('Project')
   project.AddItem('Edit Profile', RunEx('BartlebyProfile'))

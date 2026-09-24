@@ -31,6 +31,8 @@ import autoload 'bartleby/picker.vim' as Pk
 import autoload 'bartleby/commandpalette.vim' as CP
 import autoload 'bartleby/bartlebymenu.vim' as BM
 import autoload 'bartleby/scrivelist.vim' as SL
+import autoload 'bartleby/lexicon.vim' as Lx
+import autoload 'bartleby/lexiconpopup.vim' as LxP
 import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
@@ -93,6 +95,14 @@ g:bartleby_compile_indent_paragraphs = get(g:, 'bartleby_compile_indent_paragrap
 g:bartleby_compile_book_chapter_style = get(g:, 'bartleby_compile_book_chapter_style', 'numeral')
 g:bartleby_compile_book_part_style = get(g:, 'bartleby_compile_book_part_style', 'numeral')
 g:bartleby_compile_extra_args = get(g:, 'bartleby_compile_extra_args', [])
+g:bartleby_dictionary_api_key = get(g:, 'bartleby_dictionary_api_key', '')
+g:bartleby_thesaurus_api_key = get(g:, 'bartleby_thesaurus_api_key', '')
+g:bartleby_dictionary_reference = get(g:, 'bartleby_dictionary_reference', 'collegiate')
+g:bartleby_thesaurus_reference = get(g:, 'bartleby_thesaurus_reference', 'thesaurus')
+g:bartleby_lexicon_cache_max_entries = get(g:, 'bartleby_lexicon_cache_max_entries', 1000)
+g:bartleby_lexicon_timeout = get(g:, 'bartleby_lexicon_timeout', 10)
+g:bartleby_lexicon_base_url = get(g:, 'bartleby_lexicon_base_url',
+  'https://www.dictionaryapi.com/api/v3/references')
 
 # Built-in confirm() prompt for the four scrive types, used at creation
 # time. A popupbuttons.vim/menu.vim-backed picker can replace this once a
@@ -247,6 +257,9 @@ enddef
 command! -bar BartlebyCompile RunCompile()
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
+command! -bar -nargs=? BartlebyDefine LxP.LookupCommand(Lx.KIND_DICTIONARY, <q-args>)
+command! -bar -nargs=? BartlebyThesaurus LxP.LookupCommand(Lx.KIND_THESAURUS, <q-args>)
+command! -bar BartlebyLexiconClearCache Lx.ClearCache()
 
 nnoremap <silent> <leader>bi <ScriptCmd>I.Toggle()<CR>
 nnoremap <silent> <leader>bz <ScriptCmd>F.Toggle()<CR>
@@ -255,6 +268,17 @@ nnoremap <silent> <leader>bL <ScriptCmd>Sp.PickMode()<CR>
 nnoremap <silent> <leader>bp <ScriptCmd>Q.Toggle()<CR>
 nnoremap <silent> <leader>b<Space> <ScriptCmd>CP.Open()<CR>
 nnoremap <silent> <leader>bm <ScriptCmd>BM.Toggle()<CR>
+
+# Lookup mappings exist only when that kind has an API key (set before
+# Bartleby loads). The commands always exist, and explain what is missing.
+if Lx.IsEnabled(Lx.KIND_DICTIONARY)
+  nnoremap <silent> <leader>bd <ScriptCmd>LxP.LookupAtCursor(Lx.KIND_DICTIONARY)<CR>
+  xnoremap <silent> <leader>bd <Esc><ScriptCmd>LxP.LookupVisual(Lx.KIND_DICTIONARY)<CR>
+endif
+if Lx.IsEnabled(Lx.KIND_THESAURUS)
+  nnoremap <silent> <leader>bt <ScriptCmd>LxP.LookupAtCursor(Lx.KIND_THESAURUS)<CR>
+  xnoremap <silent> <leader>bt <Esc><ScriptCmd>LxP.LookupVisual(Lx.KIND_THESAURUS)<CR>
+endif
 
 augroup bartleby_quill_auto
   autocmd!
