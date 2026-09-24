@@ -117,11 +117,18 @@ enddef
 def OpenScrive(name: string): void
   var scriveName: string = name ==# '' ? fnamemodify(Sess.LastScrive(), ':t:r') : name
   if scriveName ==# ''
-    log.Warn('no scrive name given, and no previously-opened scrive to fall back to')
+    log.Warn('no scrive name given, and no previously-opened scrive to fall back to - showing the scrive list')
+    SL.Show()
     return
   endif
   var project: Pj.Project = Sc.Open(scriveName)
   if project is null_object
+    # A last scrive that was moved or deleted gets the same fallback as
+    # no last scrive at all. An explicit, mistyped name does not - its
+    # error is enough.
+    if name ==# ''
+      SL.Show()
+    endif
     return
   endif
   St.Set(project)
