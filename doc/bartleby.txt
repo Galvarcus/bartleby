@@ -28,14 +28,14 @@ Bartleby ................................................... |bartleby-bartleby|
 ==============================================================================
 Bartleby                                                     *bartleby-bartleby*
 
-A Scrivener-style writing environment for Vim: a binder, corkboard, outliner,
-and a full compile pipeline for long-form prose and screenplays, built
-entirely on Vim9script classes.
+A structured writing environment for Vim: a binder, corkboard, outliner, and a
+full compile pipeline for long-form prose and screenplays, built entirely on
+Vim9script classes.
 
 ------------------------------------------------------------------------------
 What is Bartleby?                                    *bartleby-what-is-bartleby*
 
-Bartleby brings a Scrivener-like writing workflow into Vim: a project
+Bartleby brings a binder-organized writing workflow into Vim: a project
 ("scrive") is a tree of folders and documents you build and reorganize in a
 sidebar, an index-card corkboard for shuffling scenes, a flat
 spreadsheet-style outline, and a compile step that turns your binder tree into
@@ -132,6 +132,8 @@ From there:
   manuscript, book, or screenplay file.
 
 `:BartlebyOpen` with no argument reopens whichever scrive you had open last.
+`:BartlebyList` shows every scrive with its title and type; select one and
+press `<CR>` to open it.
 
 ------------------------------------------------------------------------------
 Concepts                                                     *bartleby-concepts*
@@ -326,6 +328,10 @@ Commands                                                     *bartleby-commands*
 
     `:BartlebyNewScrive {name}`                          Create a new scrive, prompting for
                                                          its type
+
+    `:BartlebyList`                                      List every scrive and open the
+                                                         selected one; if none exist,
+                                                         prompt to create one
 
     `:BartlebyToggleBinder`                              Toggle the Binder sidebar
 
