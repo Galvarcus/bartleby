@@ -70,7 +70,10 @@ def FindOrCreateWindow(): number
   endif
   execute 'vertical topleft :30split ' .. BUF_NAME
   setlocal buftype=nofile bufhidden=hide noswapfile nobuflisted
-  setlocal nowrap nonumber norelativenumber nofoldenable
+  # Long titles wrap at word boundaries, and each wrapped line starts
+  # under the title text: shift:2 skips the "▾ " marker.
+  setlocal wrap linebreak breakindent breakindentopt=shift:2
+  setlocal nonumber norelativenumber nofoldenable
   setlocal filetype=bartleby-binder
   setlocal winfixwidth
   return bufwinnr(BUF_NAME)

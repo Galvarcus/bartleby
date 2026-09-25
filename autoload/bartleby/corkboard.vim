@@ -29,6 +29,7 @@ import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/buttonspopup.vim' as BP
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/wrap.vim' as Wr
+import autoload 'bartleby/helppopup.vim' as H
 import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
@@ -117,8 +118,22 @@ def HandleExtraKey(project: Pj.Project, folder: BI.BinderItem, docs: list<BI.Bin
     popup_close(id, -1)
     Reorder(project, folder, doc, -1, OnDocumentPicked)
     return true
+  elseif key ==# '?'
+    ShowHelp()
+    return true
   endif
   return false
+enddef
+
+def ShowHelp(): void
+  H.Show('Corkboard', [
+    ['Arrows / h j k l', 'Move between cards'],
+    ['<CR> / <Space>', 'Open the selected document'],
+    ['e', 'Edit the synopsis'],
+    ['J / K', 'Move the card later / earlier'],
+    ['<Esc>', 'Close'],
+    ['?', 'This help'],
+  ])
 enddef
 
 # Shows `folder`'s direct-child documents as a card grid. `OnDocumentPicked`

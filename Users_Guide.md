@@ -1,182 +1,153 @@
-# Bartleby: A Guide for Writers
+# Bartleby User's Guide
 
-This guide walks through Bartleby from a writer's point of view - no
-assumptions that you're a Vim power user, just that you can open Vim,
-type in it, and get around with the arrow keys or `h`/`j`/`k`/`l`. If
-you're comfortable with Vim already, you may prefer the more compact
-reference in [README.md](README.md) instead.
+This guide explains Bartleby for writers. You need to know only how to
+open Vim, type text, and move with the arrow keys. For a compact
+reference, see [README.md](README.md).
 
-Everything Bartleby does lives in ordinary text files on your
-computer - never a database, never a proprietary format. You can
-always open your chapters in another editor, back them up with any
-tool you like, or move away from Bartleby entirely without losing
-anything.
+Bartleby keeps your work in ordinary text files. You can open your
+chapters in any editor, back them up with any tool, and stop using
+Bartleby without losing anything.
 
 ## Contents
 
-- [A few words before you start](#a-few-words-before-you-start)
-- [Starting your first project](#starting-your-first-project)
-- [Finding your way around the Binder](#finding-your-way-around-the-binder)
+- [Vim modes](#vim-modes)
+- [New scrive](#new-scrive)
+- [Binder](#binder)
 - [Writing](#writing)
-- [Organizing your manuscript](#organizing-your-manuscript)
-- [Looking up words](#looking-up-words)
-- [Tracking your progress](#tracking-your-progress)
-- [Shuffling scenes on the Corkboard](#shuffling-scenes-on-the-corkboard)
-- [Seeing everything at once: the Outliner](#seeing-everything-at-once-the-outliner)
-- [Writing screenplays](#writing-screenplays)
-- [Quick access to everything](#quick-access-to-everything)
-- [Picking up where you left off](#picking-up-where-you-left-off)
-- [Undo insurance: snapshots](#undo-insurance-snapshots)
-- [Finding things](#finding-things)
-- [Turning your binder into a manuscript](#turning-your-binder-into-a-manuscript)
-- [Your author profile](#your-author-profile)
-- [Cheat sheet](#cheat-sheet)
-- [Getting help without leaving Vim](#getting-help-without-leaving-vim)
-- [Where your files actually live](#where-your-files-actually-live)
+- [Structure](#structure)
+- [Dictionary and thesaurus](#dictionary-and-thesaurus)
+- [Document details](#document-details)
+- [Corkboard](#corkboard)
+- [Outliner](#outliner)
+- [Screenplays](#screenplays)
+- [Palette and menu](#palette-and-menu)
+- [Session](#session)
+- [Auto-save](#auto-save)
+- [Snapshots](#snapshots)
+- [Search](#search)
+- [Compile](#compile)
+- [Author profile](#author-profile)
+- [Keys](#keys)
+- [Help](#help)
+- [Files](#files)
 
-## A few words before you start
+## Vim modes
 
-Vim has two kinds of mode you'll move between constantly:
+Vim has two modes that you use all the time:
 
-- **Normal mode** - the default. Letters and symbols are commands, not
-  text. This is where almost every Bartleby key in this guide is
-  pressed.
-- **Insert mode** - where you actually type prose. Press `i` to enter
-  it from normal mode, and `Esc` to leave it and go back to normal
-  mode.
+- **Normal mode** - letters and symbols are commands, not text. You
+  press almost every key in this guide in Normal mode.
+- **Insert mode** - you type your text. Press `i` to start typing and
+  `Esc` to stop.
 
-Every Bartleby command in this guide (`a`, `l`, `gc`, and so on) is
-pressed in normal mode. If a key doesn't seem to do anything, press
-`Esc` first to make sure you're not still in insert mode.
+If a key in this guide does nothing, press `Esc` and try again.
 
-## Starting your first project
+Some keys start with `<leader>`. Unless you changed it, `<leader>` is
+the backslash key, `\`.
 
-In Vim, run:
+## New scrive
+
+Bartleby calls a writing project a **scrive**. To start one, run:
 
 ```vim
 :BartlebyNewScrive My First Novel
 ```
 
-You'll be asked what kind of project this is:
+Bartleby asks for the type:
 
-- **Novel** - chapters made of scenes.
-- **Novel with Parts** - chapters grouped into parts (Part One, Part
-  Two, and so on), for longer or multi-section books.
-- **Short Story** - a single flat piece, no chapter structure.
-- **Screenplay** - uses the Fountain screenplay format instead of
-  plain text (see [Writing screenplays](#writing-screenplays)).
+| Type | Use it for |
+| --- | --- |
+| Novel | Chapters made of scenes |
+| Novel with Parts | Chapters grouped into parts, such as Part One and Part Two |
+| Short Story | One piece with no chapters |
+| Screenplay | A script in the Fountain format. See [Screenplays](#screenplays) |
 
-Pick one, and Bartleby creates the project (Bartleby calls a project a
-**scrive**) and opens its Binder - the sidebar tree that's the heart
-of everything you do. A new scrive starts with a sensible skeleton
-already in place: Front Matter, Manuscript (with a first chapter and
-scene ready to go), Back Matter, Characters, and Research.
+Bartleby then opens the Binder with a starter tree: Front Matter,
+Manuscript with a first chapter and scene, Back Matter, Characters,
+and Research.
 
-Next time you open Vim, `:BartlebyOpen` with no name reopens whichever
-scrive you had open last. To open a different one by name, use
-`:BartlebyOpen {name}`.
+To open a scrive later:
 
-To choose from all your scrives instead, run `:BartlebyList`. It shows
-each scrive's title and type. Move with `j`/`k` (or the arrow keys) and
-press `<Enter>` to open the selected one. If you have no scrives yet,
-it asks for a name and creates one.
+- `:BartlebyOpen` reopens the scrive you used last.
+- `:BartlebyOpen My First Novel` opens a scrive by name.
+- `:BartlebyList` shows all your scrives. Move with `j` and `k`, then
+  press `<Enter>` to open one. If you have no scrives, it asks for a
+  name and creates one.
 
-## Finding your way around the Binder
+## Binder
 
-The Binder is the tree on the left - every folder and document in
-your project, in the order they'll appear when you compile.
+The Binder is the tree on the left. It shows every folder and
+document in your scrive, in the order that they are compiled. The
+first line shows the scrive title. Folder names end with `/`. A long
+title wraps onto the next line.
 
-Move the cursor up and down with the arrow keys (or `j`/`k`), and:
+Move with the arrow keys or `j` and `k`. Then:
 
-- **`<Enter>`** opens whatever's under the cursor - a document for
-  writing, or expands/collapses a folder.
-- **`<Tab>`** expands or collapses a folder without opening anything.
-- **`a`** adds a new document inside the folder under the cursor (or
-  as a sibling, if the cursor is on a document).
-- **`A`** adds a new folder. Depending on your project type, you'll be
-  offered Chapter, Part, or a plain Custom folder.
-- **`r`** renames whatever's under the cursor.
-- **`dd`** deletes it, after confirming.
+| Key | Does |
+| --- | --- |
+| `<Enter>` | Open the document, or open or close the folder |
+| `<Tab>` | Open or close the folder |
+| `a` | Add a document |
+| `A` | Add a folder. You can choose Chapter, Part, or a plain folder, depending on the scrive type |
+| `r` | Rename |
+| `dd` | Delete, after a confirmation |
+| `J` / `K` | Move a chapter or part down or up |
+| `>>` / `<<` | Move a chapter into a part, or out of it |
+| `q` | Close the Binder. It opens again with the scrive |
 
-Five folders - **Front Matter**, **Manuscript**, **Back Matter**,
-**Characters**, and **Research** - are part of every scrive's
-permanent shape. You can't rename, delete, move, or reorganize these
-five specifically; think of them as the load-bearing walls of the
-project. `dd` on one of them empties its contents (after confirming)
-rather than deleting the folder itself, so you always have a fresh
-Front Matter or Back Matter to work with even after clearing it out.
-Everything you actually create - chapters, scenes, character sheets,
-research notes - lives freely inside them and can be added, removed,
-and rearranged however you like.
-
-**Chapters and Parts** can be reordered with `J` (move down) and `K`
-(move up), and promoted or demoted with `>>` (indent - turn a Chapter
-into part of a Part) and `<<` (outdent - the reverse).
-
-When you're done for the session, `q` closes the Binder - it'll come
-back automatically the next time you open this scrive.
+Five folders are permanent: **Front Matter**, **Manuscript**, **Back
+Matter**, **Characters**, and **Research**. You cannot rename, move, or
+delete them. `dd` on one of them deletes everything inside it, after a
+confirmation, and keeps the empty folder. You can add, move, and
+delete everything that you create inside them.
 
 ## Writing
 
-Open any document from the Binder with `<Enter>` and you're in an
-ordinary Vim buffer - press `i` to start typing, `Esc` when you want
-to move around or run a command again.
+Press `<Enter>` on a document in the Binder to open it. Press `i` to
+type and `Esc` to stop.
 
-A few things make it feel less like a code editor and more like a
-word processor:
+Three tools make Vim work more like a word processor. Use any of them,
+all of them, or none.
 
-**Quill** turns on automatically for your documents and gives you
-word-processor-style line wrapping - your paragraphs wrap to fit the
-window without you ever pressing Enter mid-sentence, exactly like
-Word or Google Docs. If you ever need to check or change its mode,
-`:BartlebyQuill` (or `<leader>bp`) toggles it, and `:BartlebyQuill
-detect` re-checks how a document you opened elsewhere is formatted.
+**Quill** wraps your paragraphs to the window, like a word processor.
+It starts by itself for your documents. `<leader>bp` turns it on or
+off.
 
-**Focus** narrows the window to a centered column and dims everything
-else on screen, so the only thing you're looking at is your prose.
-Toggle it with `<leader>bz` or `:BartlebyFocus`.
+**Focus** shows your text in a centered column and dims the rest of
+the screen. `<leader>bz` turns it on or off.
 
-**Spotlight** dims every paragraph except the one your cursor is in -
-useful for editing one passage at a time without the rest of the page
-pulling your eye. Toggle it with `<leader>bl`; `<leader>bL` lets you
-pick a different mode (for screenplays, a Dialogue mode dims
-everything but the current speaker's lines - see
-[Writing screenplays](#writing-screenplays)).
+**Spotlight** dims every paragraph except the one with the cursor.
+`<leader>bl` turns it on or off. `<leader>bL` picks a different mode.
+For screenplays, Dialogue mode dims everything except the current
+speaker's lines.
 
-All three are independent - use any combination, or none at all.
+## Structure
 
-## Organizing your manuscript
+The Binder tree is the structure of your book. A chapter is a folder,
+and its scenes are the documents in that folder, in the order of the
+tree. When you move a scene in the Binder, it moves in the compiled
+book.
 
-Bartleby doesn't infer your book's structure from headings in the
-text the way some tools do - the Binder tree itself *is* the
-structure. A Chapter is a folder; the scenes inside it are documents
-inside that folder, in the order they appear in the tree. Reordering
-scenes in the Binder reorders them in the finished manuscript.
+| Scrive type | Structure |
+| --- | --- |
+| Novel with Parts | Parts contain chapters, and chapters contain scenes |
+| Novel | Chapters contain scenes |
+| Short Story | Documents directly in Manuscript |
 
-For a Novel with Parts, Parts contain Chapters, which contain Scenes -
-three levels deep. For a plain Novel, Chapters contain Scenes
-directly. A Short Story generally just holds documents straight
-under Manuscript, no Chapter folders at all.
+**Front Matter and Back Matter** hold the pages before and after the
+main text, such as a dedication, a copyright notice, and
+acknowledgments. Put each one in its own document. When you compile,
+each one gets its own unnumbered heading.
 
-**Front Matter and Back Matter** hold anything that comes before or
-after the main text - a dedication, a copyright notice, acknowledgments
-- each as its own document. When you compile, each one gets its own
-unnumbered heading (a title page of its own, effectively), separate
-from your numbered chapters.
+**Characters and Research** are notes for you: character sheets,
+places, research. They are never compiled.
 
-**Characters and Research** are for you, not your reader - character
-sheets, worldbuilding notes, anything you want alongside your
-manuscript but don't intend to publish. Nothing inside them is
-included when you compile unless you explicitly include it (see
-[Turning your binder into a manuscript](#turning-your-binder-into-a-manuscript)).
+## Dictionary and thesaurus
 
-## Looking up words
+Bartleby can show the definition and the synonyms of a word from
+Merriam-Webster, in the editor and in Focus.
 
-Bartleby can show a word's definition and its synonyms from
-Merriam-Webster, right where you are writing - in the normal editor or
-in Focus.
-
-This needs two free API keys from Merriam-Webster, one for the
+This needs two free API keys from Merriam-Webster: one for the
 Collegiate Dictionary and one for the Collegiate Thesaurus. Register
 at [dictionaryapi.com](https://dictionaryapi.com), then add the keys
 to your vimrc:
@@ -186,310 +157,231 @@ let g:bartleby_dictionary_api_key = 'your-dictionary-key'
 let g:bartleby_thesaurus_api_key = 'your-thesaurus-key'
 ```
 
-You can set only one of them. Without a key, that lookup stays off.
+You can set only one of them. Without a key, that lookup is off.
 
-To look up a word, put the cursor on it and press:
+Put the cursor on a word and press:
 
-- **`<leader>bd`** for its definition.
-- **`<leader>bt`** for its synonyms.
+- `<leader>bd` for its definition.
+- `<leader>bt` for its synonyms.
 
 To look up a phrase such as "go-between", select it with `v` first,
 then press the same keys.
 
-In the synonym list, move with `j` and `k`, then press `<Enter>` to put
-the selected word in place of the original. Bartleby keeps the
-original capitalization, and `u` undoes the change. Press `a` to see
-antonyms instead, and `d` to see the definition of the selected word.
-If you misspell a word, Bartleby shows Merriam-Webster's suggestions;
-press `<Enter>` on one to look it up. Press `q` to close the list
-without a change.
-
-Bartleby remembers each lookup, so looking up the same word again is
-instant and does not use your daily allowance of requests.
-
-## Tracking your progress
-
-Every document can carry a few pieces of metadata, all visible and
-editable without leaving the Binder:
-
-- **Label** - a color (Red, Orange, Yellow, Green, Blue, Purple), for
-  whatever meaning you want to give it - "needs a rewrite," "point of
-  view: Sam," anything. Press `l` on a document to set it; it shows up
-  next to the title in the Binder.
-- **Status** - a simple state like "To Do," "Draft," or "Done" (press
-  `s` to set it).
-
-For a fuller picture - and to set two things the Binder itself doesn't
-show - open the **Inspector** with `<leader>bi` while a document is
-open. It shows that document's Title, Label, Status, **Target word
-count**, **Keywords**, and **Synopsis** all in one place, and follows
-you automatically as you switch between documents. Press `e` on any
-line to edit that field:
-
-- **Target** - a word-count goal for this document. Handy for scenes
-  you want to keep within a certain length, or chapters with a target
-  you're writing toward.
-- **Keywords** - a short comma-separated list of tags for your own
-  use (themes, characters present, anything you want to search or
-  scan for later).
-- **Synopsis** - a longer, multi-paragraph summary. Press `<Enter>`
-  freely while writing one; it inserts a new line rather than closing
-  the box. `<Ctrl-s>` saves it when you're done.
-
-## Shuffling scenes on the Corkboard
-
-Sometimes you want to see a folder's scenes as index cards rather than
-a list - useful for feeling out pacing or trying a different scene
-order without committing to it in the text. Press `gc` on a folder in
-the Binder to open its Corkboard: one card per document, showing its
-title and synopsis.
-
-Arrow keys move between cards, `<Enter>` or `<Space>` opens the
-selected one, `e` edits its synopsis right there, and `J`/`K` reorder
-cards - which, unlike the Outliner's sort below, *does* actually
-change the order scenes appear in when you compile.
-
-## Seeing everything at once: the Outliner
-
-Press `go` on a folder to open the Outliner - a spreadsheet-style view
-of that folder's entire contents: Title, Label, Status, Words, Target,
-and Keywords, all in one screen.
-
-`l` and `s` set Label and Status right from this view, same as in the
-Binder. `gs` lets you sort the list by any column - handy for
-scanning, say, everything still marked "To Do," or everything over
-its word-count target - but this sorting is just a different way of
-*looking* at your scenes; it doesn't change their actual order in the
-manuscript the way Corkboard's reordering does.
-
-## Writing screenplays
-
-Choosing "Screenplay" as your project type switches your documents to
-the `.fountain` format - plain text with a simple, readable convention
-for scene headings, character cues, and dialogue (if you've never
-written in Fountain before, a quick search for "Fountain screenplay
-format" will get you up to speed in a few minutes; it's meant to be
-learnable in one sitting).
-
-Bartleby understands Fountain's structure well enough that Spotlight's
-Dialogue mode dims everything except the current character's actual
-spoken lines - not just text between quotation marks, since screenplay
-dialogue isn't quoted at all.
-
-Compiling a screenplay produces a PDF, HTML, or Final Draft (`.fdx`)
-file in standard screenplay format - see
-[Turning your binder into a manuscript](#turning-your-binder-into-a-manuscript).
-
-## Quick access to everything
-
-Two ways to reach any Bartleby command without memorizing its keymap:
-
-- **`<leader>b<Space>`** opens a fuzzy-searchable command palette -
-  start typing a few letters of what you want ("compile", "focus",
-  "snapshot") and press `<Enter>` on the match.
-- **`<leader>bm`** opens the same set of commands organized as a
-  categorized menu instead, if you'd rather browse than type.
-
-(If you haven't changed it, your `<leader>` key is almost certainly
-the backslash, `\`.)
-
-## Picking up where you left off
-
-Bartleby remembers, per project: which document you had open, your
-exact cursor position in it, and which Binder folders were
-expanded or collapsed. It also remembers which scrive you had open
-last, across Vim restarts entirely.
-
-By default you have to ask for it explicitly - `:BartlebyOpen` with no
-name picks up your last scrive and restores all of this. If you'd
-rather this happen automatically every time you start Vim, add this
-to your vimrc:
-
-```vim
-let g:bartleby_session_auto_restore = 1
-```
-
-## Undo insurance: snapshots
-
-Beyond Vim's own undo, Bartleby can save a timestamped copy of a
-document's exact text whenever you want a checkpoint to come back to -
-useful before a big rewrite, or just at the end of a productive
-session.
-
-- **`S`** on a document in the Binder (or `:BartlebySnapshot` while
-  writing) takes one.
-- **`gS`** (or `:BartlebySnapshots`) shows you the list and lets you
-  restore any of them. Restoring always takes a fresh snapshot of your
-  *current* text first, so restoring an old version is never a
-  one-way trip.
-
-By default the 5 most recent snapshots per document are kept; older
-ones are dropped automatically. Set
-`g:bartleby_snapshot_retention` in your vimrc to change that number.
-
-## Finding things
-
-Press `/` in the Binder, or run `:BartlebySearch` from anywhere, to
-search every document in your project at once. Results land in Vim's
-quickfix list, which you can step through with `:cnext` and `:cprev`,
-or browse all at once with `:copen`.
-
-## Turning your binder into a manuscript
-
-When your project (or even just part of it) is ready to share,
-`:BartlebyCompile` walks you through producing a real output file.
-
-**Step 1: choose what to include.** You'll see the full binder tree
-with a checkbox next to every document - toggle any of them off if you
-want to compile only part of your project (a single chapter to send a
-critique partner, for instance).
-
-**Step 2: choose a kind.**
-
-- **Manuscript** produces a submission-ready PDF: double-spaced,
-  Courier, a proper title page with your contact information and word
-  count - the standard format literary agents and publishers expect.
-  This is what you'll use most often while a project is still being
-  submitted anywhere.
-- **Book** produces a typeset PDF, HTML, EPUB, or Markdown file that
-  looks like an actual printed or e-book: styled chapter openings,
-  running headers, an optional cover image, and a table of contents.
-  This is for when you're ready to self-publish or just want to see
-  your work laid out the way a finished book would look.
-- **Screenplay** produces a PDF, HTML, or Final Draft file in
-  standard screenplay format.
-
-**Step 3: choose a format and a few kind-specific settings** - line
-spacing for a Manuscript, a cover image for a Book, and so on.
-
-**Step 4: name it and confirm.** Bartleby saves your answers as a
-named target, so next time you just run `:BartlebyCompile`, pick that
-name, and choose Run - no need to answer the whole wizard again. Pick
-Edit instead if you want to change its settings, or Delete to remove
-it.
-
-However you organized your Front Matter and Back Matter, Bartleby
-takes care of formatting them correctly for whichever kind you chose -
-each becomes its own section, distinct from your
-numbered chapters, exactly as a real dedication page, copyright
-notice, or acknowledgments section should look.
-
-A few things worth knowing:
-
-- Compiling to PDF requires a couple of free external programs
-  (Pandoc, and a LaTeX installation) to already be installed on your
-  computer - see the Requirements section of
-  [README.md](README.md#requirements) if `:BartlebyCompile` reports
-  it can't find them.
-- Nothing about compiling changes your actual documents. It only ever
-  reads them and writes a separate output file.
-
-## Your author profile
-
-`:BartlebyProfile` sets your name and contact information once,
-globally, so it doesn't have to be re-entered for every new project -
-it's pulled automatically into your manuscript's title page when you
-compile. `:BartlebyProjectInfo` overrides any of those fields for the
-current project only, if this book needs different contact details
-than your usual default (a pen name, say).
-
-## Cheat sheet
-
-**Anywhere**
-
-| Key | Does |
-| --- | --- |
-| `<leader>bi` | Toggle Inspector |
-| `<leader>bz` | Toggle Focus |
-| `<leader>bl` | Toggle Spotlight |
-| `<leader>bL` | Pick a Spotlight mode |
-| `<leader>bp` | Toggle Quill |
-| `<leader>bd` | Define the word under the cursor |
-| `<leader>bt` | Synonyms for the word under the cursor |
-| `<leader>b<Space>` | Command palette |
-| `<leader>bm` | Command menu |
-
-**In the Binder**
-
-| Key | Does |
-| --- | --- |
-| `<Enter>` | Open document / expand-collapse folder |
-| `<Tab>` | Expand/collapse folder |
-| `a` | Add document |
-| `A` | Add folder |
-| `r` | Rename |
-| `dd` | Delete (or clear, for the five permanent folders) |
-| `J` / `K` | Move a Chapter/Part down/up |
-| `>>` / `<<` | Indent/outdent |
-| `l` | Set label |
-| `s` | Set status |
-| `S` / `gS` | Take / view snapshots |
-| `gc` | Open Corkboard |
-| `go` | Open Outliner |
-| `/` | Search everything |
-| `?` | Show this list, in Vim |
-| `q` | Close the Binder |
-
-**In the scrive list (`:BartlebyList`)**
+In the synonym list:
 
 | Key | Does |
 | --- | --- |
 | `j` / `k` | Move the selection |
-| `<Enter>` | Open the selected scrive |
-| `?` | Show this list |
-| `q` | Close |
-
-**In a synonym list (`<leader>bt`)**
-
-| Key | Does |
-| --- | --- |
-| `j` / `k` | Move the selection |
-| `<Enter>` | Replace the word in your text |
-| `a` | Switch between synonyms and antonyms |
+| `<Enter>` | Put the selected word in place of the original |
+| `a` | Show antonyms, or synonyms again |
 | `d` | Show the definition of the selected word |
-| `?` | Show this list |
 | `q` | Close without a change |
 
-**In the Inspector**
+Bartleby keeps the capitalization of the original word, and `u` undoes
+the change. If you misspell a word, Bartleby shows Merriam-Webster's
+suggestions. Press `<Enter>` on one to look it up.
+
+Bartleby remembers each lookup. A second lookup of the same word is
+instant and does not use your daily allowance of requests.
+
+## Document details
+
+Each document can have a label and a status. You can set both in the
+Binder:
+
+- **Label** - a color: Red, Orange, Yellow, Green, Blue, or Purple.
+  You decide what each color means, for example "needs a rewrite".
+  Press `l` to set it. The Binder shows it after the title.
+- **Status** - a state such as To Do, Draft, or Done. Press `s` to set
+  it.
+
+The **Inspector** shows all the details of the open document. Press
+`<leader>bi` to open it. It follows you when you open another
+document. Press `e` on a line to change that detail:
+
+| Detail | Use |
+| --- | --- |
+| Label and Status | As in the Binder |
+| Target | A word-count goal for the document |
+| Keywords | Your own tags, separated by commas, such as themes or characters |
+| Synopsis | A summary of one or more paragraphs. `<Enter>` starts a new line. `Ctrl-s` saves |
+
+## Corkboard
+
+The Corkboard shows the documents of a folder as index cards, with
+each title and synopsis. Use it to try a different scene order. Press
+`gc` on a folder in the Binder to open it.
 
 | Key | Does |
 | --- | --- |
-| `e` | Edit the field under the cursor |
+| Arrow keys | Move between cards |
+| `<Enter>` or `<Space>` | Open the selected document |
+| `e` | Edit the synopsis |
+| `J` / `K` | Move the card later or earlier. This changes the compile order |
+| `?` | Show the keys |
+| `Esc` | Close |
 
-**In the Corkboard**
+## Outliner
 
-| Key | Does |
-| --- | --- |
-| arrows | Move between cards |
-| `<Enter>` / `<Space>` | Open the selected document |
-| `e` | Edit its synopsis |
-| `J` / `K` | Reorder cards |
-
-**In the Outliner**
+The Outliner shows everything in a folder as a table: Title, Label,
+Status, Words, Target, and Keywords. Press `go` on a folder in the
+Binder to open it.
 
 | Key | Does |
 | --- | --- |
 | `j` / `k` | Move the selection |
 | `<Enter>` | Open the selected document |
-| `l` / `s` | Set label / status |
+| `l` / `s` | Set the label or status |
 | `gs` | Sort by a column |
-| `?` | Show this list |
+| `?` | Show the keys |
 | `q` | Close |
 
-## Getting help without leaving Vim
+Sorting changes only the view. It does not change the order in your
+book. To change the order, use the Binder or the Corkboard.
 
-Press `?` inside the Binder, Corkboard, or Outliner at any time for a
-quick list of that screen's own keys. For everything else, `:help
-bartleby` opens Bartleby's full reference documentation right inside
+## Screenplays
+
+A Screenplay scrive uses the Fountain format. Fountain is plain text
+with simple rules for scene headings, character names, and dialogue.
+If Fountain is new to you, search the web for "Fountain screenplay
+format". You can learn it in a few minutes.
+
+Spotlight's Dialogue mode knows the Fountain rules. It dims
+everything except the current character's lines.
+
+A compiled screenplay is a PDF, an HTML page, or a Final Draft file.
+See [Compile](#compile).
+
+## Palette and menu
+
+You can run any Bartleby command without its key:
+
+- `<leader>b<Space>` opens the command palette. Type part of a name,
+  such as "compile" or "focus", then press `<Enter>`.
+- `<leader>bm` opens the same commands as a menu, in groups.
+
+## Session
+
+Bartleby remembers, for each scrive, the open document, the cursor
+position, and which Binder folders are open. It also remembers the
+last scrive.
+
+`:BartlebyOpen` with no name restores all of this. To restore it each
+time Vim starts, add this line to your vimrc:
+
+```vim
+let g:bartleby_session_auto_restore = 1
+```
+
+## Auto-save
+
+Bartleby saves your documents while you work. It saves when you stop
+typing, when you leave a document, and when you switch to another
+program. It saves a document at most once every 30 seconds while you
+work in it. It saves only the documents of your scrive and does not
+touch other files.
+
+To change the 30 seconds, set `g:bartleby_autosave_interval` in your
+vimrc. To turn auto-save off:
+
+```vim
+let g:bartleby_autosave = 0
+```
+
+## Snapshots
+
+A snapshot is a copy of a document at one moment. Take one before a
+large rewrite, or at the end of a writing session.
+
+- `S` on a document in the Binder, or `:BartlebySnapshot` in the
+  document, takes a snapshot.
+- `gS` or `:BartlebySnapshots` lists the snapshots and restores one.
+  Before a restore, Bartleby takes a snapshot of the current text, so
+  you can always go back.
+
+Bartleby keeps the 5 newest snapshots of each document. To change the
+number, set `g:bartleby_snapshot_retention` in your vimrc.
+
+## Search
+
+Press `/` in the Binder, or run `:BartlebySearch`, to search all
+documents in your scrive. The results go to Vim's quickfix list. Use
+`:cnext` and `:cprev` to move between them, or `:copen` to see all of
+them.
+
+## Compile
+
+When your book, or a part of it, is ready to share, run
+`:BartlebyCompile`. It makes a separate output file and does not
+change your documents.
+
+1. **Choose the documents.** The pane lists the contents of Front
+   Matter, Manuscript, and Back Matter, with a box for each document.
+   Press `x` to include or exclude a document. On a folder, `x`
+   includes or excludes everything in it. Press `<Enter>` to continue.
+2. **Choose a kind.**
+   - **Manuscript** - a PDF in the standard submission format for
+     agents and publishers: double-spaced Courier with a title page
+     that shows your contact information and the word count.
+   - **Book** - a PDF, EPUB, HTML page, or Markdown file laid out
+     like a printed book, with chapter openings, running headers, a
+     table of contents, and an optional cover image.
+   - **Screenplay** - a PDF, HTML page, or Final Draft file in the
+     standard screenplay format.
+3. **Choose a format and the settings** for that kind, such as line
+   spacing or a cover image.
+4. **Name the target.** Bartleby saves your answers. Next time, run
+   `:BartlebyCompile`, pick the name, and choose Run. Choose Edit to
+   change the settings, or Delete to remove the target.
+
+Each Front Matter and Back Matter document becomes its own section,
+separate from your numbered chapters.
+
+A PDF needs two free programs, Pandoc and LaTeX. If
+`:BartlebyCompile` cannot find them, see
+[Requirements](README.md#requirements) in the README.
+
+## Author profile
+
+`:BartlebyProfile` stores your name and contact information once for
+all scrives. Bartleby puts it on the title page of a manuscript.
+`:BartlebyProjectInfo` changes any of these details for the current
+scrive only, for example to use a pen name.
+
+## Keys
+
+These keys work in any document:
+
+| Key | Does |
+| --- | --- |
+| `<leader>bi` | Open or close the Inspector |
+| `<leader>bz` | Turn Focus on or off |
+| `<leader>bl` | Turn Spotlight on or off |
+| `<leader>bL` | Pick a Spotlight mode |
+| `<leader>bp` | Turn Quill on or off |
+| `<leader>bd` | Define the word under the cursor |
+| `<leader>bt` | Synonyms for the word under the cursor |
+| `<leader>b<Space>` | Command palette |
+| `<leader>bm` | Command menu |
+
+The keys for the Binder, Corkboard, Outliner, Inspector, synonym list,
+and scrive list are in their own sections.
+
+## Help
+
+Press `?` in the Binder, Corkboard, Outliner, scrive list, or synonym
+list to see its keys. `:help bartleby` opens the full reference in
 Vim.
 
-## Where your files actually live
+## Files
 
-By default, every project lives under `~/Documents/Bartleby/`, one
-folder per scrive. Inside a scrive's folder, `binder/` holds your
-actual chapters and scenes as plain `.md` (or `.fountain`) files, and
-`compile/` holds anything you've compiled. Every document file sits
-right alongside a small sidecar file holding its label, status,
-synopsis, and so on - so you can always find, back up, or move your
-actual writing with nothing more than a regular file browser. To use a
-different location, set `g:bartleby_binder_root` in your vimrc.
+Each scrive is a folder under `~/Documents/Bartleby/`. In it:
+
+- `binder/` holds your chapters and scenes as plain `.md` files, or
+  `.fountain` files for a screenplay. A small file next to each
+  document holds its label, status, synopsis, and other details.
+- `compile/` holds your compiled files.
+
+You can find, copy, or back up your writing with any file browser. To
+keep your scrives in another place, set `g:bartleby_binder_root` in
+your vimrc.

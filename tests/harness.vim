@@ -41,6 +41,7 @@ import './test_outliner.vim' as TestOutliner
 import './test_scrivelist.vim' as TestScriveList
 import './test_lexicon.vim' as TestLexicon
 import './test_binder_directory.vim' as TestBinderDirectory
+import './test_autosave.vim' as TestAutoSave
 
 var suites: list<func(): void> = [
   TestTree.RunAll,
@@ -54,6 +55,7 @@ var suites: list<func(): void> = [
   TestScriveList.RunAll,
   TestLexicon.RunAll,
   TestBinderDirectory.RunAll,
+  TestAutoSave.RunAll,
 ]
 
 for RunSuite in suites

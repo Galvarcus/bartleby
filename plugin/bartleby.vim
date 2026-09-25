@@ -33,6 +33,7 @@ import autoload 'bartleby/bartlebymenu.vim' as BM
 import autoload 'bartleby/scrivelist.vim' as SL
 import autoload 'bartleby/lexicon.vim' as Lx
 import autoload 'bartleby/lexiconpopup.vim' as LxP
+import autoload 'bartleby/autosave.vim' as As
 import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
@@ -42,6 +43,8 @@ var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 # spotlight conceal colors).
 g:bartleby_binder_root = get(g:, 'bartleby_binder_root', expand('~/Documents'))
 g:bartleby_session_auto_restore = get(g:, 'bartleby_session_auto_restore', false)
+g:bartleby_autosave = get(g:, 'bartleby_autosave', true)
+g:bartleby_autosave_interval = get(g:, 'bartleby_autosave_interval', 30)
 g:bartleby_snapshot_retention = get(g:, 'bartleby_snapshot_retention', 5)
 g:bartleby_binder_show_role_labels = get(g:, 'bartleby_binder_show_role_labels', true)
 g:bartleby_focus_width = get(g:, 'bartleby_focus_width', 80)
@@ -95,6 +98,7 @@ g:bartleby_compile_indent_paragraphs = get(g:, 'bartleby_compile_indent_paragrap
 g:bartleby_compile_book_chapter_style = get(g:, 'bartleby_compile_book_chapter_style', 'numeral')
 g:bartleby_compile_book_part_style = get(g:, 'bartleby_compile_book_part_style', 'numeral')
 g:bartleby_compile_extra_args = get(g:, 'bartleby_compile_extra_args', [])
+g:bartleby_compile_log_retention = get(g:, 'bartleby_compile_log_retention', 10)
 g:bartleby_dictionary_api_key = get(g:, 'bartleby_dictionary_api_key', '')
 g:bartleby_thesaurus_api_key = get(g:, 'bartleby_thesaurus_api_key', '')
 g:bartleby_dictionary_reference = get(g:, 'bartleby_dictionary_reference', 'collegiate')
@@ -290,6 +294,13 @@ def AutoRestoreSession(): void
     OpenScrive('')
   endif
 enddef
+
+# Auto-save for scrive documents - see autoload/bartleby/autosave.vim.
+augroup bartleby_autosave
+  autocmd!
+  autocmd CursorHold,InsertLeave * As.Save(false)
+  autocmd FocusLost,BufLeave * As.Save(true)
+augroup END
 
 augroup bartleby_session
   autocmd!

@@ -55,6 +55,7 @@ var compileindentparagraphs: bool = g:bartleby_compile_indent_paragraphs
 var compilebookchapterstyle: string = g:bartleby_compile_book_chapter_style
 var compilebookpartstyle: string = g:bartleby_compile_book_part_style
 var compileextraargs: list<string> = g:bartleby_compile_extra_args
+var compilelogretention: number = g:bartleby_compile_log_retention
 
 const KIND_MANUSCRIPT: string = 'Manuscript'
 const KIND_BOOK: string = 'Book'
@@ -148,6 +149,15 @@ enddef
 # ---------------------------------------------------------------------
 
 const SELECT_BUF: string = 'Bartleby-Compile-Select'
+const SELECT_HEADER: string = '*** Compile ***'
+# Lines above the tree: the header and the project title. Every
+# cursor-line-to-row mapping below subtracts this.
+const SELECT_HEADER_LINES: number = 2
+# Only these top-level folders feed a compile (see ConcatenateManuscript/
+# ConcatenateBook), so only their contents are offered for selection.
+const COMPILE_ROLES: list<string> = [
+  BI.ROLE_FRONT_MATTER, BI.ROLE_MANUSCRIPT, BI.ROLE_BACK_MATTER,
+]
 
 class SelectState
   var project: Pj.Project
@@ -159,8 +169,25 @@ class SelectState
   enddef
 endclass
 
+# The Front Matter, Manuscript, and Back Matter folders and everything
+# under them, in tree order. Characters, Research, and custom top-level
+# folders are left out.
+def SelectableRows(project: Pj.Project): list<T.Row>
+  var rows: list<T.Row> = []
+  var inCompileRoot: bool = false
+  for row in T.Flatten(project)
+    if row.depth == 0
+      inCompileRoot = index(COMPILE_ROLES, row.item.structureRole) >= 0
+    endif
+    if inCompileRoot
+      rows->add(row)
+    endif
+  endfor
+  return rows
+enddef
+
 def AllDocIds(project: Pj.Project): list<string>
-  return T.Flatten(project)->copy()
+  return SelectableRows(project)
     ->filter((_, row) => row.item.IsDocument())
     ->mapnew((_, row) => row.item.id)
 enddef
@@ -170,7 +197,10 @@ def RenderSelectLines(rows: list<T.Row>, included: dict<bool>): list<string>
     var box: string = row.item.IsDocument()
       ? (get(included, row.item.id, false) ? '[x]' : '[ ]') : '   '
     var marker: string = row.item.IsFolder() ? '▸ ' : '· '
-    return repeat('  ', row.depth) .. box .. ' ' .. marker .. row.item.title
+    # A trailing "/" marks folders, for the Directory highlight in
+    # syntax/bartleby-compile-select.vim. Display only.
+    var title: string = row.item.IsFolder() ? row.item.title .. '/' : row.item.title
+    return repeat('  ', row.depth) .. box .. ' ' .. marker .. title
   })
 enddef
 
@@ -201,17 +231,19 @@ def RedrawSelect(): void
   var state: SelectState = b:bartleby_compile_select
   setlocal modifiable
   deletebufline('%', 1, '$')
-  setline(1, RenderSelectLines(state.rows, state.included))
+  setline(1, [SELECT_HEADER, state.project.name]
+    + RenderSelectLines(state.rows, state.included))
   setlocal nomodifiable
 enddef
 
 def DoToggle(): void
   var state: SelectState = b:bartleby_compile_select
   var lnum: number = line('.')
-  if lnum < 1 || lnum > len(state.rows)
+  var idx: number = lnum - 1 - SELECT_HEADER_LINES
+  if idx < 0 || idx >= len(state.rows)
     return
   endif
-  ToggleInclude(state.rows, state.included, lnum - 1)
+  ToggleInclude(state.rows, state.included, idx)
   RedrawSelect()
   cursor(lnum, 1)
 enddef
@@ -240,13 +272,17 @@ export def SelectContents(project: Pj.Project, preselected: list<string>,
 
   execute 'vertical topleft :40split ' .. SELECT_BUF
   setlocal buftype=nofile bufhidden=wipe noswapfile nobuflisted nomodifiable
-  setlocal nowrap nonumber norelativenumber nofoldenable
+  # Long titles wrap at word boundaries, and each wrapped line starts
+  # under the title text: shift:6 skips the "[x] · " prefix.
+  setlocal wrap linebreak breakindent breakindentopt=shift:6
+  setlocal nonumber norelativenumber nofoldenable
   setlocal winfixwidth
   vertical resize 40
   setlocal filetype=bartleby-compile-select
-  b:bartleby_compile_select = SelectState.new(project, T.Flatten(project), included, OnDone)
+  b:bartleby_compile_select = SelectState.new(project, SelectableRows(project), included, OnDone)
 
   RedrawSelect()
+  cursor(SELECT_HEADER_LINES + 1, 1)
   nnoremap <buffer> <silent> x <ScriptCmd>DoToggle()<CR>
   nnoremap <buffer> <silent> <CR> <ScriptCmd>DoConfirm()<CR>
   nnoremap <buffer> <silent> q <ScriptCmd>close<CR>
@@ -810,8 +846,33 @@ def ExecutePandoc(project: Pj.Project, target: CompileTarget): void
     endif
   endif
   args += compileextraargs
+  args->add($'--log={NewPandocLogPath(project, target)}')
 
   RunJob($'{target.kind}/{target.format}', [compilepandocbin] + args, target, outputPath)
+enddef
+
+# A new, timestamped path for this run's Pandoc log (JSON, written by
+# Pandoc's --log option):
+#   ~/.bartleby/logs/<scrive>_<target>_<YYYYmmdd-HHMMSS>.json
+# Keeps the newest g:bartleby_compile_log_retention logs per scrive and
+# target, this run included, and deletes the rest. 0 keeps every log.
+def NewPandocLogPath(project: Pj.Project, target: CompileTarget): string
+  var logDir: string = expand('~/.bartleby/logs')
+  if !isdirectory(logDir)
+    mkdir(logDir, 'p')
+  endif
+  var prefix: string = Sl.Slugify(fnamemodify(project.scriveDir, ':t:r'))
+    .. '_' .. Sl.Slugify(target.name) .. '_'
+  if compilelogretention > 0
+    var older: list<string> = sort(glob($'{logDir}/{prefix}[0-9]*.json', false, true))
+    var excess: number = len(older) - (compilelogretention - 1)
+    if excess > 0
+      for path in older[0 : excess - 1]
+        delete(path)
+      endfor
+    endif
+  endif
+  return $'{logDir}/{prefix}{strftime("%Y%m%d-%H%M%S")}.json'
 enddef
 
 export def Execute(project: Pj.Project, target: CompileTarget): void
