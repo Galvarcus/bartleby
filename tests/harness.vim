@@ -34,6 +34,7 @@ import './test_tree.vim' as TestTree
 import './test_mutate.vim' as TestMutate
 import './test_document.vim' as TestDocument
 import './test_compile.vim' as TestCompile
+import './test_compile_select.vim' as TestCompileSelect
 import './test_binder.vim' as TestBinder
 import './test_syntax.vim' as TestSyntax
 import './test_inputpopup.vim' as TestInputPopup
@@ -48,6 +49,7 @@ var suites: list<func(): void> = [
   TestMutate.RunAll,
   TestDocument.RunAll,
   TestCompile.RunAll,
+  TestCompileSelect.RunAll,
   TestBinder.RunAll,
   TestSyntax.RunAll,
   TestInputPopup.RunAll,
