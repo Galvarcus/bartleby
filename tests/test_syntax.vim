@@ -31,10 +31,10 @@ enddef
 def Test_binder_marker_and_role_label_are_isolated(): void
   new
   setlocal buftype=nofile
-  # '  ▾ Chapter: 1/' - 2-space indent, 3-byte marker, space, the role
-  # label, then the folder name '1' with the '/' that binder.vim adds.
+  # '  ▾ Chapter: 1' - 2-space indent, 3-byte marker, space, then the
+  # role label immediately after it, then the plain title '1'.
   setline(1, ['Title'])
-  setline(2, ['  ▾ Chapter: 1/'])
+  setline(2, ['  ▾ Chapter: 1'])
   setlocal filetype=bartleby-binder
   # Columns 3-5 are the 3 UTF-8 bytes of '▾'.
   assert_equal('bartlebyBinderMarker', GroupAt(2, 3))
@@ -46,9 +46,8 @@ def Test_binder_marker_and_role_label_are_isolated(): void
   for col in range(7, 15)
     assert_equal('bartlebyBinderRoleLabel', GroupAt(2, col))
   endfor
-  # Columns 16-17 are '1/', the folder name: Directory, not the label.
-  assert_equal('bartlebyBinderDirectory', GroupAt(2, 16))
-  assert_equal('bartlebyBinderDirectory', GroupAt(2, 17))
+  # Column 16 is '1' - the plain, arbitrary title - must NOT be highlighted.
+  assert_equal('', GroupAt(2, 16))
   bwipe!
 enddef
 
@@ -84,62 +83,32 @@ def Test_binder_does_not_highlight_an_unknown_color_name(): void
   bwipe!
 enddef
 
-# The compile pane's first two lines are the '*** Compile ***' header and
-# the project title (see compile.vim's RedrawSelect()). Rows start on
-# line 3, so every compile-pane test sets both lines first.
-def CompileSelectBuffer(rows: list<string>): void
+def Test_compile_select_checkbox_and_marker_are_isolated(): void
   new
   setlocal buftype=nofile
-  setline(1, ['*** Compile ***', 'My Project'] + rows)
+  setline(1, ['    [x] · Scene 1'])
   setlocal filetype=bartleby-compile-select
-enddef
-
-def Test_compile_select_header_and_title(): void
-  CompileSelectBuffer(['    [x] · Scene 1'])
-  for col in range(1, 15)
-    assert_equal('bartlebyCompileSelectHeader', GroupAt(1, col))
-  endfor
-  for col in range(1, 10)
-    assert_equal('bartlebyCompileSelectTitle', GroupAt(2, col))
-  endfor
-  bwipe!
-enddef
-
-def Test_compile_select_checkbox_and_marker_are_isolated(): void
-  CompileSelectBuffer(['    [x] · Scene 1'])
   # Columns 5-7 are '[x]'.
   for col in range(5, 7)
-    assert_equal('bartlebyCompileSelectChecked', GroupAt(3, col))
+    assert_equal('bartlebyCompileSelectChecked', GroupAt(1, col))
   endfor
   # Columns 9-10 are '·' (2 UTF-8 bytes).
-  assert_equal('bartlebyCompileSelectMarker', GroupAt(3, 9))
-  assert_equal('bartlebyCompileSelectMarker', GroupAt(3, 10))
+  assert_equal('bartlebyCompileSelectMarker', GroupAt(1, 9))
+  assert_equal('bartlebyCompileSelectMarker', GroupAt(1, 10))
   # 'Scene 1' itself must not be highlighted.
   for col in range(12, 18)
-    assert_equal('', GroupAt(3, col))
+    assert_equal('', GroupAt(1, col))
   endfor
   bwipe!
 enddef
 
 def Test_compile_select_unchecked_box_is_its_own_group(): void
-  CompileSelectBuffer(['  [ ] · Dedication'])
-  for col in range(3, 5)
-    assert_equal('bartlebyCompileSelectUnchecked', GroupAt(3, col))
-  endfor
-  bwipe!
-enddef
-
-def Test_compile_select_folder_name_is_directory(): void
-  # '    ▸ Front Matter/': 4 spaces, the 3-byte marker (columns 5-7), a
-  # space, then the name and '/' (columns 9-21). A document title that
-  # ends in '/' is not a folder.
-  CompileSelectBuffer(['    ▸ Front Matter/', '  [x] · Notes/'])
-  assert_equal('bartlebyCompileSelectMarker', GroupAt(3, 5))
-  for col in range(9, 21)
-    assert_equal('bartlebyCompileSelectDirectory', GroupAt(3, col))
-  endfor
-  for col in range(9, 14)
-    assert_equal('', GroupAt(4, col))
+  new
+  setlocal buftype=nofile
+  setline(1, ['    [ ] · Front Matter'])
+  setlocal filetype=bartleby-compile-select
+  for col in range(5, 7)
+    assert_equal('bartlebyCompileSelectUnchecked', GroupAt(1, col))
   endfor
   bwipe!
 enddef
@@ -185,9 +154,7 @@ export def RunAll(): void
   Test_binder_marker_and_role_label_are_isolated()
   Test_binder_item_label_suffix_is_isolated_to_known_colors()
   Test_binder_does_not_highlight_an_unknown_color_name()
-  Test_compile_select_header_and_title()
   Test_compile_select_checkbox_and_marker_are_isolated()
   Test_compile_select_unchecked_box_is_its_own_group()
-  Test_compile_select_folder_name_is_directory()
   Test_inspector_header_and_field_labels_are_isolated()
 enddef

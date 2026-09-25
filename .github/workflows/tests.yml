@@ -103,7 +103,7 @@ jobs:
       - name: Install Pandoc and LaTeX
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc texlive-latex-extra texlive-fonts-recommended texlive-plain-generic
+          sudo apt-get install -y pandoc texlive-latex-extra texlive-fonts-recommended
 
       - name: Checkout Logger dependency
         uses: actions/checkout@v4

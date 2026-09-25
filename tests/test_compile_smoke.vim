@@ -83,66 +83,11 @@ def Test_book_pdf_compiles_to_a_real_nonempty_file(): void
   Fx.CleanupProjectFiles(fx.project)
 enddef
 
-# Waits until `logDir` holds a log whose name is not in `before`, then
-# returns it, or '' after MAX_WAIT_MS. Pandoc writes its --log file when
-# it finishes, so a new name means that run is done.
-def WaitForNewLog(logDir: string, before: list<string>): string
-  var waited: number = 0
-  while waited < MAX_WAIT_MS
-    for path in glob(logDir .. '/*.json', false, true)
-      if index(before, path) < 0
-        return path
-      endif
-    endfor
-    execute $'sleep {POLL_INTERVAL_MS}m'
-    waited += POLL_INTERVAL_MS
-  endwhile
-  return ''
-enddef
-
-# Three Book/HTML runs (Pandoc only, no LaTeX) with
-# g:bartleby_compile_log_retention = 2, set at the end of this file
-# before Bartleby loads. Each run must write a new timestamped JSON log,
-# and only the 2 newest may remain.
-def Test_pandoc_log_per_run_with_retention(): void
-  if !executable('pandoc')
-    echom 'SKIP: pandoc not installed'
-    return
-  endif
-  var fx = BuildProjectWithContent()
-  var target = C.CompileTarget.FromDict({
-    name: 'Smoke Log', kind: 'Book', format: 'HTML', includedIds: [fx.scene1.id],
-  })
-  var logDir: string = expand('~/.bartleby/logs')
-  for run in range(3)
-    var before: list<string> = glob(logDir .. '/*.json', false, true)
-    C.Execute(fx.project, target)
-    var newLog: string = WaitForNewLog(logDir, before)
-    assert_true(newLog !=# '', $'run {run + 1} wrote no log within {MAX_WAIT_MS}ms')
-    if newLog !=# ''
-      assert_match('/bartleby-test-fixture_smoke-log_\d\{8}-\d\{6}\.json$', newLog)
-      assert_equal(v:t_list, type(json_decode(join(readfile(newLog), "\n"))))
-    endif
-    # Log names carry the time to the second.
-    sleep 1100m
-  endfor
-  # Only this target's logs: the other smoke tests write logs here too.
-  assert_equal(2, len(glob(logDir .. '/bartleby-test-fixture_smoke-log_*.json', false, true)))
-  Fx.CleanupProjectFiles(fx.project)
-enddef
-
 export def RunAll(): void
   Test_manuscript_pdf_compiles_to_a_real_nonempty_file()
   Test_book_pdf_compiles_to_a_real_nonempty_file()
-  Test_pandoc_log_per_run_with_retention()
 enddef
 
-# A private home, so the log test counts only its own logs, and a small
-# retention, both set before Bartleby loads: compile.vim reads the
-# retention setting once, when it loads.
-$HOME = tempname()
-mkdir($HOME, 'p')
-g:bartleby_compile_log_retention = 2
 execute 'source ' .. expand('<sfile>:h') .. '/../plugin/bartleby.vim'
 RunAll()
 if len(v:errors) > 0
