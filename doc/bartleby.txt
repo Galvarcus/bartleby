@@ -6,87 +6,67 @@
                                        Type |gO| to see the table of contents.
 
 Bartleby ................................................... |bartleby-bartleby|
-  What is Bartleby? ................................ |bartleby-what-is-bartleby|
+  Bartleby ............................................... |bartleby-bartleby-1|
   Requirements ......................................... |bartleby-requirements|
   Installation ......................................... |bartleby-installation|
   Quick start ........................................... |bartleby-quick-start|
   Concepts ................................................. |bartleby-concepts|
-  The Binder ............................................. |bartleby-the-binder|
+  Binder ..................................................... |bartleby-binder|
   Corkboard ............................................... |bartleby-corkboard|
   Outliner ................................................. |bartleby-outliner|
   Inspector ............................................... |bartleby-inspector|
+  Scrive list ........................................... |bartleby-scrive-list|
   Focus, Spotlight, and Quill ............. |bartleby-focus-spotlight-and-quill|
-  Fountain (screenplay) support ......... |bartleby-fountain-screenplay-support|
-  Command palette and menu ................. |bartleby-command-palette-and-menu|
+  Fountain ................................................. |bartleby-fountain|
+  Palette and menu ................................. |bartleby-palette-and-menu|
   Session, snapshots, and search ....... |bartleby-session-snapshots-and-search|
+  Auto-save ............................................... |bartleby-auto-save|
   Dictionary and thesaurus ................. |bartleby-dictionary-and-thesaurus|
-  Compiling your manuscript ............... |bartleby-compiling-your-manuscript|
+  Compile ................................................... |bartleby-compile|
   Commands ................................................. |bartleby-commands|
-  Default mappings ................................. |bartleby-default-mappings|
+  Mappings ................................................. |bartleby-mappings|
   Configuration ....................................... |bartleby-configuration|
   License ................................................... |bartleby-license|
 
 ==============================================================================
 Bartleby                                                     *bartleby-bartleby*
 
-A structured writing environment for Vim: a binder, corkboard, outliner, and a
-full compile pipeline for long-form prose and screenplays, built entirely on
-Vim9script classes.
+A structured writing environment for Vim. It provides a binder, a corkboard,
+an outliner, and a compile pipeline for long-form prose and screenplays.
 
 ------------------------------------------------------------------------------
-What is Bartleby?                                    *bartleby-what-is-bartleby*
+Bartleby                                                   *bartleby-bartleby-1*
 
-Bartleby brings a binder-organized writing workflow into Vim: a project
-("scrive") is a tree of folders and documents you build and reorganize in a
-sidebar, an index-card corkboard for shuffling scenes, a flat
-spreadsheet-style outline, and a compile step that turns your binder tree into
-a submission-ready manuscript, a typeset book, or a screenplay - all from
-plain text files you own and can edit with any editor.
+A project, called a scrive, is a tree of folders and documents. You build and
+arrange the tree in a sidebar, shuffle scenes on a corkboard, review them in
+an outline, and compile the tree into a submission manuscript, a typeset book,
+or a screenplay.
 
-Bartleby doesn't invent a new file format. Every document is a plain `.md` (or
-`.fountain`, for screenplays) file on disk, with a small JSON sidecar for
-metadata (label, status, synopsis, keywords, word count target). The binder
-structure itself lives in a single `project.json` per scrive. Nothing is
-locked into Vim.
+Every document is a plain `.md` file, or a `.fountain` file for screenplays. A
+small JSON file next to each document holds its metadata: label, status,
+synopsis, keywords, and word-count target. The tree itself is one
+`project.json` per scrive. You can edit all of these files with any editor.
 
 ------------------------------------------------------------------------------
 Requirements                                             *bartleby-requirements*
 
-- Vim 9.2 or newer, compiled with `+popupwin` and Vim9 script support.
-  Bartleby's binder tree relies on a class field typed as a list of its own
-  class (a folder's `children`), a pattern Vim9's class system only supports
-  reliably from 9.2 onward - on 9.1 this fails to load at all with
-  `E1010: Type not recognized`. Run `vim --version` to check; if your system's
-  packaged Vim is still on 9.1 (common on some Linux distributions, including
-  Ubuntu's `vim-nox` as of this writing), install a newer build directly from
-  vim.org https://www.vim.org or your platform's usual source for current
-  software instead. Bartleby is written entirely in Vim9script and does not
-  support Vim 8 or Neovim's older Vimscript-compatibility layer.
-- Logger https://github.com/Galvarcus/Logger - a small, shared Vim9script
-  logging utility Bartleby's own code depends on directly. Install it the same
-  way as Bartleby itself (see Installation #installation); it needs no
-  separate configuration.
-- Compiling manuscripts and books additionally needs:
-  - Pandoc https://pandoc.org (tested against Pandoc 3.x)
-  - A LaTeX distribution with `pdflatex` (for Manuscript targets, via the
-    sffms https://ctan.org/pkg/sffms class) and `xelatex` (for Book targets)
-  - The `sffms` LaTeX class (available on CTAN, or via your TeX distribution's
-    package manager)
-- Compiling screenplays additionally needs screenplain
-  https://github.com/vilcans/screenplain.
-- Dictionary and thesaurus lookups additionally need `curl` and your own free
-  Merriam-Webster API keys https://dictionaryapi.com (one for the Collegiate
-  Dictionary, one for the Collegiate Thesaurus). Without a key, that lookup is
-  off.
-- None of the above are required just to write - Binder, Corkboard, Outliner,
-  Focus, Spotlight, and Quill all work with nothing but Vim itself. Compile
-  and lookups are the only features with external dependencies.
+- Vim 9.2 or newer, with `+popupwin`. |bartleby-footnote1|
+- Logger https://github.com/Galvarcus/Logger - a Vim9script logging utility
+  that Bartleby uses. Install it the same way as Bartleby.
+- Compile needs Pandoc https://pandoc.org 3.x and a LaTeX distribution with
+  `pdflatex`, `xelatex`, and the sffms https://ctan.org/pkg/sffms class.
+  Screenplays need screenplain https://github.com/vilcans/screenplain instead.
+- Dictionary and thesaurus need `curl` and your own free
+  Merriam-Webster API keys https://dictionaryapi.com, one for the Collegiate
+  Dictionary and one for the Collegiate Thesaurus.
+
+Writing needs only Vim. Compile and the lookups are the only features with
+other requirements.
 
 ------------------------------------------------------------------------------
 Installation                                             *bartleby-installation*
 
-Bartleby needs Logger https://github.com/Galvarcus/Logger installed alongside
-it - install both the same way:
+Install Logger and Bartleby the same way.
 
 With vim-plug https://github.com/junegunn/vim-plug:
 
@@ -94,20 +74,19 @@ With vim-plug https://github.com/junegunn/vim-plug:
     Plug 'Galvarcus/Logger'
     Plug 'Galvarcus/bartleby'
 <
-With Vim's native package support:
+With Vim's native packages:
 
 >sh
     git clone https://github.com/Galvarcus/Logger ~/.vim/pack/plugins/start/Logger
     git clone https://github.com/Galvarcus/bartleby ~/.vim/pack/plugins/start/bartleby
 <
-With Lazy.nvim https://github.com/folke/lazy.nvim or similar (Vim9 plugins
-load the same way as any other plugin manager expects):
+With Lazy.nvim https://github.com/folke/lazy.nvim or a similar manager:
 
 >lua
     { 'Galvarcus/Logger' },
     { 'Galvarcus/bartleby' }
 <
-Restart Vim (or run `:packloadall`) and confirm it loaded:
+Restart Vim, then create a scrive to confirm that Bartleby loaded:
 
 >vim
     :BartlebyNewScrive TestProject
@@ -119,99 +98,86 @@ Quick start                                               *bartleby-quick-start*
 >vim
     :BartlebyNewScrive My Novel
 <
-This asks for a project type (novel, novel with parts, short story, or
-screenplay), creates the scrive under `g:bartleby_binder_root`
-(`~/Documents/Bartleby/` by default), and opens the Binder with a starter tree
-already in place: Front Matter, Manuscript (with a first Chapter and Scene),
-Back Matter, Characters, and Research.
+Bartleby asks for the scrive type: novel, novel with parts, short story, or
+screenplay. It creates the scrive under `g:bartleby_binder_root` and opens the
+Binder with a starter tree: Front Matter, Manuscript with a first chapter and
+scene, Back Matter, Characters, and Research.
 
-From there:
+In the Binder:
 
-- `<CR>` on a document in the Binder opens it for writing.
-- `a` adds a new document, `A` adds a new folder (Chapter/Part, where the
-  project type allows it).
-- `go` opens the Outliner for the folder under the cursor; `gc` opens its
+- `<CR>` on a document opens it.
+- `a` adds a document. `A` adds a folder.
+- `go` opens the Outliner for the folder under the cursor. `gc` opens its
   Corkboard.
-- `<leader>bi` toggles the Inspector for whatever document you're writing.
-- `:BartlebyCompile` walks you through turning the whole binder into a
-  manuscript, book, or screenplay file.
 
-`:BartlebyOpen` with no argument reopens whichever scrive you had open last.
-`:BartlebyList` shows every scrive with its title and type; select one and
-press `<CR>` to open it.
+Elsewhere:
+
+- `<leader>bi` toggles the Inspector for the current document.
+- `:BartlebyCompile` compiles the scrive.
+- `:BartlebyOpen` reopens the last scrive. `:BartlebyList` lists all scrives.
 
 ------------------------------------------------------------------------------
 Concepts                                                     *bartleby-concepts*
 
-Scrive - one writing project: a folder on disk (under
-`g:bartleby_binder_root`) holding a `project.json` (the binder tree), a
-`binder/` directory of the actual document files, and a `compile/` directory
-for saved compile targets and their output.
+Scrive - one writing project. It is a folder under `g:bartleby_binder_root`
+that holds `project.json`, a `binder/` folder with the documents, and a
+`compile/` folder with compile targets and their output.
 
-Binder item - either a folder or a document. Every item has a title and, for
-documents, a metadata sidecar (`.meta.json`) tracking label, status, synopsis,
-keywords, and a word-count target.
+Binder item - a folder or a document. A document also has a metadata file,
+`<name>.meta.json`.
 
-Structural roles - five folders every scrive starts with (Front Matter,
-Manuscript, Back Matter, Characters, Research) carry a `structureRole` the
-compile pipeline understands specifically. They're immutable in shape: they
-can't be renamed, deleted, or moved, though `dd` on one clears its contents
-(with confirmation) rather than deleting the folder itself. Chapter and Part
-folders are structural too, but ordinary and freely rearrangeable within
-Manuscript.
+Structural folders - Front Matter, Manuscript, Back Matter, Characters, and
+Research. Every scrive has them, and compile uses them. You cannot rename,
+delete, or move them. `dd` on one clears its contents after a confirmation.
+Chapter and Part folders inside Manuscript are also structural, but you can
+add, move, and delete them.
 
 ------------------------------------------------------------------------------
-The Binder                                                 *bartleby-the-binder*
+Binder                                                         *bartleby-binder*
 
-The Binder (`:BartlebyToggleBinder`, or opened automatically when a scrive is)
-is a tree sidebar mirroring your project.json. It shows one line per item: an
-expand/collapse marker for folders, a bullet for documents, the item's title,
-and (for documents) a color label in parentheses if one is set.
+The Binder is the sidebar with the scrive's tree. It opens with the scrive,
+and `:BartlebyToggleBinder` toggles it. Line 1 shows the scrive title. Folders
+end with `/`. A document with a label shows the label color after its title.
+Long titles wrap.
 
     Key                                Action ~
 
-    `<CR>`                             Open the document under the
-                                       cursor, or toggle a folder
+    `<CR>`                             Open the document, or expand or
+                                       collapse the folder
 
-    `<Tab>`                            Toggle a folder's collapsed state
+    `<Tab>`                            Expand or collapse the folder
 
-    `a`                                Add a new document
+    `a`                                Add a document
 
-    `A`                                Add a new folder (Chapter/Part
-                                       where the project type allows)
+    `A`                                Add a folder: Chapter or Part
+                                       where the scrive type allows
 
-    `dd`                               Delete the item under the cursor
-                                       (with confirmation); on a
-                                       structural folder, clears its
-                                       contents instead
+    `dd`                               Delete the item after a
+                                       confirmation. On a structural
+                                       folder, clear its contents
 
-    `r`                                Rename the item under the cursor
+    `r`                                Rename the item
 
-    `J` / `K`                          Move a Chapter or Part down/up
-                                       among its siblings
+    `J` / `K`                          Move a Chapter or Part down or up
 
-    `>>` / `<<`                        Indent/outdent (promote a Chapter
-                                       into a Part, etc.)
+    `>>` / `<<`                        Indent or outdent the item
 
     `l`                                Set the document's label
 
     `s`                                Set the document's status
 
-    `L`                                Toggle showing "Chapter:"/"Part:"
-                                       prefixes
+    `L`                                Show or hide the `Chapter:` and
+                                       `Part:` prefixes
 
     `S`                                Take a snapshot of the document
-                                       under the cursor
 
-    `gS`                               View/restore snapshots
+    `gS`                               View or restore snapshots
 
-    `gc`                               Open Corkboard for the folder
-                                       under the cursor
+    `gc`                               Open the Corkboard for the folder
 
-    `go`                               Open Outliner for the folder under
-                                       the cursor
+    `go`                               Open the Outliner for the folder
 
-    `/`                                Project-wide search
+    `/`                                Search the scrive
 
     `?`                                Show this key list
 
@@ -220,208 +186,278 @@ and (for documents) a color label in parentheses if one is set.
 ------------------------------------------------------------------------------
 Corkboard                                                   *bartleby-corkboard*
 
-`gc` on a folder in the Binder opens its direct-child documents as a grid of
-index cards - each card shows the document's title and synopsis. Arrow keys
-navigate, `<CR>`/`<Space>` opens the selected document, `e` edits its synopsis
-in place, and `J`/`K` reorder cards within the folder.
+`gc` on a folder shows its documents as index cards with each document's title
+and synopsis.
+
+    Key                         Action ~
+    Arrows or `h` `j` `k` `l`   Move between cards
+    `<CR>` or `<Space>`         Open the selected document
+    `e`                         Edit the synopsis
+    `J` / `K`                   Move the card later or earlier
+    `?`                         Show this key list
+    `<Esc>`                     Close the Corkboard
 
 ------------------------------------------------------------------------------
 Outliner                                                     *bartleby-outliner*
 
-`go` on a folder opens a spreadsheet-style view of its entire subtree: Title,
-Label, Status, Words, Target, and Keywords, one row per item, indented to
-match the binder tree.
+`go` on a folder shows all items under it as a table: Title, Label, Status,
+Words, Target, and Keywords. Rows are indented like the tree.
 
     Key         Action ~
-    `j` / `k`   Move the selection down/up
-    `<CR>`      Open the document under the cursor
+    `j` / `k`   Move the selection
+    `<CR>`      Open the document
     `l`         Set the document's label
     `s`         Set the document's status
-    `gs`        Sort the view by a column (view-only; doesn't reorder the binder)
+    `gs`        Sort by a column. This changes the view only, not the tree
     `?`         Show this key list
     `q`         Close the Outliner
 
 ------------------------------------------------------------------------------
 Inspector                                                   *bartleby-inspector*
 
-`:BartlebyToggleInspector` (or `<leader>bi`) opens a read-only split showing
-the current document's Title, Label, Status, Target word count, Keywords, and
-Synopsis. Press `e` on any field's line to edit it - Label and Status open the
-same picker the Binder uses, Target and Keywords open a plain text prompt, and
-Synopsis opens a multi-line prompt (`<CR>` inserts a new line; `<C-s>` saves).
-The Inspector follows whichever document is open in the editor window,
-updating automatically as you switch between them.
+`<leader>bi` or `:BartlebyToggleInspector` opens a read-only pane with the
+current document's Title, Label, Status, Target, Keywords, and Synopsis. It
+follows the document in the editor window.
+
+    Key                         Action ~
+    `e` on Label or Status      Pick a value
+    `e` on Target or Keywords   Type a value
+    `e` on Synopsis             Edit the synopsis. `<CR>` adds a line. `<C-s>` saves
+
+------------------------------------------------------------------------------
+Scrive list                                               *bartleby-scrive-list*
+
+`:BartlebyList` shows every scrive with its title and type. If no scrive
+exists, it asks for a name and creates one. `:BartlebyOpen` with no name and
+no previous scrive also shows this list.
+
+    Key         Action ~
+    `j` / `k`   Move the selection
+    `<CR>`      Open the scrive
+    `?`         Show this key list
+    `q`         Close the list
 
 ------------------------------------------------------------------------------
 Focus, Spotlight, and Quill                 *bartleby-focus-spotlight-and-quill*
 
-Three complementary distraction-reduction tools, each independent of the
-others:
+Three independent writing aids:
 
-- Focus (`:BartlebyFocus`, `<leader>bz`) - a centered, fixed-width writing
-  column with the rest of the screen dimmed, in the spirit of Goyo.
-- Spotlight (`:BartlebySpotlight`, `<leader>bl`) - dims everything except the
-  current paragraph or (in Dialogue mode) the current speaker's lines, in the
-  spirit of Limelight. `<leader>bL` opens a picker for its available modes.
-- Quill (`:BartlebyQuill`, `<leader>bp`) - buffer-local word-processor-style
-  wrapping (soft or hard), in the spirit of vim-pencil, with automatic mode
-  detection for a buffer's existing style.
+    Tool            Command                Mapping         Effect ~
+
+    Focus           `:BartlebyFocus`       `<leader>bz`    A centered
+                                                           writing column.
+                                                           The rest of the
+                                                           screen is dimmed
+
+    Spotlight       `:BartlebySpotlight`   `<leader>bl`    Dims all text
+                                                           except the
+                                                           current
+                                                           paragraph, or
+                                                           the current
+                                                           speaker in
+                                                           Dialogue mode.
+                                                           `<leader>bL`
+                                                           picks the mode
+
+    Quill           `:BartlebyQuill`       `<leader>bp`    Word-processor
+                                                           wrapping, soft
+                                                           or hard,
+                                                           detected from
+                                                           the document
 
 ------------------------------------------------------------------------------
-Fountain (screenplay) support             *bartleby-fountain-screenplay-support*
+Fountain                                                     *bartleby-fountain*
 
-Screenplay-type scrives use `.fountain` files instead of `.md`, with their own
-filetype, syntax highlighting, and a Dialogue Spotlight mode that understands
-character cues and scene headings structurally rather than by quote-scanning.
+Screenplay scrives use `.fountain` files. They have their own filetype and
+syntax highlighting. Spotlight's Dialogue mode finds character cues and scene
+headings in them.
 
 ------------------------------------------------------------------------------
-Command palette and menu                     *bartleby-command-palette-and-menu*
+Palette and menu                                     *bartleby-palette-and-menu*
 
-`:BartlebyCommands` (`<leader>b<Space>`) opens a fuzzy-searchable list of
-every `:Bartleby*` command. `:BartlebyMenu` (`<leader>bm`) opens the same
-functionality organized as a categorized tree (Scrive/Binder/
-View/Document/Project) instead.
+`:BartlebyCommands` or `<leader>b<Space>` opens a searchable list of all
+Bartleby commands. `:BartlebyMenu` or `<leader>bm` shows the same commands in
+groups: Scrive, Binder, View, Document, and Project.
 
 ------------------------------------------------------------------------------
 Session, snapshots, and search           *bartleby-session-snapshots-and-search*
 
-- Session: Bartleby remembers which document was open, your cursor position,
-  and the Binder's collapsed/expanded state per scrive, and which scrive you
-  had open last across Vim restarts. Restoring on startup is opt-in - see
-  `g:bartleby_session_auto_restore`.
-- Snapshots: `S` in the Binder (or `:BartlebySnapshot` from the edit window)
-  saves a timestamped copy of a document's current text;
-  `gS`/`:BartlebySnapshots` lists them and can restore one (which itself takes
-  a safety snapshot of the current state first).
-- Search: `/` in the Binder or `:BartlebySearch` greps the whole scrive into
-  the quickfix list.
+Session - Bartleby remembers, for each scrive, the open document, the cursor
+position, and which Binder folders are collapsed. It also remembers the last
+scrive. To reopen it when Vim starts, set `g:bartleby_session_auto_restore`.
+
+Snapshots - `S` in the Binder or `:BartlebySnapshot` saves a timestamped copy
+of a document. `gS` or `:BartlebySnapshots` lists the copies and restores one.
+A restore first takes a snapshot of the current text.
+
+Search - `/` in the Binder or `:BartlebySearch` searches the scrive and puts
+the results in the quickfix list.
+
+------------------------------------------------------------------------------
+Auto-save                                                   *bartleby-auto-save*
+
+Bartleby saves changed scrive documents while you work, in the editor window
+and in Focus mode. Other files are not affected.
+
+- When you pause in Normal mode or leave Insert mode, it saves at most once
+  every `g:bartleby_autosave_interval` seconds. A save that the interval skips
+  runs when the interval ends.
+- When you leave the document or Vim loses focus, it saves at once.
+
+It writes only changed documents. To turn it off, set `g:bartleby_autosave` to
+`0`.
 
 ------------------------------------------------------------------------------
 Dictionary and thesaurus                     *bartleby-dictionary-and-thesaurus*
 
-With Merriam-Webster API keys set (see Configuration #configuration),
-`<leader>bd` shows the definition of the word under the cursor and
-`<leader>bt` shows its synonyms. In visual mode, both look up the selected
-text (one line only). Both work in a scrive's editor window and in Focus mode.
+These need Merriam-Webster API keys. See Configuration #configuration.
 
-In the thesaurus, `<CR>` replaces the word in your text with the selected
-synonym, in the same capitalization (`Quiet` becomes `Calm`). One `u` undoes
-it. `a` switches between synonyms and antonyms, and `d` shows the definition
-of the selected word. A misspelled word shows Merriam-Webster's suggestions;
-`<CR>` looks one up.
+`<leader>bd` shows the definition of the word under the cursor. `<leader>bt`
+shows its synonyms. In Visual mode, both look up the selected text on one
+line. `:BartlebyDefine {word}` and `:BartlebyThesaurus {word}` look up a typed
+word.
 
-`:BartlebyDefine {word}` and `:BartlebyThesaurus {word}` look up a typed word.
-In that case `<CR>` copies the synonym to the unnamed register instead of
-replacing text.
+    Key                                Action ~
 
-Results are cached in `~/.bartleby/lexicon_cache.json` (never with your key),
-so repeat lookups make no request.
+    `j` / `k`                          Move the selection
 
-Each lookup is enabled by its own key. With no key, its mapping and its
-palette and menu entries do not exist, and its command only says which setting
-is missing. Set keys in your vimrc before Bartleby loads, or use the
-`$BARTLEBY_MW_DICTIONARY_KEY` and `$BARTLEBY_MW_THESAURUS_KEY` environment
-variables to keep them out of a shared vimrc.
+    `<CR>` in the thesaurus            Replace the word in the text, with
+                                       the same capitalization. For a
+                                       typed word, copy the synonym to
+                                       the unnamed register
+
+    `<CR>` on a suggestion             Look up the suggestion
+
+    `a`                                Show antonyms or synonyms
+
+    `d`                                Show the definition of the
+                                       selected word
+
+    `?`                                Show this key list
+
+    `q`                                Close
+
+One `u` undoes a replacement. A misspelled word shows Merriam-Webster's
+suggestions.
+
+Results are cached in `~/.bartleby/lexicon_cache.json`, so a repeated lookup
+sends no request. The cache does not contain your keys.
+
+Each lookup needs its own key. Without the key, its mapping and its palette
+and menu entries are not created, and its command reports the missing setting.
+Set the keys before Bartleby loads, or use the `$BARTLEBY_MW_DICTIONARY_KEY`
+and `$BARTLEBY_MW_THESAURUS_KEY` environment variables to keep them out of a
+shared vimrc.
 
 ------------------------------------------------------------------------------
-Compiling your manuscript                   *bartleby-compiling-your-manuscript*
+Compile                                                       *bartleby-compile*
 
-`:BartlebyCompile` walks through: which documents to include, a kind
-(Manuscript, Book, or Screenplay), a format, and kind-specific settings (font,
-line spacing, cover image, and so on). Settings are saved as a named, reusable
-target you can re-run later without answering the wizard again.
+`:BartlebyCompile` asks for the documents to include, a kind, a format, and
+settings for that kind such as font, line spacing, and cover image. It saves
+the answers as a named target that you can run again.
 
-- Manuscript - a submission-format PDF via `sffms`: double-spaced Courier,
-  running header, title page with word count. Front Matter and Back Matter
-  documents each become their own unnumbered chapter (`\chapter*`); Chapters
-  become numbered chapters; other folders are flattened into the surrounding
-  prose without a heading of their own.
-- Book - a typeset PDF, HTML, EPUB, or Markdown file via a real `book`-class
-  LaTeX template: styled chapter openings, running headers, an optional cover
-  image, and a table of contents. Front Matter and Back Matter are wrapped in
-  real `\frontmatter`/ `\backmatter`, with `\mainmatter` marking where the
-  numbered content begins - so front matter pages number in lowercase roman
-  numerals and the main text restarts at page 1, exactly as in a
-  conventionally typeset book.
-- Screenplay - PDF, HTML, or Final Draft (`.fdx`) via `screenplain`.
+The selection pane lists the contents of Front Matter, Manuscript, and Back
+Matter. Only these folders go into a compile.
 
-Structure always comes from the Binder tree itself - a Chapter folder, not a
-`#` heading in your prose - so how you organize your binder is exactly what
-ends up in the compiled output.
+    Kind                  Formats               Result ~
+
+    Manuscript            PDF                   Submission format
+                                                through sffms:
+                                                double-spaced
+                                                Courier, running
+                                                header, and a title
+                                                page with the word
+                                                count
+
+    Book                  PDF, HTML, EPUB,      A typeset book with
+                          Markdown              chapter openings,
+                                                running headers, a
+                                                table of contents,
+                                                and an optional cover
+                                                image
+
+    Screenplay            PDF, HTML, FDX        Standard screenplay
+                                                format through
+                                                screenplain
+
+The tree sets the structure. A Chapter folder becomes a numbered chapter, and
+each Front Matter and Back Matter document becomes an unnumbered chapter.
+Other folders add no heading. In a Book PDF, front matter pages use roman
+numerals, and page 1 is the first page of the main text.
+
+Each Pandoc run writes a log to `~/.bartleby/logs/`, named for the scrive, the
+target, and the time. Bartleby keeps the newest
+`g:bartleby_compile_log_retention` logs for each target.
+
+    Key in the selection pane   Action ~
+    `x`                         Include or exclude the document. On a folder, all documents under it
+    `<CR>`                      Accept the selection and continue
+    `?`                         Show this key list
+    `q`                         Cancel
 
 ------------------------------------------------------------------------------
 Commands                                                     *bartleby-commands*
 
-    Command                                              Description ~
+    Command                                                 Description ~
 
-    `:BartlebyOpen {name}`                               Open an existing scrive by name;
-                                                         with no argument, reopens the last
-                                                         one
+    `:BartlebyOpen [name]`                                  Open a scrive by name. Without a
+                                                            name, open the last scrive
 
-    `:BartlebyNewScrive {name}`                          Create a new scrive, prompting for
-                                                         its type
+    `:BartlebyNewScrive {name}`                             Create a scrive. Asks for its type
 
-    `:BartlebyList`                                      List every scrive and open the
-                                                         selected one; if none exist,
-                                                         prompt to create one
+    `:BartlebyList`                                         List all scrives and open the
+                                                            selected one
 
-    `:BartlebyToggleBinder`                              Toggle the Binder sidebar
+    `:BartlebyToggleBinder`                                 Show or hide the Binder
 
-    `:BartlebyToggleInspector`                           Toggle the Inspector split for the
-                                                         current document
+    `:BartlebyToggleInspector`                              Show or hide the Inspector
 
-    `:BartlebySearch`                                    Project-wide text search via the
-                                                         quickfix list
+    `:BartlebySearch`                                       Search the scrive into the
+                                                            quickfix list
 
-    `:BartlebyFocus[!] [dim]`                            Distraction-free composition mode;
-                                                         bang forces it off
+    `:BartlebyFocus[!] [dim]`                               Toggle Focus. `!` turns it off
 
-    `:BartlebySpotlight[!] [mode-name\|coefficient]`     Paragraph/pattern-based prose
-                                                         highlighting
+    `:BartlebySpotlight[!] [mode or coefficient]`           Toggle Spotlight. `!` turns it off
 
-    `:BartlebyQuill [detect\|off\|hard\|soft\|toggle]`   Buffer-local word-processing wrap
-                                                         mode
+    `:BartlebyQuill [detect, off, hard, soft, or toggle]`   Set the Quill wrap mode
 
-    `:BartlebySnapshot`                                  Take a snapshot of the current
-                                                         document
+    `:BartlebySnapshot`                                     Take a snapshot of the current
+                                                            document
 
-    `:BartlebySnapshots`                                 View/restore snapshots for the
-                                                         current document
+    `:BartlebySnapshots`                                    View or restore snapshots of the
+                                                            current document
 
-    `:BartlebyProfile`                                   Edit the global author/contact
-                                                         profile
+    `:BartlebyProfile`                                      Edit your author profile
 
-    `:BartlebyProjectInfo`                               Edit the current scrive's profile
-                                                         override
+    `:BartlebyProjectInfo`                                  Edit the profile for this scrive
+                                                            only
 
-    `:BartlebyCompile`                                   Open the Compile pipeline for the
-                                                         current scrive
+    `:BartlebyCompile`                                      Compile the scrive
 
-    `:BartlebyCommands`                                  Open the fuzzy command palette
+    `:BartlebyCommands`                                     Open the command palette
 
-    `:BartlebyMenu`                                      Open the categorized command menu
+    `:BartlebyMenu`                                         Open the command menu
 
-    `:BartlebyDefine [word]`                             Define the word under the cursor,
-                                                         or `word`
+    `:BartlebyDefine [word]`                                Define the word under the cursor
+                                                            or `word`
 
-    `:BartlebyThesaurus [word]`                          Show synonyms for the word under
-                                                         the cursor, or `word`
+    `:BartlebyThesaurus [word]`                             Show synonyms for the word under
+                                                            the cursor or `word`
 
-    `:BartlebyLexiconClearCache`                         Delete all cached dictionary and
-                                                         thesaurus results
+    `:BartlebyLexiconClearCache`                            Delete the lookup cache
 
 ------------------------------------------------------------------------------
-Default mappings                                     *bartleby-default-mappings*
+Mappings                                                     *bartleby-mappings*
 
     Mapping                            Action ~
 
-    `<leader>bi`                       Toggle Inspector
+    `<leader>bi`                       Toggle the Inspector
 
-    `<leader>bz`                       Toggle Focus mode
+    `<leader>bz`                       Toggle Focus
 
     `<leader>bl`                       Toggle Spotlight
 
-    `<leader>bL`                       Open Spotlight's mode picker
+    `<leader>bL`                       Pick a Spotlight mode
 
     `<leader>bp`                       Toggle Quill
 
@@ -430,234 +466,231 @@ Default mappings                                     *bartleby-default-mappings*
     `<leader>bm`                       Open the command menu
 
     `<leader>bd`                       Define the word under the cursor
-                                       (or the visual selection)
+                                       or the Visual selection
 
     `<leader>bt`                       Thesaurus for the word under the
-                                       cursor (or the visual selection)
+                                       cursor or the Visual selection
 
-`<leader>bd` and `<leader>bt` exist only when that lookup has an API key.
-
-Binder, Corkboard, and Outliner each have their own buffer-local keys - see
-The Binder #the-binder, Corkboard #corkboard, and Outliner #outliner above.
+`<leader>bd` and `<leader>bt` exist only when their API key is set. The
+Binder, Corkboard, Outliner, and other panes have their own keys, listed in
+their sections.
 
 ------------------------------------------------------------------------------
 Configuration                                           *bartleby-configuration*
 
-All settings are `g:bartleby_*` global variables, set before Bartleby loads
-(typically in your `vimrc`). Every one has a working default; you only need to
-set the ones you want to change.
+Set these variables in your vimrc before Bartleby loads. Each has a default,
+so set only the ones you want to change.
 
 General
 
     Variable                               Default               Description ~
 
-    `g:bartleby_binder_root`               `~/Documents`         Where scrives are
-                                                                 created, under a
-                                                                 `Bartleby/`
-                                                                 subdirectory
+    `g:bartleby_binder_root`               `~/Documents`         Scrives are created
+                                                                 in a `Bartleby/`
+                                                                 folder here
 
-    `g:bartleby_binder_show_role_labels`   `1`                   Show
-                                                                 "Chapter:"/"Part:"
-                                                                 prefixes in the
-                                                                 Binder by default
+    `g:bartleby_binder_show_role_labels`   `1`                   Show `Chapter:` and
+                                                                 `Part:` prefixes in
+                                                                 the Binder
 
     `g:bartleby_session_auto_restore`      `0`                   Reopen the last
-                                                                 scrive automatically
-                                                                 on Vim startup
+                                                                 scrive when Vim
+                                                                 starts
 
-    `g:bartleby_snapshot_retention`        `5`                   How many snapshots to
-                                                                 keep per document
-                                                                 (oldest evicted
-                                                                 first)
+    `g:bartleby_snapshot_retention`        `5`                   Snapshots kept per
+                                                                 document. The oldest
+                                                                 is deleted first
+
+    `g:bartleby_autosave`                  `1`                   Save changed scrive
+                                                                 documents
+                                                                 automatically
+
+    `g:bartleby_autosave_interval`         `30`                  Minimum seconds
+                                                                 between automatic
+                                                                 saves of a document
 
 Focus
 
     Variable                           Default               Description ~
 
-    `g:bartleby_focus_width`           `80`                  Column width of the
-                                                             centered writing
+    `g:bartleby_focus_width`           `80`                  Width of the writing
                                                              column
 
     `g:bartleby_focus_height`          `'85%'`               Height of the writing
                                                              column
 
-    `g:bartleby_focus_margin_top`      `-1`                  Top margin (`-1` =
-                                                             auto-center)
+    `g:bartleby_focus_margin_top`      `-1`                  Top margin. `-1`
+                                                             centers the column
 
-    `g:bartleby_focus_margin_bottom`   `-1`                  Bottom margin (`-1` =
-                                                             auto-center)
+    `g:bartleby_focus_margin_bottom`   `-1`                  Bottom margin. `-1`
+                                                             centers the column
 
-    `g:bartleby_focus_linenr`          `0`                   Show line numbers
-                                                             while focused
+    `g:bartleby_focus_linenr`          `0`                   Show line numbers in
+                                                             Focus
 
-    `g:bartleby_focus_bg`              `'black'`             Background color for
-                                                             the dimmed
-                                                             surrounding area
+    `g:bartleby_focus_bg`              `'black'`             Color of the dimmed
+                                                             area
 
 Spotlight
 
     Variable                                     Default               Description ~
 
-    `g:bartleby_spotlight_default_coefficient`   `0.5`                 Default dim strength
-                                                                       when no
-                                                                       mode/coefficient is
-                                                                       given
+    `g:bartleby_spotlight_default_coefficient`   `0.5`                 Dim strength when no
+                                                                       mode or coefficient
+                                                                       is given
 
-    `g:bartleby_spotlight_conceal_guifg`         `''`                  GUI foreground color
-                                                                       for dimmed text
-                                                                       (empty = colorscheme
-                                                                       default)
+    `g:bartleby_spotlight_conceal_guifg`         `''`                  GUI color of dimmed
+                                                                       text. Empty uses the
+                                                                       colorscheme
 
-    `g:bartleby_spotlight_conceal_ctermfg`       `''`                  Terminal foreground
-                                                                       color for dimmed text
+    `g:bartleby_spotlight_conceal_ctermfg`       `''`                  Terminal color of
+                                                                       dimmed text
 
-    `g:bartleby_spotlight_bop`                   `'^\s*$\n\zs'`        Pattern marking the
-                                                                       beginning of a
-                                                                       paragraph
+    `g:bartleby_spotlight_bop`                   `'^\s*$\n\zs'`        Pattern for the start
+                                                                       of a paragraph
 
-    `g:bartleby_spotlight_eop`                   `'^\s*$'`             Pattern marking the
-                                                                       end of a paragraph
+    `g:bartleby_spotlight_eop`                   `'^\s*$'`             Pattern for the end
+                                                                       of a paragraph
 
-    `g:bartleby_spotlight_paragraph_span`        `0`                   Extra paragraphs to
-                                                                       keep lit around the
+    `g:bartleby_spotlight_paragraph_span`        `0`                   Extra paragraphs kept
+                                                                       bright around the
                                                                        cursor
 
     `g:bartleby_spotlight_priority`              `10`                  `matchadd()` priority
-                                                                       for Spotlight's own
-                                                                       highlighting
+                                                                       of Spotlight's
+                                                                       highlight
 
-    `g:bartleby_spotlight_dialogue_pattern`      (quote-matching       Pattern used to
-                                                 regex)                detect dialogue in
-                                                                       prose (non-fountain)
-                                                                       buffers
+    `g:bartleby_spotlight_dialogue_pattern`      A quote pattern       Pattern for dialogue
+                                                                       in prose documents
 
 Quill
 
     Variable                                   Default               Description ~
 
-    `g:bartleby_quill_wrap_mode_default`       `'hard'`              Wrap mode
-                                                                     `:BartlebyQuill detect`
-                                                                     falls back to when
-                                                                     detection is inconclusive
+    `g:bartleby_quill_wrap_mode_default`       `'hard'`              Wrap mode when
+                                                                     detection finds no
+                                                                     clear style
 
-    `g:bartleby_quill_textwidth`               `74`                  `textwidth` Quill sets in
+    `g:bartleby_quill_textwidth`               `74`                  `textwidth` in
                                                                      hard-wrap mode
 
-    `g:bartleby_quill_autoformat`              `1`                   Auto-reformat paragraphs
-                                                                     as you type/leave insert
-                                                                     mode
+    `g:bartleby_quill_autoformat`              `1`                   Reformat paragraphs
+                                                                     as you type
 
-    `g:bartleby_quill_autoformat_config`       (per-filetype         Fine-grained
-                                               `formatoptions`)      `formatoptions` overrides
-                                                                     by filetype
+    `g:bartleby_quill_autoformat_config`       Per filetype          `formatoptions`
+                                                                     changes for each
+                                                                     filetype
 
-    `g:bartleby_quill_autoformat_aliases`      (filetype alias map)  Maps related filetypes
-                                                                     onto a shared autoformat
-                                                                     config
+    `g:bartleby_quill_autoformat_aliases`      A filetype map        Filetypes that share
+                                                                     one autoformat
+                                                                     setting
 
     `g:bartleby_quill_joinspaces`              `0`                   Two spaces after a
-                                                                     sentence when joining
-                                                                     lines
+                                                                     sentence when lines
+                                                                     are joined
 
-    `g:bartleby_quill_cursorwrap`              `1`                   Let the cursor move
-                                                                     across soft-wrapped
-                                                                     display lines naturally
+    `g:bartleby_quill_cursorwrap`              `1`                   Move the cursor by
+                                                                     screen line in
+                                                                     soft-wrap mode
 
-    `g:bartleby_quill_conceallevel`            `3`                   `conceallevel` Quill sets
-                                                                     in soft-wrap mode
+    `g:bartleby_quill_conceallevel`            `3`                   `conceallevel` in
+                                                                     soft-wrap mode
 
-    `g:bartleby_quill_concealcursor`           `'c'`                 `concealcursor` Quill
-                                                                     sets in soft-wrap mode
+    `g:bartleby_quill_concealcursor`           `'c'`                 `concealcursor` in
+                                                                     soft-wrap mode
 
-    `g:bartleby_quill_soft_detect_sample`      `20`                  Lines sampled when
-                                                                     auto-detecting a buffer's
-                                                                     existing wrap style
+    `g:bartleby_quill_soft_detect_sample`      `20`                  Lines read to detect
+                                                                     the wrap style
 
-    `g:bartleby_quill_soft_detect_threshold`   `130`                 Sensitivity of that
+    `g:bartleby_quill_soft_detect_threshold`   `130`                 Sensitivity of the
                                                                      detection
 
-    `g:bartleby_quill_mode_indicators`         (statusline strings)  Statusline text shown per
+    `g:bartleby_quill_mode_indicators`         Statusline text       Text shown for each
                                                                      wrap mode
 
-    `g:bartleby_quill_auto`                    `1`                   Automatically initialize
-                                                                     Quill for recognized
-                                                                     document buffers
+    `g:bartleby_quill_auto`                    `1`                   Start Quill for
+                                                                     scrive documents
+                                                                     automatically
 
 Compile
 
     Variable                                        Default               Description ~
 
-    `g:bartleby_compile_pandoc_bin`                 `'pandoc'`            Path/name of the
-                                                                          Pandoc executable
+    `g:bartleby_compile_pandoc_bin`                 `'pandoc'`            Pandoc program
 
-    `g:bartleby_compile_screenplain_bin`            `'screenplain'`       Path/name of the
-                                                                          screenplain executable
+    `g:bartleby_compile_screenplain_bin`            `'screenplain'`       screenplain program
 
-    `g:bartleby_compile_toc`                        `0`                   Include a table of
-                                                                          contents by default
+    `g:bartleby_compile_toc`                        `0`                   Add a table of
+                                                                          contents
 
-    `g:bartleby_compile_standalone`                 `1`                   Pass `--standalone` to
-                                                                          Pandoc
+    `g:bartleby_compile_standalone`                 `1`                   Pass `--standalone`
+                                                                          to Pandoc
 
-    `g:bartleby_compile_manuscript_font`            `'Courier New'`       Manuscript-target font
-                                                                          (courier/not-courier
-                                                                          switch for sffms)
+    `g:bartleby_compile_manuscript_font`            `'Courier New'`       Manuscript font.
+                                                                          sffms uses Courier or
+                                                                          not Courier
 
-    `g:bartleby_compile_book_font`                  `'Georgia'`           Book-target font
+    `g:bartleby_compile_book_font`                  `'Georgia'`           Book font
 
-    `g:bartleby_compile_screenplay_font`            `'Courier Prime'`     Screenplay-target font
+    `g:bartleby_compile_screenplay_font`            `'Courier Prime'`     Screenplay font
 
-    `g:bartleby_compile_manuscript_double_spaced`   `1`                   Default line spacing
-                                                                          for new Manuscript
-                                                                          targets
+    `g:bartleby_compile_manuscript_double_spaced`   `1`                   Line spacing of new
+                                                                          Manuscript targets
 
-    `g:bartleby_compile_indent_paragraphs`          `1`                   Indent paragraphs in
-                                                                          Book targets
-                                                                          (vs. block spacing)
+    `g:bartleby_compile_indent_paragraphs`          `1`                   Indent Book
+                                                                          paragraphs instead of
+                                                                          spacing them
 
-    `g:bartleby_compile_book_chapter_style`         `'numeral'`           Chapter numbering
-                                                                          style for Book targets
-                                                                          (`numeral` or
-                                                                          `spelled`)
+    `g:bartleby_compile_book_chapter_style`         `'numeral'`           Book chapter numbers:
+                                                                          `numeral` or
+                                                                          `spelled`
 
-    `g:bartleby_compile_book_part_style`            `'numeral'`           Part numbering style
-                                                                          for Book targets
+    `g:bartleby_compile_book_part_style`            `'numeral'`           Book part numbers:
+                                                                          `numeral` or
+                                                                          `spelled`
 
-    `g:bartleby_compile_extra_args`                 `[]`                  Extra raw arguments
-                                                                          appended to every
-                                                                          Pandoc invocation
+    `g:bartleby_compile_extra_args`                 `[]`                  More arguments for
+                                                                          every Pandoc run
+
+    `g:bartleby_compile_log_retention`              `10`                  Pandoc logs kept per
+                                                                          target. `0` keeps all
 
 Dictionary and thesaurus
 
     Variable                                 Default                                               Description ~
 
-    `g:bartleby_dictionary_api_key`          `''`                                                  Merriam-Webster Collegiate
-                                                                                                   Dictionary key; falls back to
+    `g:bartleby_dictionary_api_key`          `''`                                                  Collegiate Dictionary key. Else
                                                                                                    `$BARTLEBY_MW_DICTIONARY_KEY`
 
-    `g:bartleby_thesaurus_api_key`           `''`                                                  Merriam-Webster Collegiate
-                                                                                                   Thesaurus key; falls back to
+    `g:bartleby_thesaurus_api_key`           `''`                                                  Collegiate Thesaurus key. Else
                                                                                                    `$BARTLEBY_MW_THESAURUS_KEY`
 
-    `g:bartleby_dictionary_reference`        `'collegiate'`                                        Dictionary reference to use
-                                                                                                   (only `collegiate` for now)
+    `g:bartleby_dictionary_reference`        `'collegiate'`                                        Dictionary reference. Only
+                                                                                                   `collegiate` is available
 
-    `g:bartleby_thesaurus_reference`         `'thesaurus'`                                         Thesaurus reference to use
-                                                                                                   (only `thesaurus` for now)
+    `g:bartleby_thesaurus_reference`         `'thesaurus'`                                         Thesaurus reference. Only
+                                                                                                   `thesaurus` is available
 
-    `g:bartleby_lexicon_cache_max_entries`   `1000`                                                Results kept in the disk cache,
-                                                                                                   oldest removed first; `0` turns
-                                                                                                   the disk cache off
+    `g:bartleby_lexicon_cache_max_entries`   `1000`                                                Results kept in the disk cache.
+                                                                                                   `0` turns the disk cache off
 
     `g:bartleby_lexicon_timeout`             `10`                                                  Seconds to wait for
                                                                                                    Merriam-Webster
 
-    `g:bartleby_lexicon_base_url`            `'https://www.dictionaryapi.com/api/v3/references'`   API address; change only for a
-                                                                                                   proxy or a test server
+    `g:bartleby_lexicon_base_url`            `'https://www.dictionaryapi.com/api/v3/references'`   API address. Change it only for
+                                                                                                   a proxy or a test server
 
 ------------------------------------------------------------------------------
 License                                                       *bartleby-license*
 
-GNU GPL 3.0. See LICENSE LICENSE for the full text.
+GNU GPL 3.0. See LICENSE LICENSE.
+
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+                                                            *bartleby-footnote1*
+The binder tree uses a Vim9 class with a field that is a list of its own
+class. Vim 9.1 cannot load it and reports `E1010: Type not recognized`. Some
+Linux distributions still package Vim 9.1. Run `vim --version` to check.
+Bartleby does not support Vim 8 or Neovim.
 
  vim:tw=78:sw=4:ts=4:ft=help:norl:et:
