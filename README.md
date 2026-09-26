@@ -413,8 +413,11 @@ When a compile ends, Bartleby asks whether to open the result, and
 `<Enter>` answers yes. Markdown opens in a new tab, so no scrive window
 changes. Other formats open in the system viewer through Vim's `:Open`.
 
-Each Pandoc run writes a log to `~/.bartleby/logs/`, named for the
-scrive, the target, and the time. Bartleby keeps the newest
+Each successful Pandoc run writes Pandoc's own log to
+`~/.bartleby/logs/`, named for the scrive, the target, and the time.
+Pandoc writes no log when it fails, so on a failure Bartleby writes the
+error output to a `.log` file there instead, and asks whether to open
+it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 `g:bartleby_compile_log_retention` logs for each target.
 
 | Key in the selection pane | Action |
@@ -547,7 +550,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_compile_book_chapter_style` | `'numeral'` | Book chapter numbers: `numeral` or `spelled` |
 | `g:bartleby_compile_book_part_style` | `'numeral'` | Book part numbers: `numeral` or `spelled` |
 | `g:bartleby_compile_extra_args` | `[]` | More arguments for every Pandoc run |
-| `g:bartleby_compile_log_retention` | `10` | Pandoc logs kept per target. `0` keeps all |
+| `g:bartleby_compile_log_retention` | `10` | Compile logs kept per target. `0` keeps all |
 
 **Dictionary and thesaurus**
 

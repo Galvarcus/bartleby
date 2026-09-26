@@ -711,7 +711,7 @@ enddef
 # replaced. Every other format opens in the system viewer with Vim's
 # dist#vim9#Open, the function behind :Open.
 def OfferToOpen(target: CompileTarget, outputPath: string): void
-  log.Info($'compiled: {outputPath}')
+  log.Info($'compiled: {fnamemodify(outputPath, ":~")}')
   Dl.Confirm($'Compiled "{target.name}". Open it?', () => {
     if target.format ==# 'Markdown'
       execute 'tabedit ' .. fnameescape(outputPath)
@@ -721,7 +721,12 @@ def OfferToOpen(target: CompileTarget, outputPath: string): void
   }, true)
 enddef
 
-def RunJob(label: string, cmd: list<string>, target: CompileTarget, outputPath: string): void
+# FUNCTION: Run a compile command. On success, offer to open the output.
+# On failure, write the command's error output to logBase .. '.log' and
+# offer to open that log in a new tab. Pandoc writes its own log only on
+# success, so this failure log is the only record of what went wrong.
+def RunJob(label: string, cmd: list<string>, target: CompileTarget,
+    outputPath: string, logBase: string): void
   var errLines: list<string> = []
   log.Info($'compiling "{target.name}" ({label})...')
   job_start(cmd, {
@@ -731,9 +736,31 @@ def RunJob(label: string, cmd: list<string>, target: CompileTarget, outputPath: 
         OfferToOpen(target, outputPath)
       else
         log.Error($'{cmd[0]} exited with status {status}: {join(errLines, " | ")}')
+        OfferFailureLog(target, WriteFailureLog(logBase .. '.log', cmd, status, errLines))
       endif
     },
   })
+enddef
+
+# FUNCTION: Write a failed command, its exit status, and its error output
+# to path, and return path.
+def WriteFailureLog(path: string, cmd: list<string>, status: number,
+    errLines: list<string>): string
+  var lines: list<string> = [
+    $'Command: {join(cmd, " ")}',
+    $'Exit status: {status}',
+    '',
+  ]
+  writefile(lines + (empty(errLines) ? ['No error output.'] : errLines), path)
+  return path
+enddef
+
+# FUNCTION: Ask whether to open the failure log, with yes as the default.
+# It opens in a new tab, so that no scrive window is replaced.
+def OfferFailureLog(target: CompileTarget, path: string): void
+  Dl.Confirm($'Compiling "{target.name}" failed. Open the log?', () => {
+    execute 'tabedit ' .. fnameescape(path)
+  }, true)
 enddef
 
 def ExecuteScreenplay(project: Pj.Project, target: CompileTarget): void
@@ -750,7 +777,7 @@ def ExecuteScreenplay(project: Pj.Project, target: CompileTarget): void
   var fountainPath: string = $'{outDir}/.{Sl.Slugify(target.name)}-src.fountain'
   writefile(ConcatenateDocs(project, target, ''), fountainPath)
   RunJob($'{target.kind}/{target.format}', [compilescreenplainbin, fountainPath, outputPath],
-    target, outputPath)
+    target, outputPath, NewLogBase(project, target))
 enddef
 
 def BuildDocLines(project: Pj.Project, target: CompileTarget): list<string>
@@ -825,17 +852,20 @@ def ExecutePandoc(project: Pj.Project, target: CompileTarget): void
     endif
   endif
   args += compileextraargs
-  args->add($'--log={NewPandocLogPath(project, target)}')
+  var logBase: string = NewLogBase(project, target)
+  args->add($'--log={logBase}.json')
 
-  RunJob($'{target.kind}/{target.format}', [compilepandocbin] + args, target, outputPath)
+  RunJob($'{target.kind}/{target.format}', [compilepandocbin] + args, target, outputPath, logBase)
 enddef
 
-# FUNCTION: Return a new timestamped path for this run's Pandoc log, which
-# Pandoc writes as JSON through its log option:
-#   ~/.bartleby/logs/<scrive>_<target>_<YYYYmmdd-HHMMSS>.json
-# Keep the newest g:bartleby_compile_log_retention logs per scrive and
-# target, this run included, and delete the rest. 0 keeps every log.
-def NewPandocLogPath(project: Pj.Project, target: CompileTarget): string
+# FUNCTION: Return a new timestamped log path for this run, without an
+# extension:
+#   ~/.bartleby/logs/<scrive>_<target>_<YYYYmmdd-HHMMSS>
+# Pandoc writes .json there through its log option, but only on success.
+# On failure, RunJob writes .log there with the error output. Keep the
+# newest g:bartleby_compile_log_retention logs per scrive and target,
+# this run included, and delete the rest. 0 keeps every log.
+def NewLogBase(project: Pj.Project, target: CompileTarget): string
   var logDir: string = expand('~/.bartleby/logs')
   if !isdirectory(logDir)
     mkdir(logDir, 'p')
@@ -843,7 +873,7 @@ def NewPandocLogPath(project: Pj.Project, target: CompileTarget): string
   var prefix: string = Sl.Slugify(fnamemodify(project.scriveDir, ':t:r'))
     .. '_' .. Sl.Slugify(target.name) .. '_'
   if compilelogretention > 0
-    var older: list<string> = sort(glob($'{logDir}/{prefix}[0-9]*.json', false, true))
+    var older: list<string> = sort(glob($'{logDir}/{prefix}[0-9]*.*', false, true))
     var excess: number = len(older) - (compilelogretention - 1)
     if excess > 0
       for path in older[0 : excess - 1]
@@ -851,7 +881,7 @@ def NewPandocLogPath(project: Pj.Project, target: CompileTarget): string
       endfor
     endif
   endif
-  return $'{logDir}/{prefix}{strftime("%Y%m%d-%H%M%S")}.json'
+  return $'{logDir}/{prefix}{strftime("%Y%m%d-%H%M%S")}'
 enddef
 
 export def Execute(project: Pj.Project, target: CompileTarget): void

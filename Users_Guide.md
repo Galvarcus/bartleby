@@ -405,6 +405,10 @@ Press `Enter` to open it. A Markdown file opens in a new tab, and your
 scrive stays as it was in the first tab. A PDF, EPUB, or HTML file opens
 in the program your computer uses for that kind of file.
 
+If the compile fails, Bartleby asks whether to open the error log.
+Press `Enter` to see it in a new tab. The log shows what went wrong,
+such as a font that is not installed.
+
 Each Front Matter and Back Matter document becomes its own section,
 separate from your numbered chapters.
 

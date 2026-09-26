@@ -132,10 +132,48 @@ def Test_pandoc_log_per_run_with_retention(): void
   Fx.CleanupProjectFiles(fx.project)
 enddef
 
+# FUNCTION: A Book PDF with a font that does not exist, so xelatex fails.
+# Pandoc writes no log on failure, so Bartleby must write a .log file with
+# the error output, and ask whether to open it.
+def Test_failure_writes_a_log_and_asks_to_open_it(): void
+  if !executable('pandoc') || !executable('xelatex')
+    echom 'SKIP: pandoc/xelatex not installed'
+    return
+  endif
+  var fx = BuildProjectWithContent()
+  var target = C.CompileTarget.FromDict({
+    name: 'Smoke Fail', kind: 'Book', format: 'PDF', font: 'No Such Font Xyzzy',
+    includedIds: [fx.scene1.id],
+  })
+  var logDir: string = expand('~/.bartleby/logs')
+  C.Execute(fx.project, target)
+  var failLog: string = ''
+  var waited: number = 0
+  while failLog ==# '' && waited < MAX_WAIT_MS
+    sleep 500m
+    waited += 500
+    failLog = get(glob(logDir .. '/bartleby-test-fixture_smoke-fail_*.log', false, true), 0, '')
+  endwhile
+  assert_true(failLog !=# '', 'no failure log within ' .. MAX_WAIT_MS .. 'ms')
+  if failLog !=# ''
+    var text: list<string> = readfile(failLog)
+    assert_match('^Command: pandoc', text[0])
+    assert_match('^Exit status: [1-9]', text[1])
+    assert_true(len(text) > 3, 'the failure log has no error output')
+  endif
+  var questions = popup_list()->filter((_, id) => join(getbufline(winbufnr(id), 1, '$')) =~# 'failed')
+  assert_equal(1, len(questions), 'no question to open the log')
+  for id in popup_list()
+    popup_close(id)
+  endfor
+  Fx.CleanupProjectFiles(fx.project)
+enddef
+
 export def RunAll(): void
   Test_manuscript_pdf_compiles_to_a_real_nonempty_file()
   Test_book_pdf_compiles_to_a_real_nonempty_file()
   Test_pandoc_log_per_run_with_retention()
+  Test_failure_writes_a_log_and_asks_to_open_it()
 enddef
 
 # A private home folder, so that the log test counts only its own logs,
