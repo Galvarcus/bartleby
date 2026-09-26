@@ -7,21 +7,19 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# quill.vim - Quill: buffer-local word-processing mode, converted from
-# vim-pencil (github.com/preservim/vim-pencil) into a native vim9class
-# component. For use with Focus and the default editor window - a scrive
-# document buffer gets Quill applied automatically (see AutoApply()).
+# quill.vim: Quill, a word-processing mode for one buffer, converted from
+# vim-pencil, github.com/preservim/vim-pencil, to a Vim9 class. For
+# Focus and the normal editor window. Documents of the open scrive get
+# Quill automatically, see AutoApply.
 #
-# Three wrap modes: off, hard (textwidth + autoformat while inserting),
-# soft (display wrap, no textwidth, gj/gk-style navigation). Detection
-# scans modelines/long lines like Pencil's own s:detect_wrap_mode().
+# Three wrap modes. Off. Hard: textwidth, and autoformat while you type.
+# Soft: display wrap without textwidth, and movement by screen line as
+# with gj and gk. Detection reads modelines and long lines, as Pencil's
+# detect_wrap_mode does.
 #
-# QuillSession is defined before the functions that use it, not just
-# by convention: several of them use QuillSession in their own
-# parameter or return type, and Vim9 resolves a function's signature
-# eagerly at definition time - unlike a class used only inside a
-# function body, which can forward-reference one defined later in the
-# file just fine.
+# QuillSession is defined before the functions that use it because
+# several of them name it in a parameter or return type, and Vim9
+# resolves a signature when the function is defined.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -47,8 +45,8 @@ const MODE_HARD: number = 1
 const MODE_SOFT: number = 2
 
 ##############################################################################
-# Wrap-mode detection - scans modelines and sampled lines for a hint,
-# ported from Pencil's s:doModelines/s:doOne/s:detect_wrap_mode.
+# SECTION: Wrap mode detection. Reads modelines and sample lines for a
+# hint, from Pencil's doModelines, doOne, and detect_wrap_mode.
 ##############################################################################
 
 def ScanModelineItem(item: string, maxTw: number): number
@@ -111,9 +109,7 @@ def DetectWrapMode(maxTextwidth: number): number
   return quillwrapmodedefault ==# 'off' ? MODE_OFF : MODE_HARD
 enddef
 
-##############################################################################
-# Per-buffer session. Lives in b:bartleby_quill.
-##############################################################################
+# CLASS: The Quill state of one buffer, stored in b:bartleby_quill.
 
 export class QuillSession
   var wrapMode: number = MODE_OFF
@@ -153,9 +149,10 @@ def CurrentSession(): QuillSession
 enddef
 
 ##############################################################################
-# Autoformat - enabled only in hard mode, only during Insert, and only
-# when the cursor isn't in a blacklisted syntax region (code blocks,
-# headings, etc.) per g:bartleby_quill_autoformat_config.
+# SECTION: Autoformat. On only in hard mode, only in Insert mode, and
+# only when the cursor is not in a syntax region that
+# g:bartleby_quill_autoformat_config excludes, such as a code block or a
+# heading.
 ##############################################################################
 
 def SynStackNames(lnum: number, col: number): list<string>
@@ -215,7 +212,8 @@ def MaybeEnableAutoformat(): void
   endif
 enddef
 
-# af: 1=enable, 0=disable, -1=toggle.
+# FUNCTION: Set autoformat for the buffer. af is 1 to turn it on, 0 to
+# turn it off, and -1 to toggle it.
 export def SetAutoFormat(af: number): void
   var session: QuillSession = CurrentSession()
   var newAf: bool = af ==# -1 ? !session.lastAutoformat : af ==# 1
@@ -240,8 +238,8 @@ export def SetAutoFormat(af: number): void
 enddef
 
 ##############################################################################
-# Init - applies wrap-mode settings/mappings to the current buffer.
-# wrapArg: 'detect'|'off'|'hard'|'soft'|'toggle'.
+# SECTION: Setup. Applies the wrap mode settings and mappings to the
+# current buffer. The wrap argument is detect, off, hard, soft, or toggle.
 ##############################################################################
 
 def ApplyHardSettings(session: QuillSession): void
@@ -431,7 +429,7 @@ export def Init(wrapArg: string = 'detect'): void
 enddef
 
 ##############################################################################
-# Statusline helper and public entry points.
+# SECTION: Statusline helper and public entry points.
 ##############################################################################
 
 export def StatusIndicator(): string
@@ -452,9 +450,9 @@ export def Toggle(): void
   Init('toggle')
 enddef
 
-# Auto-applies hard-wrap Quill to a document buffer belonging to the open
-# scrive - wired to BufEnter in plugin/bartleby.vim, gated by
-# g:bartleby_quill_auto.
+# FUNCTION: Apply Quill in hard wrap mode to a document of the open
+# scrive. Runs on BufEnter, set in plugin/bartleby.vim, when
+# g:bartleby_quill_auto is on.
 export def AutoApply(): void
   if !quillautoapply || exists('b:bartleby_quill')
     return

@@ -7,20 +7,16 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# snapshot.vim - Phase 7b: a manual, Scrivener-style checkpoint of a
-# single document's text, not version control - no diffing, no
-# branching, just point-in-time copies the author took on purpose and
-# can browse or restore later.
+# snapshot.vim: manual checkpoints of one document's text. Not version
+# control: no diffs and no branches, only copies that the author takes on
+# purpose and can browse or restore later.
 #
-# Stored under <scrive>/snapshots/<doc-id>/<timestamp>.json - keyed by
-# the document's own stable id (survives a rename; its relPath
-# wouldn't) rather than its file path.
+# Stored in <scrive>/snapshots/<doc-id>/<timestamp>.json, keyed by the
+# document's id, which stays the same after a rename, unlike its path.
 #
-# Snapshot is defined before the functions that use it, not just by
-# convention: List/Restore both use Snapshot in their own parameter or
-# return type, and Vim9 resolves a function's signature eagerly at
-# definition time - unlike a class used only inside a function body,
-# which can forward-reference one defined later in the file just fine.
+# Snapshot is defined before the functions that use it because List and
+# Restore name it in a parameter or return type, and Vim9 resolves a
+# signature when the function is defined.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -56,8 +52,8 @@ export class Snapshot
     return {timestamp: this.timestamp, label: this.label, lines: this.lines}
   enddef
 
-  # What a picker shows for this snapshot: the label if one was given,
-  # otherwise a readable rendering of the timestamp.
+  # METHOD: Return the name a picker shows: the label when one was given,
+  # else the timestamp in readable form.
   def DisplayName(): string
     if this.label !=# ''
       return this.label
@@ -78,7 +74,7 @@ def SnapshotPath(project: Pj.Project, doc: BI.BinderItem, timestamp: string): st
   return $'{SnapshotDir(project, doc)}/{timestamp}.json'
 enddef
 
-# Oldest-first.
+# FUNCTION: Return the snapshots of doc, oldest first.
 export def List(project: Pj.Project, doc: BI.BinderItem): list<Snapshot>
   var dir: string = SnapshotDir(project, doc)
   if !isdirectory(dir)
@@ -102,10 +98,10 @@ def EnforceRetention(project: Pj.Project, doc: BI.BinderItem): void
   endfor
 enddef
 
-# Snapshots whatever is CURRENTLY ON DISK for `doc` - callers that want
-# to snapshot unsaved editor changes must :write first (Take() itself
-# stays a pure "copy the file" operation, no buffer awareness, so it
-# behaves the same whether called from Binder or an open buffer).
+# FUNCTION: Take a snapshot of the text of doc that is on disk now. A
+# caller that wants unsaved changes must write first. Take only copies
+# the file and knows no buffers, so it works the same from the Binder and
+# from an open buffer.
 export def Take(project: Pj.Project, doc: BI.BinderItem, label: string): void
   var path: string = doc.AbsPath(project.BinderRoot())
   if !filereadable(path)
@@ -121,11 +117,10 @@ export def Take(project: Pj.Project, doc: BI.BinderItem, label: string): void
   log.Info($'snapshot taken: {doc.title}{label ==# "" ? "" : $" ({label})"}')
 enddef
 
-# Overwrites doc's file with `snapshot`'s content - takes an automatic
-# "before restore" snapshot of the current state first, so this is
-# never truly destructive without another snapshot to undo it.
-# Reloads the buffer if the document is currently open, so the editor
-# view reflects the restored content immediately.
+# FUNCTION: Replace the file of doc with the content of snapshot. First
+# takes a snapshot of the current text, so a restore can always be
+# undone. Reloads the buffer when the document is open, so the editor
+# shows the restored text at once.
 export def Restore(project: Pj.Project, doc: BI.BinderItem, snapshot: Snapshot): void
   Take(project, doc, 'before restore')
   var path: string = doc.AbsPath(project.BinderRoot())

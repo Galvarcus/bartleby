@@ -7,12 +7,10 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# state.vim - the single scrive open in this Vim session. Phase 1 is
-# single-project; a per-tab/window notion could replace this later if
-# concurrent scrives turn out to matter. Kept in its own script (rather
-# than plugin/bartleby.vim, which held it originally) so any autoload
-# script - not just the plugin's own commands - can read/write it. A
-# plugin/ file isn't a normal import target for other scripts.
+# state.vim: the one scrive that is open in this Vim session. It is in
+# its own autoload script, not in plugin/bartleby.vim, so every autoload
+# script can read and set it: a plugin file is not a normal import
+# target.
 # License: GNU GPL 3.0
 ##############################################################################
 

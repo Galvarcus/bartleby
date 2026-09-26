@@ -7,16 +7,15 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# templates.vim - default Binder tree per scrive type, plus the on-disk
-# skeleton (folders + starter documents) that backs it. Used once, at
-# scrive-creation time - see scrive.vim#Create.
+# templates.vim: the starter Binder tree for each scrive type, and the
+# folders and documents on disk behind it. Used once, when a scrive is
+# created, see Create in scrive.vim.
 #
-# Chapter is a folder of scenes (not a single file) for Novel/Novel with
-# Parts, so a chapter's compiled heading comes from its own explicit
-# title (BinderItem.title), never from file content - see compile.vim's
-# ConcatenateDocs. Every default folder carries a structureRole so the
-# Binder can show "Chapter: "/"Part: " labels and so move/indent
-# restrictions can enforce where each kind of folder is allowed to live.
+# In a Novel or a Novel with Parts, a chapter is a folder of scenes, not
+# one file, so its compiled heading comes from the folder title, never
+# from file content, see ConcatenateManuscript in compile.vim. Every
+# starter folder has a structureRole, so that the Binder shows Chapter
+# and Part prefixes and folders move only where their role allows.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -24,9 +23,10 @@ import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as Pj
 import autoload 'bartleby/slug.vim' as Sl
 
-# A chapter folder containing one starter scene. relPath nests under the
-# chapter's own slug so multiple chapters' scene-01.md don't collide on
-# disk. docExt only ever '.md' here - screenplays don't use this shape.
+# FUNCTION: Return a chapter folder with one starter scene. relPath is in
+# the chapter's own slug folder, so the scene files of different
+# chapters do not collide on disk. docExt is always .md here, because
+# screenplays do not use chapters.
 def ChapterWithScene(chapterNumber: string): BI.BinderItem
   var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterNumber, BI.ROLE_CHAPTER)
   var relPath: string = 'chapter-' .. chapterNumber .. '/scene-01.md'
@@ -34,9 +34,9 @@ def ChapterWithScene(chapterNumber: string): BI.BinderItem
   return chapter
 enddef
 
-# A folder with one starter document inside it - still used for shapes
-# that are genuinely a single flat file (Short Story's draft, a
-# Screenplay's scenes), not a chapter/scene hierarchy.
+# FUNCTION: Return a folder with one starter document, for types that are
+# a single flat file, such as the draft of a Short Story or the scenes of
+# a Screenplay.
 def FolderWithDoc(folderTitle: string, docTitle: string, docExt: string,
     role: string = BI.ROLE_NONE): BI.BinderItem
   var folder: BI.BinderItem = BI.BinderItem.NewFolder(folderTitle, role)
@@ -45,15 +45,14 @@ def FolderWithDoc(folderTitle: string, docTitle: string, docExt: string,
   return folder
 enddef
 
-# Empty for now - cover image, dedication, acknowledgements, etc. get added
-# as documents once "New Document" (phase 2) exists. Included on every
-# scrive type for now; drop it per-type later if some don't want it.
+# FUNCTION: Return the Front Matter folder. It starts empty. Add a
+# dedication, acknowledgments, and similar pages as documents.
 def FrontMatterFolder(): BI.BinderItem
   return BI.BinderItem.NewFolder('Front Matter', BI.ROLE_FRONT_MATTER)
 enddef
 
-# Prologue, appendices, author's note, etc. - same "empty for now" story
-# as Front Matter.
+# FUNCTION: Return the Back Matter folder. It starts empty, like Front
+# Matter, for pages such as an appendix or an author's note.
 def BackMatterFolder(): BI.BinderItem
   return BI.BinderItem.NewFolder('Back Matter', BI.ROLE_BACK_MATTER)
 enddef
@@ -100,9 +99,9 @@ export def DefaultTree(projectType: string, docExt: string): list<BI.BinderItem>
   endif
 enddef
 
-# Touches an empty file for every document in `items` (mkdir -p'ing its
-# parent folder first), so the tree DefaultTree() describes actually
-# exists on disk - the Binder can't open a document that isn't there yet.
+# FUNCTION: Create an empty file for every document in items, and its
+# folder first, so that the tree from DefaultTree exists on disk. The
+# Binder cannot open a document that does not exist.
 export def Materialize(items: list<BI.BinderItem>, binderRoot: string): void
   for item in items
     if item.IsFolder()

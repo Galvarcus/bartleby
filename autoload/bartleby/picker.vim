@@ -7,21 +7,19 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# picker.vim - popup pickers built on inputpopup.vim's InputPopup (a
-# single choice field - Enter on it submits immediately, same one-
-# keypress feel as the buttonspopup.vim-based picker this replaced).
-# Single job: given a list of option strings, get the user's pick back
-# via a callback. No Binder/DocMeta knowledge lives here.
+# picker.vim: pickers built on InputPopup from inputpopup.vim, with one
+# choice field, where one Enter picks. It takes a list of options and
+# returns the pick through a callback. It knows nothing of the Binder or
+# of document metadata.
 # License: GNU GPL 3.0
 ##############################################################################
 
 import autoload 'bartleby/inputpopup.vim' as IP
 
-# Opens `options` as a single choice field titled `title`; calls `OnPick`
-# with the chosen string. Not called at all if the popup is cancelled.
-# `current` (optional) pre-selects/highlights whichever option matches
-# it, so this doubles as a radio-button picker showing the active choice
-# - omit it for a plain pick-one-of-N with no notion of a "current" value.
+# FUNCTION: Show options as one choice field titled title, and call OnPick
+# with the chosen option. Nothing is called on cancel. current, optional,
+# selects the matching option first, so the picker also shows the active
+# choice. Without it, no option is marked as current.
 export def PickOne(title: string, options: list<string>, OnPick: func(string),
     current: string = ''): void
   var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'choice', options: options}]]

@@ -7,10 +7,10 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# search.vim - project-wide text search across a scrive's documents,
-# populating the quickfix list via :vimgrep. No UI beyond the one query
-# prompt - results are browsed with Vim's own quickfix commands (:copen,
-# :cnext, :cprev, ...) rather than a bespoke results view.
+# search.vim: searches the text of all documents of a scrive into the
+# quickfix list with :vimgrep. The only UI is the query prompt: browse
+# the results with Vim's quickfix commands, such as :copen, :cnext, and
+# :cprev.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -37,9 +37,9 @@ def RunSearch(project: Pj.Project, query: string): void
     return
   endif
 
-  # \V (very nomagic): a plain-text search by default, not a regex one -
-  # matches what typing a phrase into a "find in project" prompt usually
-  # means. Only backslash and the pattern delimiter need escaping under \V.
+  # Very nomagic: search for the plain text, not a regex, which is what a
+  # find in project prompt usually means. With very nomagic, only the
+  # backslash and the pattern delimiter need escaping.
   var pattern: string = '\V' .. escape(query, '/\')
   var fileArgs: string = join(files->mapnew((_, f) => fnameescape(f)), ' ')
   execute $'silent! vimgrep /{pattern}/j {fileArgs}'

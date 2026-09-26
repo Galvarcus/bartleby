@@ -7,9 +7,9 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# persist.vim - thin JSON file I/O. Single job: dict in, dict out, on disk.
-# No knowledge of project/binder shape lives here - that belongs to whoever
-# calls this (project.vim, document.vim).
+# persist.vim: reads and writes JSON files: a dict in, a dict out. It
+# knows nothing of projects or the Binder. Its callers, such as
+# project.vim and document.vim, do.
 # License: GNU GPL 3.0
 ##############################################################################
 

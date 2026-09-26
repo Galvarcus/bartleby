@@ -7,25 +7,22 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# inspector.vim - a right-hand, read-only split showing the current
-# editor document's Title/Label/Status/Target/Keywords/Synopsis.
+# inspector.vim: a read-only split on the right that shows the Title,
+# Label, Status, Target, Keywords, and Synopsis of the document in the
+# editor.
 #
-# Read-only, not editable-in-place: an earlier design let Keywords and
-# Synopsis be edited by typing directly into the buffer (synced back via
-# TextChanged/BufWriteCmd). Replaced with a single `e` key that opens
-# the right popup for whichever field the cursor is on - Label/Status
-# reuse picker.vim's PickOne, the same widget Binder uses for the same
-# job; Target gets a plain numeric PromptText (word count, 0/blank
-# clears it); Keywords gets a single-line PromptText, the same widget
-# Binder's rename (`r`) uses; Synopsis gets PromptMultiline, since it
-# can run to several paragraphs and a single-line prompt would lose
-# that. Title
-# isn't editable here at all - renaming lives in Binder's own `r`.
+# The e key edits the field under the cursor with the fitting popup:
+#   Label, Status  PickOne from picker.vim, as in the Binder.
+#   Target         PromptText for a word count. 0 or empty clears it.
+#   Keywords       PromptText, as the Binder uses for renaming.
+#   Synopsis       PromptMultiline, because a synopsis can have several
+#                  paragraphs.
+# The title cannot be changed here. Rename with r in the Binder.
 #
-# While open, it follows whichever document the editor window shows -
-# opening a different one (from Binder, Corkboard, Outliner, or plain :e)
-# refreshes the Inspector for it automatically, via a BufEnter autocmd
-# that ignores Bartleby's own chrome windows (windows.vim#IsChromeBuffer).
+# While it is open, the Inspector follows the document in the editor
+# window. Opening another document, from the Binder, the Corkboard, the
+# Outliner, or with :e, updates it through a BufEnter autocommand that
+# ignores Bartleby's own panes, see IsChromeBuffer in windows.vim.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -42,10 +39,9 @@ var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 
 const BUF_NAME: string = 'Bartleby-Inspector'
 const FRAME_TITLE: string = '::Inspector::'
-# line numbers within RenderContent()'s own output - kept as named
-# constants since EditUnderCursor() needs to know exactly which line is
-# which without re-deriving it from the rendered text. Line 2 (Title)
-# has no constant: Title is not editable here (see the header comment).
+# Line numbers in the output of RenderContent, so that EditUnderCursor
+# knows which field is on which line. Line 2, the title, has no
+# constant: the title cannot be changed here.
 const LINE_LABEL: number = 3
 const LINE_STATUS: number = 4
 const LINE_TARGET: number = 5
@@ -70,10 +66,9 @@ def RenderContent(item: BI.BinderItem, meta: D.DocMeta): list<string>
   return lines
 enddef
 
-# Rewrites the Inspector buffer's content for `item`, without switching
-# windows/focus away from wherever the editor currently is - setbufline()/
-# deletebufline()/setbufvar() all take an explicit target buffer, so this
-# never needs to touch the editor window at all.
+# FUNCTION: Write the Inspector buffer for item without moving the focus
+# from the editor. setbufline, deletebufline, and setbufvar take a target
+# buffer, so the editor window is not touched.
 def RefreshFor(project: Pj.Project, item: BI.BinderItem): void
   var bufNr: number = bufnr(BUF_NAME)
   if bufNr == -1
@@ -149,10 +144,10 @@ def EditUnderCursor(): void
   endif
 enddef
 
-# Fired on every BufEnter while the Inspector is open - refreshes it for
-# whatever document just became active in a plain editor window. Ignores
-# Bartleby's own chrome buffers (Binder, Inspector itself) and anything
-# that isn't a document in the open scrive at all.
+# FUNCTION: Update the Inspector for the document that just became active
+# in an editor window. Runs on every BufEnter while the Inspector is
+# open. Ignores Bartleby's own panes, such as the Binder and the
+# Inspector, and anything that is not a document of the open scrive.
 def FollowEditor(): void
   if W.IsChromeBuffer(bufnr('%'))
     return
@@ -172,8 +167,8 @@ def SetupKeymaps(): void
   nnoremap <buffer> <silent> e <ScriptCmd>EditUnderCursor()<CR>
 enddef
 
-# Opens (or closes, if already open) the Inspector for whichever document
-# is open in the current window.
+# FUNCTION: Open the Inspector for the document in the current window, or
+# close it when it is open.
 export def Toggle(): void
   var winNr: number = bufwinnr(BUF_NAME)
   if winNr != -1

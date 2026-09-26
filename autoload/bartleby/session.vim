@@ -7,25 +7,19 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# session.vim - Phase 7a: per-scrive session persistence (active document,
-# cursor position, Binder open/closed, Binder's collapsed-folder state)
-# plus remembering the last-opened scrive globally.
+# session.vim: saves and restores the session of each scrive: the active
+# document, the cursor position, whether the Binder is open, and which
+# Binder folders are collapsed. Also remembers the last opened scrive.
 #
-# Capture is split into two focused entry points rather than one big
-# "capture everything" function, since they're triggered by genuinely
-# different events: CaptureCurrentDoc() from CursorHold (Vim's own idle
-# detection - naturally throttled, so this is "continuous" persistence
-# without needing a custom change-counter) and from VimLeavePre;
-# CaptureBinderState() called directly by binder.vim's own
-# toggle/collapse actions, since those are already explicit, infrequent
-# events with no need for a separate autocommand.
+# Two capture functions, for two kinds of events. CaptureCurrentDoc runs
+# on CursorHold, which Vim limits to idle moments, so it saves often
+# without a change counter, and on VimLeavePre. CaptureBinderState runs
+# when binder.vim shows, hides, or collapses, which are rare, explicit
+# actions that need no autocommand.
 #
-# SessionState is defined before the functions that use it, not just
-# by convention: Load/Save both use SessionState in their own
-# parameter or return type, and Vim9 resolves a function's signature
-# eagerly at definition time - unlike a class used only inside a
-# function body, which can forward-reference one defined later in the
-# file just fine.
+# SessionState is defined before the functions that use it because Load
+# and Save name it in a parameter or return type, and Vim9 resolves a
+# signature when the function is defined.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -78,9 +72,8 @@ def Save(project: Pj.Project, state: SessionState): void
 enddef
 
 ##############################################################################
-# Last-opened scrive, globally (not per-scrive) - lets :BartlebyOpen
-# with no argument, or an auto-restore on startup, resume without
-# retyping the scrive name.
+# SECTION: Last scrive. Saved for all scrives, so that :BartlebyOpen
+# without a name, or a restore at startup, needs no scrive name.
 ##############################################################################
 
 def LastScrivePath(): string
@@ -96,17 +89,16 @@ export def LastScrive(): string
 enddef
 
 ##############################################################################
-# Capture.
+# SECTION: Capture.
 ##############################################################################
 
 def IsProjectDoc(project: Pj.Project, path: string): bool
   return path !=# '' && path =~# '^\V' .. escape(project.BinderRoot(), '\')
 enddef
 
-# Wired to CursorHold on any document buffer, and to VimLeavePre - both
-# read the CURRENT window/buffer's own state directly, which is exactly
-# what those two events already give you, so no cross-window lookup is
-# needed here.
+# FUNCTION: Save the document and cursor of the current window. Runs on
+# CursorHold in a document buffer and on VimLeavePre. Both events give
+# the current window, so no other window is looked up.
 export def CaptureCurrentDoc(): void
   var project: Pj.Project = St.Get()
   if project is null_object
@@ -123,8 +115,8 @@ export def CaptureCurrentDoc(): void
   Save(project, SessionState.FromDict(v))
 enddef
 
-# Called directly by binder.vim's own toggle/collapse actions - already
-# explicit, infrequent user actions, so no separate autocommand needed.
+# FUNCTION: Save the Binder state. binder.vim calls this on its show,
+# hide, and collapse actions, so no autocommand is needed.
 export def CaptureBinderState(): void
   var project: Pj.Project = St.Get()
   if project is null_object
@@ -137,17 +129,17 @@ export def CaptureBinderState(): void
 enddef
 
 ##############################################################################
-# Restore - called right after a scrive is opened.
+# SECTION: Restore.
 ##############################################################################
+# FUNCTION: Restore the session of project, right after it opens.
 
 export def Restore(project: Pj.Project): void
   var state: SessionState = Load(project)
 
-  # Binder is always shown first, regardless of the saved open/closed
-  # state - its buffer has to exist for the collapsed-folder state to
-  # be applied and rendered at all, and bufhidden=hide means closing it
-  # afterward (if the saved state says it should be closed) keeps that
-  # state ready for whenever it's next opened.
+  # Show the Binder first, whatever the saved state: its buffer must exist
+  # to apply the collapsed folders. Its bufhidden is hide, so closing it
+  # afterward, when the saved state says closed, keeps that state for the
+  # next time it opens.
   B.Show(project)
   B.ApplyCollapsedIds(state.collapsedIds)
   B.Show(project)

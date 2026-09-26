@@ -7,21 +7,17 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# commandpalette.vim - Phase 7c: a fuzzy-filtered list of Bartleby's
-# global :Bartleby* commands, built on inputpopup.vim's filter field
-# type (type a few letters, Up/Down to move, Enter to run).
+# commandpalette.vim: a list of Bartleby's global commands that narrows
+# as you type, built on the filter field of inputpopup.vim. Type a few
+# letters, move with Up and Down, and run with Enter.
 #
-# Invokes by Ex command string rather than importing the modules
-# directly - most of the underlying wiring (OpenScrive, RunCompile,
-# ToggleBinder, ...) lives as script-local functions inside
-# plugin/bartleby.vim itself, not exported from an autoload module, so
-# the :Bartleby* commands are this plugin's own public API surface and
-# the natural thing to call through.
+# It runs Ex commands instead of importing modules: most functions behind
+# the commands, such as OpenScrive and RunCompile, are local to
+# plugin/bartleby.vim, so the :Bartleby commands are the public API.
 #
-# Scoped to the global, always-available commands only - not
-# Binder-cursor-dependent actions (New Chapter, Rename, ...), which
-# only make sense with a specific item under the cursor and don't fit
-# a flat, context-free palette cleanly.
+# Only global commands are listed. Binder actions such as New Chapter and
+# Rename need an item under the cursor, so they do not fit a list without
+# context.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -29,7 +25,7 @@ import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/spotlight.vim' as Sp
 import autoload 'bartleby/lexicon.vim' as Lx
 
-# Display name -> Ex command (no argument needed).
+# Display name to Ex command, for commands without an argument.
 const COMMANDS: dict<string> = {
   'List Scrives': 'BartlebyList',
   'Toggle Binder': 'BartlebyToggleBinder',
@@ -45,20 +41,20 @@ const COMMANDS: dict<string> = {
   'View Snapshots': 'BartlebySnapshots',
 }
 
-# Display name -> Ex command that still needs a typed argument, chained
-# via a second PromptText prompt.
+# Display name to Ex command, for commands that need an argument, asked
+# for with a second PromptText.
 const COMMANDS_WITH_ARG: dict<string> = {
   'Open Scrive': 'BartlebyOpen',
   'New Scrive': 'BartlebyNewScrive',
 }
 
-# Entries with no Ex-command equivalent at all - called directly
-# through their own exported module function instead.
+# Entries with no Ex command, called through an exported function of
+# their module.
 const DIRECT_ACTIONS: dict<string> = {
   'Pick Spotlight Mode': 'spotlight',
 }
 
-# Display name -> lexicon kind; see EnabledLookups().
+# Display name to lexicon kind, see EnabledLookups.
 const LOOKUPS: dict<string> = {
   'Define Word': 'dictionary',
   'Thesaurus': 'thesaurus',
@@ -72,8 +68,9 @@ export def Open(): void
   })
 enddef
 
-# Lookup entries appear only for kinds that have an API key. They act on
-# the word under the cursor in the window the palette was opened from.
+# FUNCTION: Return the lookup entries for the kinds that have an API key.
+# They act on the word under the cursor in the window where the palette
+# opened.
 def EnabledLookups(): dict<string>
   var lookups: dict<string> = {}
   for [name, kind] in items(LOOKUPS)

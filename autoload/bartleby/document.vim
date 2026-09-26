@@ -7,19 +7,19 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# document.vim - metadata attached to a document-kind BinderItem: label,
-# status, synopsis, keywords, freeform custom fields. Kept separate from
-# BinderItem so it can be loaded lazily - the Binder sidebar never needs it,
-# Corkboard/Inspector (later phases) do. Persisted as a JSON sidecar next to
-# the document's text file.
+# document.vim: the metadata of a document: label, status, synopsis,
+# keywords, word count target, and custom fields. Kept apart from
+# BinderItem so that it loads only when needed: the Binder does not use
+# it, the Corkboard, Outliner, and Inspector do. Saved as a JSON file
+# next to the document's text file.
 # License: GNU GPL 3.0
 ##############################################################################
 
 import autoload 'bartleby/persist.vim' as Pe
 
-# Display strings doubling as stored values - shown verbatim in the
-# label/status popupbuttons picker (see picker.vim), so no separate
-# slug<->display mapping to keep in sync.
+# Display strings that are also the stored values. PickOne shows them
+# unchanged, see picker.vim, so there is no second list of names to keep
+# in step.
 export const LABELS: list<string> = ['None', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple']
 export const STATUSES: list<string> = ['To Do', 'First Draft', 'Revised', 'Done']
 
@@ -31,8 +31,8 @@ export class DocMeta
   var wordCountTarget: number = 0
   var custom: dict<any> = {}
 
-  # Builds a DocMeta from a decoded JSON dict, tolerating missing keys so
-  # older/partial sidecars still load.
+  # METHOD: Build a DocMeta from a decoded JSON dict. Missing keys get
+  # defaults, so older or partial files still load.
   static def FromDict(src: dict<any>): DocMeta
     var meta: DocMeta = DocMeta.new()
     meta.label = get(src, 'label', 'None')
@@ -55,8 +55,9 @@ export class DocMeta
     }
   enddef
 
-  # sidecarPath is absolute. Missing file yields plain defaults rather than
-  # an error - a document with no metadata yet is a normal state.
+  # METHOD: Load the metadata file at sidecarPath, an absolute path. A
+  # missing file gives the defaults, not an error: a document without
+  # metadata is normal.
   static def Load(sidecarPath: string): DocMeta
     if !filereadable(sidecarPath)
       return DocMeta.new()
@@ -68,7 +69,8 @@ export class DocMeta
     Pe.WriteJson(sidecarPath, this.ToDict())
   enddef
 
-  # Field writes stay inside the class - same E1335 reasoning as elsewhere.
+  # METHOD: Set the label. Fields are written only inside the class, error
+  # E1335.
   def SetLabel(newLabel: string): void
     this.label = newLabel
   enddef
@@ -85,8 +87,8 @@ export class DocMeta
     this.keywords = newKeywords
   enddef
 
-  # No Outliner/Inspector UI sets this yet - added now so the field round-
-  # trips through ToDict/FromDict once one does.
+  # METHOD: Set the word count target, which the Inspector's Target field
+  # edits. 0 means no target.
   def SetWordCountTarget(target: number): void
     this.wordCountTarget = target
   enddef

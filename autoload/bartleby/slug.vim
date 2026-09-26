@@ -7,8 +7,8 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# slug.vim - turns a display title into a filesystem-safe slug. Single job:
-# string in, safe string out. Used for on-disk folder/file names.
+# slug.vim: turns a display title into a safe name for folders and files
+# on disk.
 # License: GNU GPL 3.0
 ##############################################################################
 

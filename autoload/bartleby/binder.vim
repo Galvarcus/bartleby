@@ -7,10 +7,10 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# binder.vim - the Binder sidebar: renders a scrive's tree, and wires the
-# keymaps that read/prompt/confirm before handing actual tree surgery off
-# to mutate.vim. Every mutation follows the same shape: gather input ->
-# mutate.vim call -> project.Save() -> Render().
+# binder.vim: the Binder sidebar. Draws the scrive tree and sets the keys
+# that ask for input or confirmation before mutate.vim changes the tree.
+# Every change follows the same steps: get the input, call mutate.vim,
+# call project.Save, and call Render.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -36,9 +36,8 @@ var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 var binderShowRoleLabels: bool = g:bartleby_binder_show_role_labels
 
 const BUF_NAME: string = 'Bartleby-Binder'
-# The title line (project name) added by Render() before the tree
-# content - every place that maps a cursor line number to a tree row
-# index needs to account for this offset.
+# Render draws the title line, the project name, above the tree. Every
+# mapping from a cursor line to a tree row subtracts this.
 const HEADER_LINES: number = 1
 const INDENT: string = '  '
 
@@ -56,8 +55,8 @@ def RenderLines(rows: list<T.Row>, binderRoot: string, collapsed: dict<bool>): l
       endif
     endif
     var label: string = binderShowRoleLabels ? row.item.DisplayLabel() : ''
-    # A trailing "/" marks folders, for syntax/bartleby-binder.vim's
-    # Directory highlight. Display only - the stored title has no "/".
+    # A trailing slash marks a folder, for the Directory highlight in
+    # syntax/bartleby-binder.vim. Display only: the stored title has no slash.
     var title: string = row.item.IsFolder() ? row.item.title .. '/' : row.item.title
     return repeat(INDENT, row.depth) .. marker .. label .. title .. suffix
   })
@@ -70,8 +69,8 @@ def FindOrCreateWindow(): number
   endif
   execute 'vertical topleft :30split ' .. BUF_NAME
   setlocal buftype=nofile bufhidden=hide noswapfile nobuflisted
-  # Long titles wrap at word boundaries, and each wrapped line starts
-  # under the title text: shift:2 skips the "▾ " marker.
+  # Long titles wrap at word boundaries. shift:2 starts each wrapped line
+  # under the title text, after the marker.
   setlocal wrap linebreak breakindent breakindentopt=shift:2
   setlocal nonumber norelativenumber nofoldenable
   setlocal filetype=bartleby-binder
@@ -79,13 +78,10 @@ def FindOrCreateWindow(): number
   return bufwinnr(BUF_NAME)
 enddef
 
-# Re-flattens and redraws `project`'s tree into the current (already-active)
-# Binder buffer, honoring which folders are collapsed. Assumes the Binder
-# window/buffer is already current - callers switch to it first (see
-# Show()). A collapsed folder's descendants are real rows that simply
-# don't exist in this render (see tree.vim#Flatten), not a Vim fold hiding
-# lines that are still technically "there" - collapse state persists
-# across renders via the buffer-local b:bartleby_collapsed set.
+# FUNCTION: Draw the tree of project in the current window, which must
+# already be the Binder, see Show. The rows of a collapsed folder are not
+# drawn at all, see tree.vim Flatten. This is not a Vim fold. The
+# collapsed folders are kept across renders in b:bartleby_collapsed.
 def Render(project: Pj.Project): void
   var previousRows: list<T.Row> = get(b:, 'bartleby_rows', [])
   var previousLine: number = line('.')
@@ -101,18 +97,17 @@ def Render(project: Pj.Project): void
   b:bartleby_rows = rows
   b:bartleby_project = project
 
-  # deletebufline()/setline() otherwise leave the cursor sitting wherever
-  # it lands by default (line 1) - put it back on the same item, at its
-  # (possibly shifted) new line, whenever that item still exists.
+  # After deletebufline and setline, the cursor is on line 1. Put it back
+  # on the same item, at its new line, when the item still exists.
   var newIdx: number = previousId ==# '' ? -1 : T.IndexOfRowById(rows, previousId)
   if newIdx >= 0
     cursor(newIdx + 1 + HEADER_LINES, 1)
   endif
 enddef
 
-# Common prologue for every cursor-driven command below: the buffer's
-# project, its rows, and the row under the cursor (null_object if none -
-# including when the cursor sits on the title line).
+# FUNCTION: Return what every cursor command needs: the buffer's project,
+# its rows, and the row under the cursor, or null_object when there is
+# none, also on the title line.
 def CursorContext(): dict<any>
   var project: Pj.Project = get(b:, 'bartleby_project', null_object)
   var rows: list<T.Row> = get(b:, 'bartleby_rows', [])
@@ -218,8 +213,9 @@ def RunSearch(): void
   Se.Run(ctx.project)
 enddef
 
-# Appends -2, -3, ... to a relPath already taken on disk. `dirSlug` may be
-# '' for a root-level document with no enclosing folder.
+# FUNCTION: Add -2, -3, and so on to a relPath that is already taken on
+# disk. dirSlug is empty for a document at the top level, outside any
+# folder.
 def UniqueRelPath(binderRoot: string, dirSlug: string, titleSlug: string, ext: string): string
   var base: string = dirSlug ==# '' ? titleSlug : dirSlug .. '/' .. titleSlug
   var relPath: string = base .. ext
@@ -456,8 +452,8 @@ def PickStatus(): void
   }, currentMeta.status)
 enddef
 
-# Flips the Chapter:/Part: label prefix on/off and re-renders. Toggles
-# the setting for the whole session (script-local), not just this buffer.
+# FUNCTION: Show or hide the Chapter and Part prefixes and draw again.
+# The setting applies to the whole session, not only to this buffer.
 def ToggleRoleLabels(): void
   binderShowRoleLabels = !binderShowRoleLabels
   var project: Pj.Project = get(b:, 'bartleby_project', null_object)
@@ -529,7 +525,8 @@ def SetupKeymaps(): void
   nnoremap <buffer> <silent> ? <ScriptCmd>ShowHelp()<CR>
 enddef
 
-# Renders `project`'s binder tree into the sidebar, creating it if needed.
+# FUNCTION: Draw the tree of project in the sidebar, and create the
+# sidebar if needed.
 export def Show(project: Pj.Project): void
   var winNr: number = FindOrCreateWindow()
   execute ':' .. winNr .. 'wincmd w'
@@ -552,9 +549,9 @@ export def IsOpen(): bool
   return bufwinnr(BUF_NAME) != -1
 enddef
 
-# Session persistence reads/restores collapse state through these two -
-# b:bartleby_collapsed lives on the Binder buffer itself, not something
-# an outside script should reach into directly.
+# FUNCTION: Return the ids of the collapsed folders, for the session. The
+# set lives in b:bartleby_collapsed on the Binder buffer, and other
+# scripts use these two functions instead of that variable.
 export def GetCollapsedIds(): list<string>
   var winNr: number = bufwinnr(BUF_NAME)
   if winNr == -1

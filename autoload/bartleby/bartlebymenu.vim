@@ -7,19 +7,16 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# bartlebymenu.vim - Phase 7d: a categorized, hierarchical menu of
-# Bartleby's global commands, built on the vendored menu.vim widget.
-# Complements commandpalette.vim rather than replacing it - the palette
-# is fast, type-to-filter access once you know roughly what you want;
-# this is browsable-by-category access when you don't. Same command
-# set as the palette (global, always-available commands only - not
-# Binder-cursor-dependent actions like New Chapter or Rename, which
-# need a specific item under the cursor and don't fit either widget's
-# flat/categorized shape without that context).
+# bartlebymenu.vim: a menu of Bartleby's global commands in groups, built
+# on menu.vim. It adds to commandpalette.vim: the palette is fast when you
+# know what you want, and the menu lets you browse by group when you do
+# not. Both have the same commands: the global ones. Binder actions such
+# as New Chapter or Rename need an item under the cursor, so they are in
+# neither.
 #
-# The menu tree is built once, at first use, and reused (menu.vim's
-# own Menu.new() registers itself for hotkey dispatch by name, so
-# rebuilding it on every open would leak stale registrations).
+# The menu is built once, at first use, and reused. Menu.new registers
+# the menu by name for the hotkey, so building it on every open would
+# leave old registrations.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -90,9 +87,9 @@ export def Toggle(): void
   menu.Toggle()
 enddef
 
-# For gVim users: also register the same tree as real :amenu entries, so
-# it shows up in gVim's own menu bar and works with :emenu - independent
-# of, and additional to, the popup/bar toggle above.
+# FUNCTION: In gVim, also register the menu as :amenu entries, so that it
+# shows in the gVim menu bar and runs with :emenu. The popup menu does
+# not change.
 export def RegisterNative(): void
   if menu is null_object
     menu = BuildMenu()

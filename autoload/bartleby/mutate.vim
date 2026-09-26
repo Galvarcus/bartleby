@@ -7,9 +7,10 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# mutate.vim - Binder tree surgery: insert/remove/move/reparent/rename.
-# Pure data operations against Project's/BinderItem's own mutation methods -
-# no UI, no persistence. Callers Save() and re-render after a truthy return.
+# mutate.vim: changes to the Binder tree: insert, remove, move, reparent,
+# and rename. Pure data operations on the change methods of Project and
+# BinderItem, with no UI and no saving. After a true result, the caller
+# saves and draws again.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -18,8 +19,8 @@ import autoload 'bartleby/project.vim' as Pj
 import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/slug.vim' as Sl
 
-# Walks up from `row` through its ancestors, returning the nearest one
-# with structureRole == role (null_object if none found before root).
+# FUNCTION: Return the nearest ancestor of row whose structureRole is
+# role, or null_object when there is none below the top level.
 export def FindAncestorWithRole(rows: list<T.Row>, row: T.Row, role: string): BI.BinderItem
   var current: BI.BinderItem = row is null_object ? null_object : row.ownerItem
   while current isnot null_object
@@ -32,8 +33,8 @@ export def FindAncestorWithRole(rows: list<T.Row>, row: T.Row, role: string): BI
   return null_object
 enddef
 
-# The scrive's single top-level Manuscript folder, or null_object if
-# somehow absent (a project predating structureRole, say).
+# FUNCTION: Return the one top-level Manuscript folder of the scrive, or
+# null_object when it is missing, as in a project older than roles.
 export def FindManuscript(project: Pj.Project): BI.BinderItem
   for i in range(project.ItemCount())
     if project.ItemAt(i).structureRole ==# BI.ROLE_MANUSCRIPT
@@ -43,9 +44,9 @@ export def FindManuscript(project: Pj.Project): BI.BinderItem
   return null_object
 enddef
 
-# Next unused bare-number title ("1", "2", ...) among `siblings` sharing
-# `role` - matches templates.vim's own default numbering, so a blank
-# title at creation time behaves the same as the scrive's starting tree.
+# FUNCTION: Return the next unused number title, 1, 2, and so on, among
+# the siblings with role. templates.vim numbers the same way, so an empty
+# title gives the same result as in a new scrive.
 def NextRoleNumber(siblings: list<BI.BinderItem>, role: string): string
   var n: number = 0
   for item in siblings
@@ -56,11 +57,9 @@ def NextRoleNumber(siblings: list<BI.BinderItem>, role: string): string
   return string(n + 1)
 enddef
 
-# Places `newItem` into `container`'s children: as the next sibling near
-# the cursor if `row` is itself a child of `container` (or IS `container`),
-# otherwise appended to the end - the same "near cursor, else append"
-# shape as AddNear, just scoped to a specific container rather than
-# wherever the cursor happens to be.
+# FUNCTION: Put newItem into the children of container: after the row at
+# the cursor when that row is in container or is container, else at the
+# end. The same rule as AddNear, but for one given container.
 def AddIntoContainer(container: BI.BinderItem, row: T.Row, newItem: BI.BinderItem): void
   if row isnot null_object && row.ownerItem is container
     container.InsertChildAt(container.IndexOfChild(row.item.id) + 1, newItem)
@@ -69,11 +68,11 @@ def AddIntoContainer(container: BI.BinderItem, row: T.Row, newItem: BI.BinderIte
   endif
 enddef
 
-# Creates a new Chapter folder (with a starter "Scene 1" document, not
-# yet materialized on disk - the caller does that, same as templates.vim's
-# own scrive-creation path) inside `container` (the Manuscript folder for
-# Novel, or a specific Part for Novel with Parts). Title defaults to the
-# next sequential bare number among sibling chapters when blank.
+# FUNCTION: Create a Chapter folder in container, which is the Manuscript
+# folder for a Novel or a Part for a Novel with Parts. It holds a first
+# document, Scene 1, which the caller creates on disk, as templates.vim
+# does for a new scrive. An empty title becomes the next number among the
+# sibling chapters.
 export def AddChapter(container: BI.BinderItem, row: T.Row, title: string): BI.BinderItem
   var chapterTitle: string = title ==# '' ? NextRoleNumber(container.children, BI.ROLE_CHAPTER) : title
   var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterTitle, BI.ROLE_CHAPTER)
@@ -83,9 +82,9 @@ export def AddChapter(container: BI.BinderItem, row: T.Row, title: string): BI.B
   return chapter
 enddef
 
-# Creates a new (empty) Part folder inside the Manuscript folder, matching
-# how templates.vim's own default Part 2 starts empty. Title defaults to
-# the next sequential bare number among sibling parts when blank.
+# FUNCTION: Create an empty Part folder in the Manuscript folder, as the
+# Part 2 of templates.vim starts empty. An empty title becomes the next
+# number among the sibling parts.
 export def AddPart(manuscript: BI.BinderItem, row: T.Row, title: string): BI.BinderItem
   var partTitle: string = title ==# '' ? NextRoleNumber(manuscript.children, BI.ROLE_PART) : title
   var part: BI.BinderItem = BI.BinderItem.NewFolder(partTitle, BI.ROLE_PART)
@@ -93,16 +92,10 @@ export def AddPart(manuscript: BI.BinderItem, row: T.Row, title: string): BI.Bin
   return part
 enddef
 
-# True if placing an item with `role` as a child of `parent` (null_object
-# meaning root level) is structurally valid: ROLE_PART/ROLE_CHAPTER may
-# only live under a ROLE_MANUSCRIPT folder (directly, or nested under
-# another Part); ROLE_CUSTOM may only live at the root. Everything else
-# (front-matter/characters/research/back-matter/'', and all documents,
-# which never carry a structural role) is unrestricted.
-# Folders the user should never restructure or lose entirely - Front
-# Matter/Manuscript/Back Matter/Characters/Research. dd on one of these
-# clears its contents instead of removing the folder itself (see
-# binder.vim's DeleteUnderCursor); rename and indent/outdent are simply
+# FUNCTION: Return true for the folders that the user must never
+# restructure or lose: Front Matter, Manuscript, Back Matter, Characters,
+# and Research. dd on one of them clears its contents instead of removing
+# it, see DeleteUnderCursor in binder.vim. Rename, indent, and outdent are
 # refused.
 export def IsImmutableFolder(item: BI.BinderItem): bool
   return item.structureRole ==# BI.ROLE_FRONT_MATTER
@@ -112,6 +105,11 @@ export def IsImmutableFolder(item: BI.BinderItem): bool
     || item.structureRole ==# BI.ROLE_RESEARCH
 enddef
 
+# FUNCTION: Return true when an item with role may be a child of parent,
+# where null_object means the top level. ROLE_PART and ROLE_CHAPTER may
+# be only under a ROLE_MANUSCRIPT folder, directly or inside a Part.
+# ROLE_CUSTOM may be only at the top level. Other roles and all documents
+# may be anywhere.
 def RoleAllowedUnder(role: string, parent: BI.BinderItem): bool
   if role ==# BI.ROLE_PART || role ==# BI.ROLE_CHAPTER
     return parent isnot null_object
@@ -128,8 +126,8 @@ def RoleAllowedUnder(role: string, parent: BI.BinderItem): bool
   return true
 enddef
 
-# Inserts `newItem` right after `row` in the tree: a root-level sibling if
-# `row` is root-level, otherwise a sibling inside `row`'s own owner folder.
+# FUNCTION: Insert newItem right after row: a top-level sibling when row
+# is at the top level, else a sibling in the owner folder of row.
 def InsertAfter(project: Pj.Project, row: T.Row, newItem: BI.BinderItem): void
   if row.ownerItem is null_object
     var idx: number = project.IndexOfItem(row.item.id)
@@ -140,10 +138,9 @@ def InsertAfter(project: Pj.Project, row: T.Row, newItem: BI.BinderItem): void
   endif
 enddef
 
-# Adds `newItem` relative to `row`: a child if `row` is a folder, otherwise
-# a sibling right after it. `row` is null_object for an empty binder, or
-# when adding with no particular cursor context - either way, appends
-# root-level.
+# FUNCTION: Add newItem next to row: as a child when row is a folder, else
+# as the next sibling. row is null_object for an empty binder, or when
+# there is no cursor row. Then newItem goes at the end of the top level.
 export def AddNear(project: Pj.Project, row: T.Row, newItem: BI.BinderItem): void
   if row is null_object
     project.AddItem(newItem)
@@ -154,8 +151,8 @@ export def AddNear(project: Pj.Project, row: T.Row, newItem: BI.BinderItem): voi
   endif
 enddef
 
-# Removes `row`'s item from the tree. Leaves any underlying document files
-# untouched on disk - deleting from the binder is not deleting work.
+# FUNCTION: Remove the item of row from the tree. Its files stay on disk:
+# removing from the binder does not delete work.
 export def Remove(project: Pj.Project, row: T.Row): void
   if row.ownerItem is null_object
     project.RemoveItemAt(project.IndexOfItem(row.item.id))
@@ -164,16 +161,16 @@ export def Remove(project: Pj.Project, row: T.Row): void
   endif
 enddef
 
-# Empties `item`'s children without removing `item` itself - for the 5
-# immutable structural folders, where dd clears contents rather than
-# deleting the folder. Matches Remove()'s own convention: files on disk
-# are left untouched, only the binder tree changes.
+# FUNCTION: Remove all children of item but keep item, for the five
+# structural folders, where dd clears the contents. As with Remove, only
+# the tree changes and files stay on disk.
 export def ClearChildren(item: BI.BinderItem): void
   item.SetChildren([])
 enddef
 
-# Swaps `row`'s item with its next/previous sibling in the same owner list.
-# `delta` is +1 (move down) or -1 (move up). No-op (false) at a list edge.
+# FUNCTION: Swap the item of row with its next or previous sibling. delta
+# is 1 to move down or -1 to move up. Returns false at the end of the
+# list.
 export def MoveWithinSiblings(project: Pj.Project, row: T.Row, delta: number): bool
   if row.item.IsFolder() && row.item.structureRole !=# BI.ROLE_CHAPTER
       && row.item.structureRole !=# BI.ROLE_PART
@@ -197,8 +194,8 @@ export def MoveWithinSiblings(project: Pj.Project, row: T.Row, delta: number): b
   return true
 enddef
 
-# Promotes `row`'s item to be a sibling of its current owner folder, right
-# after it. No-op (false) if `row` is already root-level.
+# FUNCTION: Move the item of row out of its owner folder, to right after
+# that folder. Returns false when row is already at the top level.
 export def Outdent(project: Pj.Project, rows: list<T.Row>, row: T.Row): bool
   if row.ownerItem is null_object
     return false
@@ -213,8 +210,9 @@ export def Outdent(project: Pj.Project, rows: list<T.Row>, row: T.Row): bool
   return true
 enddef
 
-# Demotes `row`'s item into its previous sibling, if that sibling is a
-# folder. No-op (false) otherwise (no previous sibling, or it's a document).
+# FUNCTION: Move the item of row into its previous sibling when that
+# sibling is a folder. Returns false when there is no previous sibling
+# or it is a document.
 export def Indent(project: Pj.Project, row: T.Row): bool
   var siblingIdx: number
   if row.ownerItem is null_object

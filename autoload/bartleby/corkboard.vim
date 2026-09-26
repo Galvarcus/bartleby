@@ -7,17 +7,18 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# corkboard.vim - index-card grid for one folder's direct-child documents,
-# built on buttonspopup.vim's PopupButtonMenu. Each card is a real
-# multi-line box: title on its own line, synopsis word-wrapped beneath it
-# (see wrap.vim) - buttonspopup.vim renders a "\n"-containing Button label
-# as a bordered box rather than its usual single-line '[ label ]' style.
-# Picking a card calls back with its document (the caller decides what
-# "picked" means - see binder.vim#OpenCorkboard for opening it in the
-# editor). `e` quick-edits the focused card's synopsis without leaving the
-# corkboard; J/K reorder it among its siblings. Both close and re-show the
-# popup (buttonspopup.vim has no in-place "update these buttons" API),
-# keeping the same card focused via opts.button.selected.
+# corkboard.vim: a grid of index cards for the documents directly in one
+# folder, built on PopupButtonMenu from buttonspopup.vim. Each card is a
+# box with the title on its own line and the synopsis wrapped below it,
+# see wrap.vim. buttonspopup.vim draws a label with line breaks as a box
+# instead of a bracketed line.
+#
+# Picking a card calls back with its document, and the caller decides
+# what to do, see OpenCorkboard in binder.vim, which opens it in the
+# editor. e edits the synopsis of the selected card, and J and K move the
+# card among its siblings. Both close the popup and show it again,
+# because buttonspopup.vim cannot update its buttons in place.
+# opts.button.selected keeps the same card selected.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -37,19 +38,18 @@ var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 const CARD_CONTENT_WIDTH: number = 24
 const CARD_SPACING: number = 2
 const MAX_SYNOPSIS_LINES: number = 3
-# Total on-screen width of one card, border + padding included - see
-# buttonspopup.vim#RenderButton's box math (content + 2 border chars + 2
-# padding spaces).
+# Width of one card on screen, with its border and padding: the content
+# plus 2 border characters and 2 spaces, see RenderButton in
+# buttonspopup.vim.
 const CARD_TOTAL_WIDTH: number = CARD_CONTENT_WIDTH + 4
 
 def Noop(): void
 enddef
 
-# How many CARD_TOTAL_WIDTH-wide columns (with CARD_SPACING between them)
-# actually fit in the terminal, so the corkboard never asks for a grid
-# wider than the TTY - a standard 80-column terminal fits 2 columns of the
-# current default card width, not 3. MARGIN leaves room for the popup's
-# own border/padding and a little breathing space at the screen edge.
+# FUNCTION: Return how many card columns, CARD_SPACING apart, fit in the
+# terminal, so the grid is never wider than the screen. An 80-column
+# terminal fits 2 columns of the default card width. MARGIN leaves room
+# for the popup border and padding and a little space at the screen edge.
 def MaxColumns(): number
   const MARGIN: number = 4
   var available: number = &columns - MARGIN
@@ -57,9 +57,10 @@ def MaxColumns(): number
   return max([1, maxFit])
 enddef
 
-# Title on its own line, then up to MAX_SYNOPSIS_LINES word-wrapped lines
-# of synopsis, joined with "\n" for buttonspopup.vim's box-card rendering.
-# A synopsis longer than that many lines gets an ellipsis on the last one.
+# FUNCTION: Return the card label: the title on its own line, then up to
+# MAX_SYNOPSIS_LINES wrapped lines of synopsis, joined by line breaks for
+# the box drawing in buttonspopup.vim. A longer synopsis ends its last
+# line with an ellipsis.
 def CardLabel(item: BI.BinderItem, binderRoot: string): string
   var meta: D.DocMeta = item.LoadMeta(binderRoot)
   var cardLines: list<string> = [item.title]
@@ -90,9 +91,8 @@ enddef
 
 def Reorder(project: Pj.Project, folder: BI.BinderItem, doc: BI.BinderItem,
     delta: number, OnDocumentPicked: func(BI.BinderItem)): void
-  # A minimal T.Row built by hand - MoveWithinSiblings only reads
-  # .item/.ownerItem, so there's no need to flatten the whole scrive just
-  # to reorder within one folder already in hand.
+  # Build a T.Row by hand. MoveWithinSiblings reads only item and ownerItem,
+  # so there is no need to flatten the whole scrive to reorder one folder.
   var row: T.Row = T.Row.new(doc, 0, folder)
   if M.MoveWithinSiblings(project, row, delta)
     project.Save()
@@ -102,7 +102,8 @@ def Reorder(project: Pj.Project, folder: BI.BinderItem, doc: BI.BinderItem,
   Show(project, folder, OnDocumentPicked, doc.id)
 enddef
 
-# Corkboard-only keys the base popup doesn't know about. true = handled.
+# FUNCTION: Handle the Corkboard keys that the base popup does not know.
+# Return true when the key is handled.
 def HandleExtraKey(project: Pj.Project, folder: BI.BinderItem, docs: list<BI.BinderItem>,
     OnDocumentPicked: func(BI.BinderItem), id: number, selectedIdx: number, key: string): bool
   var doc: BI.BinderItem = docs[selectedIdx]
@@ -136,15 +137,15 @@ def ShowHelp(): void
   ])
 enddef
 
-# Shows `folder`'s direct-child documents as a card grid. `OnDocumentPicked`
-# is called with the chosen document when one is activated (Enter/Space/
-# click) - not called at all on cancel. `preferredId` re-focuses a specific
-# card after Edit/Reorder close-and-reopen this same corkboard.
+# FUNCTION: Show the documents directly in folder as a card grid.
+# OnDocumentPicked receives the document that is activated with Enter,
+# Space, or a click. It is not called on cancel. preferredId selects a
+# card again after e, J, or K closes and reopens the Corkboard.
 export def Show(project: Pj.Project, folder: BI.BinderItem,
     OnDocumentPicked: func(BI.BinderItem), preferredId: string = ''): void
-  # copy() first: filter() mutates its list in place, and folder.children
-  # is the live tree - filtering it directly would silently delete every
-  # non-document child from the actual binder.
+  # Copy first: filter changes its list in place, and folder.children is
+  # the live tree. Filtering it directly would delete every child that is
+  # not a document from the binder.
   var docs: list<BI.BinderItem> = copy(folder.children)->filter((_, c) => c.IsDocument())
   if empty(docs)
     log.Info($'"{folder.title}" has no documents to show on the corkboard')

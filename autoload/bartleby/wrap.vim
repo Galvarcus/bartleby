@@ -7,8 +7,8 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# wrap.vim - greedy word-wrap of a string to a given display width. Single
-# job: text in, wrapped lines out. No card/UI knowledge lives here.
+# wrap.vim: wraps a string to a display width, a word at a time, and
+# returns the lines. It knows nothing of cards or UI.
 # License: GNU GPL 3.0
 ##############################################################################
 

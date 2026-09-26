@@ -7,10 +7,11 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# binderitem.vim - one node of a scrive's Binder tree. Folders and documents
-# share a single class, discriminated by `kind`, rather than subclassing -
-# this keeps tree (de)serialization a flat, uniform operation and sidesteps
-# relying on Vim9 class inheritance still settling between 9.1 and 9.2.
+# binderitem.vim: one node of a scrive's Binder tree. Folders and
+# documents share one class, told apart by kind, instead of subclasses.
+# This keeps saving and loading the tree simple and uniform, and does
+# not depend on Vim9 class inheritance, which changed between 9.1 and
+# 9.2.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -19,14 +20,13 @@ import autoload 'bartleby/document.vim' as D
 export const KIND_FOLDER: string = 'folder'
 export const KIND_DOCUMENT: string = 'document'
 
-# What a folder IS structurally, independent of its title - drives the
-# Binder's "Chapter: <title>" / "Part: <title>" display, compile-time
-# structure (which folders become \chapter/\part boundaries), and the
-# move/indent restrictions (ROLE_PART/ROLE_CHAPTER may only exist under
-# a ROLE_MANUSCRIPT folder; ROLE_CUSTOM may only exist at the top level).
-# '' (the default) means "plain organizational folder, no special
-# treatment" - every folder from before this field existed reads back
-# as '', so old scrives keep working unchanged.
+# What a folder is in the structure, independent of its title. The role
+# sets the Binder prefix, as in Chapter: title, which folders become
+# chapter and part divisions in a compile, and where a folder may move.
+# ROLE_PART and ROLE_CHAPTER exist only under ROLE_MANUSCRIPT, and
+# ROLE_CUSTOM only at the top level. An empty role, the default, is a
+# plain folder. Folders saved before roles existed load with an empty
+# role, so old scrives still work.
 export const ROLE_NONE: string = ''
 export const ROLE_FRONT_MATTER: string = 'front-matter'
 export const ROLE_MANUSCRIPT: string = 'manuscript'
@@ -39,8 +39,8 @@ export const ROLE_CUSTOM: string = 'custom'
 
 const ROLE_LABELS: dict<string> = {part: 'Part', chapter: 'Chapter'}
 
-# Timestamp + incrementing counter - unique enough for the items a single
-# Vim session creates; not meant to survive across machines/clocks.
+# Ids are a timestamp and a counter: unique within one Vim session, not
+# across machines or clocks.
 var id_counter: number = 0
 
 def NewId(): string
@@ -52,9 +52,12 @@ export class BinderItem
   var id: string
   var title: string
   var kind: string = KIND_FOLDER
-  var structureRole: string = ROLE_NONE # folder-only, see const block above
-  var relPath: string = ''             # document-only: path under binder/
-  var children: list<BinderItem> = []  # folder-only
+  # Folders only, see the ROLE constants.
+  var structureRole: string = ROLE_NONE
+  # Documents only: the path under binder/.
+  var relPath: string = ''
+  # Folders only.
+  var children: list<BinderItem> = []
 
   static def NewFolder(title: string, role: string = ROLE_NONE): BinderItem
     var item: BinderItem = BinderItem.new()
@@ -74,16 +77,16 @@ export class BinderItem
     return item
   enddef
 
-  # Replaces this folder's children wholesale. Exists because plain `var`
-  # fields are only writable from inside the class - same reasoning as
-  # Project.InitNew()/SeedTree(). Used by templates.vim while building a
-  # starter tree.
+  # METHOD: Replace all children of this folder. A var field can be written
+  # only inside its class, as with Project.InitNew and SeedTree.
+  # templates.vim uses this to build a starter tree.
   def SetChildren(newChildren: list<BinderItem>): void
     this.children = newChildren
   enddef
 
-  # Tree-surgery primitives used by mutate.vim. All mutate this.children
-  # from inside the class, same reasoning as SetChildren() above.
+  # METHOD: Add a child. This and the next methods change the tree for
+  # mutate.vim. They change this.children inside the class, as SetChildren
+  # does.
   def AddChild(child: BinderItem): void
     this.children->add(child)
   enddef
@@ -131,31 +134,34 @@ export class BinderItem
     return this.kind ==# KIND_DOCUMENT
   enddef
 
-  # "Chapter: " / "Part: " prefix for roles that want one; '' otherwise
-  # (front-matter, characters, research, custom, or any document).
+  # METHOD: Return the Chapter or Part prefix for roles that have one, or
+  # an empty string for other folders and for documents.
   def DisplayLabel(): string
     var label: string = get(ROLE_LABELS, this.structureRole, '')
     return label ==# '' ? '' : $'{label}: '
   enddef
 
-  # Absolute path to this document's text file. '' for folders.
+  # METHOD: Return the absolute path of this document's text file, or an
+  # empty string for a folder.
   def AbsPath(binderRoot: string): string
     return this.IsDocument() ? binderRoot .. '/' .. this.relPath : ''
   enddef
 
-  # Absolute path to this document's metadata sidecar. '' for folders.
+  # METHOD: Return the absolute path of this document's metadata file, or
+  # an empty string for a folder.
   def MetaPath(binderRoot: string): string
     return this.IsDocument() ? fnamemodify(this.AbsPath(binderRoot), ':r') .. '.meta.json' : ''
   enddef
 
-  # Lazy load - folders and never-annotated documents get plain defaults.
+  # METHOD: Load the metadata when needed. Folders, and documents without
+  # metadata, get the defaults.
   def LoadMeta(binderRoot: string): D.DocMeta
     return this.IsDocument() ? D.DocMeta.Load(this.MetaPath(binderRoot)) : D.DocMeta.new()
   enddef
 
-  # A document's own word count read straight off disk; a folder's is the
-  # sum of its descendants'. Re-reads the file every call - fine at
-  # scrive-sized trees, same tradeoff already accepted for LoadMeta().
+  # METHOD: Return the word count: a document's own, read from disk, or the
+  # sum of a folder's descendants. The file is read on every call, which is
+  # fast enough for a scrive, as with LoadMeta.
   def WordCount(binderRoot: string): number
     if this.IsDocument()
       var path: string = this.AbsPath(binderRoot)

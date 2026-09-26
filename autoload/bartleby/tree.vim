@@ -7,28 +7,26 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# tree.vim - flattens a scrive's Binder tree into an ordered list of Rows,
-# each carrying enough owner info to relocate its item without re-walking
-# the tree. No UI, no mutation - just tree -> rows and id -> row lookups,
-# shared by binder.vim (rendering) and mutate.vim (tree surgery).
+# tree.vim: flattens the Binder tree of a scrive into an ordered list of
+# Rows. Each Row knows its owner, so its item can be moved without
+# walking the tree again. No UI and no changes: only rows from the tree
+# and lookups by id, for binder.vim, which draws, and mutate.vim, which
+# changes the tree.
 #
-# Row is defined before the functions below on purpose, not just by
-# convention: Flatten/FindRowById/IndexOfRowById all use Row in their
-# own signatures (list<Row> etc.), and Vim9 resolves a function's
-# parameter/return types eagerly at definition time - unlike a class
-# used only inside a function body (a local var type, or via .new()),
-# which can forward-reference a class defined later in the file just
-# fine. Confirmed by trying the reorder: moving Row after these
-# functions throws E1010 "Type not recognized: Row" at the first one's
-# own signature line, before the file even finishes compiling.
+# Row is defined before the functions that use it because Flatten,
+# FindRowById, and IndexOfRowById name it in their signatures, and Vim9
+# resolves a signature when the function is defined. A class used only
+# inside a function body can come later. Moving Row after these functions
+# gives error E1010, Type not recognized: Row.
 # License: GNU GPL 3.0
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as Pj
 
-# ownerItem is null_object when `item` is root-level (its owner is the
-# Project itself, not a folder).
+# CLASS: One visible item of the tree, with its depth and its owner.
+# ownerItem is null_object when item is at the top level, where the owner
+# is the Project, not a folder.
 export class Row
   var item: BI.BinderItem
   var depth: number
@@ -40,10 +38,9 @@ export def Flatten(project: Pj.Project, collapsed: dict<bool> = {}): list<Row>
   def Walk(items: list<BI.BinderItem>, depth: number, ownerItem: BI.BinderItem): void
     for item in items
       rows->add(Row.new(item, depth, ownerItem))
-      # A collapsed folder's row still renders - its children just aren't
-      # walked at all, so they never become rows in the first place. That
-      # naturally handles nested collapse too: a folder inside a collapsed
-      # one is never visited, regardless of its own collapsed state.
+      # A collapsed folder still gets its row, but its children are not
+      # visited, so they get no rows. A folder inside a collapsed folder is
+      # never visited either, whatever its own state.
       if item.IsFolder() && !get(collapsed, item.id, false)
         Walk(item.children, depth + 1, item)
       endif

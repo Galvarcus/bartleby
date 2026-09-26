@@ -7,16 +7,14 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# profile.vim - author/contact info for Compile (name, author, address,
-# phone, email). Global default + optional per-scrive override, merged
-# field-by-field (blank scrive field falls back to global). Edited via
-# formpopup.vim.
+# profile.vim: author and contact information for compile: name, author,
+# address, phone, and email. A global profile and an optional override
+# per scrive, merged by field: an empty scrive field takes the global
+# value. Edited with inputpopup.vim.
 #
-# ProjectInfo is defined before the functions that use it, not just by
-# convention: several of them use ProjectInfo in their own parameter or
-# return type, and Vim9 resolves a function's signature eagerly at
-# definition time - unlike a class used only inside a function body,
-# which can forward-reference one defined later in the file just fine.
+# ProjectInfo is defined before the functions that use it because several
+# of them name it in a parameter or return type, and Vim9 resolves a
+# signature when the function is defined.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -61,7 +59,7 @@ export class ProjectInfo
       zip: this.zip, phonenumber: this.phonenumber, email: this.email}
   enddef
 
-  # Author name falls back to name when left blank.
+  # METHOD: Return the author name, or the name when the author is empty.
   def EffectiveAuthor(): string
     return this.authorname !=# '' ? this.authorname : this.name
   enddef
@@ -90,7 +88,8 @@ export def LoadForScrive(project: Pj.Project): ProjectInfo
   return LoadFrom(ScriveInfoPath(project))
 enddef
 
-# Per-field merge: a blank scrive-level field falls back to global.
+# FUNCTION: Merge the scrive profile of project with the global profile,
+# by field: an empty scrive field takes the global value.
 export def Resolve(project: Pj.Project): ProjectInfo
   var g: dict<any> = LoadGlobal().ToDict()
   var s: dict<any> = LoadForScrive(project).ToDict()

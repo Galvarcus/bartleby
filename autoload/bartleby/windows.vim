@@ -7,16 +7,11 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# windows.vim - locates Bartleby's own "chrome" windows (Binder,
-# Inspector) by buffer name, so document-opening code can reliably jump
-# to whichever window is the plain editor rather than guessing via
-# :wincmd p - which only tracks the single most-recently-used window, and
-# breaks as soon as there's more than one non-editor window open (once
-# Inspector is open alongside Binder, "previous window" can just as easily
-# resolve to Inspector as to the editor, depending on click/focus order).
-# Outliner used to be a third chrome window here (a real buffer taking
-# over the editor slot); it's a popup now (see outliner.vim), so it
-# never occupies a window at all and has nothing to list here.
+# windows.vim: finds Bartleby's own pane windows, the Binder and the
+# Inspector, by buffer name, so that code that opens documents always
+# finds the editor window. :wincmd p is not enough: it remembers only the
+# last window, which can be the Inspector instead of the editor.
+# The Outliner is a popup, see outliner.vim, so it takes no window.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -25,7 +20,7 @@ const CHROME_BUFFER_NAMES: list<string> = [
   'Bartleby-Inspector',
 ]
 
-# Permanent side-panels that document-opening code must never overwrite.
+# Side panes that code opening documents must never replace.
 const PROTECTED_BUFFER_NAMES: list<string> = [
   'Bartleby-Binder',
   'Bartleby-Inspector',
@@ -49,11 +44,10 @@ def IsProtectedBuffer(bufNr: number): bool
   return MatchesAny(bufNr, PROTECTED_BUFFER_NAMES)
 enddef
 
-# Switches to the first window in the current tab that isn't protected
-# chrome (Binder/Inspector), creating one if every window in the tab is
-# protected. A window showing Outliner is fair game for takeover - see
-# PROTECTED_BUFFER_NAMES above. Always succeeds; always leaves the
-# current window safe to overwrite.
+# FUNCTION: Go to the first window of the current tab that is not a
+# protected pane, the Binder or the Inspector, and create one when every
+# window is protected. Always succeeds, and always leaves a window that
+# can be replaced.
 export def GoToEditorWindow(): bool
   for winNr in range(1, winnr('$'))
     if !IsProtectedBuffer(winbufnr(winNr))

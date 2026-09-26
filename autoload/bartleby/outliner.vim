@@ -7,38 +7,29 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# outliner.vim - a flat, indented spreadsheet-style view of one folder's
-# entire subtree: Title | Label | Status | Words | Target | Keywords, one
-# row per binder item.
+# outliner.vim: a flat, indented table of the whole subtree of one
+# folder, one row per binder item, with the columns Title, Label, Status,
+# Words, Target, and Keywords.
 #
-# A custom popup, not a real buffer - the earlier real-buffer design took
-# over the window the editor itself would open a document into, which
-# turned out to be the root cause of a whole class of window-management
-# bugs (Outliner and a real document fighting over the same "editor
-# window" slot, GoToEditorWindow() treating Outliner inconsistently as
-# chrome or not depending on the caller). A popup sidesteps the problem
-# entirely: it never occupies a real window at all, so there's no slot
-# to fight over. buttonspopup.vim's grid doesn't fit this shape (its
-# "columns" are uniform, interchangeable buttons, not named,
-# differently-typed table columns), so this is its own popup rather
-# than built on that primitive.
+# A popup, not a buffer. An earlier version used a real buffer, which took
+# the window that opens documents and caused many window bugs: the
+# Outliner and a document competed for the same editor window. A popup
+# takes no window, so there is nothing to compete for. The grid of
+# buttonspopup.vim does not fit: its columns are equal buttons, not named
+# table columns of different types, so the Outliner has its own popup.
 #
-# gs sorts the visible rows by a column (view-only - it does not reorder
-# the underlying binder/project.json; that's what Binder's own J/K are
-# for). Sorting necessarily drops the tree indentation, since a sorted
-# order and a parent/child grouping can't both be shown at once - picking
-# "Tree Order" again restores it.
+# gs sorts the rows by a column. This changes only the view, not the
+# binder or project.json: J and K in the Binder change the order. A sorted
+# view cannot show the tree, so it has no indent. Tree Order restores it.
 #
-# Label/Status/Sort edits reuse picker.vim's PickOne, the exact widget
-# Binder uses for the same job - chained on top of this popup (a higher
-# zindex), not replacing it; this popup stays open underneath and
-# refreshes once the picker closes.
+# l, s, and gs use PickOne from picker.vim, as the Binder does. The picker
+# opens above this popup, with a higher zindex. This popup stays open and
+# updates when the picker closes.
 #
-# Row is defined before the functions that use it, not just by
-# convention: several of them use Row in their own parameter or return
-# type, and Vim9 resolves a function's signature eagerly at definition
-# time - unlike a class used only inside a function body, which can
-# forward-reference one defined later in the file just fine.
+# Row is defined before the functions that use it because several of
+# them name it in a parameter or return type, and Vim9 resolves a
+# signature when the function is defined. A class used only inside a
+# function body can come later.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -58,7 +49,8 @@ const SORT_KEYS: list<string> = ['Tree Order', 'Title', 'Label', 'Status', 'Word
 const MAX_VISIBLE_ROWS: number = 20
 const OUTLINER_ZINDEX: number = 250
 
-# One row's column values, already stringified - FormatRow() only pads.
+# CLASS: The column values of one row, already strings. FormatRow only
+# pads them.
 export class Row
   var item: BI.BinderItem
   var title: string

@@ -7,9 +7,9 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# scrive.vim - locates, opens, and bootstraps scrives (Bartleby writing
-# projects) under g:bartleby_binder_root. No Binder-tree or UI knowledge
-# lives here - that's project.vim and binder.vim respectively.
+# scrive.vim: finds, opens, and creates scrives, the Bartleby writing
+# projects, under g:bartleby_binder_root. The Binder tree is in
+# project.vim and the UI in binder.vim.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -23,9 +23,9 @@ var binderroot: string = g:bartleby_binder_root
 
 export const SCRIVE_EXT: string = '.bartleby'
 
-# g:bartleby_binder_root wins when set; falls back to ~/Documents. Scrives
-# themselves live one level down, in a "Bartleby" folder under that root -
-# e.g. the ~/Documents default puts them at ~/Documents/Bartleby.
+# FUNCTION: Return the folder that holds the scrives: a Bartleby folder
+# in g:bartleby_binder_root when it is set, else in ~/Documents. The
+# default is ~/Documents/Bartleby.
 export def BinderRoot(): string
   var normalized: string = substitute(fnamemodify(binderroot, ':p'), '[/\\]$', '', '')
   return normalized .. '/Bartleby'
@@ -35,7 +35,8 @@ export def ScrivePath(name: string): string
   return BinderRoot() .. '/' .. name .. SCRIVE_EXT
 enddef
 
-# Every *.bartleby directory directly under the binder root, by bare name.
+# FUNCTION: Return the bare name of every .bartleby folder directly in
+# the binder root.
 export def ListScrives(): list<string>
   var root: string = BinderRoot()
   if !isdirectory(root)
@@ -46,8 +47,8 @@ export def ListScrives(): list<string>
     ->mapnew((_, p) => fnamemodify(p, ':t:r'))
 enddef
 
-# Loads an existing scrive by name. null_object if the directory or its
-# project.json is missing/unreadable.
+# FUNCTION: Load a scrive by name, or return null_object when its folder
+# or project.json is missing or cannot be read.
 export def Open(name: string): Pj.Project
   var dir: string = ScrivePath(name)
   if !isdirectory(dir)
@@ -61,9 +62,9 @@ export def Open(name: string): Pj.Project
   return project
 enddef
 
-# Bootstraps a brand-new scrive on disk: binder/ dir, a project.json seeded
-# with DefaultTree()'s starter folders/documents for `projectType`, and the
-# matching empty files on disk. Returns it loaded.
+# FUNCTION: Create a scrive on disk: the binder folder, a project.json
+# with the starter tree of DefaultTree for projectType, and the empty
+# files of that tree. Return it loaded.
 export def Create(name: string, projectType: string = Pj.TYPE_NOVEL): Pj.Project
   var dir: string = ScrivePath(name)
   if isdirectory(dir)

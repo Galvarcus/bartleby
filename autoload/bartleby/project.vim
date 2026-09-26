@@ -7,9 +7,9 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# project.vim - a single scrive (Bartleby writing project): its root Binder
-# tree plus project.json load/save. Owns no UI and no path-resolution
-# knowledge about where scrives live on disk - see scrive.vim for that.
+# project.vim: one scrive, a Bartleby writing project: its Binder tree
+# and the loading and saving of project.json. No UI, and no knowledge of
+# where scrives are on disk, see scrive.vim.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -27,33 +27,36 @@ export const TYPE_SHORT_STORY: string = 'short_story'
 export const TYPE_SCREENPLAY: string = 'screenplay'
 
 export class Project
-  var scriveDir: string                     # absolute path to the *.bartleby dir
+  # Absolute path of the .bartleby folder.
+  var scriveDir: string
   var name: string = ''
   var projectType: string = TYPE_NOVEL
-  var items: list<BI.BinderItem> = []       # root-level binder items
+  # The top-level binder items.
+  var items: list<BI.BinderItem> = []
 
   def new(this.scriveDir)
   enddef
 
-  # Sets name/type on a brand-new scrive, right after construction and
-  # before the first Save(). Exists because plain `var` fields are only
-  # writable from inside the class - see scrive.vim#Create.
+  # METHOD: Set the name and type of a new scrive, after construction and
+  # before the first Save. A var field can be written only inside its
+  # class, see Create in scrive.vim.
   def InitNew(newName: string, newType: string = TYPE_NOVEL): void
     this.name = newName
     this.projectType = newType
   enddef
 
-  # Seeds a brand-new (empty) scrive with a starter Binder tree. Called
-  # once, right after InitNew(), before the first Save() - same
-  # not-writable-from-outside reason as InitNew() above.
+  # METHOD: Give a new, empty scrive its starter Binder tree. Called once,
+  # after InitNew and before the first Save, for the same reason as InitNew.
   def SeedTree(newItems: list<BI.BinderItem>): void
     this.items = newItems
   enddef
 
-  # Root-level counterparts to BinderItem's Child* methods - a scrive's own
-  # top-level items have no owning BinderItem, so Project mirrors that API
-  # for them. Some duplication vs. BinderItem; fine until 9.2 confirms
-  # whether a shared interface is worth introducing here.
+  # METHOD: Add a top-level item. The top-level items have no owning
+  # BinderItem, so Project repeats the child methods of BinderItem for
+  # them.
+  #
+  # REVIEW: A shared interface for Project and BinderItem would remove this
+  # repetition.
   def AddItem(item: BI.BinderItem): void
     this.items->add(item)
   enddef
@@ -97,7 +100,8 @@ export class Project
     return this.scriveDir .. '/' .. PROJECT_FILE
   enddef
 
-  # Screenplays are Fountain; every other scrive type is Markdown.
+  # METHOD: Return the document extension: .fountain for a screenplay, .md
+  # for every other type.
   def DocExt(): string
     return this.projectType ==# TYPE_SCREENPLAY ? '.fountain' : '.md'
   enddef
@@ -124,7 +128,7 @@ export class Project
     })
   enddef
 
-  # Depth-first search across the whole tree by id. null_object if absent.
+  # METHOD: Find an item by id, depth first, or return null_object.
   def FindItem(id: string): BI.BinderItem
     def Walk(list: list<BI.BinderItem>): BI.BinderItem
       for item in list
@@ -143,9 +147,9 @@ export class Project
     return Walk(this.items)
   enddef
 
-  # Depth-first search across the whole tree by on-disk path (already
-  # absolute). null_object if the path isn't one of this scrive's own
-  # documents - e.g. the buffer belongs to some other file entirely.
+  # METHOD: Find a document by its absolute path, depth first. Return
+  # null_object when the path is not a document of this scrive, as for a
+  # buffer of another file.
   def FindItemByPath(path: string): BI.BinderItem
     var binderRoot: string = this.BinderRoot()
     def Walk(list: list<BI.BinderItem>): BI.BinderItem

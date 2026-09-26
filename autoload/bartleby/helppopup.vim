@@ -7,16 +7,15 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# helppopup.vim - a static "press ? for help" popup listing a buffer's own
-# hotkeys, NERDTree-style. Shared by binder.vim/outliner.vim/compile.vim's
-# selection pane rather than each rolling its own - it's plain text, <Esc>
-# to close, everything else swallowed while it's open.
+# helppopup.vim: a popup that lists the keys of a pane, shown with ?, as
+# in NERDTree. Shared by the Binder, Outliner, Corkboard, scrive list,
+# lookup popup, and compile selection pane. Plain text. Esc closes it,
+# and it takes every other key while it is open.
 # License: GNU GPL 3.0
 ##############################################################################
 
-# entries: list of [key, description] pairs, in whatever order the caller
-# wants them shown. title becomes the popup's own border title; falls
-# back to ' Help ' when empty.
+# FUNCTION: Show entries, a list of key and description pairs in the
+# caller's order. title is the border title, or Help when it is empty.
 export def Show(title: string, entries: list<list<string>>): void
   var popupTitle: string = title ==# '' ? ' Help ' : $' {title} '
 
