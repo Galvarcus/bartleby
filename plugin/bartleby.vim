@@ -116,24 +116,15 @@ g:bartleby_lexicon_timeout = get(g:, 'bartleby_lexicon_timeout', 10)
 g:bartleby_lexicon_base_url = get(g:, 'bartleby_lexicon_base_url',
   'https://www.dictionaryapi.com/api/v3/references')
 
-# FUNCTION: Ask for the scrive type with confirm, when a scrive is
-# created, so that :BartlebyNewScrive needs no type argument.
-#
-# REVIEW: PickOne from picker.vim would match the other pickers.
-def PromptProjectType(): string
-  var choice: number = confirm(
-    'Scrive type?',
-    "&Novel\nNovel with &Parts\n&Short Story\nSc&reenplay",
-    1)
-  if choice == 2
-    return Pj.TYPE_NOVEL_PARTS
-  elseif choice == 3
-    return Pj.TYPE_SHORT_STORY
-  elseif choice == 4
-    return Pj.TYPE_SCREENPLAY
-  else
-    return Pj.TYPE_NOVEL
-  endif
+# FUNCTION: Return the scrive types as display name to project type, in
+# picker order.
+def ProjectTypes(): list<list<string>>
+  return [
+    ['Novel', Pj.TYPE_NOVEL],
+    ['Novel with Parts', Pj.TYPE_NOVEL_PARTS],
+    ['Short Story', Pj.TYPE_SHORT_STORY],
+    ['Screenplay', Pj.TYPE_SCREENPLAY],
+  ]
 enddef
 
 def OpenScrive(name: string): void
@@ -157,8 +148,19 @@ def OpenScrive(name: string): void
   Sess.Restore(project)
 enddef
 
+# FUNCTION: Ask for the scrive type with PickOne, as the other pickers
+# do, then create the scrive. Esc creates nothing.
 def NewScrive(name: string): void
-  var projectType: string = PromptProjectType()
+  var types: list<list<string>> = ProjectTypes()
+  Pk.PickOne('Scrive Type', types->mapnew((_, t) => t[0]), (choice: string) => {
+    var match: list<list<string>> = types->copy()->filter((_, t) => t[0] ==# choice)
+    if !empty(match)
+      CreateScrive(name, match[0][1])
+    endif
+  }, 'Novel')
+enddef
+
+def CreateScrive(name: string, projectType: string): void
   var project: Pj.Project = Sc.Create(name, projectType)
   if project is null_object
     return

@@ -186,6 +186,9 @@ label color after its title. Long titles wrap.
 | `?` | Show this key list |
 | `q` | Close the Binder |
 
+A confirmation question takes `y` for yes, and `n` or `<Esc>` for no.
+`<Enter>` gives the default answer, which is No for every deletion.
+
 ## Corkboard
 
 `gc` on a folder shows its documents as index cards with each
@@ -405,6 +408,10 @@ chapter, and each Front Matter and Back Matter document becomes an
 unnumbered chapter. Other folders add no heading. In a Book PDF, front
 matter pages use roman numerals, and page 1 is the first page of the
 main text.
+
+When a compile ends, Bartleby asks whether to open the result, and
+`<Enter>` answers yes. Markdown opens in a new tab, so no scrive window
+changes. Other formats open in the system viewer through Vim's `:Open`.
 
 Each Pandoc run writes a log to `~/.bartleby/logs/`, named for the
 scrive, the target, and the time. Bartleby keeps the newest

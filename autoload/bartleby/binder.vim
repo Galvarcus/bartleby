@@ -30,6 +30,7 @@ import autoload 'bartleby/picker.vim' as Pk
 import autoload 'bartleby/helppopup.vim' as H
 import autoload 'bartleby/session.vim' as Sess
 import autoload 'bartleby/snapshot.vim' as Sn
+import autoload 'bartleby/dialog_popup.vim' as Dl
 import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
@@ -339,26 +340,24 @@ def DeleteUnderCursor(): void
       return
     endif
     var clearPrompt: string = $'Clear all contents of "{item.title}"? The folder itself will remain.'
-    if confirm(clearPrompt, "&Yes\n&No", 2) != 1
-      return
-    endif
-    M.ClearChildren(item)
-    log.Info($'cleared "{item.title}" - any files on disk were left untouched')
-    ctx.project.Save()
-    Render(ctx.project)
+    Dl.Confirm(clearPrompt, () => {
+      M.ClearChildren(item)
+      log.Info($'cleared "{item.title}" - any files on disk were left untouched')
+      ctx.project.Save()
+      Render(ctx.project)
+    })
     return
   endif
 
   var prompt: string = item.IsFolder() && item.ChildCount() > 0
     ? $'Delete "{item.title}" and everything inside it?'
     : $'Delete "{item.title}"?'
-  if confirm(prompt, "&Yes\n&No", 2) != 1
-    return
-  endif
-  M.Remove(ctx.project, ctx.row)
-  log.Info('removed from binder - any files on disk were left untouched')
-  ctx.project.Save()
-  Render(ctx.project)
+  Dl.Confirm(prompt, () => {
+    M.Remove(ctx.project, ctx.row)
+    log.Info('removed from binder - any files on disk were left untouched')
+    ctx.project.Save()
+    Render(ctx.project)
+  })
 enddef
 
 def RenameUnderCursor(): void

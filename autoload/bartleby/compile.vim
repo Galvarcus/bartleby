@@ -36,6 +36,8 @@ import autoload 'bartleby/profile.vim' as Pf
 import autoload 'bartleby/slug.vim' as Sl
 import autoload 'bartleby/persist.vim' as Pe
 import autoload 'bartleby/helppopup.vim' as H
+import autoload 'bartleby/dialog_popup.vim' as Dl
+import autoload 'dist/vim9.vim' as DistVim9
 import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
@@ -367,10 +369,10 @@ def RunTargetForm(project: Pj.Project, existing: CompileTarget): void
 enddef
 
 def DeleteTargetConfirm(project: Pj.Project, target: CompileTarget): void
-  if confirm($'Delete compile target "{target.name}"?', "&Yes\n&No", 2) ==# 1
+  Dl.Confirm($'Delete compile target "{target.name}"?', () => {
     DeleteTarget(project, target.name)
     log.Info($'deleted compile target: {target.name}')
-  endif
+  })
 enddef
 
 ##############################################################################
@@ -704,11 +706,19 @@ def PandocMetadataArgs(project: Pj.Project): list<string>
   return args
 enddef
 
+# FUNCTION: Ask whether to open the compiled file, with yes as the
+# default. Markdown opens in a new tab, so that no scrive window is
+# replaced. Every other format opens in the system viewer with Vim's
+# dist#vim9#Open, the function behind :Open.
 def OfferToOpen(target: CompileTarget, outputPath: string): void
   log.Info($'compiled: {outputPath}')
-  if confirm($'Compiled "{target.name}". Open it?', "&Yes\n&No", 2) ==# 1
-    execute 'edit ' .. fnameescape(outputPath)
-  endif
+  Dl.Confirm($'Compiled "{target.name}". Open it?', () => {
+    if target.format ==# 'Markdown'
+      execute 'tabedit ' .. fnameescape(outputPath)
+    else
+      DistVim9.Open(outputPath)
+    endif
+  }, true)
 enddef
 
 def RunJob(label: string, cmd: list<string>, target: CompileTarget, outputPath: string): void

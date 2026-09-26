@@ -10,9 +10,9 @@ vim9script
 # tests.yml installs the programs.
 #
 # job_start is asynchronous, so the test polls for the output file
-# instead of waiting for a return value. On success RunJob asks with
-# confirm whether to open the result. In headless -es mode confirm
-# returns its default at once, so the test never hangs.
+# instead of waiting for a return value. On success RunJob asks whether
+# to open the result, in a popup from dialog_popup.vim. The popup does
+# not wait for an answer, so the test never hangs.
 #
 # Usage: the same command as tests/harness.vim, see its header.
 # License: GNU GPL 3.0

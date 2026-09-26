@@ -46,6 +46,7 @@ import './test_syntax.vim' as TestSyntax
 import './test_pos.vim' as TestPos
 import './test_spotlight_pos.vim' as TestSpotlightPos
 import './test_inputpopup.vim' as TestInputPopup
+import './test_dialog_popup.vim' as TestDialogPopup
 import './test_outliner.vim' as TestOutliner
 import './test_scrivelist.vim' as TestScriveList
 import './test_lexicon.vim' as TestLexicon
@@ -63,6 +64,7 @@ var suites: list<func(): void> = [
   TestPos.RunAll,
   TestSpotlightPos.RunAll,
   TestInputPopup.RunAll,
+  TestDialogPopup.RunAll,
   TestOutliner.RunAll,
   TestScriveList.RunAll,
   TestLexicon.RunAll,

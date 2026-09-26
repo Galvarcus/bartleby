@@ -96,6 +96,9 @@ Move with the arrow keys or `j` and `k`. Then:
 | `>>` / `<<` | Move a chapter into a part, or out of it |
 | `q` | Close the Binder. It opens again with the scrive |
 
+Before Bartleby deletes anything, it asks you to confirm. Press `y` to
+delete, or `n` or `Esc` to keep it. `Enter` keeps it too.
+
 Five folders are permanent: **Front Matter**, **Manuscript**, **Back
 Matter**, **Characters**, and **Research**. You cannot rename, move, or
 delete them. `dd` on one of them deletes everything inside it, after a
@@ -396,6 +399,11 @@ change your documents.
 4. **Name the target.** Bartleby saves your answers. Next time, run
    `:BartlebyCompile`, pick the name, and choose Run. Choose Edit to
    change the settings, or Delete to remove the target.
+
+When the compile is done, Bartleby asks whether to open the result.
+Press `Enter` to open it. A Markdown file opens in a new tab, and your
+scrive stays as it was in the first tab. A PDF, EPUB, or HTML file opens
+in the program your computer uses for that kind of file.
 
 Each Front Matter and Back Matter document becomes its own section,
 separate from your numbered chapters.
