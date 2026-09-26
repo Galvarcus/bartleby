@@ -1,10 +1,14 @@
 vim9script
-# tests/test_tagger_smoke.vim - the real spaCy tagger
-# (tools/pos/spacy_tagger.py) through tagger.vim. Skips when python3 or
-# spaCy with its model is not installed. Run standalone, not through
-# harness.vim; writes tests/tagger_results.txt.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_tagger_smoke.vim: the real spaCy tagger,
+# tools/pos/spacy_tagger.py, through tagger.vim. Skipped when python3, or
+# spaCy with its model, is not installed. Runs on its own, not through
+# harness.vim, and writes tests/tagger_results.txt.
 #
-# Usage: same invocation shape as harness.vim.
+# Usage: the same command as tests/harness.vim.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/tagger.vim' as Tg
 
@@ -18,7 +22,7 @@ def HasSpacy(): bool
   return v:shell_error == 0
 enddef
 
-# Byte span -> text.
+# FUNCTION: Return the text of each byte span.
 def Pieces(spans: list<any>): list<string>
   return spans->mapnew((_, s) => strpart(TEXT, s[0], s[1] - s[0]))
 enddef
@@ -47,7 +51,7 @@ def Test_real_tagger(): void
   for t in tags.tokens
     tagOf[$'{t[0]}'] = t[2]
   endfor
-  # "runs" is a verb and "run" a noun: the tagger uses context.
+  # runs is a verb and run a noun: the tagger uses the context.
   assert_equal('VERB', tagOf[string(stridx(TEXT, 'runs'))])
   assert_equal('NOUN', tagOf[string(stridx(TEXT, 'run was'))])
   assert_equal('NOUN', tagOf[string(stridx(TEXT, 'door'))])

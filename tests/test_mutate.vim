@@ -1,8 +1,12 @@
 vim9script
-# tests/test_mutate.vim - mutate.vim: tree surgery and structural rules.
-# RoleAllowedUnder(), NextRoleNumber(), AddIntoContainer() are script-local
-# (not exported) - RoleAllowedUnder is tested indirectly through Indent()/
-# Outdent()'s return values, which use it internally.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_mutate.vim: the tree changes and structure rules of
+# mutate.vim. RoleAllowedUnder, NextRoleNumber, and AddIntoContainer are
+# local to the script. RoleAllowedUnder is tested through the results of
+# Indent and Outdent, which use it.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/mutate.vim' as M
 import autoload 'bartleby/binderitem.vim' as BI
@@ -25,42 +29,41 @@ def Test_is_immutable_folder_false_for_chapter_part_custom_and_documents(): void
 enddef
 
 def Test_indent_refused_on_an_immutable_folder(): void
-  # Back Matter (immutable) sits right after Manuscript at root level -
-  # indenting it would make it Manuscript's child, which must be refused.
+  # Back Matter, a protected folder, is right after Manuscript at the top
+  # level. Indenting it would make it a child of Manuscript, which must be
+  # refused.
   var project = Fx.BuildProject()
   var rows = T.Flatten(project)
   var backMatterRow = T.FindRowById(rows, project.ItemAt(2).id)
   assert_false(M.Indent(project, backMatterRow))
-  # Confirm nothing actually moved.
+  # Confirm that nothing moved.
   assert_equal(5, project.ItemCount())
 enddef
 
 def Test_indent_allowed_for_a_chapter_into_a_preceding_chapter(): void
-  # Chapter '2' indenting into Chapter '1' is unusual in practice but
-  # structurally valid: Chapter may live under another folder that isn't
-  # Manuscript/Part per RoleAllowedUnder's actual rule (only Part/Chapter
-  # are restricted to living under Manuscript or a Part) - this exercises
-  # the one existing case genuinely worth asserting: Chapter can indent
-  # under a Part validly, so build that shape directly.
+  # Only Part and Chapter must be under Manuscript or a Part, see
+  # RoleAllowedUnder. The case worth checking is a Chapter that indents
+  # into a Part, so build that tree directly.
   var project = Fx.BuildProject()
   var manuscript = project.ItemAt(1)
   var part = BI.BinderItem.NewFolder('Part One', BI.ROLE_PART)
-  manuscript.RemoveChildAt(0) # take Chapter '1' back out
+  # Take Chapter 1 out again.
+  manuscript.RemoveChildAt(0)
   part.AddChild(BI.BinderItem.NewFolder('1', BI.ROLE_CHAPTER))
   manuscript.InsertChildAt(0, part)
   var rows = T.Flatten(project)
-  var chapterRow = T.FindRowById(rows, manuscript.ChildAt(1).id) # Chapter '2'
-  # Chapter '2' currently sits after the Part, as Manuscript's own child -
-  # indenting it should succeed by becoming the Part's child instead.
+  # Chapter 2.
+  var chapterRow = T.FindRowById(rows, manuscript.ChildAt(1).id)
+  # Chapter 2 is after the Part, as a child of Manuscript. Indenting it
+  # must succeed and make it a child of the Part.
   assert_true(M.Indent(project, chapterRow))
   assert_equal(2, part.ChildCount())
 enddef
 
 def Test_outdent_refused_when_it_would_leave_manuscript_role_restriction(): void
-  # A Chapter directly under Manuscript is already root-adjacent for
-  # RoleAllowedUnder's purposes (its grandparent is Project itself, i.e.
-  # null_object) - outdenting it would place it at true root level, which
-  # ROLE_CHAPTER never allows.
+  # The parent of a Chapter directly in Manuscript is at the top level: its
+  # grandparent is the Project, null_object for RoleAllowedUnder. Outdenting
+  # it would put it at the top level, which ROLE_CHAPTER never allows.
   var project = Fx.BuildProject()
   var manuscript = project.ItemAt(1)
   var rows = T.Flatten(project)
@@ -99,7 +102,7 @@ def Test_clear_children_empties_a_folder_without_removing_it(): void
   assert_equal(2, manuscript.ChildCount())
   M.ClearChildren(manuscript)
   assert_equal(0, manuscript.ChildCount())
-  # The folder itself is untouched - still present, same identity.
+  # The folder itself is not touched: still there, the same object.
   assert_equal(5, project.ItemCount())
   assert_equal(manuscript.id, project.ItemAt(1).id)
 enddef
@@ -119,14 +122,14 @@ def Test_move_within_siblings_false_at_a_list_edge(): void
   var manuscript = project.ItemAt(1)
   var rows = T.Flatten(project)
   var chapter1Row = T.FindRowById(rows, manuscript.ChildAt(0).id)
-  # Chapter '1' is already first - moving up (-1) is a no-op at the edge.
+  # Chapter 1 is already first, so moving it up does nothing.
   assert_false(M.MoveWithinSiblings(project, chapter1Row, -1))
 enddef
 
 def Test_move_within_siblings_refuses_non_chapter_non_part_folders(): void
   var project = Fx.BuildProject()
   var rows = T.Flatten(project)
-  # Back Matter is a structural folder but neither Chapter nor Part.
+  # Back Matter is a structural folder, but neither a Chapter nor a Part.
   var backMatterRow = T.FindRowById(rows, project.ItemAt(2).id)
   assert_false(M.MoveWithinSiblings(project, backMatterRow, 1))
 enddef
@@ -164,7 +167,7 @@ def Test_add_chapter_creates_a_folder_with_a_starter_scene(): void
   assert_equal(BI.ROLE_CHAPTER, chapter.structureRole)
   assert_equal(1, chapter.ChildCount())
   assert_equal('Scene 1', chapter.ChildAt(0).title)
-  # Appended, since row is null_object.
+  # Added at the end, because row is null_object.
   assert_equal(3, manuscript.ChildCount())
 enddef
 
@@ -172,7 +175,7 @@ def Test_add_chapter_blank_title_auto_numbers(): void
   var project = Fx.BuildProject()
   var manuscript = project.ItemAt(1)
   var chapter = M.AddChapter(manuscript, null_object, '')
-  # 2 existing chapters are '1' and '2' - the next bare number is '3'.
+  # The 2 chapters are 1 and 2, so the next number is 3.
   assert_equal('3', chapter.title)
 enddef
 

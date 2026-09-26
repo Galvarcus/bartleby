@@ -1,19 +1,23 @@
 vim9script
-# tests/test_compile.vim - compile.vim's Concatenate* functions (the
-# exported entry points; WalkManuscript/WalkBook/WalkFrontOrBackMatter/
-# JoinSiblingBlocks/etc. are script-local and only reachable through
-# these). Needs real files on disk - ReadDocLines() genuinely reads them -
-# so each test writes fixture content under the project's own binder root
-# and cleans it up via Fx.CleanupProjectFiles() when done.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_compile.vim: the Concatenate functions of compile.vim, the
+# exported entry points. WalkManuscript, WalkBook, WalkFrontOrBackMatter,
+# JoinSiblingBlocks, and the other helpers are local to the script and
+# reached through them. Needs real files on disk, because ReadDocLines
+# reads them, so each test writes fixture text under the binder root of
+# the project and removes it with Fx.CleanupProjectFiles.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/binderitem.vim' as BI
 import './fixtures.vim' as Fx
 
-# Builds the shared fixture project, adds one document each to Front
-# Matter and Back Matter (the fixture alone has none), and writes real
-# content for every document in the tree. Returns the project; caller
-# must Fx.CleanupProjectFiles(project) when done.
+# FUNCTION: Build the shared fixture project, add one document each to
+# Front Matter and Back Matter, which the fixture leaves empty, and write
+# real text for every document. The caller must call
+# Fx.CleanupProjectFiles on the project.
 def BuildProjectWithContent(): dict<any>
   var project = Fx.BuildProject()
   var frontMatter = project.ItemAt(0)
@@ -58,7 +62,7 @@ enddef
 
 def Test_concatenate_manuscript_respects_content_selection(): void
   var fx = BuildProjectWithContent()
-  # Only the Dedication is included - Manuscript and Back Matter excluded.
+  # Only the Dedication is included. Manuscript and Back Matter are not.
   var target = C.CompileTarget.FromDict({includedIds: [fx.dedication.id]})
   var lines = C.ConcatenateManuscript(fx.project, target)
   assert_equal(['# Dedication {-}', '', 'For my family.'], lines)
@@ -74,8 +78,8 @@ def Test_concatenate_manuscript_separator_appears_between_scenes_in_same_chapter
 
   var target = C.CompileTarget.FromDict({includedIds: [fx.scene1.id, scene1b.id]})
   var lines = C.ConcatenateManuscript(fx.project, target)
-  # Neither scene has its own heading, so the separator between them is
-  # the "* * *" itself, not suppressed the way a chapter heading would be.
+  # Neither scene has a heading, so the separator between them is the scene
+  # break itself, not left out as it is before a chapter heading.
   assert_equal([
     '# 1', '', 'It was a dark and stormy night.', '', '* * *', '', 'Morning came.',
   ], lines)
@@ -91,11 +95,10 @@ def Test_concatenate_manuscript_with_nothing_included_is_empty(): void
 enddef
 
 def Test_concatenate_book_wraps_frontmatter_mainmatter_backmatter(): void
-  # This exact-match assertion is also the regression guard for a real
-  # bug: ConcatenateBook()'s outer join once used target.separator
-  # between these three blocks, producing a stray "* * *" immediately
-  # around \frontmatter/\mainmatter/\backmatter (structural LaTeX
-  # transitions, not scene breaks) - any reappearance of that fails here.
+  # This exact match also guards against a real bug: the outer join of
+  # ConcatenateBook once used target.separator between these three blocks,
+  # which put a stray scene break around the frontmatter, mainmatter, and
+  # backmatter commands. Those are LaTeX transitions, not scene breaks.
   var fx = BuildProjectWithContent()
   var target = C.CompileTarget.FromDict({includedIds: AllDocIds(fx)})
   var lines = C.ConcatenateBook(fx.project, target)
@@ -113,12 +116,12 @@ enddef
 
 def Test_concatenate_book_omits_mainmatter_when_front_matter_not_included(): void
   var fx = BuildProjectWithContent()
-  # Exclude the Dedication - Front Matter contributes nothing.
+  # The Dedication is excluded, so Front Matter adds nothing.
   var target = C.CompileTarget.FromDict({includedIds: [fx.scene1.id, fx.scene2.id]})
   var lines = C.ConcatenateBook(fx.project, target)
   assert_equal(-1, index(lines, '\frontmatter'))
   assert_equal(-1, index(lines, '\mainmatter'))
-  # Manuscript content itself should still be present, unwrapped.
+  # The Manuscript text is still present, without a wrapper.
   assert_true(index(lines, '# 1') >= 0)
   Fx.CleanupProjectFiles(fx.project)
 enddef

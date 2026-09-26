@@ -1,8 +1,11 @@
-" Plugin_Name: Bartleby
-" ftdetect/fountain.vim - *.fountain gets its own real filetype rather
-" than falling back on whatever (if anything) the user's own Vim
-" runtime happens to guess - syntax/fountain.vim and Spotlight's
-" fountain-aware dialogue detection both depend on &filetype being
-" reliably 'fountain', not left to chance.
-" License: GNU GPL 3.0
+vim9script
+
+##############################################################################
+# Plugin_Name: Bartleby
+# ftdetect/fountain.vim: gives .fountain files the fountain filetype,
+# instead of whatever the user's Vim runtime guesses. syntax/fountain.vim
+# and Spotlight's Fountain dialogue detection both need the filetype to be
+# fountain.
+# License: GNU GPL 3.0
+##############################################################################
 autocmd BufRead,BufNewFile *.fountain setfiletype fountain

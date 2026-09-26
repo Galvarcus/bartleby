@@ -1,10 +1,13 @@
 vim9script
-# tests/test_inputpopup.vim - InputPopup's multiline field key handling
-# (Filter()/HandleMultilineKey() are effectively what's under test here).
-# InputPopup is exported, so its methods are called directly rather than
-# through feedkeys() - Open() must run first so this.bufnr/this.winid
-# exist for Filter() to render into, even though no real keypress ever
-# reaches the popup in this test.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_inputpopup.vim: the key handling of InputPopup, for the
+# multiline and filter fields, and the width rules. InputPopup is
+# exported, so the tests call its methods directly instead of using
+# feedkeys. Open must run first, so that bufnr and winid exist for Filter
+# to draw into, although no real key reaches the popup.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/inputpopup.vim' as IP
 
@@ -22,7 +25,7 @@ def Test_enter_inserts_a_newline_rather_than_submitting(): void
     submitted = true
   })
   popup.Filter(popup.winid, "\<CR>")
-  # Still open - Enter must not have submitted.
+  # Still open: Enter must not submit.
   assert_false(submitted)
   assert_equal("First line\n", popup.Values().text)
   popup.Close()
@@ -39,8 +42,8 @@ enddef
 
 def Test_backspace_at_line_start_merges_with_previous_line(): void
   var popup = NewMultilinePopup("First\nSecond")
-  # Field defaults start with the cursor at the end of the first line -
-  # move to the start of the second line before backspacing.
+  # The cursor starts at the end of the first line. Move to the start of
+  # the second line before the backspace.
   popup.Filter(popup.winid, "\<Down>")
   popup.Filter(popup.winid, "\<Home>")
   popup.Filter(popup.winid, "\<BS>")
@@ -70,7 +73,7 @@ enddef
 
 const FILTER_OPTIONS: list<string> = ['one', 'two', 'three', 'four', 'five', 'six']
 
-# A filter list with 6 options and 3 visible rows.
+# FUNCTION: Return an open filter list with 6 options and 3 visible rows.
 def NewFilterPopup(title: string = 'Pick', minWidth: number = 0): IP.InputPopup
   var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'filter',
     options: FILTER_OPTIONS, maxVisible: 3}]]
@@ -79,7 +82,8 @@ def NewFilterPopup(title: string = 'Pick', minWidth: number = 0): IP.InputPopup
   return popup
 enddef
 
-# The option text on each visible list row, without padding or scrollbar.
+# FUNCTION: Return the option text of each visible row, without padding
+# or scrollbar.
 def VisibleRows(popup: IP.InputPopup): list<string>
   return getbufline(winbufnr(popup.winid), 2, 4)->mapnew((_, l) => trim(l))
 enddef
@@ -104,7 +108,7 @@ def Test_filter_scrollbar_only_when_the_list_scrolls(): void
   var buf = winbufnr(popup.winid)
   var bar = range(2, 4)->mapnew((_, l) => prop_list(l, {bufnr: buf, types: ['InputPopupScrollbar', 'InputPopupThumb']})->len())
   assert_equal([1, 1, 1], bar)
-  # Typing narrows the list to fewer rows than are visible: no scrollbar.
+  # Typing makes the list shorter than its visible rows: no scrollbar.
   for c in 'fi'
     popup.Filter(popup.winid, c)
   endfor

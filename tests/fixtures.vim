@@ -1,18 +1,20 @@
 vim9script
-# tests/fixtures.vim - shared, in-memory test data. No file I/O: builds a
-# Project entirely via InitNew()/SeedTree()/AddChild(), the same public
-# construction API templates.vim itself uses, rather than reading a JSON
-# fixture from disk - keeps Tier 1 tests (see testing_feasibility_report.md)
-# genuinely free of the filesystem, and keeps the fixture readable as plain
-# Vim9 rather than a JSON blob to keep in sync by hand.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/fixtures.vim: shared test data, built in memory. BuildProject uses
+# InitNew, SeedTree, and AddChild, the construction API that
+# templates.vim uses, instead of reading a JSON fixture from disk. This
+# keeps Tier 1 tests free of the filesystem, and the fixture stays
+# readable Vim9 code instead of JSON that must be kept in step by hand.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as Pj
 
-# A Novel-type project with the standard 5 structural folders, and a
-# Manuscript containing 2 Chapters, each with 1 Scene - enough shape to
-# exercise nesting, ownership, and sibling ordering without being any
-# larger than tests actually need.
+# FUNCTION: Return a Novel project with the five structural folders, and
+# a Manuscript with 2 chapters of 1 scene each: enough to test nesting,
+# owners, and sibling order, and no larger.
 export def BuildProject(): Pj.Project
   var project = Pj.Project.new('/tmp/bartleby-test-fixture.bartleby')
   project.InitNew('Fixture Project', Pj.TYPE_NOVEL)
@@ -34,20 +36,20 @@ export def BuildProject(): Pj.Project
   return project
 enddef
 
-# Writes `lines` to `item`'s real file under `project`'s binder root, for
-# tests exercising code that actually reads document content from disk
-# (compile.vim's ReadDocLines(), notably). Creates the containing
-# directory if the fixture's relPath nests one (e.g. "chapter-1/...").
-# Callers are responsible for cleanup - see CleanupProjectFiles().
+# FUNCTION: Write lines to the real file of item under the binder root of
+# project, for tests of code that reads document text from disk, such as
+# ReadDocLines in compile.vim. Creates the folder when relPath has one,
+# as in chapter-1/scene-01.md. The caller cleans up, see
+# CleanupProjectFiles.
 export def WriteDocContent(project: Pj.Project, item: BI.BinderItem, lines: list<string>): void
   var path = item.AbsPath(project.BinderRoot())
   mkdir(fnamemodify(path, ':h'), 'p')
   writefile(lines, path)
 enddef
 
-# Removes a fixture project's entire on-disk directory (its binder root
-# and everything under it) - call in a test's cleanup step whenever
-# WriteDocContent() was used.
+# FUNCTION: Remove the whole folder of a fixture project on disk, its
+# binder root and everything in it. Call it at the end of every test that
+# used WriteDocContent.
 export def CleanupProjectFiles(project: Pj.Project): void
   delete(project.scriveDir, 'rf')
 enddef

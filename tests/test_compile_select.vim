@@ -1,17 +1,21 @@
 vim9script
-# tests/test_compile_select.vim - compile.vim's selection pane
-# (SelectContents). Opens the real pane and drives its buffer-local keys
-# with feedkeys('...', 'xt'), like test_binder.vim. Checks the header and
-# title lines, that only Front Matter, Manuscript, and Back Matter
-# contents are listed, that the cursor-to-row mapping skips the two
-# header lines, and the ids returned on <CR>.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_compile_select.vim: the selection pane of compile.vim,
+# SelectContents. Opens the real pane and drives its buffer keys with
+# feedkeys and the xt flags, as test_binder.vim does. Checks the header
+# and title lines, that only Front Matter, Manuscript, and Back Matter
+# contents are listed, that the mapping from cursor line to row skips the
+# two header lines, and the ids that CR returns.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/binderitem.vim' as BI
 import './fixtures.vim' as Fx
 
-# The fixture project plus one Research document, which must never be
-# listed. Returns {project, scene1, scene2}.
+# FUNCTION: Return the fixture project with one Research document, which
+# must never be listed, in a dict of project, scene1, and scene2.
 def BuildProject(): dict<any>
   var project = Fx.BuildProject()
   project.ItemAt(4).AddChild(BI.BinderItem.NewDocument('Harbor notes', 'research/harbor.md'))
@@ -23,12 +27,12 @@ def BuildProject(): dict<any>
   }
 enddef
 
-# Opens the pane. `result` receives the ids passed to OnDone, under the
-# key 'ids', when <CR> confirms the selection.
+# FUNCTION: Open the pane. result receives the ids that OnDone gets, under
+# the key ids, when CR confirms the selection.
 #
-# extend(), not `result.ids = ids`: in Vim 9.2.1108, a lambda that assigns
-# to a member of a captured function argument crashes Vim (segmentation
-# fault) when it runs after that function has returned.
+# extend, not an assignment to result.ids: in Vim 9.2.1108, a lambda that
+# assigns to a member of a captured function argument crashes Vim with a
+# segmentation fault when it runs after that function has returned.
 def OpenPane(project: any, result: dict<any>): void
   C.SelectContents(project, [], (ids: list<string>) => {
     extend(result, {ids: ids})

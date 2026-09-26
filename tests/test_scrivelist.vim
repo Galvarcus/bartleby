@@ -1,8 +1,11 @@
 vim9script
-# tests/test_scrivelist.vim - scrivelist.vim: CandidateDirs(), ReadEntry(),
-# FindScrives(), TypeLabel(). Builds a scratch binder root under
-# tempname() with valid and invalid *.bartleby folders, and removes it
-# after each test.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_scrivelist.vim: CandidateDirs, ReadEntry, FindScrives, and
+# TypeLabel of scrivelist.vim. Builds a binder root under tempname with
+# valid and invalid .bartleby folders, and removes it after each test.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/scrivelist.vim' as SL
 
@@ -30,7 +33,7 @@ enddef
 
 def Test_candidate_dirs_lists_only_bartleby_directories(): void
   var root: string = BuildRoot()
-  # 7 folders; the plain file named file.bartleby is not a directory.
+  # 7 folders. The plain file named file.bartleby is not a folder.
   assert_equal(7, len(SL.CandidateDirs(root)))
   delete(root, 'rf')
 enddef
@@ -43,7 +46,7 @@ def Test_find_scrives_keeps_only_valid_projects_sorted_by_title(): void
   var root: string = BuildRoot()
   var entries = SL.FindScrives(root)
   var titles = entries->mapnew((_, e) => e.title)
-  # Case-insensitive sort: alpha, NoName, Zeta.
+  # Sorted without regard to case: alpha, NoName, Zeta.
   assert_equal(['alpha novel', 'NoName', 'Zeta Script'], titles)
   delete(root, 'rf')
 enddef

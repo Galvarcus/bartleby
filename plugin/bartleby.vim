@@ -7,8 +7,9 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# bartleby.vim - plugin entry point: global config + user commands. All real
-# logic lives in autoload/bartleby/*.vim; this file only wires them up.
+# bartleby.vim: the plugin entry point, with the global settings, the
+# commands, the mappings, and the autocommands. The work is done in
+# autoload/bartleby, and this file only connects it.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -38,9 +39,9 @@ import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 
-# All g:bartleby_* globals, defaulted here. -1/'' sentinels mark "user
-# did not set this" for options with no real default (focus margins,
-# spotlight conceal colors).
+# Every g:bartleby setting, with its default. -1 and empty strings mean
+# not set, for settings with no real default, such as the Focus margins
+# and the Spotlight conceal colors.
 g:bartleby_binder_root = get(g:, 'bartleby_binder_root', expand('~/Documents'))
 g:bartleby_session_auto_restore = get(g:, 'bartleby_session_auto_restore', false)
 g:bartleby_autosave = get(g:, 'bartleby_autosave', true)
@@ -115,10 +116,10 @@ g:bartleby_lexicon_timeout = get(g:, 'bartleby_lexicon_timeout', 10)
 g:bartleby_lexicon_base_url = get(g:, 'bartleby_lexicon_base_url',
   'https://www.dictionaryapi.com/api/v3/references')
 
-# Built-in confirm() prompt for the four scrive types, used at creation
-# time. A popupbuttons.vim/menu.vim-backed picker can replace this once a
-# proper prompt widget is wired into the plugin - this is just the built-in
-# stopgap so New Scrive doesn't need the type on the command line.
+# FUNCTION: Ask for the scrive type with confirm, when a scrive is
+# created, so that :BartlebyNewScrive needs no type argument.
+#
+# REVIEW: PickOne from picker.vim would match the other pickers.
 def PromptProjectType(): string
   var choice: number = confirm(
     'Scrive type?',
@@ -144,9 +145,8 @@ def OpenScrive(name: string): void
   endif
   var project: Pj.Project = Sc.Open(scriveName)
   if project is null_object
-    # A last scrive that was moved or deleted gets the same fallback as
-    # no last scrive at all. An explicit, mistyped name does not - its
-    # error is enough.
+    # A last scrive that was moved or deleted gets the same fallback as no
+    # last scrive. A typed name that is wrong does not: its error is enough.
     if name ==# ''
       SL.Show()
     endif
@@ -184,8 +184,7 @@ def RunSearch(): void
   Se.Run(St.Get())
 enddef
 
-# Tab-completion for scrive names is deferred until custom-completion syntax
-# is confirmed against the 9.2 test target - flag if you'd like it sooner.
+# TODO: Tab completion of scrive names for :BartlebyOpen.
 command! -bar -nargs=? BartlebyOpen OpenScrive(<q-args>)
 command! -bar -nargs=1 BartlebyNewScrive NewScrive(<q-args>)
 command! -bar BartlebyList SL.Show()
@@ -202,9 +201,9 @@ def EditProjectInfo(): void
   Pf.EditForScrive(St.Get())
 enddef
 
-# Resolves the current buffer to a BinderItem of the open scrive, or
-# null_object (with a warning) if there's no open scrive or the current
-# buffer isn't one of its documents.
+# FUNCTION: Return the BinderItem of the current buffer in the open
+# scrive, or null_object with a warning when no scrive is open or the
+# buffer is not one of its documents.
 def CurrentDoc(): BI.BinderItem
   var project: Pj.Project = St.Get()
   if project is null_object
@@ -280,8 +279,9 @@ nnoremap <silent> <leader>bp <ScriptCmd>Q.Toggle()<CR>
 nnoremap <silent> <leader>b<Space> <ScriptCmd>CP.Open()<CR>
 nnoremap <silent> <leader>bm <ScriptCmd>BM.Toggle()<CR>
 
-# Lookup mappings exist only when that kind has an API key (set before
-# Bartleby loads). The commands always exist, and explain what is missing.
+# The lookup mappings exist only when their kind has an API key, set
+# before Bartleby loads. The commands always exist and report what is
+# missing.
 if Lx.IsEnabled(Lx.KIND_DICTIONARY)
   nnoremap <silent> <leader>bd <ScriptCmd>LxP.LookupAtCursor(Lx.KIND_DICTIONARY)<CR>
   xnoremap <silent> <leader>bd <Esc><ScriptCmd>LxP.LookupVisual(Lx.KIND_DICTIONARY)<CR>
@@ -302,7 +302,7 @@ def AutoRestoreSession(): void
   endif
 enddef
 
-# Auto-save for scrive documents - see autoload/bartleby/autosave.vim.
+# Auto-save for scrive documents, see autoload/bartleby/autosave.vim.
 augroup bartleby_autosave
   autocmd!
   autocmd CursorHold,InsertLeave * As.Save(false)

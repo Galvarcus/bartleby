@@ -1,8 +1,12 @@
 vim9script
-# tests/test_lexicon.vim - lexicon.vim's pure parts: ParseResponse() for
-# each response shape, CleanWord(), UrlEncode(), MatchCase(), the
-# enable/disable rules, and BuildUrl(). No network; fixtures follow the
-# shapes in Merriam-Webster's own JSON documentation.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_lexicon.vim: the pure parts of lexicon.vim: ParseResponse
+# for each kind of response, CleanWord, UrlEncode, MatchCase, the rules
+# that turn lookups on and off, and BuildUrl. No network. The fixtures
+# follow the formats in Merriam-Webster's JSON documentation.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/lexicon.vim' as Lx
 

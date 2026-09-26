@@ -1,8 +1,12 @@
 vim9script
-# tests/test_spotlight_pos.vim - Spotlight's part-of-speech modes, run in a
-# real buffer. Reads which words stay lit from the window's SpotlightDim
-# match. Tagger modes use tests/mock_tagger.py (Python 3 only, no spaCy)
-# and wait for its asynchronous results.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_spotlight_pos.vim: Spotlight's part-of-speech modes in a real
+# buffer. Reads which words stay bright from the SpotlightDim match of the
+# window. Tagger modes use tests/mock_tagger.py, which needs only Python
+# 3, not spaCy, and wait for its asynchronous results.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/spotlight.vim' as Sp
 import autoload 'bartleby/tagger.vim' as Tg
@@ -31,7 +35,8 @@ def UseTagger(setting: any): void
   Tg.Reset()
 enddef
 
-# Dim positions of line `lnum`, from the current window's SpotlightDim match.
+# FUNCTION: Return the dimmed columns of line lnum, from the SpotlightDim
+# match of the current window.
 def DimmedColumns(lnum: number): dict<bool>
   var dimmed: dict<bool> = {}
   for m in getmatches()->filter((_, x) => x.group ==# 'SpotlightDim')
@@ -48,7 +53,7 @@ def DimmedColumns(lnum: number): dict<bool>
   return dimmed
 enddef
 
-# The runs of non-space text on line `lnum` that are not dimmed.
+# FUNCTION: Return the runs of text on line lnum that are not dimmed.
 def LitWords(lnum: number): list<string>
   var dimmed: dict<bool> = DimmedColumns(lnum)
   var text: string = getline(lnum)
@@ -68,8 +73,8 @@ def LitWords(lnum: number): list<string>
   return words
 enddef
 
-# Waits up to 10 seconds for `expected` on line 3 (tagger results arrive
-# asynchronously), then asserts it.
+# FUNCTION: Wait up to 10 seconds for expected on line 3, because tagger
+# results arrive asynchronously, then check it.
 def AssertLitSoon(expected: list<string>, what: string): void
   var waited: number = 0
   while LitWords(3) != expected && waited < 10000
@@ -134,8 +139,8 @@ def Test_mock_tagger_modes(): void
   AssertLitSoon(['red'], 'Adjectives')
   Sp.Execute(false, 'Passive')
   AssertLitSoon(['was', 'opened'], 'Passive')
-  # With a tagger, Adverbs uses its tags, not the -ly heuristic: the mock
-  # tags only "quietly" as ADV.
+  # With a tagger, Adverbs uses the tags, not the ly heuristic. The mock
+  # tags only quietly as ADV.
   Sp.Execute(false, 'Adverbs')
   AssertLitSoon(['quietly'], 'Adverbs with a tagger')
   CloseBuffer()

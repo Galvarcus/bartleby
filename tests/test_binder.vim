@@ -1,20 +1,23 @@
 vim9script
-# tests/test_binder.vim - binder.vim's cursor-to-row mapping and cursor
-# restoration (CursorContext()/Render()). Both are script-local, along
-# with every keymap handler - tested indirectly by driving the real
-# buffer-local mappings with feedkeys('...', 'xt') (the 'x' flag executes
-# immediately, 't' uses real typeahead so the mappings actually fire),
-# then asserting on the resulting buffer/cursor/window state. Needs real
-# files on disk, same as test_compile.vim, since OpenUnderCursor() checks
-# filereadable() before opening.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_binder.vim: the mapping from cursor line to row in
+# binder.vim, and the cursor restore of CursorContext and Render. Both
+# are local to the script, as are all key handlers, so the tests drive
+# the real buffer mappings with feedkeys and the xt flags: x runs the keys
+# at once, and t makes them typed, so the mappings apply. Then they check
+# the buffer, cursor, and window. Needs real files on disk, as
+# test_compile.vim does, because OpenUnderCursor checks filereadable.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/binderitem.vim' as BI
 import './fixtures.vim' as Fx
 
-# Opens Binder for a fresh copy of the fixture project (with real scene
-# files written to disk) and returns {project, scene1, scene2}. Caller
-# must CloseBinderAndCleanup() when done.
+# FUNCTION: Open the Binder for a new copy of the fixture project, with
+# real scene files on disk, and return a dict of project, scene1, and
+# scene2. The caller must call CloseBinderAndCleanup.
 def OpenBinderWithContent(): dict<any>
   var project = Fx.BuildProject()
   var chapter1 = project.ItemAt(1).ChildAt(0)
@@ -28,8 +31,8 @@ def OpenBinderWithContent(): dict<any>
 enddef
 
 def CloseBinderAndCleanup(fx: dict<any>): void
-  # Close every window but one, then wipe whatever's left, so each test
-  # starts the next from a clean single-window slate.
+  # Close every window but one, then wipe what is left, so that the next
+  # test starts with one clean window.
   only!
   bwipe!
   Fx.CleanupProjectFiles(fx.project)
@@ -48,15 +51,13 @@ def Test_show_renders_the_tree_starting_at_line_2(): void
   CloseBinderAndCleanup(fx)
 enddef
 
-# Regression coverage for the header-line cursor-offset math: opening the
-# document under the cursor must land on the actual right file, not the
-# wrong one (or nothing), when the tree has a title line ahead of it.
+# FUNCTION: Regression test for the header line offset: CR on a document
+# must open that document, not another one or nothing, when a title line
+# is above the tree.
 def Test_cr_on_a_scene_line_opens_the_correct_file(): void
   var fx = OpenBinderWithContent()
-  # Manuscript(3)/Chapter 1(4)/Scene 1(5), with 2 title lines... walk
-  # down to find Scene 1's actual line rather than hardcoding it, so this
-  # test doesn't silently start asserting the wrong thing if the fixture
-  # tree shape ever changes.
+  # Find the line of Scene 1 instead of assuming it, so that this test does
+  # not check the wrong line if the fixture tree changes.
   var target = 'Scene 1'
   var lnum = 1
   while lnum <= line('$') && getline(lnum) !~# '\V' .. target
@@ -75,7 +76,7 @@ def Test_cr_on_the_title_line_does_nothing(): void
   var before = getline(1, '$')
   cursor(1, 1)
   feedkeys("\<CR>", 'xt')
-  # Still in the Binder buffer (no document opened), content unchanged.
+  # Still in the Binder buffer: no document opened and no text changed.
   assert_equal('Bartleby-Binder', bufname('%'))
   assert_equal(before, getline(1, '$'))
   CloseBinderAndCleanup(fx)
@@ -92,16 +93,18 @@ enddef
 
 def Test_cursor_stays_on_the_same_item_after_a_collapse_rerender(): void
   var fx = OpenBinderWithContent()
-  var manuscriptLnum = 3 # 'Manuscript' - see Test_show_renders_the_tree_starting_at_line_2
+  # The Manuscript line, see Test_show_renders_the_tree_starting_at_line_2.
+  var manuscriptLnum = 3
   assert_match('Manuscript', getline(manuscriptLnum))
   cursor(manuscriptLnum, 1)
-  feedkeys("\<Tab>", 'xt') # collapse
-  # Manuscript's own row must still be exactly where the cursor is,
-  # despite the buffer having been fully rewritten by Render().
+  # Collapse it.
+  feedkeys("\<Tab>", 'xt')
+  # The cursor must stay on the Manuscript row, although Render rewrote the
+  # whole buffer.
   assert_match('Manuscript', getline('.'))
   assert_equal(manuscriptLnum, line('.'))
-  # And collapsing actually did something observable: Chapter 1 (which
-  # was on the very next line) is no longer anywhere in the buffer.
+  # And collapsing had an effect: Chapter 1, on the next line before, is no
+  # longer in the buffer.
   assert_equal(0, search('Chapter\|^\s*1$', 'n'))
   CloseBinderAndCleanup(fx)
 enddef

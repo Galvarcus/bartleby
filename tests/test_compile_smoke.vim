@@ -1,21 +1,22 @@
 vim9script
-# tests/test_compile_smoke.vim - gated smoke test for the real compile
-# pipeline: does Pandoc/pdflatex/xelatex actually run to completion and
-# produce a real, non-empty output file? Not a check of the output's
-# visual correctness (see testing_feasibility_report.md - that's
-# deliberately left to manual spot-checks), just that the external-tool
-# invocation itself works end to end. Skips cleanly (exit 0) if the
-# required binaries aren't installed, rather than failing for an
-# unrelated reason - tests.yml's compile-smoke job installs them
-# explicitly, but this stays safe to run without them too.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_compile_smoke.vim: a gated smoke test of the real compile
+# pipeline. Checks that Pandoc, pdflatex, and xelatex run to the end and
+# write a real, nonempty file. It does not check how the output looks,
+# which is left to manual checks, see testing_feasibility_report.md. When
+# a program is not installed, the test is skipped with exit code 0
+# instead of failing for an unrelated reason. The compile-smoke job of
+# tests.yml installs the programs.
 #
-# job_start() is asynchronous, so this polls for the output file to
-# appear rather than waiting on a return value. RunJob()'s success path
-# calls a confirm() prompt (offering to open the result) - confirmed via
-# direct experiment that confirm() returns its default choice immediately
-# in headless -es mode rather than blocking, so this never hangs.
+# job_start is asynchronous, so the test polls for the output file
+# instead of waiting for a return value. On success RunJob asks with
+# confirm whether to open the result. In headless -es mode confirm
+# returns its default at once, so the test never hangs.
 #
-# Usage: same invocation shape as harness.vim (see its own usage comment).
+# Usage: the same command as tests/harness.vim, see its header.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/binderitem.vim' as BI
@@ -25,9 +26,9 @@ import './fixtures.vim' as Fx
 const MAX_WAIT_MS: number = 60000
 const POLL_INTERVAL_MS: number = 500
 
-# Polls OutputDir (project.scriveDir .. '/compile/output') for any file
-# matching `pattern` to appear with non-zero size, up to MAX_WAIT_MS.
-# Returns its path, or '' on timeout.
+# FUNCTION: Wait for a file matching pattern in the output folder,
+# project.scriveDir/compile/output, with a size above 0, up to
+# MAX_WAIT_MS. Return its path, or an empty string after the wait.
 def WaitForOutput(project: Pj.Project, pattern: string): string
   var outDir: string = project.scriveDir .. '/compile/output'
   var waited: number = 0
@@ -83,9 +84,9 @@ def Test_book_pdf_compiles_to_a_real_nonempty_file(): void
   Fx.CleanupProjectFiles(fx.project)
 enddef
 
-# Waits until `logDir` holds a log whose name is not in `before`, then
-# returns it, or '' after MAX_WAIT_MS. Pandoc writes its --log file when
-# it finishes, so a new name means that run is done.
+# FUNCTION: Wait until logDir has a log whose name is not in before, and
+# return it, or an empty string after MAX_WAIT_MS. Pandoc writes its log
+# file when it ends, so a new name means that run is done.
 def WaitForNewLog(logDir: string, before: list<string>): string
   var waited: number = 0
   while waited < MAX_WAIT_MS
@@ -100,10 +101,10 @@ def WaitForNewLog(logDir: string, before: list<string>): string
   return ''
 enddef
 
-# Three Book/HTML runs (Pandoc only, no LaTeX) with
-# g:bartleby_compile_log_retention = 2, set at the end of this file
-# before Bartleby loads. Each run must write a new timestamped JSON log,
-# and only the 2 newest may remain.
+# FUNCTION: Run three Book compiles to HTML, with Pandoc only and no
+# LaTeX, with g:bartleby_compile_log_retention set to 2 at the end of
+# this file, before Bartleby loads. Each run must write a new timestamped
+# JSON log, and only the 2 newest may remain.
 def Test_pandoc_log_per_run_with_retention(): void
   if !executable('pandoc')
     echom 'SKIP: pandoc not installed'
@@ -123,7 +124,7 @@ def Test_pandoc_log_per_run_with_retention(): void
       assert_match('/bartleby-test-fixture_smoke-log_\d\{8}-\d\{6}\.json$', newLog)
       assert_equal(v:t_list, type(json_decode(join(readfile(newLog), "\n"))))
     endif
-    # Log names carry the time to the second.
+    # Log names show the time to the second.
     sleep 1100m
   endfor
   # Only this target's logs: the other smoke tests write logs here too.
@@ -137,9 +138,9 @@ export def RunAll(): void
   Test_pandoc_log_per_run_with_retention()
 enddef
 
-# A private home, so the log test counts only its own logs, and a small
-# retention, both set before Bartleby loads: compile.vim reads the
-# retention setting once, when it loads.
+# A private home folder, so that the log test counts only its own logs,
+# and a small retention. Both are set before Bartleby loads, because
+# compile.vim reads the retention setting once, when it loads.
 $HOME = tempname()
 mkdir($HOME, 'p')
 g:bartleby_compile_log_retention = 2

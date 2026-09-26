@@ -1,7 +1,11 @@
 vim9script
-# tests/test_autosave.vim - autosave.vim: saves only changed documents of
-# the open scrive, honors the interval, always saves when forced, runs a
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_autosave.vim: autosave.vim saves only changed documents of
+# the open scrive, keeps the interval, always saves when forced, runs a
 # deferred save when the interval ends, and does nothing when turned off.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/autosave.vim' as As
 import autoload 'bartleby/project.vim' as Pj

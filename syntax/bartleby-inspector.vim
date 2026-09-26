@@ -1,31 +1,36 @@
-" Plugin_Name: Bartleby
-" syntax/bartleby-inspector.vim - highlighting for the Inspector pane
-" (inspector.vim). Same narrow scope as bartleby-binder/bartleby-
-" compile-select: only the fixed vocabulary the plugin itself renders
-" (the ::Inspector:: header, the field labels, the Synopsis header) is
-" ever matched. A field's own value - title, label, status, target,
-" keywords, synopsis text - is content the user wrote or picked and is
-" never pattern-matched.
-" License: GNU GPL 3.0
+vim9script
+
+##############################################################################
+# Plugin_Name: Bartleby
+# syntax/bartleby-inspector.vim: highlighting for the Inspector pane of
+# inspector.vim. As in the Binder and compile selection syntax files, it
+# matches only the fixed text that Bartleby writes: the Inspector header,
+# the field labels, and the Synopsis header. A field value, such as a
+# title, keywords, or synopsis text, is the user's own and is never
+# matched.
+#
+# No s:is_loaded guard: a syntax file runs once for every buffer.
+# License: GNU GPL 3.0
+##############################################################################
 
 if exists('b:current_syntax')
   finish
 endif
 
-" Line 1 is always the '::Inspector::' header (see inspector.vim's
-" RenderContent()).
+# Line 1 is always the Inspector header, see RenderContent in
+# inspector.vim.
 syntax match bartlebyInspectorHeader /\%1l.*/
 
-" 'Title: '/'Label: '/'Status: '/'Target: '/'Keywords: ', only at the
-" very start of a line - the only place RenderContent() ever puts them.
+# A field label, only at the start of a line, the only place where
+# RenderContent writes one.
 syntax match bartlebyInspectorField /^\(Title\|Label\|Status\|Target\|Keywords\): /
 
-" The 'Synopsis:' header line - unlike the fields above it has no
-" trailing value on the same line, so it gets its own exact-match rule.
+# The Synopsis header. Unlike the fields above, it has no value on its own
+# line, so it has its own exact rule.
 syntax match bartlebyInspectorSynopsisHeader /^Synopsis:$/
 
 highlight default link bartlebyInspectorHeader Title
 highlight default link bartlebyInspectorField Keyword
 highlight default link bartlebyInspectorSynopsisHeader Keyword
 
-let b:current_syntax = 'bartleby-inspector'
+b:current_syntax = 'bartleby-inspector'

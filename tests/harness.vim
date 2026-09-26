@@ -1,39 +1,39 @@
 vim9script
 
-# Tests contain UTF-8 text such as curly apostrophes. Without a UTF-8
-# locale (LANG unset), Vim starts with 'encoding' latin1 and would read
-# each such character as several bytes. Set it here, before any script
-# or buffer is loaded, so results do not depend on the environment.
-set encoding=utf-8
-# tests/harness.vim - runs every test module's RunAll(), then reports via
-# v:errors (populated automatically by every failed assert_*() call - see
-# :help testing.txt). Each test_*.vim file exports a single RunAll(): void
-# that calls its own (script-local) Test_* functions directly - simpler and
-# more explicit than reflection-based test discovery, at the cost of one
-# line here per test file.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/harness.vim: runs the RunAll function of every test module, then
+# reports the failures in v:errors, which every failed assert function
+# fills, see :help testing.txt. Each test_*.vim file exports one RunAll
+# that calls its own Test functions. Simpler and clearer than finding
+# tests by reflection, for the cost of one line here per test file.
 #
 # Usage: vim -es -u NONE -N -c 'set rtp+=/path/to/bartleby,/path/to/Logger' \
 #          -c 'source tests/harness.vim' -c 'quit'
 #
-# -u NONE skips Vim's normal startup entirely, INCLUDING the automatic
-# ':packloadall' that would otherwise put a pack/*/start/* install (e.g.
-# ~/.vim/pack/vendor/start/bartleby) onto 'runtimepath' - so if Bartleby
-# and Logger are installed that way rather than passed explicitly via
-# rtp+=, run ':packloadall' first instead:
+# -u NONE skips Vim's normal startup, including the automatic
+# :packloadall that adds a pack/*/start install, such as
+# ~/.vim/pack/vendor/start/bartleby, to runtimepath. When Bartleby and
+# Logger are installed that way, run :packloadall first instead of rtp+=:
 #   vim -es -u NONE -N -c 'packloadall' \
 #     -c 'source tests/harness.vim' -c 'quit'
-# Either way this must run from Bartleby's own repo root, since it reads
-# and writes tests/results.txt with a path relative to the current
-# directory.
+# Run it from the root of the Bartleby repository, because it writes
+# tests/results.txt relative to the current folder.
 #
-# Exit code is 0 on success, 1 on any failed assertion (via cquit).
+# The exit code is 0 on success and 1 on any failed assertion, with cquit.
+# License: GNU GPL 3.0
+##############################################################################
+# Tests contain UTF-8 text such as curly apostrophes. Without a UTF-8
+# locale, with LANG unset, Vim starts with encoding latin1 and reads each
+# such character as several bytes. Set it here, before any script or
+# buffer loads, so results do not depend on the environment.
+set encoding=utf-8
 
-# plugin/bartleby.vim must be sourced before any autoload file that reads
-# a g:bartleby_* global at its own script-load time (compile.vim does,
-# for its Pandoc/screenplain binary paths) - in a real Vim session this
-# always happens automatically (plugin/ loads at startup, autoload/ only
-# lazily on first use), but a test harness that only imports autoload
-# files directly skips that step unless done explicitly, here.
+# Source plugin/bartleby.vim before any autoload file that reads a
+# g:bartleby setting when it loads, as compile.vim does for the paths of
+# Pandoc and screenplain. In a Vim session, plugin files load at startup
+# and autoload files later, on first use. A harness that imports autoload
+# files directly must do this itself.
 execute 'source ' .. expand('<sfile>:h:h') .. '/plugin/bartleby.vim'
 
 import './test_tree.vim' as TestTree

@@ -1,8 +1,12 @@
 vim9script
-# tests/test_document.vim - document.vim: DocMeta (de)serialization and
-# field setters. FromDict()/ToDict() are pure/in-memory; Load()/Save() are
-# the one place in this file needing real file I/O (a real sidecar on
-# disk), kept small and self-cleaning.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_document.vim: DocMeta of document.vim, converted to and from
+# dicts, and its setters. FromDict and ToDict work in memory. Load and
+# Save are the only tests here that use a real file on disk, and they
+# remove it.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/document.vim' as D
 
@@ -30,7 +34,7 @@ def Test_from_dict_reads_every_field(): void
 enddef
 
 def Test_from_dict_tolerates_missing_keys(): void
-  # An older/partial sidecar - only label present.
+  # An older or partial metadata file with only a label.
   var meta = D.DocMeta.FromDict({label: 'Blue'})
   assert_equal('Blue', meta.label)
   assert_equal('To Do', meta.status)
@@ -56,7 +60,8 @@ def Test_setters_mutate_only_their_own_field(): void
   var meta = D.DocMeta.new()
   meta.SetLabel('Purple')
   assert_equal('Purple', meta.label)
-  assert_equal('To Do', meta.status) # unaffected
+  # Not changed.
+  assert_equal('To Do', meta.status)
 enddef
 
 def Test_load_of_a_missing_sidecar_yields_plain_defaults(): void

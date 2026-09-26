@@ -1,6 +1,10 @@
 vim9script
-# tests/test_pos.vim - pos.vim: tokens, word-list and pattern
-# classification, prose-line scope, dim gaps, and the word-list settings.
+##############################################################################
+# Plugin_Name: Bartleby
+# tests/test_pos.vim: pos.vim: tokens, classification by word list and
+# pattern, which lines are prose, dim gaps, and the word list settings.
+# License: GNU GPL 3.0
+##############################################################################
 
 import autoload 'bartleby/pos.vim' as P
 
@@ -18,7 +22,7 @@ def Test_contractions(): void
   for word in ["don't", "they're", "we've", "we'll", "I'd", "I'm", "It's", "that’s", "Let's"]
     assert_true(P.IsContraction(word, lists), word)
   endfor
-  # 's after other words is usually possessive.
+  # After other words, 's usually shows possession.
   for word in ["John's", "cat's", 'dont']
     assert_false(P.IsContraction(word, lists), word)
   endfor
@@ -59,13 +63,13 @@ def Test_prose_lines(): void
 enddef
 
 def Test_gap_positions(): void
-  # 'a bc d' with 'bc' lit: gaps 'a ' and ' d'.
+  # With bc bright in a bc d, the gaps are a and d, each with its space.
   assert_equal([[3, 1, 2], [3, 5, 2]], P.GapPositions(3, 'a bc d', [[2, 4]]))
-  # Whitespace-only gaps are skipped.
+  # Gaps of only spaces are skipped.
   assert_equal([], P.GapPositions(1, 'ab cd', [[0, 2], [3, 5]]))
-  # Overlapping and unsorted spans.
+  # Spans that overlap and are not sorted.
   assert_equal([[1, 7, 2]], P.GapPositions(1, 'abcdefgh', [[2, 6], [0, 3]]))
-  # Nothing lit: the whole line.
+  # Nothing bright: the whole line.
   assert_equal([[2, 1, 3]], P.GapPositions(2, 'abc', []))
 enddef
 
