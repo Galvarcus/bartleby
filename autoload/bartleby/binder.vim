@@ -295,7 +295,7 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
     if title ==# ''
       return
     endif
-    ctx.project.AddItem(BI.BinderItem.NewFolder(title, BI.ROLE_CUSTOM))
+    ctx.project.AddChild(BI.BinderItem.NewFolder(title, BI.ROLE_CUSTOM))
     ctx.project.Save()
     Render(ctx.project)
     return

@@ -48,7 +48,27 @@ def NewId(): string
   return printf('%s-%03d', strftime('%Y%m%d%H%M%S'), id_counter)
 enddef
 
-export class BinderItem
+# INTERFACE: A list of binder items that can be changed in place: the
+# children of a folder, or the top-level items of a scrive. BinderItem and
+# Project implement it, so code that changes the tree, see mutate.vim,
+# has one code path for both. The owner of a top-level row is the
+# Project, and of any other row its folder.
+#
+# An item is typed any here, not BinderItem: Vim9 resolves a signature
+# when it is defined, and this interface must come before BinderItem,
+# which implements it. Each class declares the exact type in its own
+# methods, so a wrong type is still rejected when the method runs.
+export interface ItemContainer
+  def AddChild(child: any): void
+  def InsertChildAt(idx: number, child: any): void
+  def RemoveChildAt(idx: number): void
+  def ChildAt(idx: number): any
+  def ChildCount(): number
+  def IndexOfChild(id: string): number
+  def SwapChildren(i: number, j: number): void
+endinterface
+
+export class BinderItem implements ItemContainer
   var id: string
   var title: string
   var kind: string = KIND_FOLDER

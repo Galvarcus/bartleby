@@ -20,8 +20,8 @@ import './fixtures.vim' as Fx
 # scene2. The caller must call CloseBinderAndCleanup.
 def OpenBinderWithContent(): dict<any>
   var project = Fx.BuildProject()
-  var chapter1 = project.ItemAt(1).ChildAt(0)
-  var chapter2 = project.ItemAt(1).ChildAt(1)
+  var chapter1 = project.ChildAt(1).ChildAt(0)
+  var chapter2 = project.ChildAt(1).ChildAt(1)
   var scene1 = chapter1.ChildAt(0)
   var scene2 = chapter2.ChildAt(0)
   Fx.WriteDocContent(project, scene1, ['Scene one text.'])

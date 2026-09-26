@@ -70,16 +70,21 @@ def Test_interval_skips_then_force_saves(): void
   Teardown(fx)
 enddef
 
+# FUNCTION: A skipped save runs by itself when the interval ends. The
+# interval is 2 seconds, not 1: localtime counts whole seconds, and with 1
+# second a clock tick between the two saves would let the second save
+# write at once. The wait is 3.5 seconds, because with whole seconds the
+# timer can need one more round.
 def Test_deferred_save_runs_when_the_interval_ends(): void
   var fx = Setup()
-  g:bartleby_autosave_interval = 1
+  g:bartleby_autosave_interval = 2
   execute 'edit ' .. fx.doc
   Edit('first')
   As.Save(false)
   Edit('second')
   As.Save(false)
   assert_equal(['first'], readfile(fx.doc))
-  sleep 1500m
+  sleep 3500m
   assert_equal(['second'], readfile(fx.doc))
   Teardown(fx)
 enddef

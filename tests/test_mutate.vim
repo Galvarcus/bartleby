@@ -34,10 +34,10 @@ def Test_indent_refused_on_an_immutable_folder(): void
   # refused.
   var project = Fx.BuildProject()
   var rows = T.Flatten(project)
-  var backMatterRow = T.FindRowById(rows, project.ItemAt(2).id)
+  var backMatterRow = T.FindRowById(rows, project.ChildAt(2).id)
   assert_false(M.Indent(project, backMatterRow))
   # Confirm that nothing moved.
-  assert_equal(5, project.ItemCount())
+  assert_equal(5, project.ChildCount())
 enddef
 
 def Test_indent_allowed_for_a_chapter_into_a_preceding_chapter(): void
@@ -45,7 +45,7 @@ def Test_indent_allowed_for_a_chapter_into_a_preceding_chapter(): void
   # RoleAllowedUnder. The case worth checking is a Chapter that indents
   # into a Part, so build that tree directly.
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var part = BI.BinderItem.NewFolder('Part One', BI.ROLE_PART)
   # Take Chapter 1 out again.
   manuscript.RemoveChildAt(0)
@@ -65,7 +65,7 @@ def Test_outdent_refused_when_it_would_leave_manuscript_role_restriction(): void
   # grandparent is the Project, null_object for RoleAllowedUnder. Outdenting
   # it would put it at the top level, which ROLE_CHAPTER never allows.
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var rows = T.Flatten(project)
   var chapter1Row = T.FindRowById(rows, manuscript.ChildAt(0).id)
   assert_false(M.Outdent(project, rows, chapter1Row))
@@ -74,21 +74,21 @@ enddef
 def Test_outdent_returns_false_for_an_already_root_level_item(): void
   var project = Fx.BuildProject()
   var rows = T.Flatten(project)
-  var frontMatterRow = T.FindRowById(rows, project.ItemAt(0).id)
+  var frontMatterRow = T.FindRowById(rows, project.ChildAt(0).id)
   assert_false(M.Outdent(project, rows, frontMatterRow))
 enddef
 
 def Test_remove_deletes_a_root_level_item(): void
   var project = Fx.BuildProject()
   var rows = T.Flatten(project)
-  var researchRow = T.FindRowById(rows, project.ItemAt(4).id)
+  var researchRow = T.FindRowById(rows, project.ChildAt(4).id)
   M.Remove(project, researchRow)
-  assert_equal(4, project.ItemCount())
+  assert_equal(4, project.ChildCount())
 enddef
 
 def Test_remove_deletes_a_nested_item_from_its_owner(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var rows = T.Flatten(project)
   var chapter1Row = T.FindRowById(rows, manuscript.ChildAt(0).id)
   M.Remove(project, chapter1Row)
@@ -98,18 +98,18 @@ enddef
 
 def Test_clear_children_empties_a_folder_without_removing_it(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   assert_equal(2, manuscript.ChildCount())
   M.ClearChildren(manuscript)
   assert_equal(0, manuscript.ChildCount())
   # The folder itself is not touched: still there, the same object.
-  assert_equal(5, project.ItemCount())
-  assert_equal(manuscript.id, project.ItemAt(1).id)
+  assert_equal(5, project.ChildCount())
+  assert_equal(manuscript.id, project.ChildAt(1).id)
 enddef
 
 def Test_move_within_siblings_swaps_two_chapters(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var rows = T.Flatten(project)
   var chapter1Row = T.FindRowById(rows, manuscript.ChildAt(0).id)
   assert_true(M.MoveWithinSiblings(project, chapter1Row, 1))
@@ -119,7 +119,7 @@ enddef
 
 def Test_move_within_siblings_false_at_a_list_edge(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var rows = T.Flatten(project)
   var chapter1Row = T.FindRowById(rows, manuscript.ChildAt(0).id)
   # Chapter 1 is already first, so moving it up does nothing.
@@ -130,7 +130,7 @@ def Test_move_within_siblings_refuses_non_chapter_non_part_folders(): void
   var project = Fx.BuildProject()
   var rows = T.Flatten(project)
   # Back Matter is a structural folder, but neither a Chapter nor a Part.
-  var backMatterRow = T.FindRowById(rows, project.ItemAt(2).id)
+  var backMatterRow = T.FindRowById(rows, project.ChildAt(2).id)
   assert_false(M.MoveWithinSiblings(project, backMatterRow, 1))
 enddef
 
@@ -143,7 +143,7 @@ enddef
 
 def Test_find_ancestor_with_role_finds_manuscript_from_a_scene(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var chapter1 = manuscript.ChildAt(0)
   var rows = T.Flatten(project)
   var sceneRow = T.FindRowById(rows, chapter1.ChildAt(0).id)
@@ -155,13 +155,13 @@ enddef
 def Test_find_ancestor_with_role_returns_null_when_absent(): void
   var project = Fx.BuildProject()
   var rows = T.Flatten(project)
-  var frontMatterRow = T.FindRowById(rows, project.ItemAt(0).id)
+  var frontMatterRow = T.FindRowById(rows, project.ChildAt(0).id)
   assert_true(M.FindAncestorWithRole(rows, frontMatterRow, BI.ROLE_PART) is null_object)
 enddef
 
 def Test_add_chapter_creates_a_folder_with_a_starter_scene(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var chapter = M.AddChapter(manuscript, null_object, 'New Chapter')
   assert_equal('New Chapter', chapter.title)
   assert_equal(BI.ROLE_CHAPTER, chapter.structureRole)
@@ -173,7 +173,7 @@ enddef
 
 def Test_add_chapter_blank_title_auto_numbers(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var chapter = M.AddChapter(manuscript, null_object, '')
   # The 2 chapters are 1 and 2, so the next number is 3.
   assert_equal('3', chapter.title)
@@ -181,7 +181,7 @@ enddef
 
 def Test_add_part_creates_an_empty_folder(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var part = M.AddPart(manuscript, null_object, 'Part One')
   assert_equal('Part One', part.title)
   assert_equal(BI.ROLE_PART, part.structureRole)
@@ -190,11 +190,55 @@ enddef
 
 def Test_rename_changes_the_items_title(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var rows = T.Flatten(project)
   var chapter1Row = T.FindRowById(rows, manuscript.ChildAt(0).id)
   M.Rename(chapter1Row, 'Prologue')
   assert_equal('Prologue', manuscript.ChildAt(0).title)
+enddef
+
+# FUNCTION: Return the row of the item with id, from a fresh Flatten.
+def RowOf(project: any, id: string): T.Row
+  return T.Flatten(project)->filter((_, r) => r.item.id ==# id)[0]
+enddef
+
+# FUNCTION: Run the same moves on two documents at the top level, owned
+# by the Project, and on two in a folder, owned by that folder. Both
+# owners implement ItemContainer, so the moves share one code path.
+def Test_same_operations_at_top_level_and_in_a_folder(): void
+  var project = Fx.BuildProject()
+  var research = project.ChildAt(4)
+  var topA = BI.BinderItem.NewDocument('Top A', 'top-a.md')
+  var topB = BI.BinderItem.NewDocument('Top B', 'top-b.md')
+  project.AddChild(topA)
+  project.AddChild(topB)
+  var subFolder = BI.BinderItem.NewFolder('Places')
+  var inA = BI.BinderItem.NewDocument('In A', 'in-a.md')
+  var inB = BI.BinderItem.NewDocument('In B', 'in-b.md')
+  research.AddChild(subFolder)
+  research.AddChild(inA)
+  research.AddChild(inB)
+
+  for [owner, a, b] in [[project, topA, topB], [research, inA, inB]]
+    var name: string = owner is project ? 'top level' : 'folder'
+    # Move A down: B comes first.
+    assert_true(M.MoveWithinSiblings(project, RowOf(project, a.id), 1), name)
+    assert_true(owner.IndexOfChild(b.id) < owner.IndexOfChild(a.id), name)
+    # Remove B.
+    var before: number = owner.ChildCount()
+    M.Remove(project, RowOf(project, b.id))
+    assert_equal(before - 1, owner.ChildCount(), name)
+    assert_equal(-1, owner.IndexOfChild(b.id), name)
+  endfor
+
+  # Indent: at the top level, Top A moves into Research, the folder just
+  # before it. In the folder, In A moves into Places.
+  assert_true(M.Indent(project, RowOf(project, topA.id)))
+  assert_true(research.IndexOfChild(topA.id) >= 0)
+  assert_equal(-1, project.IndexOfChild(topA.id))
+  assert_true(M.Indent(project, RowOf(project, inA.id)))
+  assert_true(subFolder.IndexOfChild(inA.id) >= 0)
+  assert_equal(-1, research.IndexOfChild(inA.id))
 enddef
 
 export def RunAll(): void
@@ -217,4 +261,5 @@ export def RunAll(): void
   Test_add_chapter_blank_title_auto_numbers()
   Test_add_part_creates_an_empty_folder()
   Test_rename_changes_the_items_title()
+  Test_same_operations_at_top_level_and_in_a_folder()
 enddef

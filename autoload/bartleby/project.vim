@@ -26,7 +26,7 @@ export const TYPE_NOVEL_PARTS: string = 'novel_parts'
 export const TYPE_SHORT_STORY: string = 'short_story'
 export const TYPE_SCREENPLAY: string = 'screenplay'
 
-export class Project
+export class Project implements BI.ItemContainer
   # Absolute path of the .bartleby folder.
   var scriveDir: string
   var name: string = ''
@@ -51,33 +51,30 @@ export class Project
     this.items = newItems
   enddef
 
-  # METHOD: Add a top-level item. The top-level items have no owning
-  # BinderItem, so Project repeats the child methods of BinderItem for
-  # them.
-  #
-  # REVIEW: A shared interface for Project and BinderItem would remove this
-  # repetition.
-  def AddItem(item: BI.BinderItem): void
-    this.items->add(item)
+  # METHOD: Add a top-level item. This and the next methods implement
+  # ItemContainer, see binderitem.vim, for the top-level items, which have
+  # no owning folder.
+  def AddChild(child: BI.BinderItem): void
+    this.items->add(child)
   enddef
 
-  def InsertItemAt(idx: number, item: BI.BinderItem): void
-    this.items->insert(item, idx)
+  def InsertChildAt(idx: number, child: BI.BinderItem): void
+    this.items->insert(child, idx)
   enddef
 
-  def RemoveItemAt(idx: number): void
+  def RemoveChildAt(idx: number): void
     this.items->remove(idx)
   enddef
 
-  def ItemAt(idx: number): BI.BinderItem
+  def ChildAt(idx: number): BI.BinderItem
     return this.items[idx]
   enddef
 
-  def ItemCount(): number
+  def ChildCount(): number
     return len(this.items)
   enddef
 
-  def IndexOfItem(id: string): number
+  def IndexOfChild(id: string): number
     for i in range(len(this.items))
       if this.items[i].id ==# id
         return i
@@ -86,7 +83,7 @@ export class Project
     return -1
   enddef
 
-  def SwapItems(i: number, j: number): void
+  def SwapChildren(i: number, j: number): void
     var tmp: BI.BinderItem = this.items[i]
     this.items[i] = this.items[j]
     this.items[j] = tmp

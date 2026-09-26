@@ -46,7 +46,7 @@ enddef
 
 def BuildProjectWithContent(): dict<any>
   var project = Fx.BuildProject()
-  var chapter1 = project.ItemAt(1).ChildAt(0)
+  var chapter1 = project.ChildAt(1).ChildAt(0)
   var scene1 = chapter1.ChildAt(0)
   Fx.WriteDocContent(project, scene1, ['It was a dark and stormy night.'])
   return {project: project, scene1: scene1}

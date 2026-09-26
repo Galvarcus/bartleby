@@ -20,9 +20,9 @@ import './fixtures.vim' as Fx
 # Fx.CleanupProjectFiles on the project.
 def BuildProjectWithContent(): dict<any>
   var project = Fx.BuildProject()
-  var frontMatter = project.ItemAt(0)
-  var manuscript = project.ItemAt(1)
-  var backMatter = project.ItemAt(2)
+  var frontMatter = project.ChildAt(0)
+  var manuscript = project.ChildAt(1)
+  var backMatter = project.ChildAt(2)
 
   var dedication = BI.BinderItem.NewDocument('Dedication', 'front-matter/dedication.md')
   frontMatter.AddChild(dedication)
@@ -71,7 +71,7 @@ enddef
 
 def Test_concatenate_manuscript_separator_appears_between_scenes_in_same_chapter(): void
   var fx = BuildProjectWithContent()
-  var chapter1 = fx.project.ItemAt(1).ChildAt(0)
+  var chapter1 = fx.project.ChildAt(1).ChildAt(0)
   var scene1b = BI.BinderItem.NewDocument('Scene 2', 'chapter-1/scene-02.md')
   chapter1.AddChild(scene1b)
   Fx.WriteDocContent(fx.project, scene1b, ['Morning came.'])

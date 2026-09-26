@@ -17,7 +17,7 @@ import './fixtures.vim' as Fx
 
 def OpenOutlinerWithContent(): dict<any>
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var chapter1 = manuscript.ChildAt(0)
   var scene1 = chapter1.ChildAt(0)
   var chapter2 = manuscript.ChildAt(1)

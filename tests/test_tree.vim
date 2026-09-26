@@ -42,7 +42,7 @@ enddef
 
 def Test_flatten_skips_children_of_a_collapsed_folder(): void
   var project = Fx.BuildProject()
-  var manuscriptId = project.ItemAt(1).id
+  var manuscriptId = project.ChildAt(1).id
   var rows = T.Flatten(project, {[manuscriptId]: true})
   # The Manuscript row still shows. Its 2 chapters and their scenes do not.
   assert_equal(5, len(rows))
@@ -53,7 +53,7 @@ enddef
 
 def Test_flatten_nested_collapse_hides_grandchildren_too(): void
   var project = Fx.BuildProject()
-  var manuscript = project.ItemAt(1)
+  var manuscript = project.ChildAt(1)
   var chapter1Id = manuscript.ChildAt(0).id
   # Only the chapter is collapsed, not the Manuscript.
   var rows = T.Flatten(project, {[chapter1Id]: true})
@@ -68,7 +68,7 @@ enddef
 def Test_index_of_row_by_id_finds_known_row(): void
   var project = Fx.BuildProject()
   var rows = T.Flatten(project)
-  var manuscriptId = project.ItemAt(1).id
+  var manuscriptId = project.ChildAt(1).id
   assert_equal(1, T.IndexOfRowById(rows, manuscriptId))
 enddef
 

@@ -36,9 +36,9 @@ enddef
 # FUNCTION: Return the one top-level Manuscript folder of the scrive, or
 # null_object when it is missing, as in a project older than roles.
 export def FindManuscript(project: Pj.Project): BI.BinderItem
-  for i in range(project.ItemCount())
-    if project.ItemAt(i).structureRole ==# BI.ROLE_MANUSCRIPT
-      return project.ItemAt(i)
+  for i in range(project.ChildCount())
+    if project.ChildAt(i).structureRole ==# BI.ROLE_MANUSCRIPT
+      return project.ChildAt(i)
     endif
   endfor
   return null_object
@@ -126,16 +126,17 @@ def RoleAllowedUnder(role: string, parent: BI.BinderItem): bool
   return true
 enddef
 
-# FUNCTION: Insert newItem right after row: a top-level sibling when row
-# is at the top level, else a sibling in the owner folder of row.
+# FUNCTION: Return the list that holds the item of row: the Project for a
+# top-level row, else the folder that owns the row. Both implement
+# ItemContainer, see binderitem.vim, so the callers need one code path.
+def Owner(project: Pj.Project, row: T.Row): BI.ItemContainer
+  return row.ownerItem is null_object ? project : row.ownerItem
+enddef
+
+# FUNCTION: Insert newItem right after row, in the same list.
 def InsertAfter(project: Pj.Project, row: T.Row, newItem: BI.BinderItem): void
-  if row.ownerItem is null_object
-    var idx: number = project.IndexOfItem(row.item.id)
-    project.InsertItemAt(idx + 1, newItem)
-  else
-    var idx: number = row.ownerItem.IndexOfChild(row.item.id)
-    row.ownerItem.InsertChildAt(idx + 1, newItem)
-  endif
+  var owner: BI.ItemContainer = Owner(project, row)
+  owner.InsertChildAt(owner.IndexOfChild(row.item.id) + 1, newItem)
 enddef
 
 # FUNCTION: Add newItem next to row: as a child when row is a folder, else
@@ -143,7 +144,7 @@ enddef
 # there is no cursor row. Then newItem goes at the end of the top level.
 export def AddNear(project: Pj.Project, row: T.Row, newItem: BI.BinderItem): void
   if row is null_object
-    project.AddItem(newItem)
+    project.AddChild(newItem)
   elseif row.item.IsFolder()
     row.item.AddChild(newItem)
   else
@@ -154,11 +155,8 @@ enddef
 # FUNCTION: Remove the item of row from the tree. Its files stay on disk:
 # removing from the binder does not delete work.
 export def Remove(project: Pj.Project, row: T.Row): void
-  if row.ownerItem is null_object
-    project.RemoveItemAt(project.IndexOfItem(row.item.id))
-  else
-    row.ownerItem.RemoveChildAt(row.ownerItem.IndexOfChild(row.item.id))
-  endif
+  var owner: BI.ItemContainer = Owner(project, row)
+  owner.RemoveChildAt(owner.IndexOfChild(row.item.id))
 enddef
 
 # FUNCTION: Remove all children of item but keep item, for the five
@@ -176,21 +174,13 @@ export def MoveWithinSiblings(project: Pj.Project, row: T.Row, delta: number): b
       && row.item.structureRole !=# BI.ROLE_PART
     return false
   endif
-  if row.ownerItem is null_object
-    var idx: number = project.IndexOfItem(row.item.id)
-    var target: number = idx + delta
-    if target < 0 || target >= project.ItemCount()
-      return false
-    endif
-    project.SwapItems(idx, target)
-  else
-    var idx: number = row.ownerItem.IndexOfChild(row.item.id)
-    var target: number = idx + delta
-    if target < 0 || target >= row.ownerItem.ChildCount()
-      return false
-    endif
-    row.ownerItem.SwapChildren(idx, target)
+  var owner: BI.ItemContainer = Owner(project, row)
+  var idx: number = owner.IndexOfChild(row.item.id)
+  var target: number = idx + delta
+  if target < 0 || target >= owner.ChildCount()
+    return false
   endif
+  owner.SwapChildren(idx, target)
   return true
 enddef
 
@@ -205,7 +195,7 @@ export def Outdent(project: Pj.Project, rows: list<T.Row>, row: T.Row): bool
   if !RoleAllowedUnder(row.item.structureRole, newParent)
     return false
   endif
-  row.ownerItem.RemoveChildAt(row.ownerItem.IndexOfChild(row.item.id))
+  Remove(project, row)
   InsertAfter(project, grandparentRow, row.item)
   return true
 enddef
@@ -214,28 +204,17 @@ enddef
 # sibling is a folder. Returns false when there is no previous sibling
 # or it is a document.
 export def Indent(project: Pj.Project, row: T.Row): bool
-  var siblingIdx: number
-  if row.ownerItem is null_object
-    siblingIdx = project.IndexOfItem(row.item.id) - 1
-    if siblingIdx < 0 || !project.ItemAt(siblingIdx).IsFolder()
-      return false
-    endif
-    if !RoleAllowedUnder(row.item.structureRole, project.ItemAt(siblingIdx))
-      return false
-    endif
-    project.ItemAt(siblingIdx).AddChild(row.item)
-    project.RemoveItemAt(siblingIdx + 1)
-  else
-    siblingIdx = row.ownerItem.IndexOfChild(row.item.id) - 1
-    if siblingIdx < 0 || !row.ownerItem.ChildAt(siblingIdx).IsFolder()
-      return false
-    endif
-    if !RoleAllowedUnder(row.item.structureRole, row.ownerItem.ChildAt(siblingIdx))
-      return false
-    endif
-    row.ownerItem.ChildAt(siblingIdx).AddChild(row.item)
-    row.ownerItem.RemoveChildAt(siblingIdx + 1)
+  var owner: BI.ItemContainer = Owner(project, row)
+  var siblingIdx: number = owner.IndexOfChild(row.item.id) - 1
+  if siblingIdx < 0
+    return false
   endif
+  var sibling: BI.BinderItem = owner.ChildAt(siblingIdx)
+  if !sibling.IsFolder() || !RoleAllowedUnder(row.item.structureRole, sibling)
+    return false
+  endif
+  sibling.AddChild(row.item)
+  owner.RemoveChildAt(siblingIdx + 1)
   return true
 enddef
 

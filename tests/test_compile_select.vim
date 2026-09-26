@@ -18,8 +18,8 @@ import './fixtures.vim' as Fx
 # must never be listed, in a dict of project, scene1, and scene2.
 def BuildProject(): dict<any>
   var project = Fx.BuildProject()
-  project.ItemAt(4).AddChild(BI.BinderItem.NewDocument('Harbor notes', 'research/harbor.md'))
-  var manuscript = project.ItemAt(1)
+  project.ChildAt(4).AddChild(BI.BinderItem.NewDocument('Harbor notes', 'research/harbor.md'))
+  var manuscript = project.ChildAt(1)
   return {
     project: project,
     scene1: manuscript.ChildAt(0).ChildAt(0),
