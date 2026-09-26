@@ -7,20 +7,20 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# lexiconpopup.vim - the popups for :BartlebyDefine and :BartlebyThesaurus
-# (see lexicon.vim for the lookups themselves).
+# lexiconpopup.vim: the popups of :BartlebyDefine and :BartlebyThesaurus.
+# The lookups are in lexicon.vim.
 #
-# The popup opens at once with "Looking up ...", then fills in when the
-# request finishes. It sits just below the cursor in whatever window has
-# it, so it works the same in a scrive's editor window and in Focus mode.
+# The popup opens at once with a Looking up message and fills in when the
+# request ends. It opens below the cursor in the current window, so it
+# works the same in a scrive's editor window and in Focus.
 #
-# A lookup started on the word under the cursor (or a single-line visual
-# selection) records that word's exact position as the target. <CR> on a
-# thesaurus word writes it back over the target, in the target's
-# capitalization, as one undo step. The write is skipped with a warning
-# if the target text changed meanwhile. A lookup started from a typed
-# word (:BartlebyThesaurus word) has no target; <CR> copies the word to
-# the unnamed register instead.
+# A lookup of the word under the cursor, or of a Visual selection on one
+# line, records the exact position of that word as the target. CR on a
+# thesaurus word writes it over the target, with the target's
+# capitalization, as one undo step. If the target text changed meanwhile,
+# the write is skipped with a warning. A lookup of a typed word, as in
+# :BartlebyThesaurus word, has no target, so CR copies the word to the
+# unnamed register.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -35,9 +35,9 @@ const POPUP_ZINDEX: number = 260
 const MIN_WIDTH: number = 30
 const MAX_WIDTH: number = 70
 const MAX_HEIGHT: number = 15
-# Text property type -> Bartleby highlight group -> default link. The
+# Text property type, Bartleby highlight group, and default link. The
 # groups are Bartleby's own, linked with :highlight default link, so they
-# exist even before :syntax on (Comment does not) and a colorscheme can
+# exist before :syntax on, when Comment does not, and a colorscheme can
 # restyle them.
 const PROP_TYPES: dict<list<string>> = {
   LexiconTitle: ['BartlebyLexiconTitle', 'Title'],
@@ -46,7 +46,7 @@ const PROP_TYPES: dict<list<string>> = {
   LexiconSelected: ['BartlebyLexiconSelected', 'PmenuSel'],
 }
 
-# Looks up the word under the cursor.
+# FUNCTION: Look up the word under the cursor.
 export def LookupAtCursor(kind: string): void
   if !CanLookUp(kind)
     return
@@ -63,8 +63,8 @@ export def LookupAtCursor(kind: string): void
   OpenLookup(kind, Lx.CleanWord(target.text), target)
 enddef
 
-# Looks up the last visual selection. Called after leaving visual mode,
-# so the '< and '> marks are set. The selection must be on one line.
+# FUNCTION: Look up the last Visual selection, which must be on one line.
+# Runs after Visual mode ends, when the marks of the selection are set.
 export def LookupVisual(kind: string): void
   if !CanLookUp(kind)
     return
@@ -76,8 +76,9 @@ export def LookupVisual(kind: string): void
   OpenLookup(kind, Lx.CleanWord(target.text), target)
 enddef
 
-# :BartlebyDefine / :BartlebyThesaurus. A typed word is looked up with no
-# target; no argument means the word under the cursor.
+# FUNCTION: Run :BartlebyDefine or :BartlebyThesaurus. A typed word is
+# looked up without a target. No argument means the word under the
+# cursor.
 export def LookupCommand(kind: string, arg: string): void
   if arg ==# ''
     LookupAtCursor(kind)
@@ -106,9 +107,10 @@ def OpenLookup(kind: string, word: string, target: dict<any>): void
   LexiconPopup.new(kind, word, target).Open()
 enddef
 
-# The keyword under or after the cursor on the current line, the same
-# word <cword> would pick, with its byte range: {text, bufnr, lnum,
-# start, end} (0-based, end exclusive), or {} when there is none.
+# FUNCTION: Return the keyword under or after the cursor, the word that
+# cword picks, with its byte range: a dict of text, bufnr, lnum, start,
+# and end, 0-based with end exclusive. Return an empty dict when there is
+# none.
 def WordAtCursor(): dict<any>
   var line: string = getline('.')
   var cursorCol: number = col('.') - 1
@@ -283,8 +285,8 @@ class LexiconPopup
     return rows
   enddef
 
-  # Index of the next selectable row after `from` in direction `step`,
-  # or -1 when there is none.
+  # METHOD: Return the index of the next selectable row after from, in
+  # direction step, or -1 when there is none.
   def NextSelectable(from: number, step: number): number
     var i: number = from + step
     while i >= 0 && i < len(this.rows)

@@ -7,17 +7,13 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# inputpopup.vim - a reusable, modal popup mixing free-text fields and
-# choice-of-N fields in one form, one Tab-navigation flow, one Submit/
-# Cancel. Supersedes formpopup.vim (text-only) - its layout/navigation/
-# hit-testing architecture is carried forward here, extended with a
-# `type: 'choice'` field. picker.vim's PickOne() and buttonspopup.vim's
-# PopupButtonMenu remain separate: PickOne is refactored to call this
-# widget with a single choice field (see picker.vim); PopupButtonMenu
-# stays a standalone primitive for Corkboard's card grid, which isn't a
-# form and doesn't fit this shape.
+# inputpopup.vim: a modal popup form with one Tab order and Submit and
+# Cancel buttons. Field types: text, choice, filter, and multiline.
+# picker.vim's PickOne uses one choice field. buttonspopup.vim's
+# PopupButtonMenu is separate, for the Corkboard card grid, which is not
+# a form.
 #
-# `fields` is a list of rows, each row a list of field specs:
+# fields is a list of rows, and each row is a list of field specs:
 #
 #   var fields = [
 #     [{name: 'title', type: 'text'}],
@@ -25,10 +21,7 @@ var is_loaded: bool = true
 #     [{name: 'city', type: 'text'}, {name: 'zip', type: 'text'}],
 #   ]
 #
-# A choice field always takes its own full row regardless of grouping -
-# mixing it with other fields on one row isn't supported, since the
-# width math for a row of options doesn't compose cleanly with text
-# boxes. renders as:
+# Shown as:
 #
 #   title:  __________________
 #   kind:   [ Manuscript ]  [ Book ]
@@ -36,33 +29,34 @@ var is_loaded: bool = true
 #
 #   [ Submit ]  [ Cancel ]
 #
-# The caller supplies starting values (a plain dict<any>, keyed by field
-# name - a choice field's default is the option string to preselect) and
-# gets a dict<any> back via OnSubmit when the user submits: a text
-# field's value as typed, a choice field's currently-selected option
-# string.
+# A choice field always takes a whole row: the width of a row of options
+# does not combine with text boxes. A filter field, a text line above a
+# fuzzy-matched list, and a multiline field, a text area, are each the
+# only field of their popup, see PromptFilter and PromptMultiline.
 #
-# opts (a data contract, not Vim identifiers - left as originally
-# documented on formpopup.vim, snake_case, so callers don't break):
-#   field_width   number            default text-field value-box width
-#                                    (default 20)
-#   widths        dict<number>      per-field width override (text
-#                                    fields only), keyed by field name
-#   labels        dict<string>      per-field display label, keyed by
-#                                    field name. Falls back to the field
-#                                    name itself.
-#   submit_label   string           text on the submit button (default
-#                                    'Submit')
-#   cancel_label   string           text on the cancel button (default
-#                                    'Cancel')
-#   title, line, col, zindex        passed straight through to popup_create()
+# The caller gives starting values in a dict keyed by field name. For a
+# choice field, the value is the option to select. OnSubmit receives a
+# dict of the values: typed text for a text field, and the selected
+# option for a choice or filter field.
 #
-# Keys: Tab/S-Tab or C-n/C-p move between fields AND the two buttons.
-# Within a text field: Left/Right/Home/End move the cursor, C-u clears
-# it, Enter advances. Within a choice field: Left/Right move which
-# option is selected (clamped, not wrapped), Enter advances. C-s submits
-# from anywhere, Esc/C-c cancels from anywhere. Buttons, text fields, and
-# individual choice options can all be clicked with the mouse.
+# opts keys are a data contract, not Vim identifiers, so they keep
+# snake_case:
+#   field_width   number        Width of a text field. Default 20.
+#   widths        dict<number>  Width per text field, by field name.
+#   labels        dict<string>  Label per field, by field name. Default:
+#                               the field name.
+#   submit_label  string        Text of the Submit button.
+#   cancel_label  string        Text of the Cancel button.
+#   buttons       list          An empty list shows no buttons.
+#   min_width     number        Minimum width of the popup.
+#   title, line, col, zindex    Passed to popup_create unchanged.
+#
+# Keys: Tab and S-Tab, or C-n and C-p, move between the fields and the
+# buttons. In a text field, Left, Right, Home, and End move the cursor,
+# C-u clears it, and Enter moves to the next field. In a choice field,
+# Left and Right change the option, without wrapping, and Enter moves
+# on. C-s submits and Esc or C-c cancels from anywhere. The mouse can
+# click buttons, text fields, and options.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -70,10 +64,9 @@ import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 
-# Converts formpopup.vim's old row-of-names format (list<list<string>>)
-# into InputPopup's field-spec format, for the common case of a form
-# that's entirely text fields - saves writing out {name: x, type: 'text'}
-# at every call site migrating off FormPopup.
+# FUNCTION: Convert rows of field names, a list of lists of strings, to
+# field specs of type text. Saves writing each spec for a form of only
+# text fields.
 def Noop(): void
 enddef
 
@@ -81,11 +74,9 @@ export def TextFields(rows: list<list<string>>): list<list<dict<any>>>
   return rows->mapnew((_, row) => row->mapnew((_, name) => ({name: name, type: 'text'})))
 enddef
 
-# Opens a single text field titled `title`, pre-filled with `default`;
-# calls `OnSubmit` with the entered string, or `OnCancel` (a no-op by
-# default) if the popup is cancelled instead. The single-field-submits-
-# on-one-Enter behavior applies, so this feels like input() with a
-# nicer box, not an extra form to fill out.
+# FUNCTION: Show one text field, titled title and filled with default.
+# Call OnSubmit with the text, or OnCancel, which does nothing by
+# default, on cancel. One Enter submits, like input in a box.
 export def PromptText(title: string, default: string, OnSubmit: func(string),
     OnCancel: func() = Noop): void
   var fields: list<list<dict<any>>> = [[{name: 'value', type: 'text'}]]
@@ -97,12 +88,11 @@ export def PromptText(title: string, default: string, OnSubmit: func(string),
   form.Open()
 enddef
 
-# Opens `options` as a type-to-filter list titled `title` (fuzzy-matched
-# via Vim's own matchfuzzy() as the user types); calls `OnSubmit` with
-# the selected string. Not called at all if cancelled or if Enter is
-# pressed with no matches. Up/Down (or Ctrl-K/Ctrl-J) move the
-# selection within the filtered results; Enter submits directly, same
-# one-keypress feel as PickOne.
+# FUNCTION: Show options as a list, titled title, that narrows as you
+# type, with matchfuzzy. Call OnSubmit with the selected option. Nothing
+# is called on cancel, or on Enter with no match. Up, Down, C-k, C-j,
+# PageUp, PageDown, and the mouse wheel move the selection, and the list
+# scrolls with it. One Enter submits, as in PickOne.
 export def PromptFilter(title: string, options: list<string>, OnSubmit: func(string),
     maxVisible: number = 10, minWidth: number = 0): void
   var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'filter',
@@ -117,11 +107,11 @@ export def PromptFilter(title: string, options: list<string>, OnSubmit: func(str
   form.Open()
 enddef
 
-# Opens a multi-line text field titled `title`, pre-filled with
-# `default` (newline-separated). Enter inserts a newline rather than
-# submitting (unlike every other single-field prompt) - use Ctrl-S or
-# the Submit button. Calls OnSubmit with the edited text, newline-
-# joined; not called at all if cancelled.
+# FUNCTION: Show a multiline text field, titled title and filled with
+# default, a string with line breaks. Enter adds a line, unlike every
+# other one-field prompt, so C-s or the Submit button submits. Call
+# OnSubmit with the text joined by line breaks. Nothing is called on
+# cancel.
 export def PromptMultiline(title: string, default: string, OnSubmit: func(string),
     rows: number = 5, width: number = 50): void
   var fields: list<list<dict<any>>> = [[{name: 'text', type: 'multiline',
@@ -159,7 +149,9 @@ export class InputPopup
     this.BuildButtons()
   enddef
 
-  # --- setup ------------------------------------------------------------
+  ############################################################################
+  # SECTION: Setup.
+  ############################################################################
 
   def BuildFields(): void
     this.fields = []
@@ -309,21 +301,23 @@ export class InputPopup
     return [this.FitTitle(max([maxWidth, 10])), max([rowCount, 1]) + (empty(this.buttons) ? 0 : 1)]
   enddef
 
-  # `width`, widened so the popup's title shows in full with 2 columns
-  # to spare, and to the caller's min_width option.
+  # METHOD: Return width, widened so that the title shows in full with 2
+  # columns to spare, and to the min_width option.
   def FitTitle(width: number): number
     var title: string = trim(get(this.opts, 'title', ''))
     return max([width, strdisplaywidth(title) + 2, get(this.opts, 'min_width', 0)])
   enddef
 
-  # --- public API ---------------------------------------------------------
+  ############################################################################
+  # SECTION: Public API.
+  ############################################################################
 
-  # Cb: func(dict<any>) — called with the submitted field values.
+  # METHOD: Set the function called with the field values on submit.
   def OnSubmit(Cb: any): void
     this._onSubmit = Cb
   enddef
 
-  # Cb: func() — called if the user cancels instead of submitting.
+  # METHOD: Set the function called on cancel.
   def OnCancel(Cb: any): void
     this._onCancel = Cb
   enddef
@@ -374,7 +368,9 @@ export class InputPopup
     endif
   enddef
 
-  # --- focus helpers ------------------------------------------------------
+  ############################################################################
+  # SECTION: Focus helpers.
+  ############################################################################
 
   def TotalControls(): number
     return len(this.fields) + len(this.buttons)
@@ -400,7 +396,9 @@ export class InputPopup
     popup_close(this.winid, btn.action == 'submit' ? 1 : 0)
   enddef
 
-  # --- input handling -------------------------------------------------
+  ############################################################################
+  # SECTION: Input handling.
+  ############################################################################
 
   def HandleMultilineKey(key: string): bool
     var f: dict<any> = this.fields[this.currentIdx]
@@ -516,7 +514,7 @@ export class InputPopup
     elseif isButton && key == "\<Right>"
       this.Focus(min([this.TotalControls() - 1, this.currentIdx + 1]))
     elseif isButton
-      # buttons hold no text; ignore any other key while one has focus
+      # A button holds no text, so ignore other keys while one has focus.
     elseif isFilter && (key == "\<Down>" || key == "\<C-j>" || key == "\<ScrollWheelDown>")
       this.MoveFilterSelection(this.fields[this.currentIdx], 1)
     elseif isFilter && (key == "\<Up>" || key == "\<C-k>" || key == "\<ScrollWheelUp>")
@@ -543,7 +541,7 @@ export class InputPopup
       endif
       this.Focus(this.currentIdx < len(this.fields) - 1 ? this.currentIdx + 1 : len(this.fields))
     elseif isChoice
-      # choice fields hold no text; ignore any other key
+      # A choice field holds no text, so ignore other keys.
     elseif key == "\<CR>"
       if len(this.fields) == 1
         popup_close(winid, 1)
@@ -552,7 +550,8 @@ export class InputPopup
       if this.currentIdx < len(this.fields) - 1
         this.Focus(this.currentIdx + 1)
       else
-        this.Focus(len(this.fields))    # hop to the Submit button
+        # Move to the Submit button.
+        this.Focus(len(this.fields))
       endif
     elseif key == "\<BS>" || key == "\<C-h>"
       var f: dict<any> = this.fields[this.currentIdx]
@@ -631,8 +630,8 @@ export class InputPopup
     for hit in this._fieldHit
       if pos.line == hit.lnum && pos.column >= hit.startCol && pos.column <= hit.endCol
         this.Focus(hit.idx)
-        # best-effort click-to-cursor placement; assumes ~1 byte per
-        # character within the value box (fine for ASCII input)
+        # Place the cursor at the click. Assumes one byte per character in the
+        # field, which is true for ASCII text.
         var clickChar: number = pos.column - hit.startCol
         var f: dict<any> = this.fields[hit.idx]
         f.cursor = max([0, min([strchars(f.value), f.offset + clickChar])])
@@ -655,14 +654,14 @@ export class InputPopup
     this.winid = -1
   enddef
 
-  # --- values -----------------------------------------------------------
+  ############################################################################
+  # SECTION: Values.
+  ############################################################################
 
-  # Returns the current field values as a plain dict<any>, keyed by each
-  # field's own name (never its display label). A text field whose
-  # starting default was a non-string type (list, dict, number, ...) is
-  # eval()'d back into that type; a value that no longer parses is left
-  # as the typed-in string instead. A choice field's value is whichever
-  # option string is currently selected.
+  # METHOD: Return the field values in a dict keyed by field name, never by
+  # label. A text field whose default was not a string, such as a list or
+  # a number, is converted back with eval. Text that no longer parses stays
+  # a string. A choice field returns its selected option.
   def Values(): dict<any>
     var result: dict<any> = {}
     for f in this.fields
@@ -683,7 +682,7 @@ export class InputPopup
         try
           val = eval(val)
         catch
-          # left as a plain string if it no longer parses as vim data
+          # Keep the text as a string if it no longer parses as Vim data.
         endtry
       endif
       result[f.name] = val
@@ -691,10 +690,12 @@ export class InputPopup
     return result
   enddef
 
-  # --- rendering ----------------------------------------------------------
+  ############################################################################
+  # SECTION: Rendering.
+  ############################################################################
 
-  # Moves a filter list's selection by `step` rows, and scrolls so that
-  # the selection stays visible.
+  # METHOD: Move the selection of a filter list by step rows, and scroll so
+  # that the selection stays visible.
   def MoveFilterSelection(f: dict<any>, step: number): void
     f.selectedIdx = max([0, min([len(f.filtered) - 1, f.selectedIdx + step])])
     if f.selectedIdx < f.scrollTop
@@ -711,8 +712,8 @@ export class InputPopup
       var idx: number = f.scrollTop + i
       add(lines, idx < len(f.filtered) ? '  ' .. f.filtered[idx] : '')
     endfor
-    # With a scrollbar, every list row is padded so that its last column
-    # holds the scrollbar (see DrawFilterScrollbar()).
+    # With a scrollbar, each list row is padded so that its last column
+    # holds the scrollbar, see DrawFilterScrollbar.
     if this.FilterScrolls(f)
       var width: number = popup_getoptions(this.winid).minwidth
       for i in range(1, f.maxVisible)
@@ -738,7 +739,8 @@ export class InputPopup
     prop_remove({type: 'InputPopupOptionSelected', bufnr: this.bufnr}, 1, len(lines))
 
     var inputText: string = lines[0]
-    var cursorCharIdx: number = 2 + f.cursor    # "> " prefix is 2 chars
+    # Skip the prompt mark and space before the typed text: 2 characters.
+    var cursorCharIdx: number = 2 + f.cursor
     var cursorByteCol: number = byteidx(inputText, cursorCharIdx) + 1
     var nextByteCol: number = byteidx(inputText, cursorCharIdx + 1)
     var cursorLen: number = (nextByteCol == -1 ? strlen(inputText) : nextByteCol) - (cursorByteCol - 1)
@@ -763,16 +765,16 @@ export class InputPopup
     this.DrawFilterScrollbar(f)
   enddef
 
-  # True while a filter list is longer than its visible rows.
+  # METHOD: Return true while a filter list is longer than its rows.
   def FilterScrolls(f: dict<any>): bool
     return len(f.filtered) > f.maxVisible
   enddef
 
-  # A scrollbar in the last column of the list rows, only while the list
-  # is longer than its visible rows: PmenuSbar for the track, PmenuThumb
-  # for the thumb, as in Vim's own completion menu. The thumb's size and
-  # place show which part of the list is visible. RenderFilter() has
-  # already padded the rows so that the last column is free.
+  # METHOD: Draw a scrollbar in the last column of the list rows, only
+  # while the list is longer than its rows. PmenuSbar colors the track and
+  # PmenuThumb the thumb, as in Vim's completion menu. The size and place
+  # of the thumb show which part of the list is visible. RenderFilter has
+  # already padded the rows, so the last column is free.
   def DrawFilterScrollbar(f: dict<any>): void
     prop_remove({type: 'InputPopupScrollbar', bufnr: this.bufnr, all: true})
     prop_remove({type: 'InputPopupThumb', bufnr: this.bufnr, all: true})

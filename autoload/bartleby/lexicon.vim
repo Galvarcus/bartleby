@@ -7,32 +7,32 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# lexicon.vim - Merriam-Webster dictionary and thesaurus lookups
-# (dictionaryapi.com): configuration, requests, response parsing, and a
-# response cache. No UI - see lexiconpopup.vim.
+# lexicon.vim: Merriam-Webster dictionary and thesaurus lookups through
+# dictionaryapi.com: settings, requests, response parsing, and a cache.
+# The popups are in lexiconpopup.vim.
 #
-# Each kind ('dictionary', 'thesaurus') is enabled only when its own API
-# key is set (g:bartleby_<kind>_api_key, else $BARTLEBY_MW_<KIND>_KEY)
-# and curl is installed. Merriam-Webster issues a key per product, so
-# the two kinds are independent.
+# Each kind, dictionary and thesaurus, is on only when its own API key is
+# set, in g:bartleby_<kind>_api_key or else $BARTLEBY_MW_<KIND>_KEY, and
+# curl is installed. Merriam-Webster issues one key per product, so the
+# two kinds are independent.
 #
-# REFERENCES is the hook for other Merriam-Webster references. Only the
-# Collegiate Dictionary and Collegiate Thesaurus are registered now. To
-# add one, add an entry with its apiName and the kind whose parser fits
-# its JSON (for example learners: {apiName: 'learners', kind:
-# 'dictionary', ...}); g:bartleby_<kind>_reference then selects it.
+# REFERENCES is the hook for other Merriam-Webster references. It holds
+# only the Collegiate Dictionary and Collegiate Thesaurus now. To add one,
+# add an entry with its apiName and the kind whose parser fits its JSON,
+# for example learners: {apiName: 'learners', kind: 'dictionary'}. Then
+# g:bartleby_<kind>_reference selects it.
 #
-# Requests run curl through job_start(), so Vim does not wait on the
-# network. The URL contains the key, so it goes to curl on stdin as a
-# config line - never on the command line, where process listings would
-# show it - and it is never logged.
+# curl runs through job_start, so Vim does not wait for the network. The
+# URL contains the key, so curl reads it on stdin as a config line, never
+# on the command line, where process listings show it. It is never
+# logged.
 #
-# Parsed results are cached in memory and on disk
-# (~/.bartleby/lexicon_cache.json), keyed by reference and word - never
-# by API key. Only 'ok' and 'notfound' results are cached. The disk cache
-# holds at most g:bartleby_lexicon_cache_max_entries results, oldest
-# evicted first; 0 turns the disk cache off. CACHE_VERSION changes when
-# the parsed shape changes, which discards an older cache file.
+# Parsed results are cached in memory and on disk, in
+# ~/.bartleby/lexicon_cache.json, by reference and word, never by key.
+# Only ok and notfound results are cached. The disk cache holds at most
+# g:bartleby_lexicon_cache_max_entries results and removes the oldest
+# first. 0 turns the disk cache off. CACHE_VERSION changes when the
+# parsed format changes, which discards an older cache file.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -65,8 +65,8 @@ const ENV_KEYS: dict<string> = {
   [KIND_THESAURUS]: 'BARTLEBY_MW_THESAURUS_KEY',
 }
 
-# The API key for `kind`: the g: variable when set, else the environment
-# variable, else ''.
+# FUNCTION: Return the API key for kind: the g: variable when set, else
+# the environment variable, else an empty string.
 export def ApiKey(kind: string): string
   var key: string = get(g:, $'bartleby_{kind}_api_key', '')
   if key ==# ''
@@ -75,15 +75,15 @@ export def ApiKey(kind: string): string
   return trim(key)
 enddef
 
-# The configured reference for `kind`, or {} if the configured name is
-# not registered or belongs to the other kind.
+# FUNCTION: Return the configured reference for kind, or an empty dict
+# when the name is not registered or belongs to the other kind.
 export def Reference(kind: string): dict<string>
   var name: string = get(g:, $'bartleby_{kind}_reference', '')
   var ref: dict<string> = get(REFERENCES, name, {})
   return get(ref, 'kind', '') ==# kind ? ref : {}
 enddef
 
-# Why `kind` is disabled, or '' when it is enabled.
+# FUNCTION: Return why kind is off, or an empty string when it is on.
 export def DisabledReason(kind: string): string
   if ApiKey(kind) ==# ''
     return $'{kind} lookups are off - set g:bartleby_{kind}_api_key (or ${ENV_KEYS[kind]})'
@@ -102,9 +102,8 @@ export def IsEnabled(kind: string): bool
   return DisabledReason(kind) ==# ''
 enddef
 
-# Normalizes raw text into a lookup word: trims, drops a possessive 's,
-# strips punctuation at either end, collapses inner whitespace, and
-# lowercases.
+# FUNCTION: Make a lookup word from raw text: trim it, drop a possessive
+# s, strip punctuation at both ends, join inner spaces, and lowercase it.
 export def CleanWord(raw: string): string
   var word: string = trim(raw)
   word = substitute(word, "['’]s$", '', '')
@@ -114,7 +113,7 @@ export def CleanWord(raw: string): string
   return tolower(word)
 enddef
 
-# Percent-encodes every byte outside the RFC 3986 unreserved set.
+# FUNCTION: Percent-encode every byte outside the RFC 3986 unreserved set.
 export def UrlEncode(text: string): string
   var encoded: string = ''
   for ch in split(text, '\zs')
@@ -134,8 +133,9 @@ export def BuildUrl(kind: string, word: string): string
   return $'{base}/{Reference(kind).apiName}/json/{UrlEncode(word)}?key={ApiKey(kind)}'
 enddef
 
-# Gives `replacement` the capitalization pattern of `original`: all
-# caps (more than one letter), first letter capitalized, or unchanged.
+# FUNCTION: Give replacement the capitalization of original: all capitals
+# when original has more than one letter and all are capitals, a capital
+# first letter, or no change.
 export def MatchCase(original: string, replacement: string): string
   if strchars(original) > 1 && original =~# '^\u\+$'
     return toupper(replacement)
@@ -146,14 +146,14 @@ export def MatchCase(original: string, replacement: string): string
   return replacement
 enddef
 
-# Parses a Merriam-Webster response body. Returns a dict:
-#   status:      'ok' | 'notfound' | 'error'
+# FUNCTION: Parse a Merriam-Webster response body. Return a dict:
+#   status:      ok, notfound, or error
 #   entries:     dictionary: [{headword, display, fl, defs}]
 #                thesaurus:  [{headword, fl, senses: [{label, syns}], ants}]
-#   suggestions: spelling suggestions when status is 'notfound'
-#   message:     error text when status is 'error'
-# A body that is not JSON (Merriam-Webster answers a bad key with plain
-# text) becomes an error carrying its first line.
+#   suggestions: spelling suggestions when status is notfound
+#   message:     error text when status is error
+# Merriam-Webster answers a bad key with plain text, not JSON. A body that
+# is not JSON becomes an error with its first line.
 export def ParseResponse(kind: string, word: string, body: string): dict<any>
   var text: string = trim(body)
   if text ==# ''
@@ -186,9 +186,9 @@ export def ParseResponse(kind: string, word: string, body: string): dict<any>
   return {status: 'ok', entries: entries, suggestions: [], message: ''}
 enddef
 
-# Looks up `word` (already cleaned) and calls Callback with the parsed
-# result. A cached result also arrives through a timer, so callers always
-# get the callback after Lookup() returns.
+# FUNCTION: Look up word, already cleaned, and call Callback with the
+# parsed result. A cached result also arrives through a timer, so the
+# callback always runs after Lookup returns.
 export def Lookup(kind: string, word: string, Callback: func(dict<any>)): void
   var reason: string = DisabledReason(kind)
   if reason !=# ''
@@ -204,7 +204,7 @@ export def Lookup(kind: string, word: string, Callback: func(dict<any>)): void
   StartRequest(kind, word, cacheKey, Callback)
 enddef
 
-# Removes every cached result, in memory and on disk.
+# FUNCTION: Remove every cached result, in memory and on disk.
 export def ClearCache(): void
   memory_cache = {}
   disk_cache_loaded = true
@@ -274,8 +274,8 @@ def StartRequest(kind: string, word: string, cacheKey: string,
   var err: list<string> = []
   var state: dict<any> = {closed: false, exited: false, done: false, code: -1}
 
-  # Both callbacks must fire before the output is complete: exit_cb can
-  # arrive while output is still buffered in the channel.
+  # Output is complete only after both callbacks: exit_cb can arrive while
+  # output is still waiting in the channel.
   var Finish = () => {
     if !state.closed || !state.exited || state.done
       return

@@ -7,21 +7,21 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# scrivelist.vim - :BartlebyList. Scans the binder root for *.bartleby
-# folders, keeps only those with a valid project.json, and shows them in
-# a popup list (Title | Type). <CR> opens the selection through
-# :BartlebyOpen, so it behaves exactly like opening a scrive by name.
+# scrivelist.vim: :BartlebyList. Finds the .bartleby folders in the
+# binder root, keeps those with a valid project.json, and shows them in a
+# popup list with title and type. CR opens the selection with
+# :BartlebyOpen, so it works exactly like opening a scrive by name.
 #
-# When no valid scrive exists (a fresh install), this prompts for a name
-# and runs :BartlebyNewScrive instead of reporting an error.
+# With no valid scrive, as after a fresh install, it asks for a name and
+# runs :BartlebyNewScrive instead of reporting an error.
 #
-# Discovery reads project.json directly rather than through
-# Project.Load() - Load() warns on a missing file, and a listing should
-# skip a stray folder quietly, then report the count once.
+# It reads project.json directly, not with Project.Load, because Load
+# warns about a missing file, and a list should skip a stray folder
+# quietly and report the count once.
 #
-# ScriveEntry is defined before the functions that use it, not just by
-# convention: FindScrives() and ReadEntry() use it in their own return
-# types, and Vim9 resolves a function's signature at definition time.
+# ScriveEntry is defined before the functions that use it because
+# FindScrives and ReadEntry name it in their return types, and Vim9
+# resolves a signature when the function is defined.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -44,15 +44,17 @@ const TYPE_LABELS: dict<string> = {
   [Pj.TYPE_SCREENPLAY]: 'Screenplay',
 }
 
-# One valid scrive. `name` is the folder's bare name (what :BartlebyOpen
-# takes); `title` is project.json's own name, shown to the user.
+# CLASS: One valid scrive. name is the bare folder name, which
+# :BartlebyOpen takes. title is the name in project.json, shown to the
+# user.
 export class ScriveEntry
   var name: string
   var title: string
   var projectType: string
 endclass
 
-# Every *.bartleby directory directly under `root`, valid or not.
+# FUNCTION: Return every .bartleby folder directly under root, valid or
+# not.
 export def CandidateDirs(root: string): list<string>
   if !isdirectory(root)
     return []
@@ -61,10 +63,10 @@ export def CandidateDirs(root: string): list<string>
     ->filter((_, p) => isdirectory(p))
 enddef
 
-# A ScriveEntry for `dir`, or null_object if its project.json is missing,
-# unreadable, not a JSON object, has no `items` list, or names an unknown
-# project type. A missing or empty `name` falls back to the folder name,
-# same as Project.Load().
+# FUNCTION: Return a ScriveEntry for dir, or null_object when its
+# project.json is missing, cannot be read, is not a JSON object, has no
+# items list, or names an unknown project type. A missing or empty name
+# falls back to the folder name, as in Project.Load.
 export def ReadEntry(dir: string): ScriveEntry
   var path: string = dir .. '/' .. Pj.PROJECT_FILE
   if !filereadable(path)
@@ -94,8 +96,8 @@ export def ReadEntry(dir: string): ScriveEntry
   return ScriveEntry.new(folderName, title, projectType)
 enddef
 
-# Every valid scrive under `root` (the binder root when omitted), sorted
-# by title, case-insensitively.
+# FUNCTION: Return every valid scrive under root, or under the binder root
+# when root is empty, sorted by title without regard to case.
 export def FindScrives(root: string = ''): list<ScriveEntry>
   var scanRoot: string = root ==# '' ? Sc.BinderRoot() : root
   var entries: list<ScriveEntry> = []
@@ -112,7 +114,7 @@ export def TypeLabel(projectType: string): string
   return get(TYPE_LABELS, projectType, projectType)
 enddef
 
-# :BartlebyList entry point.
+# FUNCTION: Run :BartlebyList.
 export def Show(): void
   var dirs: list<string> = CandidateDirs(Sc.BinderRoot())
   var entries: list<ScriveEntry> = FindScrives()
@@ -240,8 +242,8 @@ class ScriveListPopup
     })
   enddef
 
-  # Opens the selection after this popup's filter call returns (timer 0),
-  # so the scrive's windows are never built from inside a popup filter.
+  # METHOD: Open the selection with a timer after this popup filter call
+  # returns, so the scrive's windows are never built inside a popup filter.
   def OpenSelected(): void
     var name: string = this.entries[this.selectedIdx].name
     this.Close()
