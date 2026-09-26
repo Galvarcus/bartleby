@@ -186,8 +186,8 @@ def RunSearch(): void
   Se.Run(St.Get())
 enddef
 
-# TODO: Tab completion of scrive names for :BartlebyOpen.
-command! -bar -nargs=? BartlebyOpen OpenScrive(<q-args>)
+command! -bar -nargs=? -complete=customlist,bartleby#scrive#CompleteNames
+  \ BartlebyOpen OpenScrive(<q-args>)
 command! -bar -nargs=1 BartlebyNewScrive NewScrive(<q-args>)
 command! -bar BartlebyList SL.Show()
 command! -bar BartlebyToggleBinder ToggleBinder()

@@ -431,7 +431,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 
 | Command | Description |
 | --- | --- |
-| `:BartlebyOpen [name]` | Open a scrive by name. Without a name, open the last scrive |
+| `:BartlebyOpen [name]` | Open a scrive by name. `<Tab>` completes the name. Without a name, open the last scrive |
 | `:BartlebyNewScrive {name}` | Create a scrive. Asks for its type |
 | `:BartlebyList` | List all scrives and open the selected one |
 | `:BartlebyToggleBinder` | Show or hide the Binder |

@@ -47,10 +47,47 @@ export def ListScrives(): list<string>
     ->mapnew((_, p) => fnamemodify(p, ':t:r'))
 enddef
 
+# FUNCTION: Complete scrive names for :BartlebyOpen, the customlist
+# function of the command. Vim passes only the last word before the
+# cursor as argLead and replaces only that word, but a name can contain
+# spaces. So the whole argument is read from cmdLine, see MatchNames.
+export def CompleteNames(argLead: string, cmdLine: string, cursorPos: number): list<string>
+  var typed: string = matchstr(strpart(cmdLine, 0, cursorPos), '^\s*\S\+\s\+\zs.*$')
+  return MatchNames(ListScrives(), typed, argLead)
+enddef
+
+# FUNCTION: Return the names that match typed, the whole argument so far,
+# as the text that replaces argLead, its last word. Matching ignores case.
+# With fuzzy in wildoptions, it is fuzzy, as in Vim's own completion.
+export def MatchNames(names: list<string>, typed: string, argLead: string): list<string>
+  var matches: list<string> = &wildoptions =~# 'fuzzy' && typed !=# ''
+    ? matchfuzzy(names, typed)
+    : names->copy()->filter((_, n) => stridx(tolower(n), tolower(typed)) == 0)->sort('i')
+  # The words before argLead are already on the command line. Keep only
+  # names that start with them, and return the rest of each name.
+  var done: string = strpart(typed, 0, strlen(typed) - strlen(argLead))
+  return matches
+    ->filter((_, n) => stridx(tolower(n), tolower(done)) == 0)
+    ->mapnew((_, n) => strpart(n, strlen(done)))
+enddef
+
+# FUNCTION: Return name, or the one scrive name that differs from it only
+# in case when no scrive has name exactly. Tab completion replaces only
+# the last word, so a completed name can keep a first word in the case
+# that was typed, as in my Novel for My Novel.
+export def ResolveName(name: string): string
+  if isdirectory(ScrivePath(name))
+    return name
+  endif
+  var matches: list<string> = ListScrives()->filter((_, n) => n ==? name)
+  return len(matches) == 1 ? matches[0] : name
+enddef
+
 # FUNCTION: Load a scrive by name, or return null_object when its folder
-# or project.json is missing or cannot be read.
+# or project.json is missing or cannot be read. A name that differs from
+# one scrive only in case opens that scrive, see ResolveName.
 export def Open(name: string): Pj.Project
-  var dir: string = ScrivePath(name)
+  var dir: string = ScrivePath(ResolveName(name))
   if !isdirectory(dir)
     log.Error($'no scrive named "{name}" under {BinderRoot()}')
     return null_object

@@ -49,6 +49,7 @@ import './test_inputpopup.vim' as TestInputPopup
 import './test_dialog_popup.vim' as TestDialogPopup
 import './test_outliner.vim' as TestOutliner
 import './test_scrivelist.vim' as TestScriveList
+import './test_scrive.vim' as TestScrive
 import './test_lexicon.vim' as TestLexicon
 import './test_binder_directory.vim' as TestBinderDirectory
 import './test_autosave.vim' as TestAutoSave
@@ -67,6 +68,7 @@ var suites: list<func(): void> = [
   TestDialogPopup.RunAll,
   TestOutliner.RunAll,
   TestScriveList.RunAll,
+  TestScrive.RunAll,
   TestLexicon.RunAll,
   TestBinderDirectory.RunAll,
   TestAutoSave.RunAll,

@@ -70,7 +70,8 @@ and Research.
 To open a scrive later:
 
 - `:BartlebyOpen` reopens the scrive you used last.
-- `:BartlebyOpen My First Novel` opens a scrive by name.
+- `:BartlebyOpen My First Novel` opens a scrive by name. Type the
+  first letters of the name and press `Tab` to complete it.
 - `:BartlebyList` shows all your scrives. Move with `j` and `k`, then
   press `<Enter>` to open one. If you have no scrives, it asks for a
   name and creates one.
