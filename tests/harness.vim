@@ -1,4 +1,10 @@
 vim9script
+
+# Tests contain UTF-8 text such as curly apostrophes. Without a UTF-8
+# locale (LANG unset), Vim starts with 'encoding' latin1 and would read
+# each such character as several bytes. Set it here, before any script
+# or buffer is loaded, so results do not depend on the environment.
+set encoding=utf-8
 # tests/harness.vim - runs every test module's RunAll(), then reports via
 # v:errors (populated automatically by every failed assert_*() call - see
 # :help testing.txt). Each test_*.vim file exports a single RunAll(): void
@@ -37,6 +43,8 @@ import './test_compile.vim' as TestCompile
 import './test_compile_select.vim' as TestCompileSelect
 import './test_binder.vim' as TestBinder
 import './test_syntax.vim' as TestSyntax
+import './test_pos.vim' as TestPos
+import './test_spotlight_pos.vim' as TestSpotlightPos
 import './test_inputpopup.vim' as TestInputPopup
 import './test_outliner.vim' as TestOutliner
 import './test_scrivelist.vim' as TestScriveList
@@ -52,6 +60,8 @@ var suites: list<func(): void> = [
   TestCompileSelect.RunAll,
   TestBinder.RunAll,
   TestSyntax.RunAll,
+  TestPos.RunAll,
+  TestSpotlightPos.RunAll,
   TestInputPopup.RunAll,
   TestOutliner.RunAll,
   TestScriveList.RunAll,

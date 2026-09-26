@@ -13,7 +13,7 @@ var is_loaded: bool = true
 # Focus owns the distraction-free window layout, Spotlight owns what gets
 # visually emphasized within it.
 #
-# Mechanism (a mode is a func(): string returning the current DIM regex -
+# Mechanism (a mode returns what to DIM -
 # NOT a "bright overlay" pattern): this went through a real design
 # mistake worth recording. The first version dimmed everything with one
 # match, then tried to restore the in-focus region with a second,
@@ -30,12 +30,17 @@ var is_loaded: bool = true
 # in-focus region with a match at all - then it keeps its syntax
 # highlighting for the simple reason that nothing ever overwrote it.
 # Paragraph mode is a direct port of Limelight's own two-region dim
-# (everything before the paragraph, everything after); Dialogue mode
-# generalizes this to scattered spans by scanning each line for the
-# quote pattern and dimming only the gaps between matches (see
-# DialoguePattern()). A future pattern-based mode (Nouns, Verbs, ...)
-# follows the same shape - compute the gaps around what should stay lit,
-# never the lit text itself.
+# (everything before the paragraph, everything after), as one regex.
+# Every other mode lights scattered spans (quoted speech, or words of one
+# part of speech), so it computes the dim gaps between them and applies
+# them with matchaddpos(), not as a regex. A regex with one alternative
+# per gap redraws far too slowly: measured on 1,100 gaps, 157 ms per
+# redraw as a regex against 1 ms as positions.
+#
+# Part-of-speech modes (Nouns, Adverbs, Passive, ...) take their words
+# from word lists and patterns (pos.vim), or from a part-of-speech tagger
+# when one is set (tagger.vim). Nouns, Verbs, Adjectives, and Passive
+# need the tagger and are hidden without one.
 #
 # Color math (Dim(), Hex2Rgb(), GrayContiguous(), GrayAnsi(),
 # ValidateCoeff()) is a faithful, unmodified port of Limelight's own
@@ -49,7 +54,9 @@ var is_loaded: bool = true
 ##############################################################################
 
 import 'Logger/logger.vim' as Log
-import autoload 'bartleby/picker.vim' as Pk
+import autoload 'bartleby/inputpopup.vim' as IP
+import autoload 'bartleby/pos.vim' as P
+import autoload 'bartleby/tagger.vim' as Tg
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 var spotlightdefaultcoefficient: float = g:bartleby_spotlight_default_coefficient
@@ -60,43 +67,92 @@ var spotlighteop: string = g:bartleby_spotlight_eop
 var spotlightparagraphspan: number = g:bartleby_spotlight_paragraph_span
 var spotlightpriority: number = g:bartleby_spotlight_priority
 var spotlightdialoguepattern: string = g:bartleby_spotlight_dialogue_pattern
+var spotlightlanguage: string = g:bartleby_spotlight_language
 
 # ---------------------------------------------------------------------
-# Mode registry. Each handler is a func(): string returning the current
-# DIM regex for that mode - the text that should be dimmed, never the
-# text that should stay lit (see the module doc comment above for why).
+# Mode registry. A handler takes the mode name and returns what to dim -
+# the text that should be dimmed, never the text that stays lit:
+#   {key: string, pattern: string}          a regex (Paragraph)
+#   {key: string, positions: list<any>}     matchaddpos() positions
+# `key` identifies the result, so an unchanged result is not reapplied.
+# Handlers are plain functions that receive the mode name, not closures.
 # ---------------------------------------------------------------------
 
 const MODE_PARAGRAPH: string = 'Paragraph'
 const MODE_DIALOGUE: string = 'Dialogue'
+const MODE_PASSIVE: string = 'Passive'
 
-var mode_handlers: dict<func(): string> = {}
+var mode_handlers: dict<func(string): dict<any>> = {}
+var mode_available: dict<func(): bool> = {}
 var mode_order: list<string> = []
 
-var dialogue_cache: dict<list<any>> = {}
+# Last positions per buffer, keyed by mode, text, window range, and
+# tagger results. See CachedPositions().
+var span_cache: dict<dict<any>> = {}
 const SPOTLIGHT_DIALOGUE_WINDOW_MARGIN: number = 200
+const SPOTLIGHT_POS_WINDOW_MARGIN: number = 50
+# How far past the window edge a paragraph is followed, so that a
+# paragraph cut by the edge is still classified as a whole.
+const SPOTLIGHT_PARAGRAPH_LIMIT: number = 200
 
-# Same shared regex used by syntax/fountain.vim's fountainCharacter and
-# fountainSceneHeading rules - keep the two in sync if either changes.
-const FOUNTAIN_CHARACTER_PATTERN: string = '^\L*$'
-const FOUNTAIN_SCENE_HEADING_PATTERN: string = '^\c\(int\|ext\|est\|i\/e\)\([.\/]\| \)\|^\.\a'
+# Part-of-speech modes, in picker order, and the Universal POS tags that
+# light a word when a tagger is set. [] means the mode always uses its
+# word list or pattern (pos.vim). Nouns, Verbs, and Adjectives have no
+# word list, so they need the tagger, as does Passive.
+const POS_MODES: list<string> = [
+  'Nouns', 'Verbs', 'Adjectives', 'Adverbs', 'Pronouns', 'Determiners',
+  'Prepositions', 'Conjunctions', 'Auxiliaries', 'Contractions', 'Fillers',
+]
+const POS_TAGS: dict<list<string>> = {
+  Nouns: ['NOUN', 'PROPN'],
+  Verbs: ['VERB'],
+  Adjectives: ['ADJ'],
+  Adverbs: ['ADV'],
+  Pronouns: ['PRON'],
+  Determiners: ['DET'],
+  Prepositions: ['ADP'],
+  Conjunctions: ['CCONJ', 'SCONJ'],
+  Auxiliaries: ['AUX'],
+  Contractions: [],
+  Fillers: [],
+}
+const TAGGER_ONLY_MODES: list<string> = ['Nouns', 'Verbs', 'Adjectives', 'Passive']
 
 const GRAY_CONVERTER: dict<number> = {0: 231, 7: 254, 15: 256, 16: 231, 231: 256}
 
 var current_mode: string = MODE_PARAGRAPH
 var current_coeff: float = -1.0
 
-def RegisterMode(name: string, Handler: func(): string): void
+def RegisterMode(name: string, Handler: func(string): dict<any>,
+    Available: func(): bool): void
   if !has_key(mode_handlers, name)
     mode_order->add(name)
   endif
   mode_handlers[name] = Handler
+  mode_available[name] = Available
 enddef
 
 # For the mode picker (PickMode()) and for validating a :BartlebySpotlight
-# argument - every currently-registered mode, in registration order.
+# argument - every mode usable now, in registration order.
 export def AvailableModes(): list<string>
-  return copy(mode_order)
+  return mode_order->copy()->filter((_, name) => mode_available[name]())
+enddef
+
+def IsModeAvailable(name: string): bool
+  return has_key(mode_handlers, name) && mode_available[name]()
+enddef
+
+def Always(): bool
+  return true
+enddef
+
+def TaggerReady(): bool
+  return Tg.IsReady()
+enddef
+
+# True when `mode` takes its words from the tagger now.
+def UsesTagger(mode: string): bool
+  return mode ==# MODE_PASSIVE || (!empty(get(POS_TAGS, mode, [])) && Tg.IsReady())
 enddef
 
 # Everything before and after the paragraph containing the cursor - a
@@ -142,77 +198,86 @@ enddef
 # Override the quote pattern itself via g:bartleby_spotlight_dialogue_
 # pattern for other quoting conventions (e.g. guillemets, single quotes).
 #
-# Windowed to the visible viewport (+ a margin) rather than the whole
-# buffer: a full-buffer scan builds one regex alternative per span, and
-# on a large file this either crawls or hits E339 (pattern too long)
-# outright - confirmed on a 10,000-line file. The existing CursorMoved
-# re-application (see On()) already recomputes on every cursor move,
-# including scrolls, so windowing loses nothing visible in practice -
-# by the time text outside the margin would matter, the recompute has
-# already caught up. Cached per-buffer by [changedtick, window range],
-# since recomputing on every single cursor move within the SAME window
-# would be pure waste - unlike Paragraph, nothing here depends on the
-# exact cursor position, only on what's roughly in view.
+# Windowed to the visible viewport plus a margin, and cached per buffer
+# by [changedtick, window range] (see CachedPositions()). Scrolling
+# recomputes through the CursorMoved and WinScrolled autocommands, so
+# text outside the margin is processed before it becomes visible.
 
-def VisibleLineRange(): list<number>
-  return [max([1, line('w0') - SPOTLIGHT_DIALOGUE_WINDOW_MARGIN]),
-    min([line('$'), line('w$') + SPOTLIGHT_DIALOGUE_WINDOW_MARGIN])]
+def VisibleLineRange(margin: number): list<number>
+  return [max([1, line('w0') - margin]), min([line('$'), line('w$') + margin])]
 enddef
 
-def DialoguePattern(): string
+def ParagraphSpec(mode: string): dict<any>
+  var pattern: string = ParagraphPattern()
+  return {key: $'{mode}:{pattern}', pattern: pattern}
+enddef
+
+# The positions of mode `mode` for the window range, reused while the
+# buffer text, the range, and the tagger results stay the same.
+def CachedPositions(mode: string, margin: number,
+    Compute: func(string, number, number): list<any>): dict<any>
   var bufNr: number = bufnr('%')
-  var [first: number, last: number] = VisibleLineRange()
-  var cached: list<any> = get(dialogue_cache, bufNr, [])
-  if len(cached) == 4 && cached[0] ==# b:changedtick && cached[1] == first && cached[2] == last
-    return cached[3]
+  var [first: number, last: number] = VisibleLineRange(margin)
+  # The Insert-mode state is part of the key: the tagger skips requests
+  # while you type, so a result computed in Insert mode must not be
+  # reused after it.
+  var typing: string = mode() =~# '^[iR]' ? 'i' : 'n'
+  var key: string = $'{mode}:{bufNr}:{b:changedtick}:{first}:{last}:{Tg.Generation()}:{typing}'
+  var cached: dict<any> = get(span_cache, bufNr, {})
+  if get(cached, 'key', '') ==# key
+    return cached
   endif
-
-  var result: string = &filetype ==# 'fountain' ?
-    FountainDialoguePattern(first, last) : ProseDialoguePattern(first, last)
-  dialogue_cache[bufNr] = [b:changedtick, first, last, result]
-  return result
+  var spec: dict<any> = {key: key, positions: Compute(mode, first, last)}
+  span_cache[bufNr] = spec
+  return spec
 enddef
 
-def ProseDialoguePattern(first: number, last: number): string
-  var quotePattern: string = spotlightdialoguepattern
-  var patterns: list<string> = []
+# Dim positions for a whole non-blank line.
+def WholeLine(lnum: number, text: string): list<any>
+  return text =~ '\S' ? [[lnum]] : []
+enddef
+
+def DialogueSpec(mode: string): dict<any>
+  return CachedPositions(mode, SPOTLIGHT_DIALOGUE_WINDOW_MARGIN, DialoguePositions)
+enddef
+
+def DialoguePositions(mode: string, first: number, last: number): list<any>
+  return &filetype ==# 'fountain' ? FountainDialoguePositions(first, last)
+    : ProseDialoguePositions(first, last)
+enddef
+
+def ProseDialoguePositions(first: number, last: number): list<any>
+  var positions: list<any> = []
   for lnum in range(first, last)
     var text: string = getline(lnum)
-    var searchFrom: number = 0
-    var lastEnd: number = 0
+    var spans: list<list<number>> = []
+    var from: number = 0
     while true
-      var mstart: number = match(text, quotePattern, searchFrom)
-      if mstart == -1
+      var found: list<any> = matchstrpos(text, spotlightdialoguepattern, from)
+      if found[1] < 0 || found[2] <= found[1]
         break
       endif
-      var mend: number = matchend(text, quotePattern, searchFrom)
-      if mstart > lastEnd
-        patterns->add($'\%{lnum}l\%>{lastEnd}c\%<{mstart + 1}c.')
-      endif
-      lastEnd = mend
-      searchFrom = mend
+      spans->add([found[1], found[2]])
+      from = found[2]
     endwhile
-    if lastEnd < len(text)
-      patterns->add($'\%{lnum}l\%>{lastEnd}c.')
-    endif
+    positions += empty(spans) ? WholeLine(lnum, text) : P.GapPositions(lnum, text, spans)
   endfor
-  return join(patterns, '\|')
+  return positions
 enddef
 
 # Fountain screenplays have no quoted dialogue at all - a character cue
 # (an all-caps line, optionally with trailing parentheticals like
 # "(V.O.)", that isn't itself a scene heading) is followed by one or
 # more unquoted lines of spoken dialogue, ending at the next blank line.
-
 def IsFountainCharacterCue(text: string): bool
-  if text ==# '' || text =~# FOUNTAIN_SCENE_HEADING_PATTERN
+  if text ==# '' || text =~# P.FOUNTAIN_SCENE_HEADING_PATTERN
     return false
   endif
-  return text =~# FOUNTAIN_CHARACTER_PATTERN
+  return text =~# P.FOUNTAIN_CHARACTER_PATTERN
 enddef
 
-def FountainDialoguePattern(first: number, last: number): string
-  var patterns: list<string> = []
+def FountainDialoguePositions(first: number, last: number): list<any>
+  var positions: list<any> = []
   var total: number = line('$')
 
   # A dialogue block is stateful across lines (cue, then its following
@@ -223,8 +288,6 @@ def FountainDialoguePattern(first: number, last: number): string
   var back: number = first - 1
   while back >= 1 && getline(back) !=# ''
     if IsFountainCharacterCue(getline(back))
-      # `first` starts inside this cue's dialogue block - skip to its
-      # end without re-adding the cue line itself (outside the window).
       var dEnd: number = back + 1
       while dEnd <= total && getline(dEnd) !=# ''
         dEnd += 1
@@ -236,27 +299,125 @@ def FountainDialoguePattern(first: number, last: number): string
   endwhile
 
   while lnum <= last
-    if IsFountainCharacterCue(getline(lnum))
-      # The cue line itself dims (it's not spoken dialogue); the block
-      # of non-blank lines right after it is the lit dialogue. This
-      # inner scan may run a little past `last` to find the block's
-      # real end - harmless, and needed for a correct boundary.
-      patterns->add($'\%{lnum}l.')
-      var dEnd: number = lnum + 1
-      while dEnd <= total && getline(dEnd) !=# ''
-        dEnd += 1
+    var text: string = getline(lnum)
+    positions += WholeLine(lnum, text)
+    if IsFountainCharacterCue(text)
+      # The cue line dims (it's not spoken dialogue); the block of
+      # non-blank lines right after it is the lit dialogue.
+      lnum += 1
+      while lnum <= total && getline(lnum) !=# ''
+        lnum += 1
       endwhile
-      lnum = dEnd
     else
-      patterns->add($'\%{lnum}l.')
       lnum += 1
     endif
   endwhile
-  return join(patterns, '\|')
+  return positions
 enddef
 
-RegisterMode(MODE_PARAGRAPH, ParagraphPattern)
-RegisterMode(MODE_DIALOGUE, DialoguePattern)
+def PosSpec(mode: string): dict<any>
+  return CachedPositions(mode, SPOTLIGHT_POS_WINDOW_MARGIN, PosPositions)
+enddef
+
+# Lights the words of part of speech `mode` and dims the rest of each
+# prose line. Structure lines (headings, Fountain cues) dim entirely.
+# The range is widened to whole paragraphs, so that the tagger always
+# sees complete sentences and each paragraph keeps one cache entry.
+def PosPositions(mode: string, first: number, last: number): list<any>
+  var ft: string = &filetype
+  var total: number = line('$')
+  var start: number = first
+  while start > 1 && first - start < SPOTLIGHT_PARAGRAPH_LIMIT
+      && P.IsProseLine(getline(start - 1), ft)
+    start -= 1
+  endwhile
+  var stop: number = last
+  while stop < total && stop - last < SPOTLIGHT_PARAGRAPH_LIMIT
+      && P.IsProseLine(getline(stop + 1), ft)
+    stop += 1
+  endwhile
+
+  var tagged: bool = UsesTagger(mode)
+  var lists: dict<any> = tagged ? {} : P.Lists(spotlightlanguage)
+  var positions: list<any> = []
+  var lnum: number = start
+  while lnum <= stop
+    var text: string = getline(lnum)
+    if !P.IsProseLine(text, ft)
+      positions += WholeLine(lnum, text)
+      lnum += 1
+      continue
+    endif
+    var blockStart: number = lnum
+    var lines: list<string> = []
+    while lnum <= stop && P.IsProseLine(getline(lnum), ft)
+      lines->add(getline(lnum))
+      lnum += 1
+    endwhile
+    positions += tagged ? TaggedPositions(mode, blockStart, lines)
+      : LexicalPositions(mode, blockStart, lines, lists)
+  endwhile
+  return positions
+enddef
+
+def LexicalPositions(mode: string, blockStart: number, lines: list<string>,
+    lists: dict<any>): list<any>
+  var positions: list<any> = []
+  for i in range(len(lines))
+    positions += P.GapPositions(blockStart + i, lines[i], P.LexicalSpans(mode, lines[i], lists))
+  endfor
+  return positions
+enddef
+
+# Positions from the tagger's results for one paragraph. While the
+# results are not ready, the paragraph is left undimmed; the tagger's
+# update then redraws it.
+def TaggedPositions(mode: string, blockStart: number, lines: list<string>): list<any>
+  var tags: dict<any> = Tg.Tags(join(lines, "\n"))
+  if empty(tags)
+    return []
+  endif
+  var spans: list<any>
+  if mode ==# MODE_PASSIVE
+    spans = tags.passive
+  else
+    var wanted: list<string> = POS_TAGS[mode]
+    spans = tags.tokens->copy()->filter((_, t) => index(wanted, t[2]) >= 0)
+  endif
+
+  # Paragraph byte offsets -> per-line spans. A span that crosses a line
+  # break (a passive "was / opened") is split at it.
+  var perLine: list<list<list<number>>> = []
+  var starts: list<number> = []
+  var offset: number = 0
+  for text in lines
+    perLine->add([])
+    starts->add(offset)
+    offset += strlen(text) + 1
+  endfor
+  for span in spans
+    for i in range(len(lines))
+      var lineStart: number = starts[i]
+      var lineEnd: number = lineStart + strlen(lines[i])
+      if span[0] < lineEnd && span[1] > lineStart
+        perLine[i]->add([max([span[0], lineStart]) - lineStart, min([span[1], lineEnd]) - lineStart])
+      endif
+    endfor
+  endfor
+
+  var positions: list<any> = []
+  for i in range(len(lines))
+    positions += P.GapPositions(blockStart + i, lines[i], perLine[i])
+  endfor
+  return positions
+enddef
+
+RegisterMode(MODE_PARAGRAPH, ParagraphSpec, Always)
+RegisterMode(MODE_DIALOGUE, DialogueSpec, Always)
+for posMode in POS_MODES
+  RegisterMode(posMode, PosSpec, index(TAGGER_ONLY_MODES, posMode) >= 0 ? TaggerReady : Always)
+endfor
+RegisterMode(MODE_PASSIVE, PosSpec, TaggerReady)
 
 # ---------------------------------------------------------------------
 # Color math - unmodified port of Limelight's own s:hex2rgb/s:dim/etc.
@@ -360,30 +521,33 @@ enddef
 
 class WindowMatches
   var dimMatchId: number = -1
-  var prevPattern: string = ''
+  var prevKey: string = ''
 
   def ClearHl(): void
     if this.dimMatchId != -1
       matchdelete(this.dimMatchId)
       this.dimMatchId = -1
     endif
-    this.prevPattern = ''
+    this.prevKey = ''
   enddef
 
-  def RefreshDim(pattern: string): void
-    if pattern ==# this.prevPattern
+  # `spec` is a mode handler's result: {key, pattern} or {key, positions}.
+  def RefreshDim(spec: dict<any>): void
+    if spec.key ==# this.prevKey
       return
     endif
     if this.dimMatchId != -1
       matchdelete(this.dimMatchId)
       this.dimMatchId = -1
     endif
-    this.prevPattern = pattern
-    if pattern ==# ''
-      return
+    this.prevKey = spec.key
+    if has_key(spec, 'pattern')
+      if spec.pattern !=# ''
+        this.dimMatchId = matchadd('SpotlightDim', spec.pattern, spotlightpriority)
+      endif
+    elseif !empty(spec.positions)
+      this.dimMatchId = matchaddpos('SpotlightDim', spec.positions, spotlightpriority)
     endif
-    var priority: number = spotlightpriority
-    this.dimMatchId = matchadd('SpotlightDim', pattern, priority)
   enddef
 endclass
 
@@ -391,7 +555,7 @@ endclass
 # Session state and lifecycle.
 # ---------------------------------------------------------------------
 
-def CurrentHandler(): func(): string
+def CurrentHandler(): func(string): dict<any>
   return get(mode_handlers, current_mode, mode_handlers[MODE_PARAGRAPH])
 enddef
 
@@ -401,8 +565,8 @@ def RefreshCurrentWindow(): void
     wm = WindowMatches.new()
     w:bartleby_spotlight_matches = wm
   endif
-  var Handler: func(): string = CurrentHandler()
-  wm.RefreshDim(Handler())
+  var Handler: func(string): dict<any> = CurrentHandler()
+  wm.RefreshDim(Handler(current_mode))
 enddef
 
 def RedimSafely(): void
@@ -433,6 +597,12 @@ def On(mode: string, coeffArg: float): void
     log.Error($'unknown Spotlight mode: {actualMode}')
     return
   endif
+  if !mode_available[actualMode]()
+    var reason: string = Tg.FailureReason()
+    log.Error($'Spotlight mode {actualMode} needs a part-of-speech tagger - '
+      .. (reason ==# '' ? 'set g:bartleby_spotlight_tagger' : reason))
+    return
+  endif
   current_mode = actualMode
   current_coeff = coeffArg
 
@@ -447,7 +617,10 @@ def On(mode: string, coeffArg: float): void
 
   augroup bartleby_spotlight
     autocmd!
-    autocmd CursorMoved,CursorMovedI * RefreshCurrentWindow()
+    autocmd CursorMoved,CursorMovedI,WinScrolled * RefreshCurrentWindow()
+    # mode() still reports Insert mode during InsertLeave, and the tagger
+    # sends no requests in Insert mode, so refresh just after it.
+    autocmd InsertLeave * timer_start(0, (_) => RefreshCurrentWindow())
     autocmd ColorScheme * RedimSafely()
   augroup END
   augroup bartleby_spotlight_cleanup
@@ -481,14 +654,30 @@ export def Toggle(): void
   endif
 enddef
 
-# Radio-button mode picker (see picker.vim#PickOne's `current` param) -
-# what <leader>bL calls. Picking a mode turns Spotlight on with it,
-# switching live if it was already on with a different mode.
+# Searchable list of the available modes - what <leader>bL calls.
+# Picking a mode turns Spotlight on with it, switching live if it was
+# already on with a different mode.
 export def PickMode(): void
-  Pk.PickOne('Spotlight Mode', AvailableModes(), (choice: string) => {
+  IP.PromptFilter($'Spotlight Mode: {current_mode}', AvailableModes(), (choice: string) => {
     On(choice, current_coeff)
-  }, current_mode)
+  })
 enddef
+
+# Called by tagger.vim when results arrive or the tagger fails. Redraws
+# the current window, or turns Spotlight off if the current mode can no
+# longer run (tagger.vim has already reported why).
+def OnTaggerUpdate(): void
+  if !IsOn()
+    return
+  endif
+  if !IsModeAvailable(current_mode)
+    Off()
+    return
+  endif
+  RefreshCurrentWindow()
+enddef
+
+Tg.OnUpdate(OnTaggerUpdate)
 
 # Backs :BartlebySpotlight[!] [mode-name|coefficient] - bang always turns
 # off; a bare mode name switches to it (turning on if needed); anything

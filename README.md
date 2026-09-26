@@ -22,6 +22,7 @@ screenplays.
 - [Inspector](#inspector)
 - [Scrive list](#scrive-list)
 - [Focus, Spotlight, and Quill](#focus-spotlight-and-quill)
+- [Spotlight modes](#spotlight-modes)
 - [Fountain](#fountain)
 - [Palette and menu](#palette-and-menu)
 - [Session, snapshots, and search](#session-snapshots-and-search)
@@ -64,9 +65,12 @@ these files with any editor.
 - **Dictionary and thesaurus** need `curl` and your own free
   [Merriam-Webster API keys](https://dictionaryapi.com), one for the
   Collegiate Dictionary and one for the Collegiate Thesaurus.
+- **Spotlight's Nouns, Verbs, Adjectives, and Passive modes** need
+  Python 3 with [spaCy](https://spacy.io) and its English model. See
+  [Spotlight modes](#spotlight-modes).
 
-Writing needs only Vim. Compile and the lookups are the only features
-with other requirements.
+Writing needs only Vim. Compile, the lookups, and the tagger modes are
+the only features with other requirements.
 
 [^vim]: The binder tree uses a Vim9 class with a field that is a list
     of its own class. Vim 9.1 cannot load it and reports `E1010: Type
@@ -238,8 +242,69 @@ Three independent writing aids:
 | Tool | Command | Mapping | Effect |
 | --- | --- | --- | --- |
 | Focus | `:BartlebyFocus` | `<leader>bz` | A centered writing column. The rest of the screen is dimmed |
-| Spotlight | `:BartlebySpotlight` | `<leader>bl` | Dims all text except the current paragraph, or the current speaker in Dialogue mode. `<leader>bL` picks the mode |
+| Spotlight | `:BartlebySpotlight` | `<leader>bl` | Dims all text except the current paragraph, or except what the selected mode keeps bright. `<leader>bL` picks the mode |
 | Quill | `:BartlebyQuill` | `<leader>bp` | Word-processor wrapping, soft or hard, detected from the document |
+
+## Spotlight modes
+
+`<leader>bL` opens a searchable list of the modes, and
+`:BartlebySpotlight {mode}` selects one by name. Each part-of-speech
+mode keeps its words bright and dims everything else. Markdown headings
+and Fountain scene headings, character cues, and transitions dim
+completely.
+
+| Mode | Keeps bright | Source |
+| --- | --- | --- |
+| Paragraph | The paragraph with the cursor | |
+| Dialogue | Quoted speech. In Fountain, the dialogue under each character cue | |
+| Nouns | Nouns and proper nouns | Tagger only |
+| Verbs | Main verbs | Tagger only |
+| Adjectives | Adjectives | Tagger only |
+| Adverbs | Adverbs | Tagger, else word list and the `-ly` ending |
+| Pronouns | Pronouns | Tagger, else word list |
+| Determiners | Articles and other determiners such as `this` and `every` | Tagger, else word list |
+| Prepositions | Prepositions | Tagger, else word list |
+| Conjunctions | Conjunctions | Tagger, else word list |
+| Auxiliaries | Helping verbs such as `was`, `have`, and `can` | Tagger, else word list |
+| Contractions | Contractions such as `don't` and `they're` | Word list and pattern |
+| Fillers | Filler words such as `just`, `really`, and `very` | Word list |
+| Passive | Passive constructions such as `was opened` | Tagger only |
+
+**Tagger.** A tagger reads whole sentences, so it knows that "run" is a
+verb in "they run" and a noun in "a long run". Word lists cannot know
+this, so Nouns, Verbs, Adjectives, and Passive need a tagger and are
+hidden without one. To use spaCy:
+
+```sh
+python3 -m pip install spacy
+python3 -m spacy download en_core_web_sm
+```
+
+```vim
+let g:bartleby_spotlight_tagger = 'spacy'
+```
+
+The tagger starts when a mode first needs it and stays running. It
+receives one paragraph at a time and does not receive text while you
+type. A paragraph is tagged again when you leave Insert mode. If the
+tagger fails, Bartleby reports the error once and hides the tagger
+modes.
+
+**Contractions.** `'s` counts as a contraction only after the words in
+the `s_contraction_words` list, such as `it`, `that`, and `there`. After
+other words, `'s` is usually possessive, as in "John's hat", so it does
+not count.
+
+**Word lists.** The lists are in `tools/pos/en.json`. They hold single
+words. To add or remove words for a mode, use its name as a key:
+
+```vim
+let g:bartleby_spotlight_words_add = {'Fillers': ['anyway', 'somehow']}
+let g:bartleby_spotlight_words_remove = {'Adverbs': ['well']}
+```
+
+With a tagger, all modes except Contractions and Fillers use the
+tagger, so list changes affect only those two.
 
 ## Fountain
 
@@ -424,8 +489,13 @@ default, so set only the ones you want to change.
 | `g:bartleby_spotlight_bop` | `'^\s*$\n\zs'` | Pattern for the start of a paragraph |
 | `g:bartleby_spotlight_eop` | `'^\s*$'` | Pattern for the end of a paragraph |
 | `g:bartleby_spotlight_paragraph_span` | `0` | Extra paragraphs kept bright around the cursor |
-| `g:bartleby_spotlight_priority` | `10` | `matchadd()` priority of Spotlight's highlight |
+| `g:bartleby_spotlight_priority` | `10` | Match priority of Spotlight's highlight |
 | `g:bartleby_spotlight_dialogue_pattern` | A quote pattern | Pattern for dialogue in prose documents |
+| `g:bartleby_spotlight_tagger` | `''` | Part-of-speech tagger: `'spacy'`, or a command as a list. Empty turns the tagger modes off |
+| `g:bartleby_spotlight_spacy_model` | `'en_core_web_sm'` | spaCy model for `'spacy'` |
+| `g:bartleby_spotlight_language` | `'en'` | Word lists to use, from `tools/pos/<language>.json` |
+| `g:bartleby_spotlight_words_add` | `{}` | Words to add to a mode's list, by mode name |
+| `g:bartleby_spotlight_words_remove` | `{}` | Words to remove from a mode's list, by mode name |
 
 **Quill**
 

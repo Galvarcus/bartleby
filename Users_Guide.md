@@ -14,6 +14,7 @@ Bartleby without losing anything.
 - [New scrive](#new-scrive)
 - [Binder](#binder)
 - [Writing](#writing)
+- [Spotlight modes](#spotlight-modes)
 - [Structure](#structure)
 - [Dictionary and thesaurus](#dictionary-and-thesaurus)
 - [Document details](#document-details)
@@ -118,8 +119,61 @@ the screen. `<leader>bz` turns it on or off.
 
 **Spotlight** dims every paragraph except the one with the cursor.
 `<leader>bl` turns it on or off. `<leader>bL` picks a different mode.
-For screenplays, Dialogue mode dims everything except the current
-speaker's lines.
+See [Spotlight modes](#spotlight-modes).
+
+## Spotlight modes
+
+Spotlight's modes help you revise. Each one keeps one kind of word
+bright and dims everything else, so you can see at a glance how often
+you use it. Press `<leader>bL`, type part of a mode's name, and press
+`<Enter>`.
+
+| Mode | Keeps bright | Use it to |
+| --- | --- | --- |
+| Paragraph | The paragraph you are in | Concentrate on one paragraph |
+| Dialogue | What your characters say | Read the dialogue on its own |
+| Adverbs | Words such as "quickly" and "very" | Find adverbs to cut |
+| Fillers | Words such as "just", "really", and "actually" | Find words that add nothing |
+| Contractions | Words such as "don't" and "it's" | Check the tone of a passage |
+| Pronouns | Words such as "she", "they", and "it" | Check that each pronoun is clear |
+| Determiners | Words such as "the", "this", and "every" | Check repeated openings |
+| Prepositions | Words such as "of", "in", and "by" | Find long chains of phrases |
+| Conjunctions | Words such as "and", "but", and "because" | Find sentences that run on |
+| Auxiliaries | Helping verbs such as "was", "have", and "can" | Find weak verb phrases |
+| Nouns | Nouns | Check concrete detail |
+| Verbs | Main verbs | Check that your verbs are strong |
+| Adjectives | Adjectives | Find adjectives to cut |
+| Passive | Phrases such as "was opened" | Find passive sentences |
+
+Headings, and in screenplays the scene headings and character names,
+dim completely.
+
+**"'s".** Bartleby counts "'s" as a contraction only after words such as
+"it", "that", "there", and "what", as in "it's" or "that's". After a
+name, "'s" usually shows who owns something, as in "John's hat", so it
+does not count.
+
+**Nouns, Verbs, Adjectives, and Passive** need a free program called
+spaCy, which reads whole sentences. It knows that "run" is a verb in
+"they run" and a noun in "a long run". Word lists cannot tell the
+difference. Without spaCy, these four modes do not appear in the list.
+
+To install spaCy, run these two commands in a terminal:
+
+```sh
+python3 -m pip install spacy
+python3 -m spacy download en_core_web_sm
+```
+
+Then add this line to your vimrc:
+
+```vim
+let g:bartleby_spotlight_tagger = 'spacy'
+```
+
+With spaCy set, the other modes use it too and become more accurate.
+spaCy does not check a paragraph while you type in it. It checks the
+paragraph again when you press `Esc`.
 
 ## Structure
 

@@ -123,3 +123,53 @@ jobs:
           fi
           cat tests/smoke_results.txt
           grep -qx 'All smoke tests passed' tests/smoke_results.txt
+
+  tagger-smoke:
+    name: Part-of-speech tagger smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # See the "test" job's own Install Vim step for why this uses a
+      # prebuilt AppImage rather than apt or rhysd/action-setup-vim.
+      - name: Install Vim
+        run: |
+          url=$(curl -s https://api.github.com/repos/vim/vim-appimage/releases/latest \
+            | jq -r '.assets[] | select(.name | test("^Vim-v.*-x86_64\\.AppImage$")) | .browser_download_url')
+          curl -sL -o /tmp/vim.appimage "$url"
+          chmod +x /tmp/vim.appimage
+          cd /tmp && ./vim.appimage --appimage-extract
+          ln -s /tmp/squashfs-root/AppRun /tmp/squashfs-root/vim
+          echo "/tmp/squashfs-root" >> "$GITHUB_PATH"
+
+      # Its own Python, first on PATH, so the tagger's python3 finds spaCy.
+      # Ubuntu's system Python refuses pip installs (PEP 668).
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install spaCy and its English model
+        run: |
+          python3 -m pip install spacy
+          python3 -m spacy download en_core_web_sm
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v4
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      - name: Run tagger smoke test
+        run: |
+          vim -es -u NONE -N -V20/tmp/vim.log \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/test_tagger_smoke.vim' -c 'quit' || true
+          if [ ! -f tests/tagger_results.txt ]; then
+            echo "::error::tests/tagger_results.txt was never created - Vim likely failed before finishing. Verbose log follows:"
+            cat /tmp/vim.log
+            exit 1
+          fi
+          cat tests/tagger_results.txt
+          grep -qx 'All tagger tests passed' tests/tagger_results.txt

@@ -62,6 +62,11 @@ g:bartleby_spotlight_paragraph_span = get(g:, 'bartleby_spotlight_paragraph_span
 g:bartleby_spotlight_priority = get(g:, 'bartleby_spotlight_priority', 10)
 g:bartleby_spotlight_dialogue_pattern = get(g:, 'bartleby_spotlight_dialogue_pattern',
   '"[^"]*"\|"[^"]*"')
+g:bartleby_spotlight_language = get(g:, 'bartleby_spotlight_language', 'en')
+g:bartleby_spotlight_tagger = get(g:, 'bartleby_spotlight_tagger', '')
+g:bartleby_spotlight_spacy_model = get(g:, 'bartleby_spotlight_spacy_model', 'en_core_web_sm')
+g:bartleby_spotlight_words_add = get(g:, 'bartleby_spotlight_words_add', {})
+g:bartleby_spotlight_words_remove = get(g:, 'bartleby_spotlight_words_remove', {})
 g:bartleby_quill_wrap_mode_default = get(g:, 'bartleby_quill_wrap_mode_default', 'hard')
 g:bartleby_quill_textwidth = get(g:, 'bartleby_quill_textwidth', 74)
 g:bartleby_quill_autoformat = get(g:, 'bartleby_quill_autoformat', true)
