@@ -273,9 +273,11 @@ Three independent writing aids:
 Spotlight modes                                       *bartleby-spotlight-modes*
 
 `<leader>bL` opens a searchable list of the modes, and
-`:BartlebySpotlight {mode}` selects one by name. Each part-of-speech mode
-keeps its words bright and dims everything else. Markdown headings and
-Fountain scene headings, character cues, and transitions dim completely.
+`:BartlebySpotlight {mode}` selects one by name. In the list, type to search,
+or scroll with the arrow keys, `<PageUp>`, `<PageDown>`, or the mouse wheel.
+Each part-of-speech mode keeps its words bright and dims everything else.
+Markdown headings and Fountain scene headings, character cues, and transitions
+dim completely.
 
     Mode                  Keeps bright          Source ~
 
@@ -610,17 +612,25 @@ Focus
     `g:bartleby_focus_height`          `'85%'`               Height of the writing
                                                              column
 
-    `g:bartleby_focus_margin_top`      `-1`                  Top margin. `-1`
-                                                             centers the column
+    `g:bartleby_focus_margin_top`      `-1`                  Top margin. `-1` centers
+                                                             the column
 
     `g:bartleby_focus_margin_bottom`   `-1`                  Bottom margin. `-1`
                                                              centers the column
 
-    `g:bartleby_focus_linenr`          `0`                   Show line numbers in
-                                                             Focus
+    `g:bartleby_focus_linenr`          `0`                   Show line numbers in Focus
 
-    `g:bartleby_focus_bg`              `'black'`             Color of the dimmed
-                                                             area
+    `g:bartleby_focus_bg`              `'black'`             Color of the dimmed area
+
+    `g:bartleby_focus_fullscreen`      `0`                   In the GUI, show Focus in
+                                                             fullscreen.
+                                                             |bartleby-footnote2|
+
+    `g:bartleby_focus_guifont`         `''`                  In the GUI, the font for
+                                                             Focus, for example
+                                                             `'DejaVu Sans Mono 14'`.
+                                                             Empty keeps the current
+                                                             font
 
 Spotlight
 
@@ -794,5 +804,11 @@ The binder tree uses a Vim9 class with a field that is a list of its own
 class. Vim 9.1 cannot load it and reports `E1010: Type not recognized`. Some
 Linux distributions still package Vim 9.1. Run `vim --version` to check.
 Bartleby does not support Vim 8 or Neovim.
+
+                                                            *bartleby-footnote2*
+MacVim uses its `'fullscreen'` option. The GTK and Windows GUIs use the `s`
+flag in `'guioptions'`. Other GUIs have no fullscreen mode. When Focus ends,
+also by `:q` in the Focus window, Bartleby restores the previous font and
+window state.
 
  vim:tw=78:sw=4:ts=4:ft=help:norl:et:
