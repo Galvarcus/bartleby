@@ -7,34 +7,25 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# focus.vim - Focus: distraction-free composition mode, converted from
-# Goyo (github.com/junegunn/goyo.vim) into a native vim9class component.
-# Opens the current buffer alone in a new tab, framed by four invisible
-# "pad" windows that center a fixed-width (and optionally fixed-height)
-# writing column, with statusline/tabline/ruler hidden and chrome
-# highlight groups blended into the background. Multiple concurrent
-# sessions are supported (one per tab, mirroring Goyo's own t:-scoped
-# state) via the tab-local t:bartleby_focus_session variable.
+# focus.vim: Focus, a distraction-free writing mode, converted from Goyo,
+# github.com/junegunn/goyo.vim, to a Vim9 class.
+# Opens the current buffer alone in a new tab. Four empty pad windows
+# center a writing column of fixed width, and optionally fixed height.
+# The statusline, tabline, and ruler are hidden, and the window chrome
+# takes the background color. Each tab can hold its own session, in the
+# tab-local variable t:bartleby_focus_session, as in Goyo.
 #
-# Dropped from the original during conversion: decorative background
-# patterns (goyo_decoration_*). Third-party statusline plugin
-# integration (gitgutter/signify/airline/powerline/lightline) IS kept -
-# see DisableThirdPartyStatuslines()/RestoreThirdPartyStatuslines() below -
-# since a plugin actively managing its own statusline content (airline in
-# particular) will keep reasserting it regardless of 'laststatus'. GVim
-# IS a target for this project too, so guioptions handling (hiding
-# scrollbars) is also kept, matching Goyo's own has('gui_running') guards.
+# Not converted: Goyo's decorative background patterns. Kept: handling
+# for statusline plugins, see DisableThirdPartyStatuslines, because a
+# plugin such as airline redraws its statusline whatever laststatus is.
+# Also kept: guioptions handling, to hide GVim scrollbars.
 #
-# `User BartlebyFocusEnter`/`User BartlebyFocusLeave` autocmd events fire
-# once setup/before teardown respectively (ported from Goyo's own User
-# GoyoEnter/GoyoLeave) - the extension point for anything added later:
-# a GUI font, entering GUI fullscreen, 'spell', an external dictionary
-# lookup (e.g. sdcv) binding, etc. None of that needs to live in this
-# file; it can all hook in independently via those two events.
+# In the GUI, Focus can also set a font and enter fullscreen, see
+# ApplyGuiSettings. The User BartlebyFocusEnter and BartlebyFocusLeave
+# events, from Goyo's GoyoEnter and GoyoLeave, let other settings join.
 #
-# Paragraph dimming - what Limelight actually does - is deliberately NOT
-# part of this file; that's Spotlight's job (phase 5b), used alongside
-# Focus rather than folded into it.
+# Paragraph dimming, as in Limelight, is Spotlight's job. Use it together
+# with Focus.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -66,15 +57,11 @@ def ClampVal(val: number, lo: number, hi: number): number
 enddef
 
 
-##############################################################################
-# Third-party statusline plugin integration. Several popular statusline
-# plugins actively manage their own status line content via their own
-# autocmds, which fights a bare `set laststatus=0` - airline in
-# particular reasserts itself on window/buffer events regardless of
-# 'laststatus'. All silent!-guarded, so this is a harmless no-op for
-# anyone without a given plugin installed - ported directly from Goyo's
-# own equivalent handling.
-##############################################################################
+# FUNCTION: Stop statusline plugins from redrawing during Focus, and
+# return which ones were stopped. Plugins such as airline redraw their
+# statusline on window and buffer events, so laststatus alone does not
+# hide it. Each call is guarded with silent!, so a plugin that is not
+# installed changes nothing. Converted from Goyo.
 
 def DisableThirdPartyStatuslines(): dict<bool>
   var disabled: dict<bool> = {}
@@ -121,8 +108,8 @@ def RestoreThirdPartyStatuslines(disabled: dict<bool>): void
 
   if get(disabled, 'airline', false) && !exists('#airline')
     silent! execute 'AirlineToggle'
-    # Airline needs two refreshes to avoid a rendering glitch on re-enable -
-    # matches Goyo's own comment on this exact workaround.
+    # Airline needs two refreshes to avoid a drawing error when it is turned
+    # on again, as in Goyo.
     silent! execute 'AirlineRefresh'
     silent! execute 'AirlineRefresh'
   endif
@@ -141,14 +128,10 @@ def RestoreThirdPartyStatuslines(disabled: dict<bool>): void
   endif
 enddef
 
-##############################################################################
-# Global <C-w>{key} mappings, active for as long as any Focus session is
-# open in any tab. Genuinely global (not buffer-local) because Vim window
-# commands are - matches Goyo's own approach, including its handling of
-# concurrent sessions: a second session's setup only maps keys the first
-# didn't already claim, and tracks (in its own mappedKeys) only the ones
-# it's responsible for unmapping again.
-##############################################################################
+# FUNCTION: Map Ctrl-W keys to do nothing while any Focus session is open.
+# The mappings are global, because window commands are global. As in
+# Goyo, a second session maps only the keys that the first did not, and
+# records in mappedKeys the ones it must unmap.
 
 def MapsNop(): list<string>
   var candidates: list<string> = ['R', 'H', 'J', 'K', 'L', '|', '_']
@@ -159,10 +142,8 @@ def MapsNop(): list<string>
   return mapped
 enddef
 
-# Dispatches a <C-w>{key} resize mapping to whichever tab's session is
-# current when the key is actually pressed - the mapping itself is
-# global, but its effect should only ever touch the session for the tab
-# you're in right now.
+# FUNCTION: Apply a Ctrl-W resize key to the session of the current tab.
+# The mapping is global, but the resize must change only this tab.
 def FocusResizeKey(key: string): void
   if !exists('t:bartleby_focus_session')
     return
@@ -198,10 +179,11 @@ def UnmapCtrlW(keys: list<string>): void
 enddef
 
 ##############################################################################
-# Session lifecycle. Enter()/Exit() are free functions (not methods) so
-# they can create/destroy the FocusSession object itself, plus drive the
-# tab-split and global-option save/restore that surrounds it.
+# SECTION: Session lifecycle.
 ##############################################################################
+# FUNCTION: Start a Focus session. Enter and Exit are functions, not
+# methods, because they create and remove the FocusSession object and
+# save and restore the global options around it.
 
 def Enter(dimExpr: string): void
   if exists('t:bartleby_focus_session')
@@ -252,7 +234,7 @@ def Enter(dimExpr: string): void
   set sidescroll=1
   set sidescrolloff=0
 
-  # Hide left-hand scrollbars in GVim.
+  # Hide the scrollbars on the left in GVim.
   if has('gui_running')
     set guioptions-=l
     set guioptions-=L
@@ -281,12 +263,8 @@ def Enter(dimExpr: string): void
     ApplyGuiSettings(saved)
   endif
 
-  # Extension point for anything that should activate alongside Focus -
-  # a GUI font/fullscreen toggle, 'spell', an external dictionary lookup
-  # binding, etc. None of that lives here; it hooks in independently via
-  # e.g. `autocmd User BartlebyFocusEnter ...` (and the matching
-  # BartlebyFocusLeave below to reverse it), without ever needing to
-  # touch this file. Ported from Goyo's own User GoyoEnter/GoyoLeave.
+  # Let other settings join Focus: autocmd User BartlebyFocusEnter, and
+  # BartlebyFocusLeave to reverse them. From Goyo's GoyoEnter.
   if exists('#User#BartlebyFocusEnter')
     doautocmd User BartlebyFocusEnter
   endif
@@ -298,9 +276,8 @@ def Exit(): void
   endif
   var session: FocusSession = t:bartleby_focus_session
 
-  # Fired before any teardown begins, so a BartlebyFocusEnter hook's own
-  # handler can still see/reverse whatever it set up (fullscreen, a
-  # temporary mapping, ...) while the focus window is still current.
+  # Runs before the teardown, so that a BartlebyFocusLeave handler can
+  # reverse its own setup while the Focus window is still current.
   if exists('#User#BartlebyFocusLeave')
     doautocmd User BartlebyFocusLeave
   endif
@@ -347,9 +324,8 @@ def Exit(): void
   endif
   RestoreGuiSettings(saved)
 
-  # tranquilize() overwrote highlight groups directly, and those are
-  # global rather than tab-scoped - re-applying the colorscheme is what
-  # actually undoes that, not anything tab-local closing away.
+  # Tranquilize changed global highlight groups, which closing the tab does
+  # not undo. Loading the colorscheme again restores them.
   if exists('g:colors_name')
     execute 'colorscheme ' .. g:colors_name
   else
@@ -357,18 +333,18 @@ def Exit(): void
   endif
 enddef
 
-# GUI font and fullscreen for Focus, from g:bartleby_focus_guifont and
-# g:bartleby_focus_fullscreen. Each value is saved in `saved` before it
-# changes, and RestoreGuiSettings() puts it back when Focus ends, also
-# after :q in the Focus window (see FocusSession.Blank()).
+# FUNCTION: Set the GUI font and fullscreen for Focus, from
+# g:bartleby_focus_guifont and g:bartleby_focus_fullscreen. Each value is
+# saved in saved before it changes, and RestoreGuiSettings restores it
+# when Focus ends, also after :q in the Focus window, see Blank.
 #
-# Fullscreen: MacVim has a 'fullscreen' option. The GTK and Windows GUIs
-# use the "s" flag in 'guioptions' instead, which Exit() restores with
-# the rest of 'guioptions'. Other GUIs have no fullscreen.
+# Fullscreen: MacVim has a fullscreen option. The GTK and Windows GUIs
+# use the s flag in guioptions, which Exit restores with the rest of
+# guioptions. Other GUIs have no fullscreen.
 #
-# 'guifont' and 'fullscreen' do not exist in a Vim without a GUI, so a
-# compiled function cannot name them directly. eval() and :execute reach
-# them only at run time, and only when has('gui_running').
+# A Vim without a GUI has neither guifont nor fullscreen, so a compiled
+# function cannot name them. eval and :execute reach them at run time,
+# and only when has('gui_running') is true.
 def ApplyGuiSettings(saved: dict<any>): void
   if focusguifont !=# ''
     saved.guifont = eval('&guifont')
@@ -402,9 +378,8 @@ def RestoreGuiSettings(saved: dict<any>): void
 enddef
 
 ##############################################################################
-# Autocmd trampolines - all fired globally (TabLeave/VimResized/etc. have
-# no buffer/window scoping to hang off of), each a no-op unless the
-# *current* tab happens to have an active session.
+# SECTION: Autocommand handlers. The events are global, so each handler
+# does nothing unless the current tab has a Focus session.
 ##############################################################################
 
 def FocusAutoExit(): void
@@ -443,10 +418,10 @@ def FocusAutoHideStatusline(): void
 enddef
 
 ##############################################################################
-# Public entry points.
+# SECTION: Public entry points.
 ##############################################################################
 
-# Plain toggle, no dimension argument - what <leader>bz calls.
+# FUNCTION: Toggle Focus with the default size. <leader>bz calls this.
 export def Toggle(): void
   if exists('t:bartleby_focus_session')
     Exit()
@@ -455,9 +430,9 @@ export def Toggle(): void
   endif
 enddef
 
-# Backs :BartlebyFocus[!] [dim] - bang always exits; a bare dim argument
-# while already active live-adjusts the running session instead of
-# restarting it (matches Goyo's own :Goyo <dim> behavior).
+# FUNCTION: Run :BartlebyFocus. With a bang, always exit. With a size
+# while Focus is on, resize the running session instead of restarting
+# it, as :Goyo does.
 export def Execute(bang: bool, dimExpr: string): void
   if bang
     Exit()
@@ -474,8 +449,8 @@ export def Execute(bang: bool, dimExpr: string): void
   endif
 enddef
 
-# A parsed set of pad dimensions - width/height of the centered writing
-# column, plus xoff/yoff to shift it off-center if requested.
+# CLASS: The size of the writing column: width and height, and xoff and
+# yoff to move it off center.
 class Dimensions
   var width: number
   var height: number
@@ -497,10 +472,10 @@ class Dimensions
     return dim
   enddef
 
-  # Parses a Goyo-style dimension expression - "<width>[+-xoff]x<height>
-  # [+-yoff]", every part optional, layered over the global defaults
-  # above. null_object (not an error) on a malformed expression, so a
-  # mistyped :BartlebyFocus argument can just no-op rather than crash.
+  # METHOD: Parse a Goyo size expression, <width>[+-xoff]x<height>[+-yoff].
+  # Every part is optional and falls back to the global defaults. Return
+  # null_object for an invalid expression, so that a mistyped argument
+  # does nothing instead of failing.
   static def Parse(expr: string): Dimensions
     var dim: Dimensions = Dimensions.Default()
     if expr ==# ''
@@ -526,9 +501,9 @@ class Dimensions
     return dim
   enddef
 
-  # Field writes from outside this class aren't allowed (E1335) - these
-  # exist so FocusSession can clamp/adjust an existing Dimensions object
-  # without needing to reconstruct one from scratch each time.
+  # METHOD: Clamp the size. Code outside the class cannot write its fields,
+  # error E1335, so FocusSession changes an existing Dimensions with these
+  # methods.
   def ClampTo(maxWidth: number, maxHeight: number): void
     this.width = ClampVal(this.width, 2, maxWidth)
     this.height = ClampVal(this.height, 2, maxHeight)
@@ -543,9 +518,9 @@ class Dimensions
   enddef
 endclass
 
-# One active Focus session, living in its own tab. Mirrors Goyo's t:goyo_*
-# tab-local variables as class fields instead, stored in
-# t:bartleby_focus_session on the tab it owns.
+# CLASS: One Focus session in its own tab. Holds as class fields what Goyo
+# keeps in t:goyo variables, stored in t:bartleby_focus_session of its
+# tab.
 export class FocusSession
   var origTab: number
   var masterBuf: number
@@ -564,18 +539,16 @@ export class FocusSession
     this.padBufs = {l: l, r: r, t: t, b: b}
   enddef
 
-  # Bounces the user back out of a pad window the instant they wander
-  # into one (WinEnter/CursorMoved on the pad's own buffer - see
-  # SetupPad()), and treats a visibly-collapsed pad layout (someone
-  # managed to close/resize one) as reason enough to give up and exit
-  # cleanly rather than leave a broken layout on screen.
+  # METHOD: Move the cursor out of a pad window as soon as it enters one,
+  # on WinEnter or CursorMoved of the pad buffer, see SetupPad. When the
+  # pads have collapsed, because a pad was closed or resized, exit Focus
+  # cleanly instead of leaving a broken layout. This is also how :q in the
+  # Focus window ends Focus.
   def Blank(repel: string): void
     if bufwinnr(this.padBufs.r) <= bufwinnr(this.padBufs.l) + 1
         || bufwinnr(this.padBufs.b) <= bufwinnr(this.padBufs.t) + 3
-      # Exit() changes the window layout (tabclose, tabnew, ...), which
-      # newer Vim refuses to allow synchronously from within a WinEnter
-      # autocmd (E1312). Defer it to run right after this autocmd
-      # finishes instead, when that restriction no longer applies.
+      # Exit changes the window layout, which Vim does not allow inside a
+      # WinEnter autocommand, error E1312. Run it just after this autocommand.
       timer_start(0, (_) => Exit())
       return
     endif
@@ -598,9 +571,9 @@ export class FocusSession
     endif
   enddef
 
-  # Creates one pad window via `openCmd` (e.g. 'vertical topleft new'),
-  # configures it as inert chrome, and returns to the window that was
-  # current beforehand - called four times in Enter(), once per side.
+  # METHOD: Create one pad window with openCmd, such as vertical topleft
+  # new, make it inert, and return to the previous window. Enter calls this
+  # once for each side.
   def InitPad(openCmd: string): number
     execute openCmd
     setlocal buftype=nofile bufhidden=wipe nomodifiable nobuflisted noswapfile
@@ -617,9 +590,9 @@ export class FocusSession
     return bufNr
   enddef
 
-  # Sizes and positions one already-created pad, and wires its
-  # Blank()/HideStatusline() autocmds. `repel` is the wincmd direction to
-  # bounce back in if the user ends up in this pad anyway.
+  # METHOD: Size and place one pad, and set its Blank and HideStatusline
+  # autocommands. repel is the wincmd direction that moves the cursor back
+  # out of the pad.
   def SetupPad(bufNr: number, vert: bool, size: number, repel: string): void
     var win: number = bufwinnr(bufNr)
     execute ':' .. win .. 'wincmd w'
@@ -630,8 +603,8 @@ export class FocusSession
       autocmd WinLeave <buffer> ++nested t:bartleby_focus_session.HideStatusline()
     augroup END
 
-    # Padding out short pad windows with blank lines hides GUI scrollbars
-    # that would otherwise appear alongside an obviously-empty buffer.
+    # Fill a short pad with blank lines, so the GUI shows no scrollbar beside
+    # an empty buffer.
     var diff: number = winheight(0) - line('$')
     if diff > 0
       setlocal modifiable
@@ -665,9 +638,8 @@ export class FocusSession
     this.SetupPad(this.padBufs.r, true, hmargin - xoff, 'h')
   enddef
 
-  # Recolors the chrome highlight groups to blend into the background,
-  # so the pad windows and (already-blanked) statusline/vertical-split
-  # fillchars read as empty space rather than visible borders.
+  # METHOD: Give the chrome highlight groups the background color, so the
+  # pads, the statusline, and the split lines look like empty space.
   def Tranquilize(): void
     var bg: string = synIDattr(synIDtrans(hlID('Normal')), 'bg#')
     var gui: bool = has('gui_running') || (has('termguicolors') && &termguicolors)

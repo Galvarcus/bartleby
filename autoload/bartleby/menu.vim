@@ -5,51 +5,49 @@ if exists('s:is_loaded') || v:version < 902 || &cp
 endif
 var is_loaded: bool = true
 
+##############################################################################
 # Plugin_Name: Bartleby
+# menu.vim: a reusable menu widget for the terminal and the GUI.
 # License: GNU GPL 3.0
-# ============================================================================
-# menu.vim — generic, reusable TUI/GUI menu widget (Vim 9.2 classes)
 #
-# Design
-# ------
-# Two complementary, opt-in ways to present the same item tree:
+# Design: one item tree, shown in two ways that can be used together.
 #
-#   1. Popup mode (the default, and the one the hotkey toggles):
-#      rendered with Vim's own popup engine (popup_create()).
-#      - In the GUI, the root is a titled, bordered popup positioned via
-#        `pos` (cursor/center/coords), same as any submenu.
-#      - In the terminal, the root instead renders as a full-width,
-#        borderless, titleless menu bar along the top of the screen
-#        (Midnight-Commander style). Selecting a bar item opens a
-#        bordered, titleless dropdown one row below it, with its content
-#        left-aligned under that item's label. Every level below the top
-#        one — in both GUI and terminal — is a bordered, titleless popup
-#        cascading to the right of its parent, as before.
-#      This is what SetupToggle() wires a hotkey to.
+#   1. Popup mode, the default, and the mode that the hotkey toggles.
+#      Drawn with popup_create.
+#      In the GUI, the root is a bordered popup with a title, placed by
+#      pos: at the cursor, centered, or at a line and column.
+#      In the terminal, the root is a menu bar across the top of the
+#      screen, without border or title, like Midnight Commander. An
+#      item on the bar opens a bordered dropdown one row below it,
+#      aligned under the item's label.
+#      In both, each deeper level is a bordered popup without a title,
+#      to the right of its parent. SetupToggle maps a key to this mode.
 #
-#   2. Native mode (opt-in, via RegisterAsVimMenu()):
-#      builds real :amenu entries from the same item tree, so the menu
-#      also shows up in gVim's menu bar / can be run with :emenu. This is
-#      independent of the popup and purely additive.
+#   2. Native mode, optional, through RegisterAsVimMenu. Builds :amenu
+#      entries from the same tree, so the menu also appears in the gVim
+#      menu bar and runs with :emenu. It does not change the popup.
 #
-# Selection highlighting uses matchaddpos() via win_execute() rather than
-# text-properties — text-properties only compose correctly for the first
-# highlighted span per screen line in a multi-column/multi-match popup,
-# which was a hard-won lesson from an earlier widget (popupbuttons.vim).
-# ============================================================================
+# The selection highlight uses matchaddpos through win_execute, not text
+# properties. Text properties show correct colors only for the first
+# highlighted span on a line, which popupbuttons.vim showed earlier.
+##############################################################################
 
-var menus: dict<any> = {}          # name -> Menu instance, for hotkey dispatch
-var itemRegistry: dict<any> = {}   # id -> MenuItem, for native :amenu dispatch
+# Menu name to Menu, for the hotkey dispatch.
+var menus: dict<any> = {}
+# Item id to MenuItem, for the native :amenu dispatch.
+var itemRegistry: dict<any> = {}
 var idSeed: number = 0
 
-# Dispatch target for <ScriptCmd> mappings created by SetupToggle().
+# FUNCTION: Toggle the menu with the given name. The target of the ScriptCmd
+# mappings that SetupToggle creates.
 export def MenuToggle(name: string)
   if menus->has_key(name)
     menus[name].Toggle()
   endif
 enddef
 
-# Dispatch target for <ScriptCmd> entries created by RegisterAsVimMenu().
+# FUNCTION: Run the item with the given id. The target of the ScriptCmd
+# entries that RegisterAsVimMenu creates.
 export def MenuInvoke(id: string)
   if itemRegistry->has_key(id)
     var it = itemRegistry[id]
@@ -59,14 +57,16 @@ export def MenuInvoke(id: string)
   endif
 enddef
 
-# ----------------------------------------------------------------------------
+# CLASS: One menu entry: a label with an action, or a submenu.
 export class MenuItem
   public var label: string
-  public var Action: func = null_function     # func(item: MenuItem)
+  # Called as Action(item) with this MenuItem.
+  public var Action: func = null_function
   public var data: any = v:none
   public var enabled: bool = true
   public var separator: bool = false
-  public var items: list<any> = []            # child MenuItems (non-empty = submenu)
+  # Child MenuItems. A nonempty list makes this entry a submenu.
+  public var items: list<any> = []
 
   def new(this.label, Action: func = null_function, data: any = v:none)
     this.Action = Action
@@ -90,16 +90,16 @@ export class MenuItem
   enddef
 endclass
 
-# ----------------------------------------------------------------------------
+# CLASS: A menu of MenuItems, shown as popups or as a native menu.
 export class Menu
-  # identity
+  # Identity.
   var name: string
   var title: string
 
-  # content
+  # Content.
   var items: list<any> = []
 
-  # appearance — override any of these before opening
+  # Appearance. Change any of these before the menu opens.
   public var normal_hl: string = 'Pmenu'
   public var select_hl: string = 'PmenuSel'
   public var disabled_hl: string = 'Comment'
@@ -107,26 +107,35 @@ export class Menu
   public var padding: list<number> = [0, 1, 0, 1]
   public var minwidth: number = 14
   public var submenu_marker: string = ' >'
-  public var pos: any = 'cursor'              # 'cursor' | 'center' | [line, col]
+  # One of cursor, center, or a list of line and column.
+  public var pos: any = 'cursor'
 
-  # behaviour
+  # Behavior.
   public var close_on_select: bool = true
   public var wrap_navigation: bool = true
 
-  # internal state — do not set directly
-  var _stack: list<number> = []           # popup ids, root..deepest
-  var _itemsOf: dict<any> = {}            # winid -> items list shown there
-  var _cur: dict<number> = {}             # winid -> selected index
-  var _selMatch: dict<number> = {}        # winid -> matchid of selection hl
-  var _isBar: dict<bool> = {}             # winid -> true if rendered as a menu bar
-  var _barCols: dict<any> = {}            # winid -> list<number>, start col per item
+  # Internal state. Do not set these directly.
+  # Popup ids, from the root to the deepest level.
+  var _stack: list<number> = []
+  # Window id to the items shown in that window.
+  var _itemsOf: dict<any> = {}
+  # Window id to its selected index.
+  var _cur: dict<number> = {}
+  # Window id to the match id of its selection highlight.
+  var _selMatch: dict<number> = {}
+  # Window id to true when the window is a menu bar.
+  var _isBar: dict<bool> = {}
+  # Window id to the start column of each item on the bar.
+  var _barCols: dict<any> = {}
 
   def new(this.name, title: string = '')
     this.title = title == '' ? this.name : title
     menus[this.name] = this
   enddef
 
-  # ---------------- building ----------------
+  ############################################################################
+  # SECTION: Building.
+  ############################################################################
 
   def AddItem(label: string, Action: func = null_function, data: any = v:none): MenuItem
     var item = MenuItem.new(label, Action, data)
@@ -140,9 +149,11 @@ export class Menu
     this.items->add(sep)
   enddef
 
-  # ---------------- hotkey ----------------
+  ############################################################################
+  # SECTION: Hotkey.
+  ############################################################################
 
-  # Map {lhs} in {mode} to toggle this menu open/closed.
+  # METHOD: Map lhs in mode to toggle this menu.
   def SetupToggle(lhs: string, mode: string = 'n')
     execute $'{mode}noremap <silent> {lhs} <ScriptCmd>call MenuToggle("{this.name}")<CR>'
   enddef
@@ -172,16 +183,19 @@ export class Menu
   enddef
 
   def Close()
-    # close deepest-first
+    # Close the deepest level first.
     for id in reverse(copy(this._stack))
       if !empty(popup_getpos(id))
-        popup_close(id)   # triggers callback -> _OnClose() cleans up state
+        # This runs the popup callback, and _OnClose clears the state.
+        popup_close(id)
       endif
     endfor
     this._stack = []
   enddef
 
-  # ---------------- rendering ----------------
+  ############################################################################
+  # SECTION: Rendering.
+  ############################################################################
 
   def _Lines(items: list<any>): list<string>
     var w = this.minwidth
@@ -201,10 +215,10 @@ export class Menu
     return lines
   enddef
 
-  # Lay out the top-level items on one line, Midnight-Commander-bar style.
-  # Returns the padded line plus each item's 1-based start column (so the
-  # dropdown opened from an item can align its content to that column).
-  # Separators are not supported on the bar; they get column -1.
+  # METHOD: Lay out the top-level items on one line, as a menu bar. Return
+  # the padded line and the 1-based start column of each item, so that the
+  # dropdown of an item aligns under it. The bar has no separators: a
+  # separator gets column -1.
   def _BarLine(items: list<any>): dict<any>
     var cols: list<number> = []
     var line = ' '
@@ -225,8 +239,8 @@ export class Menu
     return {line: line, cols: cols}
   enddef
 
-  # Terminal-Vim root: a full-width, borderless, titleless bar at the top
-  # of the screen. GUI root uses _ShowLevel() instead — see Open().
+  # METHOD: Show the terminal root: a menu bar across the top of the screen,
+  # without border or title. The GUI root uses _ShowLevel. See Open.
   def _ShowBar()
     var items = this.items
     var built = this._BarLine(items)
@@ -286,7 +300,9 @@ export class Menu
     this._Highlight(winid)
   enddef
 
-  # ---------------- selection / highlighting ----------------
+  ############################################################################
+  # SECTION: Selection and highlighting.
+  ############################################################################
 
   def _NextSelectable(items: list<any>, from: number, dir: number): number
     var n = len(items)
@@ -329,7 +345,9 @@ export class Menu
     unlet g:__menu_mid
   enddef
 
-  # ---------------- input handling ----------------
+  ############################################################################
+  # SECTION: Input handling.
+  ############################################################################
 
   def _Filter(winid: number, key: string): bool
     var items = this._itemsOf[winid]
@@ -441,11 +459,13 @@ export class Menu
     endif
   enddef
 
-  # ---------------- optional: native GUI/terminal menu (:emenu) ----------------
+  ############################################################################
+  # SECTION: Native menu for the GUI and :emenu, optional.
+  ############################################################################
 
-  # Additionally builds real :amenu entries from this.items, so the same
-  # menu also appears in gVim's menu bar and can be invoked with :emenu.
-  # Independent of the popup — does not affect Toggle()/Open()/Close().
+  # METHOD: Build :amenu entries from this.items, so that the menu also
+  # appears in the gVim menu bar and runs with :emenu. The popup menu,
+  # Toggle, Open, and Close do not change.
   def RegisterAsVimMenu(root: string = '', priority: string = '')
     var r = root == '' ? this.title : root
     this._BuildVimMenu(r, this.items, priority)

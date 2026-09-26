@@ -7,11 +7,10 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# buttonspopup.vim - generic reusable popup of clickable buttons.
+# buttonspopup.vim: a reusable popup of clickable buttons.
 # License: GNU GPL 3.0
 #
-# USAGE
-# -----
+# Usage:
 #   import autoload 'bartleby/buttonspopup.vim' as BP
 #
 #   var buttons = [
@@ -25,106 +24,84 @@ var is_loaded: bool = true
 #     popup:  {title: ' Confirm ', border: []},
 #     callback: (selected: any) => {
 #       if selected != null
-#         # the caller decides whether/how to invoke it - the popup class
-#         # itself never calls a button's Action.
 #         call(selected.Action, [])
 #       endif
 #     },
 #   })
 #   menu.Show()
 #
+# The popup never calls a button's Action. The callback decides.
+#
 # Button.new(label, Action, data = v:none)
-#   label   string   - text shown on the button. A plain string renders as
-#                       the original single-line '[ label ]' bracket style.
-#                       A label containing "\n" instead renders as a
-#                       bordered multi-line card - the first line reads as
-#                       a title, with no special styling of its own; how
-#                       you split further lines (e.g. word-wrapping a
-#                       longer synopsis) is entirely up to the caller (see
-#                       bartleby/wrap.vim for a small helper).
-#   Action  funcref  - associated function; returned untouched to the
-#                       callback (never invoked by this class)
-#   data    any      - optional caller-defined payload carried alongside
-#                       the button (e.g. an id, a record, ...); defaults
-#                       to v:none when omitted
+#   label   string    Text of the button. A label without a line break
+#                     shows as one line in brackets. A label with a line
+#                     break shows as a bordered card, and its first line
+#                     reads as a title. The caller splits the lines, for
+#                     example with bartleby/wrap.vim.
+#   Action  funcref   Returned to the callback unchanged, never called.
+#   data    any       Optional payload for the caller, such as an id.
+#                     Default v:none.
 #
 # PopupButtonMenu.new(buttons: list<Button>, opts: dict<any> = {})
-#   opts is a dict<any> with three (all optional except callback) sections.
-#   NOTE: opts' own keys (button/popup/callback and their sub-keys below)
-#   are a data contract, not Vim identifiers - left as originally
-#   documented (snake_case) rather than renamed to camelCase, so any other
-#   caller of this widget doesn't break.
+#   opts has three sections. Only callback is required. The keys of opts
+#   are a data contract, not Vim identifiers, so they keep snake_case.
 #
-#     opts.popup     any popup_create() option: title, border, pos, line,
-#                     col, minwidth, zindex, highlight, etc. Passed straight
-#                     through. 'filter' and 'callback' are reserved and
-#                     overwritten by this class.
+#   opts.popup      Any popup_create option, such as title, border, pos,
+#                   line, col, minwidth, zindex, or highlight. Passed
+#                   through unchanged, except filter and callback, which
+#                   this class sets.
 #
-#     opts.button     columns      number  grid column count
-#                                          (default: len(buttons), i.e. 1 row)
-#                     spacing      number  blank cols between buttons within
-#                                          a row (default: 2)
-#                     row_spacing  number  blank lines between button rows
-#                                          (default: 1)
-#                     width        number  force a minimum width for every
-#                                          button (default: 0, meaning each
-#                                          button is sized independently to
-#                                          fit its own content - single-line
-#                                          text, or the longest line of a
-#                                          multi-line card)
-#                     normal_hl    string  highlight group, unselected
-#                                          button (default 'Pmenu')
-#                     select_hl    string  highlight group, selected
-#                                          button (default 'PmenuSel')
-#                     selected     number  initially-highlighted button
-#                                          index (default 0)
+#   opts.button     columns      number  Grid columns. Default: one row.
+#                   spacing      number  Blank columns between buttons in
+#                                        a row. Default 2.
+#                   row_spacing  number  Blank lines between rows.
+#                                        Default 1.
+#                   width        number  Minimum width of every button.
+#                                        Default 0: each button fits its
+#                                        own text or longest card line.
+#                   normal_hl    string  Highlight of an unselected
+#                                        button. Default Pmenu.
+#                   select_hl    string  Highlight of the selected
+#                                        button. Default PmenuSel.
+#                   selected     number  Index of the first selected
+#                                        button. Default 0.
 #
-#     opts.on_key     optional func(id: number, selected: number,
-#                     key: string): bool, tried before this popup's own
-#                     key handling on every keypress. Return true to mean
-#                     "handled, stop here"; false falls through to the
-#                     built-in navigation/activation keys as normal. Lets
-#                     a caller layer its own keys onto an otherwise-
-#                     unmodified popup (see bartleby/corkboard.vim for an
-#                     example: 'e' to edit, J/K to reorder).
+#   opts.on_key     Optional func(id: number, selected: number,
+#                   key: string): bool, called before the popup's own key
+#                   handling on every key. True means the key is handled.
+#                   False passes it on to the built-in keys. Corkboard
+#                   uses this for e to edit and J and K to reorder.
 #
-#     opts.callback   REQUIRED. func(any). Called once, when the popup
-#                     closes, with the activated Button object, or `null`
-#                     if the popup was cancelled (<Esc>, or a click outside
-#                     the popup).
+#   opts.callback   Required func(any). Called once when the popup closes,
+#                   with the activated Button, or null when the popup was
+#                   cancelled by Esc or a click outside it.
 #
-# menu.Show(): number   -- opens the popup, returns its winid.
+# menu.Show(): number   Opens the popup and returns its window id.
 #
-# NAVIGATION
-# ----------
-#   <Left>/<Right>/<Tab>/<S-Tab> / h / l   move selection (wraps)
-#   <Up>/<Down> / k / j                    move by one grid row (wraps per
-#                                           column)
-#   <CR> / <Space>                         activate the selected button
-#   <LeftMouse>                            click a button to activate it
-#                                           directly; clicking outside the
-#                                           popup cancels it
-#   <ScrollWheelUp>/<ScrollWheelDown>      scroll when content exceeds
-#                                           opts.popup.maxheight (default:
-#                                           terminal height minus a small
-#                                           margin) - selection also
-#                                           auto-scrolls into view as it
-#                                           moves past the visible area
-#   <Esc> / <C-c>                          cancel (callback receives null)
+# Keys:
+#   Left, Right, Tab, S-Tab, h, l   Move the selection. Wraps around.
+#   Up, Down, k, j                  Move one grid row. Wraps per column.
+#   CR, Space                       Activate the selected button.
+#   LeftMouse                       Activate the clicked button. A click
+#                                   outside the popup cancels it.
+#   ScrollWheelUp, ScrollWheelDown  Scroll when the content is taller
+#                                   than opts.popup.maxheight. Default:
+#                                   the screen height less a margin. The
+#                                   selection also scrolls into view.
+#   Esc, C-c                        Cancel. The callback receives null.
 ##############################################################################
 
 import 'Logger/logger.vim' as Log
 
 var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
 
-# [topLeft, topRight, bottomLeft, bottomRight, horizontal, vertical].
-# Plain ASCII, deliberately - Unicode box-drawing characters are in
-# Unicode's "ambiguous width" category, and a mismatch between what a
-# terminal/font actually renders them as and what strdisplaywidth()
-# assumes throws off every highlight span computed from it. Gating on
-# 'ambiwidth' wasn't sufficient to avoid this in practice, since that
-# reflects Vim's own assumption rather than the terminal's actual
-# rendering - so ASCII stays unconditional for now.
+# FUNCTION: Return the box corners and edges in this order: top left,
+# top right, bottom left, bottom right, horizontal, vertical.
+# Plain ASCII on purpose. Unicode box-drawing characters have ambiguous
+# width, and when the terminal draws them at a different width than
+# strdisplaywidth assumes, every highlight span computed from them is
+# off. The ambiwidth option did not prevent this, because it describes
+# what Vim assumes, not what the terminal draws.
 def BoxChars(): list<string>
   return ['+', '+', '+', '+', '-', '|']
 enddef
@@ -139,7 +116,7 @@ export class Button
 endclass
 
 export class PopupButtonMenu
-  # ---- configuration (set from opts in the constructor) ----
+  # Configuration, set from opts in the constructor.
   var buttons: list<Button>
   var callback: func(any)
   var columns: number = 1
@@ -149,15 +126,11 @@ export class PopupButtonMenu
   var normalHl: string = 'Pmenu'
   var selectHl: string = 'PmenuSel'
   var popupOpts: dict<any> = {}
-  # Optional func(id: number, selected: number, key: string): bool, tried
-  # before this popup's own key handling. Returning true means "handled,
-  # stop here"; false falls through to the built-in navigation/activation
-  # keys as normal. Lets a caller (e.g. corkboard.vim) add its own keys to
-  # an otherwise-unmodified PopupButtonMenu. null (the default) means no
-  # hook - behavior is identical to before this option existed.
+  # Optional key hook from opts.on_key. See the Usage section in the file
+  # header. Null means no hook.
   var OnKey: any = null
 
-  # ---- runtime state ----
+  # Runtime state.
   var id: number = -1
   var lines: list<string> = []
   var positions: list<dict<any>> = []
@@ -188,7 +161,9 @@ export class PopupButtonMenu
     this.selected = max([0, min([len(this.buttons) - 1, get(buttonOpts, 'selected', 0)])])
   enddef
 
-  # -------------------------- public API --------------------------------
+  ############################################################################
+  # SECTION: Public API.
+  ############################################################################
 
   def Show(): number
     this.BuildLayout()
@@ -210,39 +185,30 @@ export class PopupButtonMenu
       this.popupOpts.padding = [0, 1, 0, 1]
     endif
     if !has_key(this.popupOpts, 'maxheight')
-      # Leaves room for the tabline/statusline/command line - Vim shows a
-      # scrollbar automatically once content exceeds this (it renders in
-      # the right-hand padding column reserved above, so it doesn't eat
-      # into card text). Reaching it while a button is selected still
-      # needs explicit handling below, though - see EnsureVisible().
+      # Leave room for the tabline, statusline, and command line. Vim shows a
+      # scrollbar when the content is taller, in the right padding column,
+      # so it does not cover card text. Keeping the selected button visible
+      # still needs EnsureVisible.
       this.popupOpts.maxheight = max([3, &lines - 6])
     endif
     if !has_key(this.popupOpts, 'mapping')
-      # Default 'mapping' is TRUE, meaning keys typed while this popup has
-      # focus are first run through the user's own :map'd bindings before
-      # ever reaching our filter. Two problems follow from that: (1) a
-      # personal mapping on <Left> (very common - e.g. disabling arrow
-      # keys, or binding <Left>/<Right> to window/buffer navigation)
-      # intercepts the key outright, so our filter never sees it at all;
-      # and (2) even when nothing is mapped, Vim still has to wait up to
-      # 'timeoutlen' (1000ms by default) to see whether a longer mapped
-      # sequence is coming, which is the real source of the sluggishness.
-      # Since this popup implements its own complete key handling, we
-      # don't want any of that: take the keys raw.
+      # The default mapping value is true: typed keys first go through the
+      # user's own mappings. A mapping on Left or Right then takes the key
+      # before this filter sees it, and Vim waits up to timeoutlen for
+      # longer mapped sequences, which makes the popup feel slow. This popup
+      # handles every key itself, so it takes the keys unmapped.
       this.popupOpts.mapping = false
     endif
 
-    # bound-method funcrefs: Vim resolves `this` when these are invoked
-    # later by the popup, so Filter/HandleClose keep full access to the
-    # object's state.
+    # Bound method funcrefs: Vim resolves this when the popup calls them,
+    # so Filter and HandleClose keep full access to the object.
     this.popupOpts.filter = this.Filter
     this.popupOpts.callback = this.HandleClose
 
     this.id = popup_create(this.lines, this.popupOpts)
 
-    # Each button gets its own always-on highlight match (normalHl, or
-    # selectHl for the initially-selected one). See AddMatch() for why
-    # matchaddpos() is used here instead of text properties.
+    # Each button has its own highlight match: normalHl, or selectHl for the
+    # selected one. AddMatch explains why matchaddpos is used.
     this.matchIds = []
     for pos in this.positions
       var hl: string = pos.idx == this.selected ? this.selectHl : this.normalHl
@@ -252,14 +218,15 @@ export class PopupButtonMenu
     return this.id
   enddef
 
-  # -------------------------- internals ---------------------------------
+  ############################################################################
+  # SECTION: Internals.
+  ############################################################################
 
-  # A label with no "\n" renders exactly as before: single line, sized to
-  # its own '[ label ]' text (or opts.button.width, whichever is wider).
-  # A label containing "\n" renders as a bordered box instead - each line
-  # left-aligned and padded to the widest line (or opts.button.width).
-  # Returns {lines: list<string>, width: number} - every line in `lines`
-  # has the same display width, so callers never need to pad further.
+  # METHOD: Render one button. A label without a line break is one line,
+  # as wide as its bracketed text or opts.button.width, whichever is
+  # wider. A label with a line break is a bordered box, each line padded
+  # to the widest line or opts.button.width. Returns a dict with lines
+  # and width. All lines have the same display width.
   def RenderButton(button: Button): dict<any>
     var cellLines: list<string> = split(button.label, "\n", true)
 
@@ -298,9 +265,8 @@ export class PopupButtonMenu
     var curLine: number = 1
 
     for r in range(rowCount)
-      # Render every button in this row first, so rowHeight (the tallest
-      # of them) is known before any of their lines are assembled -
-      # shorter buttons in the same row get blank-padded to match.
+      # Render every button of the row first, so that the row height, the
+      # tallest button, is known. Shorter buttons get blank lines to match.
       var rendered: list<dict<any>> = []
       for c in range(this.columns)
         if idx + c >= buttonCount
@@ -346,34 +312,25 @@ export class PopupButtonMenu
     this.positions = newPositions
   enddef
 
-  # Adds a highlight match for one button inside the popup window and
-  # returns its match-id, so it can be individually removed later.
+  # METHOD: Add a highlight match for one button in the popup window and
+  # return its match id, so that it can be removed on its own.
   #
-  # This uses matchaddpos() (via win_execute(), since matchaddpos() always
-  # targets the *current* window and a popup can't be made current without
-  # closing it) rather than text properties (prop_add()). Text properties
-  # turned out to be unreliable for this: with several separate highlighted
-  # spans sharing one popup screen line, only the first span's colors were
-  # actually composited into the popup's rendered surface - every span
-  # after it fell back to a generic "this is a difference" attribute
-  # (bold) instead of applying normalHl/selectHl. matchaddpos() has none
-  # of that limitation: each match is composited independently regardless
-  # of how many others share the line, and (unlike the prop_add() version)
-  # its highlight is picked up by the very next `redraw` reliably, with no
-  # stale-by-one-keystroke lag. matchaddpos() also accepts several [line,
-  # col, length] triples in one call, which is what lets a multi-line
-  # card's whole box - border and all - be one single match/one match-id,
-  # the same as a single-line button's one span always was.
+  # Uses matchaddpos through win_execute, because matchaddpos works on the
+  # current window and a popup cannot become current. Text properties do
+  # not work here: with several highlighted spans on one popup line, only
+  # the first span keeps its colors. The others show as bold. matchaddpos
+  # draws each match independently, shows it on the next redraw, and takes
+  # several positions in one call, so a whole card, border included, is
+  # one match with one id.
   def AddMatch(pos: dict<any>, hlGroup: string): number
     var output: string = win_execute(this.id,
       $'echo matchaddpos("{hlGroup}", {string(pos.spans)})')
     return str2nr(trim(output))
   enddef
 
-  # Scrolls the popup, if needed, so `targetLine` (the top line of a
-  # button's own spans) is visible - needed because this class's own key
-  # handling means Vim's usual "moving the cursor scrolls the view"
-  # popup behavior never gets a chance to run for keyboard navigation.
+  # METHOD: Scroll the popup so that targetLine, the top line of a button,
+  # is visible. The popup handles its own keys, so Vim's own scrolling on
+  # cursor movement never runs for keyboard navigation.
   def EnsureVisible(targetLine: number): void
     var topLine: number = str2nr(trim(win_execute(this.id, 'echo line("w0")')))
     var botLine: number = str2nr(trim(win_execute(this.id, 'echo line("w$")')))
@@ -466,7 +423,9 @@ export class PopupButtonMenu
     endif
   enddef
 
-  # -------------------------- static helpers ------------------------------
+  ############################################################################
+  # SECTION: Static helpers.
+  ############################################################################
 
   static def NextIndex(selected: number, total: number, columns: number,
       direction: string): number

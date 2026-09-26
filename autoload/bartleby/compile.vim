@@ -7,27 +7,23 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# compile.vim - Compile pipeline (v2). Three independent export paths:
-#   Manuscript (short story/novel/novel w/ parts) - submission PDF only,
-#     via xelatex + tools/latex/manuscript.tex.
-#   Book (short story/novel/novel w/ parts) - reader-facing PDF/HTML/
-#     EPUB/Markdown, via xelatex + tools/latex/book.tex or Pandoc's own
-#     HTML/EPUB writers + tools/css/book.css.
-#   Screenplay - PDF/HTML/FDX via screenplain, NOT Pandoc - screenplain
-#     has no CLI font-override flag, so g:bartleby_compile_screenplay_font
-#     is currently unused (reserved for if/when that changes).
+# compile.vim: compiles a scrive into one output file. Three kinds:
+#   Manuscript  Submission PDF, through Pandoc with pdflatex and
+#               tools/latex/manuscript.tex, a template for the sffms class.
+#   Book        PDF, HTML, EPUB, or Markdown for readers. PDF uses xelatex
+#               and tools/latex/book.tex. HTML and EPUB use Pandoc's own
+#               writers and tools/css/book.css.
+#   Screenplay  PDF, HTML, or FDX through screenplain, not Pandoc.
+#               screenplain has no font option, so
+#               g:bartleby_compile_screenplay_font has no effect yet.
 #
-# Bartleby's own job stops at concatenating the included documents in
-# binder order and shelling out with the right resource files - no
-# hand-rolled format conversion where Pandoc/LaTeX/screenplain already
-# does it (this replaces v1's StripMarkdown() - plaintext output is gone;
-# Pandoc's own `plain` writer or plain Markdown output covers that need).
+# Bartleby joins the included documents in binder order and runs the
+# converter with the right template. It converts no formats itself.
 #
-# CompileTarget is defined before the functions that use it, not just
-# by convention: many of them use CompileTarget in their own parameter
-# or return type, and Vim9 resolves a function's signature eagerly at
-# definition time - unlike a class used only inside a function body,
-# which can forward-reference one defined later in the file just fine.
+# CompileTarget is defined before the functions that use it because many
+# of them name it in their parameter or return type. Vim9 resolves a
+# signature when the function is defined, so a class named there must
+# already exist. A class used only inside a function body can come later.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -70,11 +66,8 @@ const KIND_FORMATS: dict<list<string>> = {
 const PANDOC_EXT: dict<string> = {PDF: 'pdf', HTML: 'html', EPUB: 'epub', Markdown: 'md'}
 const SCREENPLAY_EXT: dict<string> = {PDF: 'pdf', HTML: 'html', FDX: 'fdx'}
 
-##############################################################################
-# CompileTarget - a saved preset. Breaking change from v1's shape
-# (kind/font/coverImage/doubleSpaced replace the old flat format list) -
-# old saved targets are simply incompatible, per your call.
-##############################################################################
+# CLASS: A saved compile preset: kind, format, font, cover image,
+# spacing, separator, and the included documents.
 
 export class CompileTarget
   var name: string = ''
@@ -142,19 +135,17 @@ export def DeleteTarget(project: Pj.Project, name: string): void
   endif
 enddef
 
-##############################################################################
-# Contents selection - a checkbox-style tree buffer, unchanged in shape
-# from v1. Kept outside the unified popup per your decision - defaults
-# to "everything," reachable separately to customize a saved target.
-##############################################################################
+# Contents selection: a tree buffer with a checkbox per document. It is
+# separate from the settings popup, and all documents are included by
+# default.
 
 const SELECT_BUF: string = 'Bartleby-Compile-Select'
 const SELECT_HEADER: string = '*** Compile ***'
-# Lines above the tree: the header and the project title. Every
-# cursor-line-to-row mapping below subtracts this.
+# Lines above the tree: the header and the project title. Every mapping
+# from a cursor line to a row subtracts this.
 const SELECT_HEADER_LINES: number = 2
-# Only these top-level folders feed a compile (see ConcatenateManuscript/
-# ConcatenateBook), so only their contents are offered for selection.
+# Only these top-level folders go into a compile, see ConcatenateManuscript
+# and ConcatenateBook, so only their contents are listed.
 const COMPILE_ROLES: list<string> = [
   BI.ROLE_FRONT_MATTER, BI.ROLE_MANUSCRIPT, BI.ROLE_BACK_MATTER,
 ]
@@ -169,9 +160,9 @@ class SelectState
   enddef
 endclass
 
-# The Front Matter, Manuscript, and Back Matter folders and everything
-# under them, in tree order. Characters, Research, and custom top-level
-# folders are left out.
+# FUNCTION: Return the Front Matter, Manuscript, and Back Matter folders
+# and everything under them, in tree order. Characters, Research, and
+# custom top-level folders are left out.
 def SelectableRows(project: Pj.Project): list<T.Row>
   var rows: list<T.Row> = []
   var inCompileRoot: bool = false
@@ -197,7 +188,7 @@ def RenderSelectLines(rows: list<T.Row>, included: dict<bool>): list<string>
     var box: string = row.item.IsDocument()
       ? (get(included, row.item.id, false) ? '[x]' : '[ ]') : '   '
     var marker: string = row.item.IsFolder() ? '▸ ' : '· '
-    # A trailing "/" marks folders, for the Directory highlight in
+    # A trailing slash marks a folder, for the Directory highlight in
     # syntax/bartleby-compile-select.vim. Display only.
     var title: string = row.item.IsFolder() ? row.item.title .. '/' : row.item.title
     return repeat('  ', row.depth) .. box .. ' ' .. marker .. title
@@ -272,8 +263,8 @@ export def SelectContents(project: Pj.Project, preselected: list<string>,
 
   execute 'vertical topleft :40split ' .. SELECT_BUF
   setlocal buftype=nofile bufhidden=wipe noswapfile nobuflisted nomodifiable
-  # Long titles wrap at word boundaries, and each wrapped line starts
-  # under the title text: shift:6 skips the "[x] · " prefix.
+  # Long titles wrap at word boundaries. shift:6 starts each wrapped line
+  # under the title text, after the checkbox and marker.
   setlocal wrap linebreak breakindent breakindentopt=shift:6
   setlocal nonumber norelativenumber nofoldenable
   setlocal winfixwidth
@@ -298,21 +289,16 @@ def ShowSelectHelp(): void
   ])
 enddef
 
-##############################################################################
-# Wizard: name -> kind -> format -> (spacing, if Manuscript) -> contents
-# -> a single FormPopup for the remaining fields (font, cover image if
-# Book, separator if not Screenplay). This is the "reduced to one popup
-# where possible" compromise while the fully unified widget (inputpopup.vim)
-# is its own separate phase.
-##############################################################################
+# FUNCTION: Return the default font for a compile kind.
 
 def DefaultFont(kind: string): string
   return kind ==# KIND_BOOK ? compilebookfont : compilemanuscriptfont
 enddef
 
-# `existing` is null_object for a brand-new target, or the target being
-# edited - pre-fills every field and overwrites in place on submit
-# (deleting the old file first if the name itself changed).
+# FUNCTION: Show the settings form: name, font, cover image for Book, and
+# separator for all kinds except Screenplay. existing is null_object for a
+# new target. For an edited target, it fills every field, and a changed
+# name deletes the old target file.
 def FinishWizard(project: Pj.Project, kind: string, format: string,
     doubleSpaced: bool, ids: list<string>, existing: CompileTarget): void
   var fields: list<list<string>> = [['name'], ['font']]
@@ -353,10 +339,9 @@ def FinishWizard(project: Pj.Project, kind: string, format: string,
   form.Open()
 enddef
 
-# Contents selection happens FIRST - all other information gathering
-# (kind, format, spacing, name, font, cover image, separator) happens
-# only after <CR> confirms the selection pane, per preference. Every
-# picker pre-selects the existing value when editing.
+# FUNCTION: Run the compile wizard: contents selection first, then kind,
+# format, spacing for Manuscript, and the settings form. Each picker
+# starts on the existing value when a target is edited.
 def RunTargetForm(project: Pj.Project, existing: CompileTarget): void
   var preselected: list<string> = existing is null_object ? [] : existing.includedIds
   var kindDefault: string = existing is null_object ? KIND_MANUSCRIPT : existing.kind
@@ -389,7 +374,7 @@ def DeleteTargetConfirm(project: Pj.Project, target: CompileTarget): void
 enddef
 
 ##############################################################################
-# Execution.
+# SECTION: Execution.
 ##############################################################################
 
 def OutputDir(project: Pj.Project): string
@@ -418,14 +403,11 @@ def WriteFontOverrideCss(outDir: string, font: string): string
   return path
 enddef
 
-# sffms.cls has a genuine internal bug: its ulem-based bold/smallcaps
-# redefinition breaks plain \section{} (confirmed via a raw LaTeX test,
-# independent of our template/hyperref/Pandoc - "Runaway argument" from
-# \section's own \@hangfrom/\@svsec machinery). Real manuscript format
-# doesn't use sub-headings anyway - scenes within a chapter use the
-# separator, not an H2 - so flattening H2+ to plain text for Manuscript
-# compiles sidesteps the sffms bug rather than fighting it. Book is
-# unaffected (no sffms/ulem involved) and keeps real sub-headings.
+# FUNCTION: Turn level 2 and deeper headings into plain text, for
+# Manuscript only. sffms has a bug: its ulem-based redefinition breaks a
+# plain section command, with a Runaway argument error, also without this
+# template or Pandoc. A manuscript has no subheadings anyway: scenes use
+# the separator. Book does not use sffms and keeps its subheadings.
 def FlattenSubheadings(lines: list<string>): list<string>
   return lines->mapnew((_, line) => substitute(line, '^#\{2,\}\s*', '', ''))
 enddef
@@ -457,11 +439,9 @@ def ReadDocLines(item: BI.BinderItem, binderRoot: string): list<string>
   return readfile(path)
 enddef
 
-# True when `lines` already opens with its own markdown heading - such
-# content self-delineates (a chapter's injected "# Title", or flattened
-# content whose first real item is itself a chapter), so no separator
-# is needed before it; bare prose (a scene, or a legacy flat-file
-# chapter with no heading of its own) does need one.
+# FUNCTION: Return true when lines start with a Markdown heading. Such a
+# block marks its own start, so no separator goes before it. Plain prose,
+# such as a scene, needs one.
 def StartsWithHeading(lines: list<string>): bool
   return !empty(lines) && lines[0] =~# '^#\s'
 enddef
@@ -482,14 +462,11 @@ def JoinSiblingBlocks(blocks: list<list<string>>, separator: string): list<strin
   return lines
 enddef
 
-# Manuscript structure: a ROLE_CHAPTER folder becomes `# <its own title>`
-# (never derived from file content) followed by its scenes, separator-
-# joined. Every other folder (ROLE_PART included) is flattened - walked
-# through with no heading of its own, since sffms has no safe sectioning
-# level below \chapter and real manuscripts don't represent Part
-# structure at all (see the design doc). A bare document at any level
-# (a pre-restructure flat-file chapter) is included as-is, unchanged
-# from the original ConcatenateDocs behavior, for backward compatibility.
+# FUNCTION: Build Manuscript text. A Chapter folder becomes a heading with
+# the folder title, never taken from the file content, followed by its
+# scenes with separators between them. Other folders, Part included, add
+# no heading: sffms has no safe level below chapter, and a manuscript
+# shows no parts. A document directly in a folder is included unchanged.
 def WalkManuscript(items: list<BI.BinderItem>, target: CompileTarget,
     binderRoot: string, separator: string): list<string>
   var blocks: list<list<string>> = []
@@ -510,8 +487,9 @@ def WalkManuscript(items: list<BI.BinderItem>, target: CompileTarget,
   return JoinSiblingBlocks(blocks, separator)
 enddef
 
-# True if any included item under `items` is a ROLE_PART folder - decides
-# whether Book compiles as Part(H1)/Chapter(H2) or plain Chapter(H1).
+# FUNCTION: Return true when an included item under items is a Part folder.
+# This decides whether a Book uses level 1 for parts and level 2 for
+# chapters, or level 1 for chapters.
 def HasIncludedPart(items: list<BI.BinderItem>, includedIds: list<string>): bool
   for item in items
     if item.IsFolder()
@@ -526,10 +504,9 @@ def HasIncludedPart(items: list<BI.BinderItem>, includedIds: list<string>): bool
   return false
 enddef
 
-# Book structure: real \part/\chapter divisions (book.tex has no sffms-
-# style restriction on sectioning depth). partLevel/chapterLevel are '#'
-# or '##' depending on whether Parts are present at all for this target -
-# a bare Chapter is H1 when there's no enclosing Part, H2 when there is.
+# FUNCTION: Build Book text with real part and chapter divisions. book.tex
+# has no sffms limit on depth. partLevel and chapterLevel are one or two
+# number signs: a chapter is level 1 without parts and level 2 with them.
 def WalkBook(items: list<BI.BinderItem>, target: CompileTarget, binderRoot: string,
     separator: string, partLevel: string, chapterLevel: string): list<string>
   var blocks: list<list<string>> = []
@@ -557,14 +534,11 @@ def WalkBook(items: list<BI.BinderItem>, target: CompileTarget, binderRoot: stri
   return JoinSiblingBlocks(blocks, separator)
 enddef
 
-# Front Matter/Back Matter content, for both Manuscript and Book: each
-# direct document gets its own unnumbered heading (Pandoc's `{-}`
-# attribute, which becomes \chapter*{} in LaTeX output regardless of
-# document class) rather than being flattened in as plain, headingless
-# content - a book's front/back matter is conventionally a sequence of
-# distinct unnumbered pieces (dedication, acknowledgments, ...), not one
-# undifferentiated block. Nested folders are walked but don't get a
-# heading of their own; only documents do.
+# FUNCTION: Build Front Matter or Back Matter text, for Manuscript and
+# Book. Each document gets its own unnumbered heading, the Pandoc {-}
+# attribute, which LaTeX shows as an unnumbered chapter. Front and back
+# matter are separate pieces, such as a dedication and acknowledgments,
+# not one block. Nested folders are walked but get no heading.
 def WalkFrontOrBackMatter(items: list<BI.BinderItem>, target: CompileTarget,
     binderRoot: string, separator: string): list<string>
   var blocks: list<list<string>> = []
@@ -580,9 +554,9 @@ def WalkFrontOrBackMatter(items: list<BI.BinderItem>, target: CompileTarget,
   return JoinSiblingBlocks(blocks, separator)
 enddef
 
-# Front Matter/Manuscript/Back Matter are always direct root-level
-# siblings (never nested), so finding one by role is a flat scan, not a
-# recursive tree search.
+# FUNCTION: Return the top-level item with the given role. Front Matter,
+# Manuscript, and Back Matter are always top-level, so a flat scan is
+# enough.
 def FindTopLevelItem(items: list<BI.BinderItem>, role: string): BI.BinderItem
   for item in items
     if item.structureRole ==# role
@@ -592,10 +566,9 @@ def FindTopLevelItem(items: list<BI.BinderItem>, role: string): BI.BinderItem
   return null_object
 enddef
 
-# A Pandoc raw-LaTeX block: passed through to the LaTeX output verbatim,
-# regardless of output format - how Book's \frontmatter/\mainmatter/
-# \backmatter (plain `book` class commands, no package needed) get into
-# a compile that's otherwise built entirely from Markdown.
+# FUNCTION: Return a Pandoc raw LaTeX block, copied to the LaTeX output
+# unchanged. This is how the frontmatter, mainmatter, and backmatter
+# commands of the book class get into a compile built from Markdown.
 def RawLatex(cmd: string): list<string>
   return ['```{=latex}', cmd, '```', '']
 enddef
@@ -649,24 +622,22 @@ export def ConcatenateBook(project: Pj.Project, target: CompileTarget): list<str
     blocks->add(RawLatex('\backmatter') + backBody)
   endif
 
-  # No separator here (unlike every other JoinSiblingBlocks call): these
-  # three blocks are structural transitions - \frontmatter/\mainmatter/
-  # \backmatter already provide their own page-level separation, so a
-  # "* * *" scene-break style separator between them would be a stray
-  # mark with no relationship to the actual prose. StartsWithHeading()
-  # can't detect this itself, since each block starts with a raw-LaTeX
-  # line rather than a heading.
+  # No separator here, unlike every other JoinSiblingBlocks call. These
+  # three blocks are structural transitions: frontmatter, mainmatter, and
+  # backmatter already start new pages, so a scene separator between them
+  # would be a stray mark. StartsWithHeading cannot detect this, because
+  # each block starts with a raw LaTeX line, not a heading.
   return JoinSiblingBlocks(blocks, '')
 enddef
 
-# Joins only the non-empty parts of `parts` with `sep` - blank pieces are
-# omitted entirely rather than leaving stray separators.
+# FUNCTION: Join the nonempty parts with sep. Empty parts leave no stray
+# separator.
 def JoinNonEmpty(parts: list<string>, sep: string): string
   return join(parts->copy()->filter((_, p) => p !=# ''), sep)
 enddef
 
-# "City, State, Country Zip" - any missing piece (including all of them)
-# is simply absent, never a dangling comma/space.
+# FUNCTION: Return City, State, Country Zip. Missing parts are left out,
+# with no stray comma or space.
 def CityStateLine(info: Pf.ProjectInfo): string
   var cityState: string = JoinNonEmpty([info.city, info.state], ', ')
   var cityStateCountry: string = JoinNonEmpty([cityState, info.countrycode], ', ')
@@ -677,20 +648,20 @@ def CountWords(lines: list<string>): number
   return len(split(join(lines, ' ')))
 enddef
 
-# Manuscript-only metadata - sffms-specific, not shared with Book.
-# usecourier maps g:bartleby_compile_manuscript_font to sffms's own
-# courier/not-courier switch (see manuscript.tex for why: sffms doesn't
-# use fontspec, so arbitrary font names don't apply here).
-# "numeral" | "spelled" | "bare-numeral" | "bare-spelled" -> two booleans
-# the template branches on (see book.tex): whether to show the word
-# ("Chapter"/"Part") at all, and whether the number itself is spelled
-# out (via fmtcount's \Numberstring) rather than a plain digit.
+# FUNCTION: Convert a numbering style to the two booleans that book.tex
+# uses: whether to show the word Chapter or Part, and whether to spell
+# the number with fmtcount. Styles: numeral, spelled, bare-numeral, and
+# bare-spelled.
 def BookNumberStyleArgs(prefix: string, style: string): list<string>
   var bare: string = style =~# '^bare' ? 'true' : 'false'
   var spelled: string = style =~# 'spelled' ? 'true' : 'false'
   return [$'--metadata={prefix}bare:{bare}', $'--metadata={prefix}spelled:{spelled}']
 enddef
 
+# FUNCTION: Return the Pandoc metadata arguments for a Manuscript, which
+# only sffms uses. usecourier maps the target font to the Courier switch
+# of sffms, which does not use fontspec, so other font names do not
+# apply. manuscript.tex explains more.
 def ManuscriptMetadataArgs(project: Pj.Project, target: CompileTarget,
     mdLines: list<string>): list<string>
   var args: list<string> = [$'--metadata=wordcount:{CountWords(mdLines)}']
@@ -712,9 +683,8 @@ def PandocMetadataArgs(project: Pj.Project): list<string>
   if info.EffectiveAuthor() !=# ''
     args->add($'--metadata=author:{info.EffectiveAuthor()}')
   endif
-  # realname (info.name, required) is distinct from author (the byline,
-  # which may be a pen name) - the manuscript title page's contact block
-  # shows the real name, not necessarily the byline.
+  # realname, from info.name, is the legal name for the contact block on
+  # the title page. author is the byline, which may be a pen name.
   if info.name !=# ''
     args->add($'--metadata=realname:{info.name}')
   endif
@@ -815,13 +785,12 @@ def ExecutePandoc(project: Pj.Project, target: CompileTarget): void
   endif
 
   if target.kind ==# KIND_MANUSCRIPT
-    # pdflatex, not xelatex - see manuscript.tex for why.
+    # Pandoc's default engine, pdflatex. manuscript.tex explains why.
     args->add($'--template={ManuscriptTemplatePath()}')
-    # Required: Pandoc can't introspect a custom class name like sffms
-    # to know it's report-based, so it silently maps H1 to \section
-    # instead of \chapter without this - sffms's own chapter styling
-    # then doesn't apply, and its auto-numbering collides visibly with
-    # the literal heading text.
+    # Required. Pandoc cannot tell that the custom sffms class is based on
+    # report, so without this it maps level 1 headings to sections, sffms
+    # chapter styling does not apply, and its numbering collides with the
+    # heading text.
     args->add('--top-level-division=chapter')
     args += ManuscriptMetadataArgs(project, target, docLines)
   elseif target.kind ==# KIND_BOOK
@@ -851,11 +820,11 @@ def ExecutePandoc(project: Pj.Project, target: CompileTarget): void
   RunJob($'{target.kind}/{target.format}', [compilepandocbin] + args, target, outputPath)
 enddef
 
-# A new, timestamped path for this run's Pandoc log (JSON, written by
-# Pandoc's --log option):
+# FUNCTION: Return a new timestamped path for this run's Pandoc log, which
+# Pandoc writes as JSON through its log option:
 #   ~/.bartleby/logs/<scrive>_<target>_<YYYYmmdd-HHMMSS>.json
-# Keeps the newest g:bartleby_compile_log_retention logs per scrive and
-# target, this run included, and deletes the rest. 0 keeps every log.
+# Keep the newest g:bartleby_compile_log_retention logs per scrive and
+# target, this run included, and delete the rest. 0 keeps every log.
 def NewPandocLogPath(project: Pj.Project, target: CompileTarget): string
   var logDir: string = expand('~/.bartleby/logs')
   if !isdirectory(logDir)
@@ -883,9 +852,8 @@ export def Execute(project: Pj.Project, target: CompileTarget): void
   endif
 enddef
 
-##############################################################################
-# Public entry point: pick a saved target, or build a new one.
-##############################################################################
+# FUNCTION: Pick a saved target and run it, or build a new one. The entry
+# point of :BartlebyCompile.
 
 export def Run(project: Pj.Project): void
   var names: list<string> = ListTargets(project)
