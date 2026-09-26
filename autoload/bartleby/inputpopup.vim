@@ -104,10 +104,11 @@ enddef
 # selection within the filtered results; Enter submits directly, same
 # one-keypress feel as PickOne.
 export def PromptFilter(title: string, options: list<string>, OnSubmit: func(string),
-    maxVisible: number = 10): void
+    maxVisible: number = 10, minWidth: number = 0): void
   var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'filter',
     options: options, maxVisible: maxVisible}]]
-  var form: InputPopup = InputPopup.new(fields, {}, {title: $' {title} ', buttons: []})
+  var form: InputPopup = InputPopup.new(fields, {},
+    {title: $' {title} ', buttons: [], min_width: minWidth})
   form.OnSubmit((values: dict<any>) => {
     if values.choice !=# ''
       OnSubmit(values.choice)
@@ -189,6 +190,7 @@ export class InputPopup
           field.maxVisible = get(spec, 'maxVisible', 10)
           field.filtered = copy(field.options)
           field.selectedIdx = 0
+          field.scrollTop = 0
         elseif fieldType ==# 'multiline'
           var startText: string = get(this.defaults, name, '')
           field.lines = split(startText, "\n", true)
@@ -242,6 +244,12 @@ export class InputPopup
     if empty(prop_type_get('InputPopupOption'))
       prop_type_add('InputPopupOption', {highlight: 'Pmenu'})
     endif
+    if empty(prop_type_get('InputPopupScrollbar'))
+      prop_type_add('InputPopupScrollbar', {highlight: 'PmenuSbar'})
+    endif
+    if empty(prop_type_get('InputPopupThumb'))
+      prop_type_add('InputPopupThumb', {highlight: 'PmenuThumb'})
+    endif
     if empty(prop_type_get('InputPopupOptionSelected'))
       prop_type_add('InputPopupOptionSelected', {highlight: 'PmenuSel'})
     endif
@@ -275,7 +283,9 @@ export class InputPopup
         w = max([w, strchars(opt)])
       endfor
       var visibleRows: number = min([max([len(f.options), 1]), f.maxVisible])
-      return [max([w, 10]), 1 + visibleRows]
+      # One more column for the scrollbar when the list can scroll.
+      var scrollbar: number = len(f.options) > f.maxVisible ? 2 : 0
+      return [this.FitTitle(max([w + scrollbar, 10])), 1 + visibleRows]
     endif
     if len(this.fields) == 1 && this.fields[0].type ==# 'multiline'
       var f: dict<any> = this.fields[0]
@@ -296,7 +306,14 @@ export class InputPopup
     for w in values(rowWidths)
       maxWidth = max([maxWidth, w])
     endfor
-    return [max([maxWidth, 10]), max([rowCount, 1]) + (empty(this.buttons) ? 0 : 1)]
+    return [this.FitTitle(max([maxWidth, 10])), max([rowCount, 1]) + (empty(this.buttons) ? 0 : 1)]
+  enddef
+
+  # `width`, widened so the popup's title shows in full with 2 columns
+  # to spare, and to the caller's min_width option.
+  def FitTitle(width: number): number
+    var title: string = trim(get(this.opts, 'title', ''))
+    return max([width, strdisplaywidth(title) + 2, get(this.opts, 'min_width', 0)])
   enddef
 
   # --- public API ---------------------------------------------------------
@@ -500,12 +517,14 @@ export class InputPopup
       this.Focus(min([this.TotalControls() - 1, this.currentIdx + 1]))
     elseif isButton
       # buttons hold no text; ignore any other key while one has focus
-    elseif isFilter && (key == "\<Down>" || key == "\<C-j>")
-      var f: dict<any> = this.fields[this.currentIdx]
-      f.selectedIdx = min([max([len(f.filtered) - 1, 0]), f.selectedIdx + 1])
-    elseif isFilter && (key == "\<Up>" || key == "\<C-k>")
-      var f: dict<any> = this.fields[this.currentIdx]
-      f.selectedIdx = max([0, f.selectedIdx - 1])
+    elseif isFilter && (key == "\<Down>" || key == "\<C-j>" || key == "\<ScrollWheelDown>")
+      this.MoveFilterSelection(this.fields[this.currentIdx], 1)
+    elseif isFilter && (key == "\<Up>" || key == "\<C-k>" || key == "\<ScrollWheelUp>")
+      this.MoveFilterSelection(this.fields[this.currentIdx], -1)
+    elseif isFilter && key == "\<PageDown>"
+      this.MoveFilterSelection(this.fields[this.currentIdx], this.fields[this.currentIdx].maxVisible)
+    elseif isFilter && key == "\<PageUp>"
+      this.MoveFilterSelection(this.fields[this.currentIdx], -this.fields[this.currentIdx].maxVisible)
     elseif isFilter && key == "\<CR>"
       if !empty(this.fields[this.currentIdx].filtered)
         popup_close(winid, 1)
@@ -580,6 +599,7 @@ export class InputPopup
       var f: dict<any> = this.fields[this.currentIdx]
       f.filtered = f.value ==# '' ? copy(f.options) : matchfuzzy(f.options, f.value)
       f.selectedIdx = 0
+      f.scrollTop = 0
     endif
 
     this.Render()
@@ -673,12 +693,32 @@ export class InputPopup
 
   # --- rendering ----------------------------------------------------------
 
+  # Moves a filter list's selection by `step` rows, and scrolls so that
+  # the selection stays visible.
+  def MoveFilterSelection(f: dict<any>, step: number): void
+    f.selectedIdx = max([0, min([len(f.filtered) - 1, f.selectedIdx + step])])
+    if f.selectedIdx < f.scrollTop
+      f.scrollTop = f.selectedIdx
+    elseif f.selectedIdx >= f.scrollTop + f.maxVisible
+      f.scrollTop = f.selectedIdx - f.maxVisible + 1
+    endif
+  enddef
+
   def RenderFilter(): void
     var f: dict<any> = this.fields[0]
     var lines: list<string> = ['> ' .. f.value]
     for i in range(f.maxVisible)
-      add(lines, i < len(f.filtered) ? '  ' .. f.filtered[i] : '')
+      var idx: number = f.scrollTop + i
+      add(lines, idx < len(f.filtered) ? '  ' .. f.filtered[idx] : '')
     endfor
+    # With a scrollbar, every list row is padded so that its last column
+    # holds the scrollbar (see DrawFilterScrollbar()).
+    if this.FilterScrolls(f)
+      var width: number = popup_getoptions(this.winid).minwidth
+      for i in range(1, f.maxVisible)
+        lines[i] ..= repeat(' ', max([0, width - 1 - strdisplaywidth(lines[i])])) .. ' '
+      endfor
+    endif
     if empty(f.filtered)
       lines[1] = '  (no matches)'
     endif
@@ -708,14 +748,47 @@ export class InputPopup
 
     this._fieldHit = []
     this._optionHit = []
-    for i in range(min([len(f.filtered), f.maxVisible]))
+    for i in range(min([len(f.filtered) - f.scrollTop, f.maxVisible]))
+      var idx: number = f.scrollTop + i
       var lnum: number = i + 2
       var text: string = lines[lnum - 1]
-      var propType: string = i == f.selectedIdx ? 'InputPopupOptionSelected' : 'InputPopupOption'
+      var propType: string = idx == f.selectedIdx ? 'InputPopupOptionSelected' : 'InputPopupOption'
+      # Stop before the scrollbar column, which has its own highlight.
+      var length: number = this.FilterScrolls(f) ? strlen(text) - 1 : strlen(text)
       prop_add(lnum, 1, {
-        type: propType, bufnr: this.bufnr, length: max([strlen(text), 1]),
+        type: propType, bufnr: this.bufnr, length: max([length, 1]),
       })
-      add(this._optionHit, {idx: 0, optionIdx: i, lnum: lnum, startCol: 1, endCol: strlen(text)})
+      add(this._optionHit, {idx: 0, optionIdx: idx, lnum: lnum, startCol: 1, endCol: strlen(text)})
+    endfor
+    this.DrawFilterScrollbar(f)
+  enddef
+
+  # True while a filter list is longer than its visible rows.
+  def FilterScrolls(f: dict<any>): bool
+    return len(f.filtered) > f.maxVisible
+  enddef
+
+  # A scrollbar in the last column of the list rows, only while the list
+  # is longer than its visible rows: PmenuSbar for the track, PmenuThumb
+  # for the thumb, as in Vim's own completion menu. The thumb's size and
+  # place show which part of the list is visible. RenderFilter() has
+  # already padded the rows so that the last column is free.
+  def DrawFilterScrollbar(f: dict<any>): void
+    prop_remove({type: 'InputPopupScrollbar', bufnr: this.bufnr, all: true})
+    prop_remove({type: 'InputPopupThumb', bufnr: this.bufnr, all: true})
+    if !this.FilterScrolls(f)
+      return
+    endif
+    var total: number = len(f.filtered)
+    var rows: number = f.maxVisible
+    var thumbSize: number = max([1, rows * rows / total])
+    var thumbTop: number = (f.scrollTop * (rows - thumbSize) + (total - rows) / 2) / (total - rows)
+    for i in range(rows)
+      var lnum: number = i + 2
+      prop_add(lnum, strlen(getbufline(this.bufnr, lnum)[0]), {
+        type: i >= thumbTop && i < thumbTop + thumbSize ? 'InputPopupThumb' : 'InputPopupScrollbar',
+        bufnr: this.bufnr, length: 1,
+      })
     endfor
   enddef
 

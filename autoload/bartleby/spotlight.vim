@@ -69,18 +69,19 @@ var spotlightpriority: number = g:bartleby_spotlight_priority
 var spotlightdialoguepattern: string = g:bartleby_spotlight_dialogue_pattern
 var spotlightlanguage: string = g:bartleby_spotlight_language
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Mode registry. A handler takes the mode name and returns what to dim -
 # the text that should be dimmed, never the text that stays lit:
 #   {key: string, pattern: string}          a regex (Paragraph)
 #   {key: string, positions: list<any>}     matchaddpos() positions
 # `key` identifies the result, so an unchanged result is not reapplied.
 # Handlers are plain functions that receive the mode name, not closures.
-# ---------------------------------------------------------------------
+##############################################################################
 
 const MODE_PARAGRAPH: string = 'Paragraph'
 const MODE_DIALOGUE: string = 'Dialogue'
 const MODE_PASSIVE: string = 'Passive'
+const PICKER_TITLE: string = 'Spotlight Mode: '
 
 var mode_handlers: dict<func(string): dict<any>> = {}
 var mode_available: dict<func(): bool> = {}
@@ -419,12 +420,12 @@ for posMode in POS_MODES
 endfor
 RegisterMode(MODE_PASSIVE, PosSpec, TaggerReady)
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Color math - unmodified port of Limelight's own s:hex2rgb/s:dim/etc.
 # Blends Normal's fg toward its bg by `coeff` (0.0 = no dim, 1.0 = fully
 # bg-colored) for a smooth true-color/256-color dim, rather than just
 # swapping in a fixed highlight group.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def Hex2Rgb(str: string): list<number>
   var hex: string = substitute(str, '^#', '', '')
@@ -511,13 +512,13 @@ def Dim(coeff: float): void
   endif
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Per-window match bookkeeping. Matches are inherently window-scoped in
 # Vim regardless of anything else, so even though Spotlight's on/off
 # state is global (see IsOn() below - matches Limelight's own design),
 # each window still needs its own dim match id. Lives in
 # w:bartleby_spotlight_matches.
-# ---------------------------------------------------------------------
+##############################################################################
 
 class WindowMatches
   var dimMatchId: number = -1
@@ -551,9 +552,9 @@ class WindowMatches
   enddef
 endclass
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Session state and lifecycle.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def CurrentHandler(): func(string): dict<any>
   return get(mode_handlers, current_mode, mode_handlers[MODE_PARAGRAPH])
@@ -641,9 +642,9 @@ export def Off(): void
   unlet! w:bartleby_spotlight_matches
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Public entry points.
-# ---------------------------------------------------------------------
+##############################################################################
 
 # Plain toggle, current mode - what <leader>bl calls.
 export def Toggle(): void
@@ -658,9 +659,15 @@ enddef
 # Picking a mode turns Spotlight on with it, switching live if it was
 # already on with a different mode.
 export def PickMode(): void
-  IP.PromptFilter($'Spotlight Mode: {current_mode}', AvailableModes(), (choice: string) => {
+  var modes: list<string> = AvailableModes()
+  # Wide enough for the title with the longest mode name, plus 2, so the
+  # title never shows truncated and the width does not change with the
+  # current mode.
+  var longest: number = max(modes->mapnew((_, m) => strdisplaywidth(m)))
+  var width: number = strdisplaywidth(PICKER_TITLE) + longest + 2
+  IP.PromptFilter(PICKER_TITLE .. current_mode, modes, (choice: string) => {
     On(choice, current_coeff)
-  })
+  }, 10, width)
 enddef
 
 # Called by tagger.vim when results arrive or the tagger fails. Redraws

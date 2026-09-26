@@ -41,7 +41,8 @@ var failure_reason: string = ''
 var next_id: number = 1
 # Request id -> paragraph hash, for requests not answered yet.
 var pending: dict<string> = {}
-# Paragraph hash -> {tokens: [[start, end, tag], ...], passive: [[start, end], ...]}
+# Paragraph hash -> {tokens: [[start, end, tag], ...],
+#                    passive: [[start, end], ...]}
 var cache: dict<dict<any>> = {}
 var stderr_lines: list<string> = []
 var generation: number = 0

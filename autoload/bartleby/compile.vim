@@ -70,11 +70,11 @@ const KIND_FORMATS: dict<list<string>> = {
 const PANDOC_EXT: dict<string> = {PDF: 'pdf', HTML: 'html', EPUB: 'epub', Markdown: 'md'}
 const SCREENPLAY_EXT: dict<string> = {PDF: 'pdf', HTML: 'html', FDX: 'fdx'}
 
-# ---------------------------------------------------------------------
+##############################################################################
 # CompileTarget - a saved preset. Breaking change from v1's shape
 # (kind/font/coverImage/doubleSpaced replace the old flat format list) -
 # old saved targets are simply incompatible, per your call.
-# ---------------------------------------------------------------------
+##############################################################################
 
 export class CompileTarget
   var name: string = ''
@@ -142,11 +142,11 @@ export def DeleteTarget(project: Pj.Project, name: string): void
   endif
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Contents selection - a checkbox-style tree buffer, unchanged in shape
 # from v1. Kept outside the unified popup per your decision - defaults
 # to "everything," reachable separately to customize a saved target.
-# ---------------------------------------------------------------------
+##############################################################################
 
 const SELECT_BUF: string = 'Bartleby-Compile-Select'
 const SELECT_HEADER: string = '*** Compile ***'
@@ -298,13 +298,13 @@ def ShowSelectHelp(): void
   ])
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Wizard: name -> kind -> format -> (spacing, if Manuscript) -> contents
 # -> a single FormPopup for the remaining fields (font, cover image if
 # Book, separator if not Screenplay). This is the "reduced to one popup
 # where possible" compromise while the fully unified widget (inputpopup.vim)
 # is its own separate phase.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def DefaultFont(kind: string): string
   return kind ==# KIND_BOOK ? compilebookfont : compilemanuscriptfont
@@ -388,9 +388,9 @@ def DeleteTargetConfirm(project: Pj.Project, target: CompileTarget): void
   endif
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Execution.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def OutputDir(project: Pj.Project): string
   return project.scriveDir .. '/compile/output'
@@ -883,9 +883,9 @@ export def Execute(project: Pj.Project, target: CompileTarget): void
   endif
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Public entry point: pick a saved target, or build a new one.
-# ---------------------------------------------------------------------
+##############################################################################
 
 export def Run(project: Pj.Project): void
   var names: list<string> = ListTargets(project)

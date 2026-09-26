@@ -116,6 +116,15 @@ off.
 
 **Focus** shows your text in a centered column and dims the rest of
 the screen. `<leader>bz` turns it on or off.
+In GVim or MacVim, Focus can also fill the whole screen and use a
+larger font. Add these lines to your vimrc, with a font you have:
+
+```vim
+let g:bartleby_focus_fullscreen = 1
+let g:bartleby_focus_guifont = 'DejaVu Sans Mono 14'
+```
+
+When you leave Focus, the window and the font return to how they were.
 
 **Spotlight** dims every paragraph except the one with the cursor.
 `<leader>bl` turns it on or off. `<leader>bL` picks a different mode.
@@ -125,8 +134,8 @@ See [Spotlight modes](#spotlight-modes).
 
 Spotlight's modes help you revise. Each one keeps one kind of word
 bright and dims everything else, so you can see at a glance how often
-you use it. Press `<leader>bL`, type part of a mode's name, and press
-`<Enter>`.
+you use it. Press `<leader>bL`, then type part of a mode's name or
+scroll with the arrow keys, and press `<Enter>`.
 
 | Mode | Keeps bright | Use it to |
 | --- | --- | --- |

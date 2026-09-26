@@ -46,10 +46,10 @@ const MODE_OFF: number = 0
 const MODE_HARD: number = 1
 const MODE_SOFT: number = 2
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Wrap-mode detection - scans modelines and sampled lines for a hint,
 # ported from Pencil's s:doModelines/s:doOne/s:detect_wrap_mode.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def ScanModelineItem(item: string, maxTw: number): number
   var m: list<string> = matchlist(item, '^\([a-z]\+\)=\([a-zA-Z0-9_.-]\+\)$')
@@ -111,9 +111,9 @@ def DetectWrapMode(maxTextwidth: number): number
   return quillwrapmodedefault ==# 'off' ? MODE_OFF : MODE_HARD
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Per-buffer session. Lives in b:bartleby_quill.
-# ---------------------------------------------------------------------
+##############################################################################
 
 export class QuillSession
   var wrapMode: number = MODE_OFF
@@ -152,11 +152,11 @@ def CurrentSession(): QuillSession
   return session
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Autoformat - enabled only in hard mode, only during Insert, and only
 # when the cursor isn't in a blacklisted syntax region (code blocks,
 # headings, etc.) per g:bartleby_quill_autoformat_config.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def SynStackNames(lnum: number, col: number): list<string>
   return synstack(lnum, col)->mapnew((_, id) => synIDattr(id, 'name'))
@@ -239,10 +239,10 @@ export def SetAutoFormat(af: number): void
   session.SetLastAutoformat(newAf)
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Init - applies wrap-mode settings/mappings to the current buffer.
 # wrapArg: 'detect'|'off'|'hard'|'soft'|'toggle'.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def ApplyHardSettings(session: QuillSession): void
   if &modeline ==# false && session.maxTextwidth > 0
@@ -430,9 +430,9 @@ export def Init(wrapArg: string = 'detect'): void
   SetupPunctuationMaps(session)
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Statusline helper and public entry points.
-# ---------------------------------------------------------------------
+##############################################################################
 
 export def StatusIndicator(): string
   var session: QuillSession = get(b:, 'bartleby_quill', null_object)

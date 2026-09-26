@@ -72,6 +72,11 @@ these files with any editor.
 Writing needs only Vim. Compile, the lookups, and the tagger modes are
 the only features with other requirements.
 
+[^fullscreen]: MacVim uses its `'fullscreen'` option. The GTK and
+    Windows GUIs use the `s` flag in `'guioptions'`. Other GUIs have no
+    fullscreen mode. When Focus ends, also by `:q` in the Focus window,
+    Bartleby restores the previous font and window state.
+
 [^vim]: The binder tree uses a Vim9 class with a field that is a list
     of its own class. Vim 9.1 cannot load it and reports `E1010: Type
     not recognized`. Some Linux distributions still package Vim 9.1.
@@ -248,7 +253,9 @@ Three independent writing aids:
 ## Spotlight modes
 
 `<leader>bL` opens a searchable list of the modes, and
-`:BartlebySpotlight {mode}` selects one by name. Each part-of-speech
+`:BartlebySpotlight {mode}` selects one by name. In the list, type to
+search, or scroll with the arrow keys, `<PageUp>`, `<PageDown>`, or the
+mouse wheel. Each part-of-speech
 mode keeps its words bright and dims everything else. Markdown headings
 and Fountain scene headings, character cues, and transitions dim
 completely.
@@ -478,6 +485,8 @@ default, so set only the ones you want to change.
 | `g:bartleby_focus_margin_bottom` | `-1` | Bottom margin. `-1` centers the column |
 | `g:bartleby_focus_linenr` | `0` | Show line numbers in Focus |
 | `g:bartleby_focus_bg` | `'black'` | Color of the dimmed area |
+| `g:bartleby_focus_fullscreen` | `0` | In the GUI, show Focus in fullscreen.[^fullscreen] |
+| `g:bartleby_focus_guifont` | `''` | In the GUI, the font for Focus, for example `'DejaVu Sans Mono 14'`. Empty keeps the current font |
 
 **Spotlight**
 

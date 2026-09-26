@@ -77,11 +77,11 @@ def Save(project: Pj.Project, state: SessionState): void
   Pe.WriteJson(SessionPath(project), state.ToDict())
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Last-opened scrive, globally (not per-scrive) - lets :BartlebyOpen
 # with no argument, or an auto-restore on startup, resume without
 # retyping the scrive name.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def LastScrivePath(): string
   return expand('~/.bartleby/last_scrive.json')
@@ -95,9 +95,9 @@ export def LastScrive(): string
   return get(Pe.ReadJson(LastScrivePath()), 'scriveDir', '')
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Capture.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def IsProjectDoc(project: Pj.Project, path: string): bool
   return path !=# '' && path =~# '^\V' .. escape(project.BinderRoot(), '\')
@@ -136,9 +136,9 @@ export def CaptureBinderState(): void
   Save(project, SessionState.FromDict(v))
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Restore - called right after a scrive is opened.
-# ---------------------------------------------------------------------
+##############################################################################
 
 export def Restore(project: Pj.Project): void
   var state: SessionState = Load(project)

@@ -47,6 +47,8 @@ var focusmargintop: number = g:bartleby_focus_margin_top
 var focusmarginbottom: number = g:bartleby_focus_margin_bottom
 var focuslinenr: number = g:bartleby_focus_linenr
 var focusbg: string = g:bartleby_focus_bg
+var focusfullscreen: bool = !!g:bartleby_focus_fullscreen
+var focusguifont: string = g:bartleby_focus_guifont
 
 def RelSize(expr: any, limit: number): number
   if type(expr) ==# v:t_number
@@ -64,7 +66,7 @@ def ClampVal(val: number, lo: number, hi: number): number
 enddef
 
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Third-party statusline plugin integration. Several popular statusline
 # plugins actively manage their own status line content via their own
 # autocmds, which fights a bare `set laststatus=0` - airline in
@@ -72,7 +74,7 @@ enddef
 # 'laststatus'. All silent!-guarded, so this is a harmless no-op for
 # anyone without a given plugin installed - ported directly from Goyo's
 # own equivalent handling.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def DisableThirdPartyStatuslines(): dict<bool>
   var disabled: dict<bool> = {}
@@ -139,14 +141,14 @@ def RestoreThirdPartyStatuslines(disabled: dict<bool>): void
   endif
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Global <C-w>{key} mappings, active for as long as any Focus session is
 # open in any tab. Genuinely global (not buffer-local) because Vim window
 # commands are - matches Goyo's own approach, including its handling of
 # concurrent sessions: a second session's setup only maps keys the first
 # didn't already claim, and tracks (in its own mappedKeys) only the ones
 # it's responsible for unmapping again.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def MapsNop(): list<string>
   var candidates: list<string> = ['R', 'H', 'J', 'K', 'L', '|', '_']
@@ -195,11 +197,11 @@ def UnmapCtrlW(keys: list<string>): void
   endfor
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Session lifecycle. Enter()/Exit() are free functions (not methods) so
 # they can create/destroy the FocusSession object itself, plus drive the
 # tab-split and global-option save/restore that surrounds it.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def Enter(dimExpr: string): void
   if exists('t:bartleby_focus_session')
@@ -275,6 +277,9 @@ def Enter(dimExpr: string): void
   augroup END
 
   session.HideStatusline()
+  if has('gui_running')
+    ApplyGuiSettings(saved)
+  endif
 
   # Extension point for anything that should activate alongside Focus -
   # a GUI font/fullscreen toggle, 'spell', an external dictionary lookup
@@ -340,6 +345,7 @@ def Exit(): void
   if has_key(saved, 'guioptions')
     &guioptions = saved.guioptions
   endif
+  RestoreGuiSettings(saved)
 
   # tranquilize() overwrote highlight groups directly, and those are
   # global rather than tab-scoped - re-applying the colorscheme is what
@@ -351,11 +357,55 @@ def Exit(): void
   endif
 enddef
 
-# ---------------------------------------------------------------------
+# GUI font and fullscreen for Focus, from g:bartleby_focus_guifont and
+# g:bartleby_focus_fullscreen. Each value is saved in `saved` before it
+# changes, and RestoreGuiSettings() puts it back when Focus ends, also
+# after :q in the Focus window (see FocusSession.Blank()).
+#
+# Fullscreen: MacVim has a 'fullscreen' option. The GTK and Windows GUIs
+# use the "s" flag in 'guioptions' instead, which Exit() restores with
+# the rest of 'guioptions'. Other GUIs have no fullscreen.
+#
+# 'guifont' and 'fullscreen' do not exist in a Vim without a GUI, so a
+# compiled function cannot name them directly. eval() and :execute reach
+# them only at run time, and only when has('gui_running').
+def ApplyGuiSettings(saved: dict<any>): void
+  if focusguifont !=# ''
+    saved.guifont = eval('&guifont')
+    try
+      execute $'&guifont = {string(focusguifont)}'
+    catch
+      log.Error($'could not set g:bartleby_focus_guifont "{focusguifont}": {v:exception}')
+      remove(saved, 'guifont')
+    endtry
+  endif
+  if !focusfullscreen
+    return
+  endif
+  if exists('+fullscreen')
+    saved.fullscreen = eval('&fullscreen')
+    execute '&fullscreen = true'
+  elseif has('gui_gtk') || has('gui_win32')
+    set guioptions+=s
+  else
+    log.Warn('this GUI has no fullscreen mode - g:bartleby_focus_fullscreen has no effect')
+  endif
+enddef
+
+def RestoreGuiSettings(saved: dict<any>): void
+  if has_key(saved, 'guifont')
+    execute $'&guifont = {string(saved.guifont)}'
+  endif
+  if has_key(saved, 'fullscreen')
+    execute $'&fullscreen = {saved.fullscreen ? "true" : "false"}'
+  endif
+enddef
+
+##############################################################################
 # Autocmd trampolines - all fired globally (TabLeave/VimResized/etc. have
 # no buffer/window scoping to hang off of), each a no-op unless the
 # *current* tab happens to have an active session.
-# ---------------------------------------------------------------------
+##############################################################################
 
 def FocusAutoExit(): void
   if exists('t:bartleby_focus_session')
@@ -392,9 +442,9 @@ def FocusAutoHideStatusline(): void
   endif
 enddef
 
-# ---------------------------------------------------------------------
+##############################################################################
 # Public entry points.
-# ---------------------------------------------------------------------
+##############################################################################
 
 # Plain toggle, no dimension argument - what <leader>bz calls.
 export def Toggle(): void
