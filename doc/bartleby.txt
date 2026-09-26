@@ -503,7 +503,8 @@ Commands                                                     *bartleby-commands*
 
     Command                                                 Description ~
 
-    `:BartlebyOpen [name]`                                  Open a scrive by name. Without a
+    `:BartlebyOpen [name]`                                  Open a scrive by name. `<Tab>`
+                                                            completes the name. Without a
                                                             name, open the last scrive
 
     `:BartlebyNewScrive {name}`                             Create a scrive. Asks for its type
