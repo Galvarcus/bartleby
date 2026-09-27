@@ -18,8 +18,11 @@ def HasSpacy(): bool
   if !executable('python3')
     return false
   endif
-  system($'python3 -c "import spacy; spacy.load(''{g:bartleby_spotlight_spacy_model}'')"')
-  return v:shell_error == 0
+  # The model that the tagger would run: the last word of its command.
+  g:bartleby_spotlight_tagger = 'spacy'
+  var model: string = get(TA.Command(), -1, '')
+  system($'python3 -c "import spacy; spacy.load(''{model}'')"')
+  return model !=# '' && v:shell_error == 0
 enddef
 
 # FUNCTION: Return the text of each byte span.

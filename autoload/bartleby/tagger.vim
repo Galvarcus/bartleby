@@ -14,7 +14,8 @@ var is_loaded: bool = true
 # g:bartleby_spotlight_tagger selects the tagger:
 #   ''        No tagger, the default. The tagger-only modes are hidden.
 #   'spacy'   tools/pos/spacy_tagger.py, run with python3, with the model
-#             in g:bartleby_spotlight_spacy_model.
+#             in g:bartleby_spotlight_spacy_model, else the model of
+#             the language file, see lang.vim.
 #   [cmd...]  Any command with the same protocol. See the header of
 #             tools/pos/spacy_tagger.py.
 #
@@ -30,7 +31,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/pos.vim' as P
+import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/log.vim' as L
 
 var log = L.New(expand('<sfile>:t'))
@@ -57,8 +58,13 @@ export def Command(): list<string>
     return setting
   endif
   if setting ==# 'spacy'
-    return ['python3', $'{P.PluginRoot()}/tools/pos/spacy_tagger.py',
-      get(g:, 'bartleby_spotlight_spacy_model', 'en_core_web_sm')]
+    # An empty model setting means the model of the language file. A
+    # language without one has no tagger.
+    var model: string = get(g:, 'bartleby_spotlight_spacy_model', '')
+    if model ==# ''
+      model = LA.Get('spacy_model', '')
+    endif
+    return model ==# '' ? [] : ['python3', $'{LA.PluginRoot()}/tools/pos/spacy_tagger.py', model]
   endif
   return []
 enddef

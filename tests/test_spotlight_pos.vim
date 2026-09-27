@@ -60,8 +60,8 @@ def LitWords(lnum: number): list<string>
   var words: list<string> = []
   var word: string = ''
   for c in range(1, strlen(text))
-    if text[c - 1] =~ '\S' && !has_key(dimmed, c)
-      word ..= text[c - 1]
+    if strpart(text, c - 1, 1) =~ '\S' && !has_key(dimmed, c)
+      word ..= strpart(text, c - 1, 1)
     elseif word !=# ''
       words->add(word)
       word = ''
@@ -124,6 +124,16 @@ def Test_dialogue_lights_quoted_speech(): void
   CloseBuffer()
 enddef
 
+def Test_dialogue_lights_curly_quotes(): void
+  new
+  setlocal buftype=nofile filetype=markdown
+  setline(1, ['Title', '', 'She said, “Wait,” and left.'])
+  cursor(3, 1)
+  SP.Execute(false, 'Dialogue')
+  assert_equal(['“Wait,”'], LitWords(3))
+  CloseBuffer()
+enddef
+
 def Test_mock_tagger_modes(): void
   UseTagger(['python3', MOCK_TAGGER])
   var modes = SP.AvailableModes()
@@ -171,6 +181,7 @@ export def RunAll(): void
   Test_word_list_modes_light_their_words()
   Test_heading_line_dims_entirely()
   Test_dialogue_lights_quoted_speech()
+  Test_dialogue_lights_curly_quotes()
   Test_mock_tagger_modes()
   Test_failing_tagger_turns_spotlight_off_and_hides_modes()
 enddef

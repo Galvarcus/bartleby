@@ -17,6 +17,11 @@ def Test_tokens_keep_inner_apostrophes(): void
   assert_equal(["Don't", 'stop', 'it’s', 'late'], Words(text, P.Tokens(text)))
 enddef
 
+def Test_tokens_keep_letters_beyond_ascii(): void
+  var text = 'Café naïve Straße, über Жизнь λόγος.'
+  assert_equal(['Café', 'naïve', 'Straße', 'über', 'Жизнь', 'λόγος'], Words(text, P.Tokens(text)))
+enddef
+
 def Test_contractions(): void
   var lists = P.Lists('en')
   for word in ["don't", "they're", "we've", "we'll", "I'd", "I'm", "It's", "that’s", "Let's"]
@@ -86,17 +91,19 @@ def Test_word_list_settings(): void
   assert_true(has_key(P.Lists('en').fillers, 'very'))
 enddef
 
-def Test_unknown_language_gives_no_lists(): void
-  assert_equal({}, P.Lists('xx'))
+def Test_unknown_language_uses_english(): void
+  var lists = P.Lists('xx')
+  assert_equal(P.Lists('en').pronouns, lists.pronouns)
 enddef
 
 export def RunAll(): void
   Test_tokens_keep_inner_apostrophes()
+  Test_tokens_keep_letters_beyond_ascii()
   Test_contractions()
   Test_heuristic_adverbs()
   Test_lexical_spans_per_mode()
   Test_prose_lines()
   Test_gap_positions()
   Test_word_list_settings()
-  Test_unknown_language_gives_no_lists()
+  Test_unknown_language_uses_english()
 enddef

@@ -27,6 +27,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/tree.vim' as T
@@ -45,6 +46,7 @@ var log = L.New(expand('<sfile>:t'))
 var compilescriptpath: string = expand('<sfile>:p')
 var compilepandocbin: string = g:bartleby_compile_pandoc_bin
 var compilescreenplainbin: string = g:bartleby_compile_screenplain_bin
+var compilelang: string = g:bartleby_compile_lang
 var compiletoc: bool = g:bartleby_compile_toc
 var compilestandalone: bool = g:bartleby_compile_standalone
 var compilemanuscriptfont: string = g:bartleby_compile_manuscript_font
@@ -850,6 +852,13 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
         args->add($'--epub-cover-image={target.coverImage}')
       endif
     endif
+  endif
+  # The language of the text, for Pandoc: the lang attribute in HTML, the
+  # EPUB language, and LaTeX templates that use $lang$. An empty setting
+  # means the pandoc_lang of the language file.
+  var lang: string = compilelang ==# '' ? LA.Get('pandoc_lang', '') : compilelang
+  if lang !=# ''
+    args->add($'--metadata=lang:{lang}')
   endif
   args += compileextraargs
   var logBase: string = NewLogBase(project, target)

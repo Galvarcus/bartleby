@@ -36,7 +36,8 @@ screenplays.
 - [License](#license)
 
 For a walkthrough written for authors, see
-[Users_Guide.md](Users_Guide.md).
+[Users_Guide.md](Users_Guide.md). To add support for another language,
+see [Localization_README.md](Localization_README.md).
 
 <!-- vimdoc-ignore-end -->
 
@@ -306,7 +307,8 @@ the `s_contraction_words` list, such as `it`, `that`, and `there`. After
 other words, `'s` is usually possessive, as in "John's hat", so it does
 not count.
 
-**Word lists.** The lists are in `tools/pos/en.json`. They hold single
+**Word lists.** The lists are in the language file, `tools/lang/en.json`
+for English. They hold single
 words. To add or remove words for a mode, use its name as a key:
 
 ```vim
@@ -482,6 +484,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_binder_root` | `~/Documents` | Scrives are created in a `Bartleby/` folder here |
 | `g:bartleby_binder_show_role_labels` | `1` | Show `Chapter:` and `Part:` prefixes in the Binder |
 | `g:bartleby_session_auto_restore` | `0` | Reopen the last scrive when Vim starts |
+| `g:bartleby_language` | `''` | Language of your writing, such as `'en'`. Empty uses Vim's own language, and a language without a language file uses English. See [Localization_README.md](Localization_README.md) |
 | `g:bartleby_snapshot_retention` | `5` | Snapshots kept per document. The oldest is deleted first |
 | `g:bartleby_autosave` | `1` | Save changed scrive documents automatically |
 | `g:bartleby_autosave_interval` | `30` | Minimum seconds between automatic saves of a document |
@@ -510,10 +513,9 @@ default, so set only the ones you want to change.
 | `g:bartleby_spotlight_eop` | `'^\s*$'` | Pattern for the end of a paragraph |
 | `g:bartleby_spotlight_paragraph_span` | `0` | Extra paragraphs kept bright around the cursor |
 | `g:bartleby_spotlight_priority` | `10` | Match priority of Spotlight's highlight |
-| `g:bartleby_spotlight_dialogue_pattern` | A quote pattern | Pattern for dialogue in prose documents |
+| `g:bartleby_spotlight_dialogue_pattern` | `''` | Pattern for dialogue in prose documents. Empty uses the quotes of the language: straight or curly double quotes for English |
 | `g:bartleby_spotlight_tagger` | `''` | Part-of-speech tagger: `'spacy'`, or a command as a list. Empty turns the tagger modes off |
-| `g:bartleby_spotlight_spacy_model` | `'en_core_web_sm'` | spaCy model for `'spacy'` |
-| `g:bartleby_spotlight_language` | `'en'` | Word lists to use, from `tools/pos/<language>.json` |
+| `g:bartleby_spotlight_spacy_model` | `''` | spaCy model for `'spacy'`. Empty uses the model of the language, `en_core_web_sm` for English |
 | `g:bartleby_spotlight_words_add` | `{}` | Words to add to a mode's list, by mode name |
 | `g:bartleby_spotlight_words_remove` | `{}` | Words to remove from a mode's list, by mode name |
 
@@ -552,6 +554,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_compile_book_part_style` | `'numeral'` | Book part numbers: `numeral` or `spelled` |
 | `g:bartleby_compile_extra_args` | `[]` | More arguments for every Pandoc run |
 | `g:bartleby_compile_log_retention` | `10` | Compile logs kept per target. `0` keeps all |
+| `g:bartleby_compile_lang` | `''` | Language code for Pandoc, such as `'en-GB'`. Empty uses the code of the language, `en-US` for English |
 
 **Dictionary and thesaurus**
 
@@ -559,8 +562,8 @@ default, so set only the ones you want to change.
 | --- | --- | --- |
 | `g:bartleby_dictionary_api_key` | `''` | Collegiate Dictionary key. Else `$BARTLEBY_MW_DICTIONARY_KEY` |
 | `g:bartleby_thesaurus_api_key` | `''` | Collegiate Thesaurus key. Else `$BARTLEBY_MW_THESAURUS_KEY` |
-| `g:bartleby_dictionary_reference` | `'collegiate'` | Dictionary reference. Only `collegiate` is available |
-| `g:bartleby_thesaurus_reference` | `'thesaurus'` | Thesaurus reference. Only `thesaurus` is available |
+| `g:bartleby_dictionary_reference` | `''` | Dictionary reference. Empty uses the reference of the language, `collegiate` for English |
+| `g:bartleby_thesaurus_reference` | `''` | Thesaurus reference. Empty uses the reference of the language, `thesaurus` for English |
 | `g:bartleby_lexicon_cache_max_entries` | `1000` | Results kept in the disk cache. `0` turns the disk cache off |
 | `g:bartleby_lexicon_timeout` | `10` | Seconds to wait for Merriam-Webster |
 | `g:bartleby_lexicon_base_url` | `'https://www.dictionaryapi.com/api/v3/references'` | API address. Change it only for a proxy or a test server |

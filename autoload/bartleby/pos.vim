@@ -12,10 +12,9 @@ var is_loaded: bool = true
 # pattern, which lines count as prose, and conversion of bright spans to
 # dim positions. All pure functions, so tests can call them directly.
 #
-# The word lists are in tools/pos/<language>.json, one file per language,
-# selected by g:bartleby_spotlight_language. g:bartleby_spotlight_words_add
-# and g:bartleby_spotlight_words_remove change the list of a mode, by
-# mode name, with single words:
+# The word lists and rules come from the language file, see lang.vim.
+# g:bartleby_spotlight_words_add and g:bartleby_spotlight_words_remove
+# change the list of a mode, by mode name, with single words:
 #   {Fillers: ['anyway'], Pronouns: ['yall']}
 # MODE_LISTS in constants.vim maps mode names to list keys.
 #
@@ -23,47 +22,30 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/lang.vim' as LA
 import 'bartleby/variables/constants.vim' as CO
 
-var log = L.New(expand('<sfile>:t'))
-var posscriptpath: string = expand('<sfile>:p')
 var loaded_lists: dict<dict<any>> = {}
 
-# Mode name to its list key in tools/pos/<language>.json.
+# A word: letters, with inner apostrophes, as in don't. The classes lower
+# and upper, not alpha: in Vim only these two match letters beyond ASCII,
+# such as é, ß, and Cyrillic or Greek letters. Scripts without letter
+# case, such as Chinese or Japanese, still match nothing here.
+const WORD_PATTERN: string = '\v[[:lower:][:upper:]]+%([''’][[:lower:][:upper:]]+)*'
 
-# A word: letters, with inner apostrophes, as in don't.
-const WORD_PATTERN: string = '\v[[:alpha:]]+%([''’][[:alpha:]]+)*'
-const CONTRACTION_PATTERN: string = '\c\v%(n[''’]t|[''’]%(re|ve|ll|d|m))$'
-const S_CONTRACTION_PATTERN: string = '\c\v^(.+)[''’]s$'
-# Contractions ending in n't whose base is not the text before n't.
-const NT_BASES: dict<string> = {ca: 'can', wo: 'will', sha: 'shall', ai: 'am'}
-
-export def PluginRoot(): string
-  return fnamemodify(posscriptpath, ':h:h:h')
-enddef
-
-# FUNCTION: Return the word lists for language, with the user's additions
-# and removals, as dicts for fast lookup: {pronouns: {i: true}}. Cached
-# after the first load. An empty dict when the language file is missing.
-export def Lists(language: string): dict<any>
-  if has_key(loaded_lists, language)
-    return loaded_lists[language]
+# FUNCTION: Return the word lists of the language code, or of the current
+# language when code is empty, with the user's additions and removals, as
+# dicts for fast lookup: {pronouns: {i: true}}. The language rules come
+# with them under the key rules, see Rules. Cached after the first load.
+export def Lists(code: string = ''): dict<any>
+  var lang: string = code ==# '' ? LA.Code() : code
+  if has_key(loaded_lists, lang)
+    return loaded_lists[lang]
   endif
-  var path: string = $'{PluginRoot()}/tools/pos/{language}.json'
-  var raw: dict<any> = {}
-  try
-    raw = json_decode(join(readfile(path), "\n"))
-  catch
-    log.Error($'no word lists for language "{language}": {path}')
-    loaded_lists[language] = {}
-    return {}
-  endtry
-  var lists: dict<any> = {}
-  for [key, words] in items(raw)
-    if type(words) == v:t_list
-      lists[key] = ToSet(words)
-    endif
+  var profile: dict<any> = LA.Profile(lang)
+  var lists: dict<any> = {rules: Rules(profile)}
+  for [key, words] in items(get(profile, 'lists', {}))
+    lists[key] = ToSet(words)
   endfor
   for [mode, words] in items(get(g:, 'bartleby_spotlight_words_add', {}))
     var key: string = get(CO.MODE_LISTS, mode, '')
@@ -81,7 +63,7 @@ export def Lists(language: string): dict<any>
       endfor
     endif
   endfor
-  loaded_lists[language] = lists
+  loaded_lists[lang] = lists
   return lists
 enddef
 
@@ -105,27 +87,46 @@ export def Tokens(text: string): list<list<number>>
   return tokens
 enddef
 
-# FUNCTION: Return true for a contraction such as don't, they're, we'll,
-# I'd, or I'm, and for 's only after a word in s_contraction_words, as in
-# it's or that's. After other words, 's usually shows possession, as in
-# John's hat, so it does not count.
+# FUNCTION: Return true for a contraction: a word that ends in one of the
+# contraction_suffixes of the language, such as n't or 're in English, or
+# in one of its conditional_contraction_suffixes after a word in the named
+# list. In English, 's counts only after words such as it and that: after
+# other words it usually shows possession, as in John's hat.
 export def IsContraction(word: string, lists: dict<any>): bool
-  if word =~ CONTRACTION_PATTERN
-    return true
-  endif
-  var parts: list<string> = matchlist(word, S_CONTRACTION_PATTERN)
-  return !empty(parts) && has_key(get(lists, 's_contraction_words', {}), tolower(parts[1]))
+  var rules: dict<any> = get(lists, 'rules', {})
+  var lower: string = NormalizeApostrophes(tolower(word))
+  for suffix in rules.contractionSuffixes
+    if HasSuffix(lower, suffix)
+      return true
+    endif
+  endfor
+  for [suffix, listKey] in items(rules.conditionalSuffixes)
+    if HasSuffix(lower, suffix)
+      return has_key(get(lists, listKey, {}), strpart(lower, 0, strlen(lower) - strlen(suffix)))
+    endif
+  endfor
+  return false
 enddef
 
-# FUNCTION: Return true for a word in the adverbs list, or a word ending
-# in ly that is not in adverb_exceptions, such as family or friendly. A
-# heuristic: the tagger replaces it when one is set.
+# FUNCTION: Return true for a word in the adverbs list, or a word with one
+# of the adverb_suffixes of the language, such as ly in English, that is
+# not in adverb_exceptions, such as family or friendly. At least two
+# letters must come before the suffix. A heuristic: the tagger replaces it
+# when one is set.
 export def IsHeuristicAdverb(word: string, lists: dict<any>): bool
   var lower: string = tolower(word)
   if has_key(get(lists, 'adverbs', {}), lower)
     return true
   endif
-  return lower =~# '..ly$' && !has_key(get(lists, 'adverb_exceptions', {}), lower)
+  if has_key(get(lists, 'adverb_exceptions', {}), lower)
+    return false
+  endif
+  for suffix in get(lists, 'rules', {}).adverbSuffixes
+    if strchars(lower) >= strchars(suffix) + 2 && HasSuffix(lower, suffix)
+      return true
+    endif
+  endfor
+  return false
 enddef
 
 # FUNCTION: Return the spans of text that mode keeps bright, by word list
@@ -145,7 +146,7 @@ export def LexicalSpans(mode: string, text: string, lists: dict<any>): list<list
       # it's and they're count as pronouns and don't as an auxiliary: try the
       # word, then its base, see ContractionBase.
       var lower: string = tolower(word)
-      lit = has_key(words, lower) || has_key(words, ContractionBase(lower))
+      lit = has_key(words, lower) || has_key(words, ContractionBase(lower, get(lists, 'rules', {})))
     endif
     if lit
       spans->add([start, end])
@@ -189,15 +190,41 @@ export def GapPositions(lnum: number, text: string, spans: list<list<number>>): 
   return positions
 enddef
 
-# FUNCTION: Return the word a contraction is built on: don't gives do,
-# can't gives can, won't gives will, and they're gives they. word is
-# lowercase.
-def ContractionBase(word: string): string
-  if word =~ "n['’]t$"
-    var base: string = substitute(word, "n['’]t$", '', '')
-    return get(NT_BASES, base, base)
-  endif
-  return matchstr(word, "^[^'’]*")
+# FUNCTION: Return the word a contraction is built on: the text before its
+# contraction suffix, mapped through contraction_bases of the language when
+# listed there. In English, don't gives do, can't gives can, and they're
+# gives they. word is lowercase.
+def ContractionBase(word: string, rules: dict<any>): string
+  var lower: string = NormalizeApostrophes(word)
+  for suffix in rules.contractionSuffixes + keys(rules.conditionalSuffixes)
+    if HasSuffix(lower, suffix)
+      var base: string = strpart(lower, 0, strlen(lower) - strlen(suffix))
+      return get(rules.contractionBases, base, base)
+    endif
+  endfor
+  return lower
+enddef
+
+# FUNCTION: Return the rules of a language file, with defaults, so that a
+# language without a rule simply has none.
+def Rules(profile: dict<any>): dict<any>
+  return {
+    adverbSuffixes: get(profile, 'adverb_suffixes', []),
+    contractionSuffixes: get(profile, 'contraction_suffixes', []),
+    conditionalSuffixes: get(profile, 'conditional_contraction_suffixes', {}),
+    contractionBases: get(profile, 'contraction_bases', {}),
+  }
+enddef
+
+# FUNCTION: Return text with the typographic apostrophe replaced by the
+# straight one, which the language files use.
+def NormalizeApostrophes(text: string): string
+  return substitute(text, '’', "'", 'g')
+enddef
+
+# FUNCTION: Return true when word ends in suffix and is longer than it.
+def HasSuffix(word: string, suffix: string): bool
+  return strlen(word) > strlen(suffix) && strpart(word, strlen(word) - strlen(suffix)) ==# suffix
 enddef
 
 def ToSet(words: list<any>): dict<bool>

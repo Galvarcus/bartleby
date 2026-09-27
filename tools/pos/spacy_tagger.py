@@ -31,16 +31,33 @@ def byte_offsets(text):
     return offsets
 
 
-def passive_spans(doc, offsets):
+def ud_passive_spans(doc, offsets):
+    """Passive spans for models that label the passive auxiliary auxpass
+    or aux:pass, as the English model does. The span runs from the first
+    auxiliary of the verb, of any aux label, to the verb."""
     spans = []
     for verb in doc:
-        auxes = [c for c in verb.children if c.dep_ in ("aux", "auxpass", "aux:pass")]
+        auxes = [c for c in verb.children if c.dep_.startswith("aux")]
         if not any(c.dep_ in ("auxpass", "aux:pass") for c in auxes):
             continue
         start = min(c.idx for c in auxes)
         end = verb.idx + len(verb.text)
         spans.append([offsets[start], offsets[end]])
     return spans
+
+
+# Passive rules by the model's language, nlp.lang. A language without a
+# rule returns no passive spans, and its language file sets
+# tagger_passive to false, so Bartleby hides the Passive mode. See
+# Localization_README.md.
+PASSIVE_RULES = {
+    "en": ud_passive_spans,
+}
+
+
+def passive_spans(doc, offsets):
+    rule = PASSIVE_RULES.get(doc.lang_)
+    return rule(doc, offsets) if rule else []
 
 
 def main():

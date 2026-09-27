@@ -40,6 +40,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/pos.vim' as P
@@ -54,8 +55,6 @@ var spotlightbop: string = g:bartleby_spotlight_bop
 var spotlighteop: string = g:bartleby_spotlight_eop
 var spotlightparagraphspan: number = g:bartleby_spotlight_paragraph_span
 var spotlightpriority: number = g:bartleby_spotlight_priority
-var spotlightdialoguepattern: string = g:bartleby_spotlight_dialogue_pattern
-var spotlightlanguage: string = g:bartleby_spotlight_language
 
 ##############################################################################
 # SECTION: Mode registry. A handler takes the mode name and returns what
@@ -137,6 +136,12 @@ enddef
 
 def TaggerReady(): bool
   return TA.IsReady()
+enddef
+
+# FUNCTION: Return true when the tagger is ready and the language file
+# declares that the tagger has a passive rule for the language.
+def PassiveReady(): bool
+  return TA.IsReady() && LA.Get('tagger_passive', false)
 enddef
 
 # FUNCTION: Return true when mode takes its words from the tagger now.
@@ -230,14 +235,23 @@ def DialoguePositions(mode: string, first: number, last: number): list<any>
     : ProseDialoguePositions(first, last)
 enddef
 
+# FUNCTION: Return the dialogue pattern: g:bartleby_spotlight_dialogue_pattern
+# when set, else the dialogue quotes of the language file. Read on each
+# use, not when this script loads, so that a changed language applies.
+def DialoguePattern(): string
+  return g:bartleby_spotlight_dialogue_pattern !=# '' ? g:bartleby_spotlight_dialogue_pattern
+    : LA.Get('dialogue_pattern', '"[^"]*"')
+enddef
+
 def ProseDialoguePositions(first: number, last: number): list<any>
+  var pattern: string = DialoguePattern()
   var positions: list<any> = []
   for lnum in range(first, last)
     var text: string = getline(lnum)
     var spans: list<list<number>> = []
     var from: number = 0
     while true
-      var found: list<any> = matchstrpos(text, spotlightdialoguepattern, from)
+      var found: list<any> = matchstrpos(text, pattern, from)
       if found[1] < 0 || found[2] <= found[1]
         break
       endif
@@ -322,7 +336,7 @@ def PosPositions(mode: string, first: number, last: number): list<any>
   endwhile
 
   var tagged: bool = UsesTagger(mode)
-  var lists: dict<any> = tagged ? {} : P.Lists(spotlightlanguage)
+  var lists: dict<any> = tagged ? {} : P.Lists()
   var positions: list<any> = []
   var lnum: number = start
   while lnum <= stop
@@ -402,7 +416,7 @@ RegisterMode(MODE_DIALOGUE, DialogueSpec, Always)
 for posMode in POS_MODES
   RegisterMode(posMode, PosSpec, index(TAGGER_ONLY_MODES, posMode) >= 0 ? TaggerReady : Always)
 endfor
-RegisterMode(MODE_PASSIVE, PosSpec, TaggerReady)
+RegisterMode(MODE_PASSIVE, PosSpec, PassiveReady)
 
 ##############################################################################
 # SECTION: Color math, Limelight's hex2rgb and dim, unchanged. Blends the

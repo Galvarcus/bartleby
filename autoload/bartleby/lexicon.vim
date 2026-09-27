@@ -7,35 +7,38 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# lexicon.vim: Merriam-Webster dictionary and thesaurus lookups through
-# dictionaryapi.com: settings, requests, response parsing, and a cache.
-# The popups are in lexiconpopup.vim.
+# lexicon.vim: dictionary and thesaurus lookups: settings, keys,
+# requests, and a cache, for every provider. The provider of a reference
+# builds its URL and parses its response, as lexicon_mw.vim does for
+# Merriam-Webster. The popups are in lexiconpopup.vim, and the result
+# format in lexicon_result.vim.
 #
-# Each kind, dictionary and thesaurus, is on only when its own API key is
-# set, in g:bartleby_<kind>_api_key or else $BARTLEBY_MW_<KIND>_KEY, and
-# curl is installed. Merriam-Webster issues one key per product, so the
-# two kinds are independent.
-#
-# REFERENCES, in constants.vim, is the hook for other Merriam-Webster
-# references. It holds only the Collegiate Dictionary and Collegiate
-# Thesaurus now. To add one, add an entry with its apiName and the kind
-# whose parser fits its JSON, for example learners: {apiName: 'learners',
-# kind: 'dictionary'}. Then g:bartleby_<kind>_reference selects it.
+# Each kind, dictionary and thesaurus, uses one reference of CO.REFERENCES:
+# g:bartleby_<kind>_reference when set, else the one the language file
+# names. A kind is on when its reference and provider exist, curl is
+# installed, and, when the provider needs a key, the key is set in
+# g:bartleby_<kind>_api_key or the provider's environment variable. For
+# Merriam-Webster these are $BARTLEBY_MW_DICTIONARY_KEY and
+# $BARTLEBY_MW_THESAURUS_KEY. It issues one key per product, so the two
+# kinds are independent.
 #
 # curl runs through job_start, so Vim does not wait for the network. The
-# URL contains the key, so curl reads it on stdin as a config line, never
-# on the command line, where process listings show it. It is never
+# URL can contain the key, so curl reads it on stdin as a config line,
+# never on the command line, where process listings show it. It is never
 # logged.
 #
 # Parsed results are cached in memory and on disk, in
-# ~/.bartleby/lexicon_cache.json, by reference and word, never by key.
-# Only ok and notfound results are cached. The disk cache holds at most
-# g:bartleby_lexicon_cache_max_entries results and removes the oldest
-# first. 0 turns the disk cache off. CACHE_VERSION changes when the
-# parsed format changes, which discards an older cache file.
+# ~/.bartleby/lexicon_cache.json, by provider, reference, and word, never
+# by key. Only ok and notfound results are cached. The disk cache holds at
+# most g:bartleby_lexicon_cache_max_entries results and removes the oldest
+# first. 0 turns the disk cache off. CACHE_VERSION changes when the parsed
+# format or the cache key changes, which discards an older cache file.
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/lang.vim' as LA
+import autoload 'bartleby/lexicon_mw.vim' as LM
+import autoload 'bartleby/lexicon_result.vim' as LR
 import autoload 'bartleby/log.vim' as L
 import 'bartleby/variables/constants.vim' as CO
 
@@ -46,38 +49,43 @@ var disk_cache_loaded: bool = false
 
 
 
-const CACHE_VERSION: number = 1
-const ENV_KEYS: dict<string> = {
-  [CO.KIND_DICTIONARY]: 'BARTLEBY_MW_DICTIONARY_KEY',
-  [CO.KIND_THESAURUS]: 'BARTLEBY_MW_THESAURUS_KEY',
-}
-
-# FUNCTION: Return the API key for kind: the g: variable when set, else
-# the environment variable, else an empty string.
-export def ApiKey(kind: string): string
-  var key: string = get(g:, $'bartleby_{kind}_api_key', '')
-  if key ==# ''
-    key = getenv(ENV_KEYS[kind]) ?? ''
-  endif
-  return trim(key)
-enddef
+const CACHE_VERSION: number = 2
 
 # FUNCTION: Return the configured reference for kind, or an empty dict
-# when the name is not registered or belongs to the other kind.
+# when the name is not registered or belongs to the other kind. An empty
+# setting means the reference of the language file.
 export def Reference(kind: string): dict<string>
   var name: string = get(g:, $'bartleby_{kind}_reference', '')
+  if name ==# ''
+    name = LA.Get($'{kind}_reference', '')
+  endif
   var ref: dict<string> = get(CO.REFERENCES, name, {})
   return get(ref, 'kind', '') ==# kind ? ref : {}
 enddef
 
+# FUNCTION: Return the API key for kind: the g: variable when set, else
+# the environment variable of the reference's provider, else an empty
+# string.
+export def ApiKey(kind: string): string
+  var key: string = get(g:, $'bartleby_{kind}_api_key', '')
+  if key ==# ''
+    var envName: string = get(get(Provider(get(Reference(kind), 'provider', '')), 'envKeys', {}), kind, '')
+    key = envName ==# '' ? '' : (getenv(envName) ?? '')
+  endif
+  return trim(key)
+enddef
+
 # FUNCTION: Return why kind is off, or an empty string when it is on.
 export def DisabledReason(kind: string): string
-  if ApiKey(kind) ==# ''
-    return $'{kind} lookups are off - set g:bartleby_{kind}_api_key (or ${ENV_KEYS[kind]})'
-  endif
-  if empty(Reference(kind))
+  var ref: dict<string> = Reference(kind)
+  var provider: dict<any> = Provider(get(ref, 'provider', ''))
+  if empty(ref) || empty(provider)
     var name: string = get(g:, $'bartleby_{kind}_reference', '')
-    return $'g:bartleby_{kind}_reference "{name}" is not a known {kind} reference'
+    return $'no {kind} reference "{name ==# '' ? LA.Get($"{kind}_reference", '') : name}" for this language'
+  endif
+  if provider.needsKey && ApiKey(kind) ==# ''
+    var envName: string = get(provider.envKeys, kind, '')
+    return $'{kind} lookups are off - set g:bartleby_{kind}_api_key (or ${envName})'
   endif
   if !executable('curl')
     return $'{kind} lookups need curl, which was not found'
@@ -100,24 +108,10 @@ export def CleanWord(raw: string): string
   return tolower(word)
 enddef
 
-# FUNCTION: Percent-encode every byte outside the RFC 3986 unreserved set.
-export def UrlEncode(text: string): string
-  var encoded: string = ''
-  for ch in split(text, '\zs')
-    if ch =~# '^[A-Za-z0-9._~-]$'
-      encoded ..= ch
-    else
-      for byte in str2blob([ch])
-        encoded ..= printf('%%%02X', byte)
-      endfor
-    endif
-  endfor
-  return encoded
-enddef
-
 export def BuildUrl(kind: string, word: string): string
-  var base: string = substitute(g:bartleby_lexicon_base_url, '/\+$', '', '')
-  return $'{base}/{Reference(kind).apiName}/json/{UrlEncode(word)}?key={ApiKey(kind)}'
+  var ref: dict<string> = Reference(kind)
+  var F: func(dict<string>, string, string): string = Provider(ref.provider).buildUrl
+  return F(ref, word, ApiKey(kind))
 enddef
 
 # FUNCTION: Give replacement the capitalization of original: all capitals
@@ -133,44 +127,16 @@ export def MatchCase(original: string, replacement: string): string
   return replacement
 enddef
 
-# FUNCTION: Parse a Merriam-Webster response body. Return a dict:
-#   status:      ok, notfound, or error
-#   entries:     dictionary: [{headword, display, fl, defs}]
-#                thesaurus:  [{headword, fl, senses: [{label, syns}], ants}]
-#   suggestions: spelling suggestions when status is notfound
-#   message:     error text when status is error
-# Merriam-Webster answers a bad key with plain text, not JSON. A body that
-# is not JSON becomes an error with its first line.
+# FUNCTION: Parse a response body with the provider of kind's reference.
+# The result follows lexicon_result.vim.
 export def ParseResponse(kind: string, word: string, body: string): dict<any>
-  var text: string = trim(body)
-  if text ==# ''
-    return ErrorResult('empty response from Merriam-Webster')
+  var ref: dict<string> = Reference(kind)
+  var provider: dict<any> = Provider(get(ref, 'provider', ''))
+  if empty(provider)
+    return LR.Error($'no {kind} reference for this language')
   endif
-  var data: any
-  try
-    data = json_decode(text)
-  catch
-    return ErrorResult('Merriam-Webster: ' .. strcharpart(split(text, "\n")[0], 0, 120))
-  endtry
-  if type(data) != v:t_list
-    return ErrorResult('unexpected response from Merriam-Webster')
-  endif
-  if empty(data) || data->copy()->filter((_, v) => type(v) != v:t_string)->empty()
-    return {status: 'notfound', entries: [], suggestions: data, message: ''}
-  endif
-
-  var raw: list<dict<any>> = data->copy()->filter((_, v) => type(v) == v:t_dict)
-  var matching: list<dict<any>> = raw->copy()->filter((_, e) => IsEntryFor(e, word))
-  var chosen: list<dict<any>> = empty(matching) ? raw : matching
-
-  var entries: list<dict<any>> = kind ==# CO.KIND_THESAURUS
-    ? chosen->mapnew((_, e) => ThesaurusEntry(e))
-    : chosen->mapnew((_, e) => DictionaryEntry(e))
-  entries = entries->filter((_, e) => !empty(e))
-  if empty(entries)
-    return {status: 'notfound', entries: [], suggestions: [], message: ''}
-  endif
-  return {status: 'ok', entries: entries, suggestions: [], message: ''}
+  var F: func(string, string, string): dict<any> = provider.parse
+  return F(kind, word, body)
 enddef
 
 # FUNCTION: Look up word, already cleaned, and call Callback with the
@@ -179,10 +145,11 @@ enddef
 export def Lookup(kind: string, word: string, Callback: func(dict<any>)): void
   var reason: string = DisabledReason(kind)
   if reason !=# ''
-    timer_start(0, (_) => Callback(ErrorResult(reason)))
+    timer_start(0, (_) => Callback(LR.Error(reason)))
     return
   endif
-  var cacheKey: string = $'{Reference(kind).apiName}:{word}'
+  var ref: dict<string> = Reference(kind)
+  var cacheKey: string = $'{ref.provider}:{ref.apiName}:{word}'
   var cached: dict<any> = CacheGet(cacheKey)
   if !empty(cached)
     timer_start(0, (_) => Callback(cached))
@@ -200,59 +167,23 @@ export def ClearCache(): void
   endif
 enddef
 
-def ErrorResult(message: string): dict<any>
-  return {status: 'error', entries: [], suggestions: [], message: message}
-enddef
-
-def StripSyllables(headword: string): string
-  return substitute(headword, '\*', '', 'g')
-enddef
-
-def IsEntryFor(entry: dict<any>, word: string): bool
-  var meta: dict<any> = get(entry, 'meta', {})
-  var stems: list<any> = get(meta, 'stems', [])
-  if index(stems->mapnew((_, s) => tolower(s)), word) >= 0
-    return true
+# FUNCTION: Return the provider name to its functions and key settings.
+# To add a provider, write a script with BuildUrl and Parse, as
+# lexicon_mw.vim, and add an entry here. envKeys names the environment
+# variable that holds the key of each kind, when the provider needs one.
+def Provider(name: string): dict<any>
+  if name ==# 'merriam-webster'
+    return {
+      buildUrl: LM.BuildUrl,
+      parse: LM.Parse,
+      needsKey: true,
+      envKeys: {
+        [CO.KIND_DICTIONARY]: 'BARTLEBY_MW_DICTIONARY_KEY',
+        [CO.KIND_THESAURUS]: 'BARTLEBY_MW_THESAURUS_KEY',
+      },
+    }
   endif
-  var hw: string = get(get(entry, 'hwi', {}), 'hw', '')
-  return tolower(StripSyllables(hw)) ==# word
-enddef
-
-def DictionaryEntry(entry: dict<any>): dict<any>
-  var defs: list<any> = get(entry, 'shortdef', [])->filter((_, d) => type(d) == v:t_string)
-  if empty(defs)
-    return {}
-  endif
-  var hw: string = get(get(entry, 'hwi', {}), 'hw', get(get(entry, 'meta', {}), 'id', ''))
-  return {
-    headword: StripSyllables(hw),
-    display: substitute(hw, '\*', '·', 'g'),
-    fl: get(entry, 'fl', ''),
-    defs: defs,
-  }
-enddef
-
-def ThesaurusEntry(entry: dict<any>): dict<any>
-  var meta: dict<any> = get(entry, 'meta', {})
-  var synLists: list<any> = get(meta, 'syns', [])
-  var shortdefs: list<any> = get(entry, 'shortdef', [])
-  var senses: list<dict<any>> = []
-  for i in range(len(synLists))
-    if !empty(synLists[i])
-      senses->add({label: get(shortdefs, i, ''), syns: synLists[i]})
-    endif
-  endfor
-  var ants: list<any> = flattennew(get(meta, 'ants', []))->uniq()
-  if empty(senses) && empty(ants)
-    return {}
-  endif
-  var hw: string = get(get(entry, 'hwi', {}), 'hw', get(meta, 'id', ''))
-  return {
-    headword: StripSyllables(hw),
-    fl: get(entry, 'fl', ''),
-    senses: senses,
-    ants: ants,
-  }
+  return {}
 enddef
 
 def StartRequest(kind: string, word: string, cacheKey: string,
@@ -270,7 +201,7 @@ def StartRequest(kind: string, word: string, cacheKey: string,
     state.done = true
     if state.code != 0
       var detail: string = empty(err) ? $'exit code {state.code}' : trim(split(join(err, ''), "\n")[0])
-      Callback(ErrorResult($'lookup failed: {detail}'))
+      Callback(LR.Error($'lookup failed: {detail}'))
       return
     endif
     var result: dict<any> = ParseResponse(kind, word, join(out, ''))
@@ -302,7 +233,7 @@ def StartRequest(kind: string, word: string, cacheKey: string,
     },
   })
   if job_status(job) ==# 'fail'
-    Callback(ErrorResult('could not start curl'))
+    Callback(LR.Error('could not start curl'))
     return
   endif
   ch_sendraw(job, $'url = "{BuildUrl(kind, word)}"' .. "\n")

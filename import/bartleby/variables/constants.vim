@@ -72,19 +72,21 @@ export const LABELS: list<string> = ['None', 'Red', 'Orange', 'Yellow', 'Green',
 export const STATUSES: list<string> = ['To Do', 'First Draft', 'Revised', 'Done']
 
 ##############################################################################
-# SECTION: Dictionary and thesaurus. REFERENCES is the hook for other
-# Merriam-Webster references, see lexicon.vim.
+# SECTION: Dictionary and thesaurus. Each reference names its provider,
+# see lexicon.vim, and a language file chooses its default references.
 ##############################################################################
 
 export const KIND_DICTIONARY: string = 'dictionary'
 export const KIND_THESAURUS: string = 'thesaurus'
 export const REFERENCES: dict<dict<string>> = {
   collegiate: {
+    provider: 'merriam-webster',
     apiName: 'collegiate',
     kind: KIND_DICTIONARY,
     title: 'Merriam-Webster Dictionary',
   },
   thesaurus: {
+    provider: 'merriam-webster',
     apiName: 'thesaurus',
     kind: KIND_THESAURUS,
     title: 'Merriam-Webster Thesaurus',
@@ -96,7 +98,7 @@ export const REFERENCES: dict<dict<string>> = {
 # character cue and scene heading rules from the two patterns.
 ##############################################################################
 
-# Mode name to its list key in tools/pos/<language>.json.
+# Mode name to its list key in the lists of tools/lang/<code>.json.
 export const MODE_LISTS: dict<string> = {
   Pronouns: 'pronouns',
   Determiners: 'determiners',

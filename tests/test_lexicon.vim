@@ -9,6 +9,7 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/lexicon.vim' as LE
+import autoload 'bartleby/lexicon_mw.vim' as LM
 
 const DICTIONARY_BODY: string = json_encode([
   {
@@ -98,9 +99,9 @@ def Test_clean_word(): void
 enddef
 
 def Test_url_encode(): void
-  assert_equal('ice%20cream', LE.UrlEncode('ice cream'))
-  assert_equal('go-between', LE.UrlEncode('go-between'))
-  assert_equal('caf%C3%A9', LE.UrlEncode('café'))
+  assert_equal('ice%20cream', LM.UrlEncode('ice cream'))
+  assert_equal('go-between', LM.UrlEncode('go-between'))
+  assert_equal('caf%C3%A9', LM.UrlEncode('café'))
 enddef
 
 def Test_match_case(): void
@@ -154,6 +155,22 @@ def Test_build_url(): void
   g:bartleby_dictionary_api_key = savedKey
 enddef
 
+def Test_reference_comes_from_the_language_file(): void
+  var saved = g:bartleby_dictionary_reference
+  g:bartleby_dictionary_reference = ''
+  assert_equal('collegiate', LE.Reference('dictionary').apiName)
+  assert_equal('merriam-webster', LE.Reference('dictionary').provider)
+  g:bartleby_dictionary_reference = saved
+enddef
+
+def Test_unknown_reference_is_off_with_a_reason(): void
+  var saved = g:bartleby_dictionary_reference
+  g:bartleby_dictionary_reference = 'nosuch'
+  assert_false(LE.IsEnabled('dictionary'))
+  assert_match('no dictionary reference "nosuch"', LE.DisabledReason('dictionary'))
+  g:bartleby_dictionary_reference = saved
+enddef
+
 export def RunAll(): void
   Test_parse_dictionary_keeps_only_matching_entries()
   Test_parse_dictionary_keeps_all_entries_when_none_match()
@@ -170,4 +187,6 @@ export def RunAll(): void
   Test_environment_key_is_the_fallback()
   Test_unknown_or_wrong_kind_reference_is_disabled()
   Test_build_url()
+  Test_reference_comes_from_the_language_file()
+  Test_unknown_reference_is_off_with_a_reason()
 enddef
