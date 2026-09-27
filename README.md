@@ -32,6 +32,7 @@ screenplays.
 - [Commands](#commands)
 - [Mappings](#mappings)
 - [Configuration](#configuration)
+- [Logging](#logging)
 - [License](#license)
 
 For a walkthrough written for authors, see
@@ -563,6 +564,21 @@ default, so set only the ones you want to change.
 | `g:bartleby_lexicon_cache_max_entries` | `1000` | Results kept in the disk cache. `0` turns the disk cache off |
 | `g:bartleby_lexicon_timeout` | `10` | Seconds to wait for Merriam-Webster |
 | `g:bartleby_lexicon_base_url` | `'https://www.dictionaryapi.com/api/v3/references'` | API address. Change it only for a proxy or a test server |
+
+## Logging
+
+Bartleby shows its messages through
+[Logger](https://github.com/Galvarcus/Logger), so Logger's options apply,
+with `bartleby` as the plugin name. To also write Bartleby's messages to a
+log file, one file per Vim session in `~/.Logger/`:
+
+```vim
+let g:logger_bartleby_log_file = v:true
+```
+
+`:LoggerMessages` shows the recent messages of all plugins. See the Logger
+README for the other options, such as the message level and the number
+of log files to keep.
 
 ## License
 

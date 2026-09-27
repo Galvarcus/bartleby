@@ -21,6 +21,8 @@ vim9script
 if exists('b:current_syntax')
   finish
 endif
+
+import 'bartleby/variables/constants.vim' as CO
 syntax sync minlines=200
 
 # Title page: lines of the form Key: value at the start of the file, up to
@@ -33,8 +35,9 @@ syntax match fountainTitleKey /^\a[A-Za-z0-9 ]*:/ contained contains=NONE
 # matchgroup, is a line with no lowercase letter. The dialogue is
 # everything up to the next blank line. A region, not a match per line,
 # gives the dialogue its own highlight, apart from the action lines.
-syntax region fountainDialogue matchgroup=fountainCharacter start=/^\L*$/ end=/^\s*$/
-      \ contains=fountainParenthetical,fountainNote,fountainBoneyard,@fountainEmphasis
+execute 'syntax region fountainDialogue matchgroup=fountainCharacter'
+  .. $' start=/{CO.FOUNTAIN_CHARACTER_PATTERN}/ end=/^\s*$/'
+  .. ' contains=fountainParenthetical,fountainNote,fountainBoneyard,@fountainEmphasis'
 
 # Parenthetical: a whole line in parentheses, inside a dialogue block.
 syntax match fountainParenthetical /^\s*(.*)\s*$/ contained
@@ -43,9 +46,9 @@ syntax match fountainParenthetical /^\s*(.*)\s*$/ contained
 # slash, or a space, or a leading period that forces a heading, Fountain's
 # escape for a heading without a standard prefix. Defined after
 # fountainDialogue, so these lines are not read as character cues.
-syntax region fountainSceneHeading start=/^\c\(int\|ext\|est\|i\/e\)\([.\/]\| \)/ end=/$/
-      \ contains=fountainSceneNumber
-syntax match fountainSceneHeading /^\.\a.*$/
+execute $'syntax region fountainSceneHeading start=/{CO.FOUNTAIN_SCENE_PREFIX_PATTERN}/ end=/$/'
+  .. ' contains=fountainSceneNumber'
+execute $'syntax match fountainSceneHeading /{CO.FOUNTAIN_FORCED_SCENE_PATTERN}.*$/'
 syntax region fountainSceneNumber start=/#/ end=/#/ contained
 
 # Transitions: a line in capitals that ends in TO:, or one of a few fixed

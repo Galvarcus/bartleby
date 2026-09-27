@@ -17,26 +17,26 @@ var is_loaded: bool = true
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/document.vim' as D
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
-import autoload 'bartleby/mutate.vim' as M
-import autoload 'bartleby/templates.vim' as Tm
-import autoload 'bartleby/corkboard.vim' as C
+import autoload 'bartleby/mutate.vim' as MU
+import autoload 'bartleby/templates.vim' as TE
+import autoload 'bartleby/corkboard.vim' as CR
 import autoload 'bartleby/outliner.vim' as O
-import autoload 'bartleby/search.vim' as Se
+import autoload 'bartleby/search.vim' as SE
 import autoload 'bartleby/windows.vim' as W
-import autoload 'bartleby/slug.vim' as Sl
-import autoload 'bartleby/picker.vim' as Pk
+import autoload 'bartleby/slug.vim' as SU
+import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/helppopup.vim' as H
-import autoload 'bartleby/session.vim' as Sess
-import autoload 'bartleby/snapshot.vim' as Sn
-import autoload 'bartleby/dialog_popup.vim' as Dl
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/session.vim' as SS
+import autoload 'bartleby/snapshot.vim' as SN
+import autoload 'bartleby/dialog_popup.vim' as DP
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 var binderShowRoleLabels: bool = g:bartleby_binder_show_role_labels
 
-const BUF_NAME: string = 'Bartleby-Binder'
 # Render draws the title line, the project name, above the tree. Every
 # mapping from a cursor line to a tree row subtracts this.
 const HEADER_LINES: number = 1
@@ -51,7 +51,7 @@ def RenderLines(rows: list<T.Row>, binderRoot: string, collapsed: dict<bool>): l
     var suffix: string = ''
     if row.item.IsDocument()
       var meta: D.DocMeta = row.item.LoadMeta(binderRoot)
-      if meta.label !=# D.LABELS[0]
+      if meta.label !=# CO.LABELS[0]
         suffix = $' ({meta.label})'
       endif
     endif
@@ -64,11 +64,11 @@ def RenderLines(rows: list<T.Row>, binderRoot: string, collapsed: dict<bool>): l
 enddef
 
 def FindOrCreateWindow(): number
-  var winNr: number = bufwinnr(BUF_NAME)
+  var winNr: number = bufwinnr(CO.BINDER_BUF)
   if winNr != -1
     return winNr
   endif
-  execute 'vertical topleft :30split ' .. BUF_NAME
+  execute 'vertical topleft :30split ' .. CO.BINDER_BUF
   setlocal buftype=nofile bufhidden=hide noswapfile nobuflisted
   # Long titles wrap at word boundaries. shift:2 starts each wrapped line
   # under the title text, after the marker.
@@ -76,14 +76,14 @@ def FindOrCreateWindow(): number
   setlocal nonumber norelativenumber nofoldenable
   setlocal filetype=bartleby-binder
   setlocal winfixwidth
-  return bufwinnr(BUF_NAME)
+  return bufwinnr(CO.BINDER_BUF)
 enddef
 
 # FUNCTION: Draw the tree of project in the current window, which must
 # already be the Binder, see Show. The rows of a collapsed folder are not
 # drawn at all, see tree.vim Flatten. This is not a Vim fold. The
 # collapsed folders are kept across renders in b:bartleby_collapsed.
-def Render(project: Pj.Project): void
+def Render(project: PO.Project): void
   var previousRows: list<T.Row> = get(b:, 'bartleby_rows', [])
   var previousLine: number = line('.')
   var previousId: string = previousLine > HEADER_LINES && previousLine <= len(previousRows) + HEADER_LINES
@@ -110,7 +110,7 @@ enddef
 # its rows, and the row under the cursor, or null_object when there is
 # none, also on the title line.
 def CursorContext(): dict<any>
-  var project: Pj.Project = get(b:, 'bartleby_project', null_object)
+  var project: PO.Project = get(b:, 'bartleby_project', null_object)
   var rows: list<T.Row> = get(b:, 'bartleby_rows', [])
   var lineNr: number = line('.')
   var row: T.Row = lineNr > HEADER_LINES && lineNr <= len(rows) + HEADER_LINES
@@ -141,8 +141,8 @@ def OpenCorkboard(): void
   if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsFolder()
     return
   endif
-  var project: Pj.Project = ctx.project
-  C.Show(project, ctx.row.item, (doc: BI.BinderItem) => {
+  var project: PO.Project = ctx.project
+  CR.Show(project, ctx.row.item, (doc: BI.BinderItem) => {
     var path: string = doc.AbsPath(project.BinderRoot())
     if !filereadable(path)
       log.Error($'missing file on disk: {path}')
@@ -158,14 +158,14 @@ def TakeSnapshot(): void
   if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
     return
   endif
-  var project: Pj.Project = ctx.project
+  var project: PO.Project = ctx.project
   var doc: BI.BinderItem = ctx.row.item
   IP.PromptText('Snapshot label (optional)', '', (label: string) => {
-    Sn.Take(project, doc, label)
+    SN.Take(project, doc, label)
   })
 enddef
 
-def ShowSnapshotReadOnly(doc: BI.BinderItem, snapshot: Sn.Snapshot): void
+def ShowSnapshotReadOnly(doc: BI.BinderItem, snapshot: SN.Snapshot): void
   W.GoToEditorWindow()
   execute 'enew'
   setline(1, snapshot.lines)
@@ -178,19 +178,19 @@ def ViewSnapshots(): void
   if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
     return
   endif
-  var project: Pj.Project = ctx.project
+  var project: PO.Project = ctx.project
   var doc: BI.BinderItem = ctx.row.item
-  var snapshots: list<Sn.Snapshot> = reverse(Sn.List(project, doc))
+  var snapshots: list<SN.Snapshot> = reverse(SN.List(project, doc))
   if empty(snapshots)
     log.Info($'no snapshots for "{doc.title}"')
     return
   endif
   var names: list<string> = snapshots->mapnew((_, s) => s.DisplayName())
-  Pk.PickOne('Snapshots', names, (choice: string) => {
-    var snapshot: Sn.Snapshot = snapshots[index(names, choice)]
-    Pk.PickOne($' {choice} ', ['Restore', 'View', 'Cancel'], (action: string) => {
+  PI.PickOne('Snapshots', names, (choice: string) => {
+    var snapshot: SN.Snapshot = snapshots[index(names, choice)]
+    PI.PickOne($' {choice} ', ['Restore', 'View', 'Cancel'], (action: string) => {
       if action ==# 'Restore'
-        Sn.Restore(project, doc, snapshot)
+        SN.Restore(project, doc, snapshot)
       elseif action ==# 'View'
         ShowSnapshotReadOnly(doc, snapshot)
       endif
@@ -211,7 +211,7 @@ def RunSearch(): void
   if ctx.project is null_object
     return
   endif
-  Se.Run(ctx.project)
+  SE.Run(ctx.project)
 enddef
 
 # FUNCTION: Add -2, -3, and so on to a relPath that is already taken on
@@ -245,15 +245,15 @@ def FinishAddDocument(ctx: dict<any>, title: string): void
   var dirSlug: string = ''
   if ctx.row isnot null_object
     if ctx.row.item.IsFolder()
-      dirSlug = Sl.Slugify(ctx.row.item.title)
+      dirSlug = SU.Slugify(ctx.row.item.title)
     elseif ctx.row.ownerItem isnot null_object
-      dirSlug = Sl.Slugify(ctx.row.ownerItem.title)
+      dirSlug = SU.Slugify(ctx.row.ownerItem.title)
     endif
   endif
-  var relPath: string = UniqueRelPath(ctx.project.BinderRoot(), dirSlug, Sl.Slugify(title), ctx.project.DocExt())
+  var relPath: string = UniqueRelPath(ctx.project.BinderRoot(), dirSlug, SU.Slugify(title), ctx.project.DocExt())
   var newItem: BI.BinderItem = BI.BinderItem.NewDocument(title, relPath)
-  M.AddNear(ctx.project, ctx.row, newItem)
-  Tm.Materialize([newItem], ctx.project.BinderRoot())
+  MU.AddNear(ctx.project, ctx.row, newItem)
+  TE.Materialize([newItem], ctx.project.BinderRoot())
   ctx.project.Save()
   Render(ctx.project)
 enddef
@@ -264,12 +264,12 @@ def AddFolder(): void
     return
   endif
   var options: list<string> = ['Custom']
-  if ctx.project.projectType ==# Pj.TYPE_NOVEL
+  if ctx.project.projectType ==# CO.TYPE_NOVEL
     options->add('Chapter')
-  elseif ctx.project.projectType ==# Pj.TYPE_NOVEL_PARTS
+  elseif ctx.project.projectType ==# CO.TYPE_NOVEL_PARTS
     options->add('Part')
-    var onOrInsidePart: bool = (ctx.row isnot null_object && ctx.row.item.structureRole ==# BI.ROLE_PART)
-      || M.FindAncestorWithRole(ctx.rows, ctx.row, BI.ROLE_PART) isnot null_object
+    var onOrInsidePart: bool = (ctx.row isnot null_object && ctx.row.item.structureRole ==# CO.ROLE_PART)
+      || MU.FindAncestorWithRole(ctx.rows, ctx.row, CO.ROLE_PART) isnot null_object
     if onOrInsidePart
       options->add('Chapter')
     endif
@@ -277,7 +277,7 @@ def AddFolder(): void
   if len(options) ==# 1
     CreateFolder(ctx, 'Custom')
   else
-    Pk.PickOne('Add Folder', options, (choice: string) => {
+    PI.PickOne('Add Folder', options, (choice: string) => {
       CreateFolder(ctx, choice)
     })
   endif
@@ -295,7 +295,7 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
     if title ==# ''
       return
     endif
-    ctx.project.AddChild(BI.BinderItem.NewFolder(title, BI.ROLE_CUSTOM))
+    ctx.project.AddChild(BI.BinderItem.NewFolder(title, CO.ROLE_CUSTOM))
     ctx.project.Save()
     Render(ctx.project)
     return
@@ -303,25 +303,25 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
 
   if kind ==# 'Chapter'
     var container: BI.BinderItem
-    if ctx.project.projectType ==# Pj.TYPE_NOVEL_PARTS
-      container = (ctx.row isnot null_object && ctx.row.item.structureRole ==# BI.ROLE_PART)
-        ? ctx.row.item : M.FindAncestorWithRole(ctx.rows, ctx.row, BI.ROLE_PART)
+    if ctx.project.projectType ==# CO.TYPE_NOVEL_PARTS
+      container = (ctx.row isnot null_object && ctx.row.item.structureRole ==# CO.ROLE_PART)
+        ? ctx.row.item : MU.FindAncestorWithRole(ctx.rows, ctx.row, CO.ROLE_PART)
     else
-      container = M.FindManuscript(ctx.project)
+      container = MU.FindManuscript(ctx.project)
     endif
     if container is null_object
       log.Error('no Manuscript/Part folder found to add a chapter into')
       return
     endif
-    var chapter: BI.BinderItem = M.AddChapter(container, ctx.row, title)
-    Tm.Materialize([chapter], ctx.project.BinderRoot())
+    var chapter: BI.BinderItem = MU.AddChapter(container, ctx.row, title)
+    TE.Materialize([chapter], ctx.project.BinderRoot())
   else
-    var manuscript: BI.BinderItem = M.FindManuscript(ctx.project)
+    var manuscript: BI.BinderItem = MU.FindManuscript(ctx.project)
     if manuscript is null_object
       log.Error('no Manuscript folder found to add a part into')
       return
     endif
-    M.AddPart(manuscript, ctx.row, title)
+    MU.AddPart(manuscript, ctx.row, title)
   endif
   ctx.project.Save()
   Render(ctx.project)
@@ -334,14 +334,14 @@ def DeleteUnderCursor(): void
   endif
   var item: BI.BinderItem = ctx.row.item
 
-  if M.IsImmutableFolder(item)
+  if MU.IsImmutableFolder(item)
     if item.ChildCount() == 0
       log.Info($'"{item.title}" is already empty')
       return
     endif
     var clearPrompt: string = $'Clear all contents of "{item.title}"? The folder itself will remain.'
-    Dl.Confirm(clearPrompt, () => {
-      M.ClearChildren(item)
+    DP.Confirm(clearPrompt, () => {
+      MU.ClearChildren(item)
       log.Info($'cleared "{item.title}" - any files on disk were left untouched')
       ctx.project.Save()
       Render(ctx.project)
@@ -352,8 +352,8 @@ def DeleteUnderCursor(): void
   var prompt: string = item.IsFolder() && item.ChildCount() > 0
     ? $'Delete "{item.title}" and everything inside it?'
     : $'Delete "{item.title}"?'
-  Dl.Confirm(prompt, () => {
-    M.Remove(ctx.project, ctx.row)
+  DP.Confirm(prompt, () => {
+    MU.Remove(ctx.project, ctx.row)
     log.Info('removed from binder - any files on disk were left untouched')
     ctx.project.Save()
     Render(ctx.project)
@@ -365,7 +365,7 @@ def RenameUnderCursor(): void
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
-  if M.IsImmutableFolder(ctx.row.item)
+  if MU.IsImmutableFolder(ctx.row.item)
     log.Info($'"{ctx.row.item.title}" cannot be renamed')
     return
   endif
@@ -374,7 +374,7 @@ def RenameUnderCursor(): void
     if newTitle ==# '' || newTitle ==# oldTitle
       return
     endif
-    M.Rename(ctx.row, newTitle)
+    MU.Rename(ctx.row, newTitle)
     ctx.project.Save()
     Render(ctx.project)
   })
@@ -385,7 +385,7 @@ def Move(delta: number): void
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
-  if !M.MoveWithinSiblings(ctx.project, ctx.row, delta)
+  if !MU.MoveWithinSiblings(ctx.project, ctx.row, delta)
     log.Info('this item cannot be reordered here')
     return
   endif
@@ -398,7 +398,7 @@ def IndentUnderCursor(): void
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
-  if !M.Indent(ctx.project, ctx.row)
+  if !MU.Indent(ctx.project, ctx.row)
     log.Info('no valid folder above to indent into')
     return
   endif
@@ -411,7 +411,7 @@ def OutdentUnderCursor(): void
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
-  if !M.Outdent(ctx.project, ctx.rows, ctx.row)
+  if !MU.Outdent(ctx.project, ctx.rows, ctx.row)
     log.Info('already at the top level, or not a valid destination for this item')
     return
   endif
@@ -424,10 +424,10 @@ def PickLabel(): void
   if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
     return
   endif
-  var project: Pj.Project = ctx.project
+  var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.row.item
   var currentMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-  Pk.PickOne('Label', D.LABELS, (choice: string) => {
+  PI.PickOne('Label', CO.LABELS, (choice: string) => {
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     meta.SetLabel(choice)
     meta.Save(item.MetaPath(project.BinderRoot()))
@@ -440,10 +440,10 @@ def PickStatus(): void
   if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
     return
   endif
-  var project: Pj.Project = ctx.project
+  var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.row.item
   var currentMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-  Pk.PickOne('Status', D.STATUSES, (choice: string) => {
+  PI.PickOne('Status', CO.STATUSES, (choice: string) => {
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     meta.SetStatus(choice)
     meta.Save(item.MetaPath(project.BinderRoot()))
@@ -455,7 +455,7 @@ enddef
 # The setting applies to the whole session, not only to this buffer.
 def ToggleRoleLabels(): void
   binderShowRoleLabels = !binderShowRoleLabels
-  var project: Pj.Project = get(b:, 'bartleby_project', null_object)
+  var project: PO.Project = get(b:, 'bartleby_project', null_object)
   if project isnot null_object
     Render(project)
   endif
@@ -498,7 +498,7 @@ def ToggleCollapse(): void
   endif
   b:bartleby_collapsed = collapsed
   Render(ctx.project)
-  Sess.CaptureBinderState()
+  SS.CaptureBinderState()
 enddef
 
 def SetupKeymaps(): void
@@ -526,33 +526,33 @@ enddef
 
 # FUNCTION: Draw the tree of project in the sidebar, and create the
 # sidebar if needed.
-export def Show(project: Pj.Project): void
+export def Show(project: PO.Project): void
   var winNr: number = FindOrCreateWindow()
   execute ':' .. winNr .. 'wincmd w'
   Render(project)
   SetupKeymaps()
 enddef
 
-export def Toggle(project: Pj.Project): void
-  var winNr: number = bufwinnr(BUF_NAME)
+export def Toggle(project: PO.Project): void
+  var winNr: number = bufwinnr(CO.BINDER_BUF)
   if winNr != -1
     execute ':' .. winNr .. 'close'
-    Sess.CaptureBinderState()
+    SS.CaptureBinderState()
     return
   endif
   Show(project)
-  Sess.CaptureBinderState()
+  SS.CaptureBinderState()
 enddef
 
 export def IsOpen(): bool
-  return bufwinnr(BUF_NAME) != -1
+  return bufwinnr(CO.BINDER_BUF) != -1
 enddef
 
 # FUNCTION: Return the ids of the collapsed folders, for the session. The
 # set lives in b:bartleby_collapsed on the Binder buffer, and other
 # scripts use these two functions instead of that variable.
 export def GetCollapsedIds(): list<string>
-  var winNr: number = bufwinnr(BUF_NAME)
+  var winNr: number = bufwinnr(CO.BINDER_BUF)
   if winNr == -1
     return []
   endif
@@ -560,7 +560,7 @@ export def GetCollapsedIds(): list<string>
 enddef
 
 export def ApplyCollapsedIds(ids: list<string>): void
-  var winNr: number = bufwinnr(BUF_NAME)
+  var winNr: number = bufwinnr(CO.BINDER_BUF)
   if winNr == -1
     return
   endif

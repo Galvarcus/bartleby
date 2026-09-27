@@ -19,6 +19,8 @@ if exists('b:current_syntax')
   finish
 endif
 
+import 'bartleby/variables/constants.vim' as CO
+
 # Line 1 is always the project name, see Render in binder.vim.
 syntax match bartlebyBinderTitle /\%1l.*/
 
@@ -44,10 +46,11 @@ syntax match bartlebyBinderDirectory /\%(\%(▾\|▸\) \%(\%(Chapter\|Part\): \)
 syntax match bartlebyBinderRoleLabel /\%(\%(▾\|▸\|·\) \)\@<=\(Chapter\|Part\): /
 
 # The label color that binder.vim adds after a document title, such as
-# Red. Only the real label names match, the LABELS of document.vim
-# without None, which is never shown, and only at the end of the line,
-# where RenderLines puts it.
-syntax match bartlebyBinderItemLabel / (\(Red\|Orange\|Yellow\|Green\|Blue\|Purple\))$/
+# Red. The pattern is built from LABELS in constants.vim, without None,
+# which is never shown, so only real label names match. It matches only
+# at the end of the line, where RenderLines puts the label.
+var labels: string = CO.LABELS->copy()->filter((_, l) => l !=# 'None')->join('\|')
+execute $'syntax match bartlebyBinderItemLabel / (\({labels}\))$/'
 
 highlight default link bartlebyBinderTitle Title
 highlight default link bartlebyBinderMarker Comment

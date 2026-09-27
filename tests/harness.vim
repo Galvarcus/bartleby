@@ -36,42 +36,42 @@ set encoding=utf-8
 # files directly must do this itself.
 execute 'source ' .. expand('<sfile>:h:h') .. '/plugin/bartleby.vim'
 
-import './test_tree.vim' as TestTree
-import './test_mutate.vim' as TestMutate
-import './test_document.vim' as TestDocument
-import './test_compile.vim' as TestCompile
-import './test_compile_select.vim' as TestCompileSelect
-import './test_binder.vim' as TestBinder
-import './test_syntax.vim' as TestSyntax
-import './test_pos.vim' as TestPos
-import './test_spotlight_pos.vim' as TestSpotlightPos
-import './test_inputpopup.vim' as TestInputPopup
-import './test_dialog_popup.vim' as TestDialogPopup
-import './test_outliner.vim' as TestOutliner
-import './test_scrivelist.vim' as TestScriveList
-import './test_scrive.vim' as TestScrive
-import './test_lexicon.vim' as TestLexicon
-import './test_binder_directory.vim' as TestBinderDirectory
-import './test_autosave.vim' as TestAutoSave
+import './test_tree.vim' as TT
+import './test_mutate.vim' as TM
+import './test_document.vim' as TD
+import './test_compile.vim' as TC
+import './test_compile_select.vim' as TCS
+import './test_binder.vim' as TB
+import './test_syntax.vim' as TSY
+import './test_pos.vim' as TP
+import './test_spotlight_pos.vim' as TSP
+import './test_inputpopup.vim' as TI
+import './test_dialog_popup.vim' as TDP
+import './test_outliner.vim' as TO
+import './test_scrivelist.vim' as TSL
+import './test_scrive.vim' as TSC
+import './test_lexicon.vim' as TL
+import './test_binder_directory.vim' as TBD
+import './test_autosave.vim' as TAU
 
 var suites: list<func(): void> = [
-  TestTree.RunAll,
-  TestMutate.RunAll,
-  TestDocument.RunAll,
-  TestCompile.RunAll,
-  TestCompileSelect.RunAll,
-  TestBinder.RunAll,
-  TestSyntax.RunAll,
-  TestPos.RunAll,
-  TestSpotlightPos.RunAll,
-  TestInputPopup.RunAll,
-  TestDialogPopup.RunAll,
-  TestOutliner.RunAll,
-  TestScriveList.RunAll,
-  TestScrive.RunAll,
-  TestLexicon.RunAll,
-  TestBinderDirectory.RunAll,
-  TestAutoSave.RunAll,
+  TT.RunAll,
+  TM.RunAll,
+  TD.RunAll,
+  TC.RunAll,
+  TCS.RunAll,
+  TB.RunAll,
+  TSY.RunAll,
+  TP.RunAll,
+  TSP.RunAll,
+  TI.RunAll,
+  TDP.RunAll,
+  TO.RunAll,
+  TSL.RunAll,
+  TSC.RunAll,
+  TL.RunAll,
+  TBD.RunAll,
+  TAU.RunAll,
 ]
 
 for RunSuite in suites

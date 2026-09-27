@@ -1,4 +1,5 @@
 vim9script
+import 'bartleby/variables/constants.vim' as CO
 
 if exists('s:is_loaded') || v:version < 902 || &cp
   finish
@@ -16,14 +17,14 @@ var is_loaded: bool = true
 ##############################################################################
 
 const CHROME_BUFFER_NAMES: list<string> = [
-  'Bartleby-Binder',
-  'Bartleby-Inspector',
+  CO.BINDER_BUF,
+  CO.INSPECTOR_BUF,
 ]
 
 # Side panes that code opening documents must never replace.
 const PROTECTED_BUFFER_NAMES: list<string> = [
-  'Bartleby-Binder',
-  'Bartleby-Inspector',
+  CO.BINDER_BUF,
+  CO.INSPECTOR_BUF,
 ]
 
 def MatchesAny(bufNr: number, names: list<string>): bool

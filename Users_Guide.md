@@ -449,6 +449,16 @@ Press `?` in the Binder, Corkboard, Outliner, scrive list, or synonym
 list to see its keys. `:help bartleby` opens the full reference in
 Vim.
 
+If something goes wrong, `:LoggerMessages` shows Bartleby's recent
+messages. To keep them in a file that you can send with a problem
+report, add this line to your vimrc:
+
+```vim
+let g:logger_bartleby_log_file = v:true
+```
+
+The files are in the `.Logger` folder in your home folder.
+
 ## Files
 
 Each scrive is a folder under `~/Documents/Bartleby/`. In it:

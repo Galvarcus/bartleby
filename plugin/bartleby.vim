@@ -13,31 +13,32 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/scrive.vim' as Sc
+import autoload 'bartleby/scrive.vim' as S
 import autoload 'bartleby/binder.vim' as B
-import autoload 'bartleby/project.vim' as Pj
-import autoload 'bartleby/search.vim' as Se
-import autoload 'bartleby/state.vim' as St
+import autoload 'bartleby/project.vim' as PO
+import autoload 'bartleby/search.vim' as SE
+import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/inspector.vim' as I
 import autoload 'bartleby/focus.vim' as F
-import autoload 'bartleby/spotlight.vim' as Sp
+import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/quill.vim' as Q
-import autoload 'bartleby/profile.vim' as Pf
+import autoload 'bartleby/profile.vim' as PR
 import autoload 'bartleby/compile.vim' as C
-import autoload 'bartleby/session.vim' as Sess
-import autoload 'bartleby/snapshot.vim' as Sn
+import autoload 'bartleby/session.vim' as SS
+import autoload 'bartleby/snapshot.vim' as SN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/inputpopup.vim' as IP
-import autoload 'bartleby/picker.vim' as Pk
+import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/commandpalette.vim' as CP
 import autoload 'bartleby/bartlebymenu.vim' as BM
 import autoload 'bartleby/scrivelist.vim' as SL
-import autoload 'bartleby/lexicon.vim' as Lx
-import autoload 'bartleby/lexiconpopup.vim' as LxP
-import autoload 'bartleby/autosave.vim' as As
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/lexicon.vim' as LE
+import autoload 'bartleby/lexiconpopup.vim' as LP
+import autoload 'bartleby/autosave.vim' as A
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 # Every g:bartleby setting, with its default. -1 and empty strings mean
 # not set, for settings with no real default, such as the Focus margins
@@ -120,21 +121,21 @@ g:bartleby_lexicon_base_url = get(g:, 'bartleby_lexicon_base_url',
 # picker order.
 def ProjectTypes(): list<list<string>>
   return [
-    ['Novel', Pj.TYPE_NOVEL],
-    ['Novel with Parts', Pj.TYPE_NOVEL_PARTS],
-    ['Short Story', Pj.TYPE_SHORT_STORY],
-    ['Screenplay', Pj.TYPE_SCREENPLAY],
+    ['Novel', CO.TYPE_NOVEL],
+    ['Novel with Parts', CO.TYPE_NOVEL_PARTS],
+    ['Short Story', CO.TYPE_SHORT_STORY],
+    ['Screenplay', CO.TYPE_SCREENPLAY],
   ]
 enddef
 
 def OpenScrive(name: string): void
-  var scriveName: string = name ==# '' ? fnamemodify(Sess.LastScrive(), ':t:r') : name
+  var scriveName: string = name ==# '' ? fnamemodify(SS.LastScrive(), ':t:r') : name
   if scriveName ==# ''
     log.Warn('no scrive name given, and no previously-opened scrive to fall back to - showing the scrive list')
     SL.Show()
     return
   endif
-  var project: Pj.Project = Sc.Open(scriveName)
+  var project: PO.Project = S.Open(scriveName)
   if project is null_object
     # A last scrive that was moved or deleted gets the same fallback as no
     # last scrive. A typed name that is wrong does not: its error is enough.
@@ -143,16 +144,16 @@ def OpenScrive(name: string): void
     endif
     return
   endif
-  St.Set(project)
-  Sess.RememberLastScrive(project.scriveDir)
-  Sess.Restore(project)
+  ST.Set(project)
+  SS.RememberLastScrive(project.scriveDir)
+  SS.Restore(project)
 enddef
 
 # FUNCTION: Ask for the scrive type with PickOne, as the other pickers
 # do, then create the scrive. Esc creates nothing.
 def NewScrive(name: string): void
   var types: list<list<string>> = ProjectTypes()
-  Pk.PickOne('Scrive Type', types->mapnew((_, t) => t[0]), (choice: string) => {
+  PI.PickOne('Scrive Type', types->mapnew((_, t) => t[0]), (choice: string) => {
     var match: list<list<string>> = types->copy()->filter((_, t) => t[0] ==# choice)
     if !empty(match)
       CreateScrive(name, match[0][1])
@@ -161,29 +162,29 @@ def NewScrive(name: string): void
 enddef
 
 def CreateScrive(name: string, projectType: string): void
-  var project: Pj.Project = Sc.Create(name, projectType)
+  var project: PO.Project = S.Create(name, projectType)
   if project is null_object
     return
   endif
-  St.Set(project)
-  Sess.RememberLastScrive(project.scriveDir)
+  ST.Set(project)
+  SS.RememberLastScrive(project.scriveDir)
   B.Show(project)
 enddef
 
 def ToggleBinder(): void
-  if St.Get() is null_object
+  if ST.Get() is null_object
     log.Warn('no scrive open - run :BartlebyOpen <name> first')
     return
   endif
-  B.Toggle(St.Get())
+  B.Toggle(ST.Get())
 enddef
 
 def RunSearch(): void
-  if St.Get() is null_object
+  if ST.Get() is null_object
     log.Warn('no scrive open - run :BartlebyOpen <name> first')
     return
   endif
-  Se.Run(St.Get())
+  SE.Run(ST.Get())
 enddef
 
 command! -bar -nargs=? -complete=customlist,bartleby#scrive#CompleteNames
@@ -194,20 +195,20 @@ command! -bar BartlebyToggleBinder ToggleBinder()
 command! -bar BartlebySearch RunSearch()
 command! -bar BartlebyToggleInspector I.Toggle()
 command! -bar -bang -nargs=? BartlebyFocus F.Execute('<bang>' ==# '!', <q-args>)
-command! -bar -bang -nargs=? BartlebySpotlight Sp.Execute('<bang>' ==# '!', <q-args>)
+command! -bar -bang -nargs=? BartlebySpotlight SP.Execute('<bang>' ==# '!', <q-args>)
 def EditProjectInfo(): void
-  if St.Get() is null_object
+  if ST.Get() is null_object
     log.Warn('no scrive open - run :BartlebyOpen <name> first')
     return
   endif
-  Pf.EditForScrive(St.Get())
+  PR.EditForScrive(ST.Get())
 enddef
 
 # FUNCTION: Return the BinderItem of the current buffer in the open
 # scrive, or null_object with a warning when no scrive is open or the
 # buffer is not one of its documents.
 def CurrentDoc(): BI.BinderItem
-  var project: Pj.Project = St.Get()
+  var project: PO.Project = ST.Get()
   if project is null_object
     log.Warn('no scrive open - run :BartlebyOpen <name> first')
     return null_object
@@ -220,33 +221,33 @@ def CurrentDoc(): BI.BinderItem
 enddef
 
 def SnapshotCurrentDoc(): void
-  var project: Pj.Project = St.Get()
+  var project: PO.Project = ST.Get()
   var doc: BI.BinderItem = CurrentDoc()
   if doc is null_object
     return
   endif
   IP.PromptText('Snapshot label (optional)', '', (label: string) => {
-    Sn.Take(project, doc, label)
+    SN.Take(project, doc, label)
   })
 enddef
 
 def ViewSnapshotsForCurrentDoc(): void
-  var project: Pj.Project = St.Get()
+  var project: PO.Project = ST.Get()
   var doc: BI.BinderItem = CurrentDoc()
   if doc is null_object
     return
   endif
-  var snapshots: list<Sn.Snapshot> = reverse(Sn.List(project, doc))
+  var snapshots: list<SN.Snapshot> = reverse(SN.List(project, doc))
   if empty(snapshots)
     log.Info($'no snapshots for "{doc.title}"')
     return
   endif
   var names: list<string> = snapshots->mapnew((_, s) => s.DisplayName())
-  Pk.PickOne('Snapshots', names, (choice: string) => {
-    var snapshot: Sn.Snapshot = snapshots[index(names, choice)]
-    Pk.PickOne($' {choice} ', ['Restore', 'Cancel'], (action: string) => {
+  PI.PickOne('Snapshots', names, (choice: string) => {
+    var snapshot: SN.Snapshot = snapshots[index(names, choice)]
+    PI.PickOne($' {choice} ', ['Restore', 'Cancel'], (action: string) => {
       if action ==# 'Restore'
-        Sn.Restore(project, doc, snapshot)
+        SN.Restore(project, doc, snapshot)
       endif
     })
   })
@@ -255,28 +256,28 @@ enddef
 command! -bar -nargs=? BartlebyQuill Q.Init(<q-args> ==# '' ? 'detect' : <q-args>)
 command! -bar BartlebySnapshot SnapshotCurrentDoc()
 command! -bar BartlebySnapshots ViewSnapshotsForCurrentDoc()
-command! -bar BartlebyProfile Pf.EditGlobal()
+command! -bar BartlebyProfile PR.EditGlobal()
 command! -bar BartlebyProjectInfo EditProjectInfo()
 
 def RunCompile(): void
-  if St.Get() is null_object
+  if ST.Get() is null_object
     log.Warn('no scrive open - run :BartlebyOpen <name> first')
     return
   endif
-  C.Run(St.Get())
+  C.Run(ST.Get())
 enddef
 
 command! -bar BartlebyCompile RunCompile()
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
-command! -bar -nargs=? BartlebyDefine LxP.LookupCommand(Lx.KIND_DICTIONARY, <q-args>)
-command! -bar -nargs=? BartlebyThesaurus LxP.LookupCommand(Lx.KIND_THESAURUS, <q-args>)
-command! -bar BartlebyLexiconClearCache Lx.ClearCache()
+command! -bar -nargs=? BartlebyDefine LP.LookupCommand(CO.KIND_DICTIONARY, <q-args>)
+command! -bar -nargs=? BartlebyThesaurus LP.LookupCommand(CO.KIND_THESAURUS, <q-args>)
+command! -bar BartlebyLexiconClearCache LE.ClearCache()
 
 nnoremap <silent> <leader>bi <ScriptCmd>I.Toggle()<CR>
 nnoremap <silent> <leader>bz <ScriptCmd>F.Toggle()<CR>
-nnoremap <silent> <leader>bl <ScriptCmd>Sp.Toggle()<CR>
-nnoremap <silent> <leader>bL <ScriptCmd>Sp.PickMode()<CR>
+nnoremap <silent> <leader>bl <ScriptCmd>SP.Toggle()<CR>
+nnoremap <silent> <leader>bL <ScriptCmd>SP.PickMode()<CR>
 nnoremap <silent> <leader>bp <ScriptCmd>Q.Toggle()<CR>
 nnoremap <silent> <leader>b<Space> <ScriptCmd>CP.Open()<CR>
 nnoremap <silent> <leader>bm <ScriptCmd>BM.Toggle()<CR>
@@ -284,13 +285,13 @@ nnoremap <silent> <leader>bm <ScriptCmd>BM.Toggle()<CR>
 # The lookup mappings exist only when their kind has an API key, set
 # before Bartleby loads. The commands always exist and report what is
 # missing.
-if Lx.IsEnabled(Lx.KIND_DICTIONARY)
-  nnoremap <silent> <leader>bd <ScriptCmd>LxP.LookupAtCursor(Lx.KIND_DICTIONARY)<CR>
-  xnoremap <silent> <leader>bd <Esc><ScriptCmd>LxP.LookupVisual(Lx.KIND_DICTIONARY)<CR>
+if LE.IsEnabled(CO.KIND_DICTIONARY)
+  nnoremap <silent> <leader>bd <ScriptCmd>LP.LookupAtCursor(CO.KIND_DICTIONARY)<CR>
+  xnoremap <silent> <leader>bd <Esc><ScriptCmd>LP.LookupVisual(CO.KIND_DICTIONARY)<CR>
 endif
-if Lx.IsEnabled(Lx.KIND_THESAURUS)
-  nnoremap <silent> <leader>bt <ScriptCmd>LxP.LookupAtCursor(Lx.KIND_THESAURUS)<CR>
-  xnoremap <silent> <leader>bt <Esc><ScriptCmd>LxP.LookupVisual(Lx.KIND_THESAURUS)<CR>
+if LE.IsEnabled(CO.KIND_THESAURUS)
+  nnoremap <silent> <leader>bt <ScriptCmd>LP.LookupAtCursor(CO.KIND_THESAURUS)<CR>
+  xnoremap <silent> <leader>bt <Esc><ScriptCmd>LP.LookupVisual(CO.KIND_THESAURUS)<CR>
 endif
 
 augroup bartleby_quill_auto
@@ -299,7 +300,7 @@ augroup bartleby_quill_auto
 augroup END
 
 def AutoRestoreSession(): void
-  if g:bartleby_session_auto_restore && Sess.LastScrive() !=# ''
+  if g:bartleby_session_auto_restore && SS.LastScrive() !=# ''
     OpenScrive('')
   endif
 enddef
@@ -307,14 +308,14 @@ enddef
 # Auto-save for scrive documents, see autoload/bartleby/autosave.vim.
 augroup bartleby_autosave
   autocmd!
-  autocmd CursorHold,InsertLeave * As.Save(false)
-  autocmd FocusLost,BufLeave * As.Save(true)
+  autocmd CursorHold,InsertLeave * A.Save(false)
+  autocmd FocusLost,BufLeave * A.Save(true)
 augroup END
 
 augroup bartleby_session
   autocmd!
-  autocmd CursorHold * Sess.CaptureCurrentDoc()
-  autocmd VimLeavePre * Sess.CaptureCurrentDoc()
+  autocmd CursorHold * SS.CaptureCurrentDoc()
+  autocmd VimLeavePre * SS.CaptureCurrentDoc()
   autocmd VimEnter * AutoRestoreSession()
 augroup END
 
