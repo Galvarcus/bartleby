@@ -14,23 +14,19 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/persist.vim' as Pe
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/persist.vim' as PE
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
-export const PROJECT_FILE: string = 'project.json'
 
-export const TYPE_NOVEL: string = 'novel'
-export const TYPE_NOVEL_PARTS: string = 'novel_parts'
-export const TYPE_SHORT_STORY: string = 'short_story'
-export const TYPE_SCREENPLAY: string = 'screenplay'
 
 export class Project implements BI.ItemContainer
   # Absolute path of the .bartleby folder.
   var scriveDir: string
   var name: string = ''
-  var projectType: string = TYPE_NOVEL
+  var projectType: string = CO.TYPE_NOVEL
   # The top-level binder items.
   var items: list<BI.BinderItem> = []
 
@@ -40,7 +36,7 @@ export class Project implements BI.ItemContainer
   # METHOD: Set the name and type of a new scrive, after construction and
   # before the first Save. A var field can be written only inside its
   # class, see Create in scrive.vim.
-  def InitNew(newName: string, newType: string = TYPE_NOVEL): void
+  def InitNew(newName: string, newType: string = CO.TYPE_NOVEL): void
     this.name = newName
     this.projectType = newType
   enddef
@@ -94,13 +90,13 @@ export class Project implements BI.ItemContainer
   enddef
 
   def ProjectFilePath(): string
-    return this.scriveDir .. '/' .. PROJECT_FILE
+    return this.scriveDir .. '/' .. CO.PROJECT_FILE
   enddef
 
   # METHOD: Return the document extension: .fountain for a screenplay, .md
   # for every other type.
   def DocExt(): string
-    return this.projectType ==# TYPE_SCREENPLAY ? '.fountain' : '.md'
+    return this.projectType ==# CO.TYPE_SCREENPLAY ? '.fountain' : '.md'
   enddef
 
   def Load(): bool
@@ -109,16 +105,16 @@ export class Project implements BI.ItemContainer
       log.Warn($'project.json not found in {this.scriveDir}')
       return false
     endif
-    var data: dict<any> = Pe.ReadJson(path)
+    var data: dict<any> = PE.ReadJson(path)
     this.name = get(data, 'name', fnamemodify(this.scriveDir, ':t:r'))
-    this.projectType = get(data, 'projectType', TYPE_NOVEL)
+    this.projectType = get(data, 'projectType', CO.TYPE_NOVEL)
     var rawItems: list<dict<any>> = get(data, 'items', [])
     this.items = rawItems->mapnew((_, i) => BI.BinderItem.FromDict(i))
     return true
   enddef
 
   def Save(): void
-    Pe.WriteJson(this.ProjectFilePath(), {
+    PE.WriteJson(this.ProjectFilePath(), {
       name: this.name,
       projectType: this.projectType,
       items: this.items->mapnew((_, i) => i.ToDict()),

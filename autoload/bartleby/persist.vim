@@ -13,9 +13,9 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 export def ReadJson(path: string): dict<any>
   if !filereadable(path)

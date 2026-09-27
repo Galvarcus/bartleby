@@ -28,16 +28,16 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
-import autoload 'bartleby/project.vim' as Pj
-import autoload 'bartleby/state.vim' as St
+import autoload 'bartleby/project.vim' as PO
+import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/windows.vim' as W
-import autoload 'bartleby/picker.vim' as Pk
+import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/inputpopup.vim' as IP
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
-const BUF_NAME: string = 'Bartleby-Inspector'
 const FRAME_TITLE: string = '::Inspector::'
 # Line numbers in the output of RenderContent, so that EditUnderCursor
 # knows which field is on which line. Line 2, the title, has no
@@ -69,8 +69,8 @@ enddef
 # FUNCTION: Write the Inspector buffer for item without moving the focus
 # from the editor. setbufline, deletebufline, and setbufvar take a target
 # buffer, so the editor window is not touched.
-def RefreshFor(project: Pj.Project, item: BI.BinderItem): void
-  var bufNr: number = bufnr(BUF_NAME)
+def RefreshFor(project: PO.Project, item: BI.BinderItem): void
+  var bufNr: number = bufnr(CO.INSPECTOR_BUF)
   if bufNr == -1
     return
   endif
@@ -96,13 +96,13 @@ def EditUnderCursor(): void
   if ctx.project is null_object || ctx.item is null_object
     return
   endif
-  var project: Pj.Project = ctx.project
+  var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.item
   var lnum: number = line('.')
 
   if lnum == LINE_LABEL
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    Pk.PickOne('Label', D.LABELS, (choice: string) => {
+    PI.PickOne('Label', CO.LABELS, (choice: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetLabel(choice)
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -110,7 +110,7 @@ def EditUnderCursor(): void
     }, meta.label)
   elseif lnum == LINE_STATUS
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    Pk.PickOne('Status', D.STATUSES, (choice: string) => {
+    PI.PickOne('Status', CO.STATUSES, (choice: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetStatus(choice)
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -152,7 +152,7 @@ def FollowEditor(): void
   if W.IsChromeBuffer(bufnr('%'))
     return
   endif
-  var project: Pj.Project = St.Get()
+  var project: PO.Project = ST.Get()
   if project is null_object
     return
   endif
@@ -170,7 +170,7 @@ enddef
 # FUNCTION: Open the Inspector for the document in the current window, or
 # close it when it is open.
 export def Toggle(): void
-  var winNr: number = bufwinnr(BUF_NAME)
+  var winNr: number = bufwinnr(CO.INSPECTOR_BUF)
   if winNr != -1
     execute ':' .. winNr .. 'close'
     augroup bartleby_inspector_follow
@@ -179,7 +179,7 @@ export def Toggle(): void
     return
   endif
 
-  var project: Pj.Project = St.Get()
+  var project: PO.Project = ST.Get()
   if project is null_object
     log.Warn('no scrive open')
     return
@@ -192,7 +192,7 @@ export def Toggle(): void
   endif
 
   var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-  execute 'vertical botright :40split ' .. BUF_NAME
+  execute 'vertical botright :40split ' .. CO.INSPECTOR_BUF
   setlocal buftype=nofile bufhidden=hide noswapfile nobuflisted
   setlocal nonumber norelativenumber nofoldenable
   setlocal filetype=bartleby-inspector

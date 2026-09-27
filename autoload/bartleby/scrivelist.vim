@@ -25,23 +25,23 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/scrive.vim' as Sc
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/scrive.vim' as S
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/helppopup.vim' as H
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 const HEADERS: list<string> = ['Title', 'Type']
 const COLUMN_GAP: string = '    '
 const MAX_VISIBLE_ROWS: number = 15
 const SCRIVELIST_ZINDEX: number = 250
 const TYPE_LABELS: dict<string> = {
-  [Pj.TYPE_NOVEL]: 'Novel',
-  [Pj.TYPE_NOVEL_PARTS]: 'Novel with Parts',
-  [Pj.TYPE_SHORT_STORY]: 'Short Story',
-  [Pj.TYPE_SCREENPLAY]: 'Screenplay',
+  [CO.TYPE_NOVEL]: 'Novel',
+  [CO.TYPE_NOVEL_PARTS]: 'Novel with Parts',
+  [CO.TYPE_SHORT_STORY]: 'Short Story',
+  [CO.TYPE_SCREENPLAY]: 'Screenplay',
 }
 
 # CLASS: One valid scrive. name is the bare folder name, which
@@ -59,7 +59,7 @@ export def CandidateDirs(root: string): list<string>
   if !isdirectory(root)
     return []
   endif
-  return globpath(root, '*' .. Sc.SCRIVE_EXT, false, true)
+  return globpath(root, '*' .. CO.SCRIVE_EXT, false, true)
     ->filter((_, p) => isdirectory(p))
 enddef
 
@@ -68,7 +68,7 @@ enddef
 # items list, or names an unknown project type. A missing or empty name
 # falls back to the folder name, as in Project.Load.
 export def ReadEntry(dir: string): ScriveEntry
-  var path: string = dir .. '/' .. Pj.PROJECT_FILE
+  var path: string = dir .. '/' .. CO.PROJECT_FILE
   if !filereadable(path)
     return null_object
   endif
@@ -99,7 +99,7 @@ enddef
 # FUNCTION: Return every valid scrive under root, or under the binder root
 # when root is empty, sorted by title without regard to case.
 export def FindScrives(root: string = ''): list<ScriveEntry>
-  var scanRoot: string = root ==# '' ? Sc.BinderRoot() : root
+  var scanRoot: string = root ==# '' ? S.BinderRoot() : root
   var entries: list<ScriveEntry> = []
   for dir in CandidateDirs(scanRoot)
     var entry: ScriveEntry = ReadEntry(dir)
@@ -116,11 +116,11 @@ enddef
 
 # FUNCTION: Run :BartlebyList.
 export def Show(): void
-  var dirs: list<string> = CandidateDirs(Sc.BinderRoot())
+  var dirs: list<string> = CandidateDirs(S.BinderRoot())
   var entries: list<ScriveEntry> = FindScrives()
   var skipped: number = len(dirs) - len(entries)
   if skipped > 0
-    log.Warn($'skipped {skipped} folder(s) under {Sc.BinderRoot()} with no valid project.json')
+    log.Warn($'skipped {skipped} folder(s) under {S.BinderRoot()} with no valid project.json')
   endif
   if empty(entries)
     PromptNewScrive()
@@ -134,7 +134,7 @@ def Pad(text: string, width: number): string
 enddef
 
 def PromptNewScrive(): void
-  log.Info($'no scrives found under {Sc.BinderRoot()} - name a new one to create it')
+  log.Info($'no scrives found under {S.BinderRoot()} - name a new one to create it')
   IP.PromptText('No scrives - create one', '', (name: string) => {
     if name !=# ''
       execute $'BartlebyNewScrive {name}'

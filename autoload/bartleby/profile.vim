@@ -18,12 +18,13 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/project.vim' as Pj
-import autoload 'bartleby/persist.vim' as Pe
+import autoload 'bartleby/project.vim' as PO
+import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/inputpopup.vim' as IP
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 const FIELDS: list<string> = ['name', 'authorname', 'address', 'city', 'state',
   'countrycode', 'zip', 'phonenumber', 'email']
@@ -69,7 +70,7 @@ export def GlobalPath(): string
   return expand('~/.bartleby/profile.json')
 enddef
 
-export def ScriveInfoPath(project: Pj.Project): string
+export def ScriveInfoPath(project: PO.Project): string
   return project.scriveDir .. '/project-info.json'
 enddef
 
@@ -77,20 +78,20 @@ def LoadFrom(path: string): ProjectInfo
   if !filereadable(path)
     return ProjectInfo.new()
   endif
-  return ProjectInfo.FromDict(Pe.ReadJson(path))
+  return ProjectInfo.FromDict(PE.ReadJson(path))
 enddef
 
 export def LoadGlobal(): ProjectInfo
   return LoadFrom(GlobalPath())
 enddef
 
-export def LoadForScrive(project: Pj.Project): ProjectInfo
+export def LoadForScrive(project: PO.Project): ProjectInfo
   return LoadFrom(ScriveInfoPath(project))
 enddef
 
 # FUNCTION: Merge the scrive profile of project with the global profile,
 # by field: an empty scrive field takes the global value.
-export def Resolve(project: Pj.Project): ProjectInfo
+export def Resolve(project: PO.Project): ProjectInfo
   var g: dict<any> = LoadGlobal().ToDict()
   var s: dict<any> = LoadForScrive(project).ToDict()
   var merged: dict<any> = {}
@@ -115,20 +116,20 @@ def SaveAndValidate(path: string, values: dict<any>, requireName: bool): void
     log.Error('Name is required')
     return
   endif
-  Pe.WriteJson(path, values)
+  PE.WriteJson(path, values)
 enddef
 
 export def EditGlobal(): void
   var current: dict<any> = LoadGlobal().ToDict()
   var form: IP.InputPopup = IP.InputPopup.new(IP.TextFields(FormLayout()), current,
-    {title: ' Bartleby Profile ', labels: FormLabels()})
+    {title: CO.PROFILE_TITLE, labels: FormLabels()})
   form.OnSubmit((values: dict<any>) => {
     SaveAndValidate(GlobalPath(), values, true)
   })
   form.Open()
 enddef
 
-export def EditForScrive(project: Pj.Project): void
+export def EditForScrive(project: PO.Project): void
   var globalDict: dict<any> = LoadGlobal().ToDict()
   var current: dict<any> = Resolve(project).ToDict()
   var form: IP.InputPopup = IP.InputPopup.new(IP.TextFields(FormLayout()), current,

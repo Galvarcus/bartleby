@@ -12,12 +12,13 @@ vim9script
 
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/binderitem.vim' as BI
-import './fixtures.vim' as Fx
+import './fixtures.vim' as FI
+import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return the fixture project with one Research document, which
 # must never be listed, in a dict of project, scene1, and scene2.
 def BuildProject(): dict<any>
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   project.ChildAt(4).AddChild(BI.BinderItem.NewDocument('Harbor notes', 'research/harbor.md'))
   var manuscript = project.ChildAt(1)
   return {
@@ -41,7 +42,7 @@ enddef
 
 def ClosePane(): void
   only!
-  silent! bwipe! Bartleby-Compile-Select
+  execute 'silent! bwipe! ' .. CO.COMPILE_SELECT_BUF
 enddef
 
 def Test_lists_header_title_and_only_compile_folders(): void

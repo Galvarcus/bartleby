@@ -6,10 +6,10 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/tree.vim' as T
-import './fixtures.vim' as Fx
+import './fixtures.vim' as FI
 
 def Test_flatten_produces_all_rows_in_depth_first_order(): void
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var rows = T.Flatten(project)
   # 5 top-level folders, 2 chapters, and 2 scenes.
   assert_equal(9, len(rows))
@@ -19,7 +19,7 @@ def Test_flatten_produces_all_rows_in_depth_first_order(): void
 enddef
 
 def Test_flatten_assigns_correct_depth(): void
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var rows = T.Flatten(project)
   var depths = rows->mapnew((_, r) => r.depth)
   # Depths in tree order: Front Matter 0, Manuscript 0, Chapter 1 1, its
@@ -29,7 +29,7 @@ def Test_flatten_assigns_correct_depth(): void
 enddef
 
 def Test_flatten_assigns_correct_owner(): void
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var rows = T.Flatten(project)
   # Row 0 is Front Matter: top level, no owner.
   assert_true(rows[0].ownerItem is null_object)
@@ -41,7 +41,7 @@ def Test_flatten_assigns_correct_owner(): void
 enddef
 
 def Test_flatten_skips_children_of_a_collapsed_folder(): void
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var manuscriptId = project.ChildAt(1).id
   var rows = T.Flatten(project, {[manuscriptId]: true})
   # The Manuscript row still shows. Its 2 chapters and their scenes do not.
@@ -52,7 +52,7 @@ def Test_flatten_skips_children_of_a_collapsed_folder(): void
 enddef
 
 def Test_flatten_nested_collapse_hides_grandchildren_too(): void
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var manuscript = project.ChildAt(1)
   var chapter1Id = manuscript.ChildAt(0).id
   # Only the chapter is collapsed, not the Manuscript.
@@ -66,14 +66,14 @@ def Test_flatten_nested_collapse_hides_grandchildren_too(): void
 enddef
 
 def Test_index_of_row_by_id_finds_known_row(): void
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var rows = T.Flatten(project)
   var manuscriptId = project.ChildAt(1).id
   assert_equal(1, T.IndexOfRowById(rows, manuscriptId))
 enddef
 
 def Test_index_of_row_by_id_returns_minus_one_for_unknown_id(): void
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var rows = T.Flatten(project)
   assert_equal(-1, T.IndexOfRowById(rows, 'no-such-id'))
 enddef

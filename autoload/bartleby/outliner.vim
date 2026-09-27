@@ -35,14 +35,15 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
-import autoload 'bartleby/picker.vim' as Pk
+import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/helppopup.vim' as H
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 const HEADERS: list<string> = ['Title', 'Label', 'Status', 'Words', 'Target', 'Keywords']
 const SORT_KEYS: list<string> = ['Tree Order', 'Title', 'Label', 'Status', 'Words']
@@ -129,7 +130,7 @@ def FormatRow(widths: list<number>, title: string, label: string, status: string
 enddef
 
 class OutlinerPopup
-  var project: Pj.Project
+  var project: PO.Project
   var folder: BI.BinderItem
   var sortKey: string = 'Tree Order'
   var rows: list<Row> = []
@@ -266,7 +267,7 @@ class OutlinerPopup
     endif
     var item: BI.BinderItem = row.item
     var currentMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
-    Pk.PickOne('Label', D.LABELS, (choice: string) => {
+    PI.PickOne('Label', CO.LABELS, (choice: string) => {
       var meta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
       meta.SetLabel(choice)
       meta.Save(item.MetaPath(this.project.BinderRoot()))
@@ -282,7 +283,7 @@ class OutlinerPopup
     endif
     var item: BI.BinderItem = row.item
     var currentMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
-    Pk.PickOne('Status', D.STATUSES, (choice: string) => {
+    PI.PickOne('Status', CO.STATUSES, (choice: string) => {
       var meta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
       meta.SetStatus(choice)
       meta.Save(item.MetaPath(this.project.BinderRoot()))
@@ -292,7 +293,7 @@ class OutlinerPopup
   enddef
 
   def PickSort(): void
-    Pk.PickOne('Sort by', SORT_KEYS, (choice: string) => {
+    PI.PickOne('Sort by', SORT_KEYS, (choice: string) => {
       this.sortKey = choice
       this.Rebuild()
       this.Render()
@@ -350,7 +351,7 @@ def WidthsSum(widths: list<number>): number
   return total + (len(widths) - 1) * 2
 enddef
 
-export def Show(project: Pj.Project, folder: BI.BinderItem): void
+export def Show(project: PO.Project, folder: BI.BinderItem): void
   var popup: OutlinerPopup = OutlinerPopup.new(project, folder)
   popup.Open()
 enddef

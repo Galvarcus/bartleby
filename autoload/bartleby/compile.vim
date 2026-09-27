@@ -27,20 +27,21 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/tree.vim' as T
-import autoload 'bartleby/picker.vim' as Pk
+import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/inputpopup.vim' as IP
-import autoload 'bartleby/profile.vim' as Pf
-import autoload 'bartleby/slug.vim' as Sl
-import autoload 'bartleby/persist.vim' as Pe
+import autoload 'bartleby/profile.vim' as PR
+import autoload 'bartleby/slug.vim' as SU
+import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/helppopup.vim' as H
-import autoload 'bartleby/dialog_popup.vim' as Dl
-import autoload 'dist/vim9.vim' as DistVim9
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/dialog_popup.vim' as DP
+import autoload 'dist/vim9.vim' as DV
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 var compilescriptpath: string = expand('<sfile>:p')
 var compilepandocbin: string = g:bartleby_compile_pandoc_bin
 var compilescreenplainbin: string = g:bartleby_compile_screenplain_bin
@@ -101,36 +102,36 @@ export class CompileTarget
   enddef
 endclass
 
-def TargetsDir(project: Pj.Project): string
+def TargetsDir(project: PO.Project): string
   return project.scriveDir .. '/compile/targets'
 enddef
 
-def TargetPath(project: Pj.Project, name: string): string
-  return TargetsDir(project) .. '/' .. Sl.Slugify(name) .. '.json'
+def TargetPath(project: PO.Project, name: string): string
+  return TargetsDir(project) .. '/' .. SU.Slugify(name) .. '.json'
 enddef
 
-export def ListTargets(project: Pj.Project): list<string>
+export def ListTargets(project: PO.Project): list<string>
   var dir: string = TargetsDir(project)
   if !isdirectory(dir)
     return []
   endif
   return globpath(dir, '*.json', false, true)
-    ->mapnew((_, p) => CompileTarget.FromDict(Pe.ReadJson(p)).name)
+    ->mapnew((_, p) => CompileTarget.FromDict(PE.ReadJson(p)).name)
 enddef
 
-export def LoadTarget(project: Pj.Project, name: string): CompileTarget
+export def LoadTarget(project: PO.Project, name: string): CompileTarget
   var path: string = TargetPath(project, name)
   if !filereadable(path)
     return null_object
   endif
-  return CompileTarget.FromDict(Pe.ReadJson(path))
+  return CompileTarget.FromDict(PE.ReadJson(path))
 enddef
 
-export def SaveTarget(project: Pj.Project, target: CompileTarget): void
-  Pe.WriteJson(TargetPath(project, target.name), target.ToDict())
+export def SaveTarget(project: PO.Project, target: CompileTarget): void
+  PE.WriteJson(TargetPath(project, target.name), target.ToDict())
 enddef
 
-export def DeleteTarget(project: Pj.Project, name: string): void
+export def DeleteTarget(project: PO.Project, name: string): void
   var path: string = TargetPath(project, name)
   if filereadable(path)
     delete(path)
@@ -141,7 +142,6 @@ enddef
 # separate from the settings popup, and all documents are included by
 # default.
 
-const SELECT_BUF: string = 'Bartleby-Compile-Select'
 const SELECT_HEADER: string = '*** Compile ***'
 # Lines above the tree: the header and the project title. Every mapping
 # from a cursor line to a row subtracts this.
@@ -149,11 +149,11 @@ const SELECT_HEADER_LINES: number = 2
 # Only these top-level folders go into a compile, see ConcatenateManuscript
 # and ConcatenateBook, so only their contents are listed.
 const COMPILE_ROLES: list<string> = [
-  BI.ROLE_FRONT_MATTER, BI.ROLE_MANUSCRIPT, BI.ROLE_BACK_MATTER,
+  CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_BACK_MATTER,
 ]
 
 class SelectState
-  var project: Pj.Project
+  var project: PO.Project
   var rows: list<T.Row>
   var included: dict<bool>
   var OnDone: func(list<string>)
@@ -165,7 +165,7 @@ endclass
 # FUNCTION: Return the Front Matter, Manuscript, and Back Matter folders
 # and everything under them, in tree order. Characters, Research, and
 # custom top-level folders are left out.
-def SelectableRows(project: Pj.Project): list<T.Row>
+def SelectableRows(project: PO.Project): list<T.Row>
   var rows: list<T.Row> = []
   var inCompileRoot: bool = false
   for row in T.Flatten(project)
@@ -179,7 +179,7 @@ def SelectableRows(project: Pj.Project): list<T.Row>
   return rows
 enddef
 
-def AllDocIds(project: Pj.Project): list<string>
+def AllDocIds(project: PO.Project): list<string>
   return SelectableRows(project)
     ->filter((_, row) => row.item.IsDocument())
     ->mapnew((_, row) => row.item.id)
@@ -250,7 +250,7 @@ def DoConfirm(): void
   Cb(ids)
 enddef
 
-export def SelectContents(project: Pj.Project, preselected: list<string>,
+export def SelectContents(project: PO.Project, preselected: list<string>,
     OnDone: func(list<string>)): void
   var included: dict<bool> = {}
   if empty(preselected)
@@ -263,7 +263,7 @@ export def SelectContents(project: Pj.Project, preselected: list<string>,
     endfor
   endif
 
-  execute 'vertical topleft :40split ' .. SELECT_BUF
+  execute 'vertical topleft :40split ' .. CO.COMPILE_SELECT_BUF
   setlocal buftype=nofile bufhidden=wipe noswapfile nobuflisted nomodifiable
   # Long titles wrap at word boundaries. shift:6 starts each wrapped line
   # under the title text, after the checkbox and marker.
@@ -301,7 +301,7 @@ enddef
 # separator for all kinds except Screenplay. existing is null_object for a
 # new target. For an edited target, it fills every field, and a changed
 # name deletes the old target file.
-def FinishWizard(project: Pj.Project, kind: string, format: string,
+def FinishWizard(project: PO.Project, kind: string, format: string,
     doubleSpaced: bool, ids: list<string>, existing: CompileTarget): void
   var fields: list<list<string>> = [['name'], ['font']]
   if kind ==# KIND_BOOK
@@ -344,20 +344,20 @@ enddef
 # FUNCTION: Run the compile wizard: contents selection first, then kind,
 # format, spacing for Manuscript, and the settings form. Each picker
 # starts on the existing value when a target is edited.
-def RunTargetForm(project: Pj.Project, existing: CompileTarget): void
+def RunTargetForm(project: PO.Project, existing: CompileTarget): void
   var preselected: list<string> = existing is null_object ? [] : existing.includedIds
   var kindDefault: string = existing is null_object ? KIND_MANUSCRIPT : existing.kind
   SelectContents(project, preselected, (ids: list<string>) => {
-    Pk.PickOne('Compile Kind', KINDS, (kind: string) => {
+    PI.PickOne('Compile Kind', KINDS, (kind: string) => {
       var formats: list<string> = get(KIND_FORMATS, kind, [])
       var formatDefault: string = (existing isnot null_object && existing.kind ==# kind)
         ? existing.format : formats[0]
-      Pk.PickOne('Format', formats, (format: string) => {
+      PI.PickOne('Format', formats, (format: string) => {
         if kind ==# KIND_MANUSCRIPT
           var spacingDefault: string = existing isnot null_object
             ? (existing.doubleSpaced ? 'Double' : 'Single')
             : (compilemanuscriptdoublespaced ? 'Double' : 'Single')
-          Pk.PickOne('Line Spacing', ['Double', 'Single'], (spacing: string) => {
+          PI.PickOne('Line Spacing', ['Double', 'Single'], (spacing: string) => {
             FinishWizard(project, kind, format, spacing ==# 'Double', ids, existing)
           }, spacingDefault)
         else
@@ -368,8 +368,8 @@ def RunTargetForm(project: Pj.Project, existing: CompileTarget): void
   })
 enddef
 
-def DeleteTargetConfirm(project: Pj.Project, target: CompileTarget): void
-  Dl.Confirm($'Delete compile target "{target.name}"?', () => {
+def DeleteTargetConfirm(project: PO.Project, target: CompileTarget): void
+  DP.Confirm($'Delete compile target "{target.name}"?', () => {
     DeleteTarget(project, target.name)
     log.Info($'deleted compile target: {target.name}')
   })
@@ -379,7 +379,7 @@ enddef
 # SECTION: Execution.
 ##############################################################################
 
-def OutputDir(project: Pj.Project): string
+def OutputDir(project: PO.Project): string
   return project.scriveDir .. '/compile/output'
 enddef
 
@@ -414,7 +414,7 @@ def FlattenSubheadings(lines: list<string>): list<string>
   return lines->mapnew((_, line) => substitute(line, '^#\{2,\}\s*', '', ''))
 enddef
 
-def ConcatenateDocs(project: Pj.Project, target: CompileTarget, separator: string): list<string>
+def ConcatenateDocs(project: PO.Project, target: CompileTarget, separator: string): list<string>
   var rows: list<T.Row> = T.Flatten(project)->copy()->filter((_, row) => row.item.IsDocument()
     && index(target.includedIds, row.item.id) >= 0)
   var lines: list<string> = []
@@ -477,7 +477,7 @@ def WalkManuscript(items: list<BI.BinderItem>, target: CompileTarget,
       if index(target.includedIds, item.id) >= 0
         blocks->add(ReadDocLines(item, binderRoot))
       endif
-    elseif item.structureRole ==# BI.ROLE_CHAPTER
+    elseif item.structureRole ==# CO.ROLE_CHAPTER
       var body: list<string> = WalkManuscript(item.children, target, binderRoot, separator)
       if !empty(body)
         blocks->add([$'# {item.title}', ''] + body)
@@ -495,7 +495,7 @@ enddef
 def HasIncludedPart(items: list<BI.BinderItem>, includedIds: list<string>): bool
   for item in items
     if item.IsFolder()
-      if item.structureRole ==# BI.ROLE_PART
+      if item.structureRole ==# CO.ROLE_PART
         return true
       endif
       if HasIncludedPart(item.children, includedIds)
@@ -517,13 +517,13 @@ def WalkBook(items: list<BI.BinderItem>, target: CompileTarget, binderRoot: stri
       if index(target.includedIds, item.id) >= 0
         blocks->add(ReadDocLines(item, binderRoot))
       endif
-    elseif item.structureRole ==# BI.ROLE_PART
+    elseif item.structureRole ==# CO.ROLE_PART
       var body: list<string> = WalkBook(item.children, target, binderRoot, separator,
         partLevel, chapterLevel)
       if !empty(body)
         blocks->add([$'{partLevel} {item.title}', ''] + body)
       endif
-    elseif item.structureRole ==# BI.ROLE_CHAPTER
+    elseif item.structureRole ==# CO.ROLE_CHAPTER
       var body: list<string> = WalkBook(item.children, target, binderRoot, separator,
         partLevel, chapterLevel)
       if !empty(body)
@@ -575,11 +575,11 @@ def RawLatex(cmd: string): list<string>
   return ['```{=latex}', cmd, '```', '']
 enddef
 
-export def ConcatenateManuscript(project: Pj.Project, target: CompileTarget): list<string>
+export def ConcatenateManuscript(project: PO.Project, target: CompileTarget): list<string>
   var blocks: list<list<string>> = []
-  var frontMatter: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_FRONT_MATTER)
-  var manuscript: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_MANUSCRIPT)
-  var backMatter: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_BACK_MATTER)
+  var frontMatter: BI.BinderItem = FindTopLevelItem(project.items, CO.ROLE_FRONT_MATTER)
+  var manuscript: BI.BinderItem = FindTopLevelItem(project.items, CO.ROLE_MANUSCRIPT)
+  var backMatter: BI.BinderItem = FindTopLevelItem(project.items, CO.ROLE_BACK_MATTER)
   var binderRoot: string = project.BinderRoot()
 
   if frontMatter isnot null_object
@@ -594,11 +594,11 @@ export def ConcatenateManuscript(project: Pj.Project, target: CompileTarget): li
   return JoinSiblingBlocks(blocks, target.separator)
 enddef
 
-export def ConcatenateBook(project: Pj.Project, target: CompileTarget): list<string>
+export def ConcatenateBook(project: PO.Project, target: CompileTarget): list<string>
   var blocks: list<list<string>> = []
-  var frontMatter: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_FRONT_MATTER)
-  var manuscript: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_MANUSCRIPT)
-  var backMatter: BI.BinderItem = FindTopLevelItem(project.items, BI.ROLE_BACK_MATTER)
+  var frontMatter: BI.BinderItem = FindTopLevelItem(project.items, CO.ROLE_FRONT_MATTER)
+  var manuscript: BI.BinderItem = FindTopLevelItem(project.items, CO.ROLE_MANUSCRIPT)
+  var backMatter: BI.BinderItem = FindTopLevelItem(project.items, CO.ROLE_BACK_MATTER)
   var binderRoot: string = project.BinderRoot()
   var hasPart: bool = manuscript isnot null_object
     && HasIncludedPart(manuscript.children, target.includedIds)
@@ -640,7 +640,7 @@ enddef
 
 # FUNCTION: Return City, State, Country Zip. Missing parts are left out,
 # with no stray comma or space.
-def CityStateLine(info: Pf.ProjectInfo): string
+def CityStateLine(info: PR.ProjectInfo): string
   var cityState: string = JoinNonEmpty([info.city, info.state], ', ')
   var cityStateCountry: string = JoinNonEmpty([cityState, info.countrycode], ', ')
   return JoinNonEmpty([cityStateCountry, info.zip], ' ')
@@ -664,10 +664,10 @@ enddef
 # only sffms uses. usecourier maps the target font to the Courier switch
 # of sffms, which does not use fontspec, so other font names do not
 # apply. manuscript.tex explains more.
-def ManuscriptMetadataArgs(project: Pj.Project, target: CompileTarget,
+def ManuscriptMetadataArgs(project: PO.Project, target: CompileTarget,
     mdLines: list<string>): list<string>
   var args: list<string> = [$'--metadata=wordcount:{CountWords(mdLines)}']
-  if project.projectType ==# Pj.TYPE_NOVEL || project.projectType ==# Pj.TYPE_NOVEL_PARTS
+  if project.projectType ==# CO.TYPE_NOVEL || project.projectType ==# CO.TYPE_NOVEL_PARTS
     args->add('--metadata=isnovel:true')
   endif
   if target.font =~? 'courier'
@@ -679,8 +679,8 @@ def ManuscriptMetadataArgs(project: Pj.Project, target: CompileTarget,
   return args
 enddef
 
-def PandocMetadataArgs(project: Pj.Project): list<string>
-  var info: Pf.ProjectInfo = Pf.Resolve(project)
+def PandocMetadataArgs(project: PO.Project): list<string>
+  var info: PR.ProjectInfo = PR.Resolve(project)
   var args: list<string> = [$'--metadata=title:{project.name}']
   if info.EffectiveAuthor() !=# ''
     args->add($'--metadata=author:{info.EffectiveAuthor()}')
@@ -712,11 +712,11 @@ enddef
 # dist#vim9#Open, the function behind :Open.
 def OfferToOpen(target: CompileTarget, outputPath: string): void
   log.Info($'compiled: {fnamemodify(outputPath, ":~")}')
-  Dl.Confirm($'Compiled "{target.name}". Open it?', () => {
+  DP.Confirm($'Compiled "{target.name}". Open it?', () => {
     if target.format ==# 'Markdown'
       execute 'tabedit ' .. fnameescape(outputPath)
     else
-      DistVim9.Open(outputPath)
+      DV.Open(outputPath)
     endif
   }, true)
 enddef
@@ -758,12 +758,12 @@ enddef
 # FUNCTION: Ask whether to open the failure log, with yes as the default.
 # It opens in a new tab, so that no scrive window is replaced.
 def OfferFailureLog(target: CompileTarget, path: string): void
-  Dl.Confirm($'Compiling "{target.name}" failed. Open the log?', () => {
+  DP.Confirm($'Compiling "{target.name}" failed. Open the log?', () => {
     execute 'tabedit ' .. fnameescape(path)
   }, true)
 enddef
 
-def ExecuteScreenplay(project: Pj.Project, target: CompileTarget): void
+def ExecuteScreenplay(project: PO.Project, target: CompileTarget): void
   if !executable(compilescreenplainbin)
     log.Error($'screenplain not found ({compilescreenplainbin}) - install via pip, or set g:bartleby_compile_screenplain_bin')
     return
@@ -773,14 +773,14 @@ def ExecuteScreenplay(project: Pj.Project, target: CompileTarget): void
     mkdir(outDir, 'p')
   endif
   var ext: string = get(SCREENPLAY_EXT, target.format, 'pdf')
-  var outputPath: string = $'{outDir}/{Sl.Slugify(target.name)}.{ext}'
-  var fountainPath: string = $'{outDir}/.{Sl.Slugify(target.name)}-src.fountain'
+  var outputPath: string = $'{outDir}/{SU.Slugify(target.name)}.{ext}'
+  var fountainPath: string = $'{outDir}/.{SU.Slugify(target.name)}-src.fountain'
   writefile(ConcatenateDocs(project, target, ''), fountainPath)
   RunJob($'{target.kind}/{target.format}', [compilescreenplainbin, fountainPath, outputPath],
     target, outputPath, NewLogBase(project, target))
 enddef
 
-def BuildDocLines(project: Pj.Project, target: CompileTarget): list<string>
+def BuildDocLines(project: PO.Project, target: CompileTarget): list<string>
   if target.kind ==# KIND_MANUSCRIPT
     return FlattenSubheadings(ConcatenateManuscript(project, target))
   elseif target.kind ==# KIND_BOOK
@@ -790,13 +790,13 @@ def BuildDocLines(project: Pj.Project, target: CompileTarget): list<string>
   endif
 enddef
 
-def ExecutePandoc(project: Pj.Project, target: CompileTarget): void
+def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   var outDir: string = OutputDir(project)
   if !isdirectory(outDir)
     mkdir(outDir, 'p')
   endif
   var ext: string = get(PANDOC_EXT, target.format, 'pdf')
-  var outputPath: string = $'{outDir}/{Sl.Slugify(target.name)}.{ext}'
+  var outputPath: string = $'{outDir}/{SU.Slugify(target.name)}.{ext}'
 
   if target.format ==# 'Markdown'
     writefile(BuildDocLines(project, target), outputPath)
@@ -809,7 +809,7 @@ def ExecutePandoc(project: Pj.Project, target: CompileTarget): void
     return
   endif
 
-  var mdPath: string = $'{outDir}/.{Sl.Slugify(target.name)}-src.md'
+  var mdPath: string = $'{outDir}/.{SU.Slugify(target.name)}-src.md'
   var docLines: list<string> = BuildDocLines(project, target)
   writefile(docLines, mdPath)
 
@@ -865,13 +865,13 @@ enddef
 # On failure, RunJob writes .log there with the error output. Keep the
 # newest g:bartleby_compile_log_retention logs per scrive and target,
 # this run included, and delete the rest. 0 keeps every log.
-def NewLogBase(project: Pj.Project, target: CompileTarget): string
+def NewLogBase(project: PO.Project, target: CompileTarget): string
   var logDir: string = expand('~/.bartleby/logs')
   if !isdirectory(logDir)
     mkdir(logDir, 'p')
   endif
-  var prefix: string = Sl.Slugify(fnamemodify(project.scriveDir, ':t:r'))
-    .. '_' .. Sl.Slugify(target.name) .. '_'
+  var prefix: string = SU.Slugify(fnamemodify(project.scriveDir, ':t:r'))
+    .. '_' .. SU.Slugify(target.name) .. '_'
   if compilelogretention > 0
     var older: list<string> = sort(glob($'{logDir}/{prefix}[0-9]*.*', false, true))
     var excess: number = len(older) - (compilelogretention - 1)
@@ -884,7 +884,7 @@ def NewLogBase(project: Pj.Project, target: CompileTarget): string
   return $'{logDir}/{prefix}{strftime("%Y%m%d-%H%M%S")}'
 enddef
 
-export def Execute(project: Pj.Project, target: CompileTarget): void
+export def Execute(project: PO.Project, target: CompileTarget): void
   if target.kind ==# KIND_SCREENPLAY
     ExecuteScreenplay(project, target)
   else
@@ -895,10 +895,10 @@ enddef
 # FUNCTION: Pick a saved target and run it, or build a new one. The entry
 # point of :BartlebyCompile.
 
-export def Run(project: Pj.Project): void
+export def Run(project: PO.Project): void
   var names: list<string> = ListTargets(project)
   var options: list<string> = names + ['+ New Target']
-  Pk.PickOne('Compile', options, (choice: string) => {
+  PI.PickOne('Compile', options, (choice: string) => {
     if choice ==# '+ New Target'
       RunTargetForm(project, null_object)
       return
@@ -908,7 +908,7 @@ export def Run(project: Pj.Project): void
       log.Error($'target not found: {choice}')
       return
     endif
-    Pk.PickOne($'"{choice}"', ['Run', 'Edit', 'Delete'], (action: string) => {
+    PI.PickOne($'"{choice}"', ['Run', 'Edit', 'Delete'], (action: string) => {
       if action ==# 'Run'
         Execute(project, target)
       elseif action ==# 'Edit'

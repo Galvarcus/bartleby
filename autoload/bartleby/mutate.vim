@@ -15,9 +15,10 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
-import autoload 'bartleby/slug.vim' as Sl
+import autoload 'bartleby/slug.vim' as SU
+import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return the nearest ancestor of row whose structureRole is
 # role, or null_object when there is none below the top level.
@@ -35,9 +36,9 @@ enddef
 
 # FUNCTION: Return the one top-level Manuscript folder of the scrive, or
 # null_object when it is missing, as in a project older than roles.
-export def FindManuscript(project: Pj.Project): BI.BinderItem
+export def FindManuscript(project: PO.Project): BI.BinderItem
   for i in range(project.ChildCount())
-    if project.ChildAt(i).structureRole ==# BI.ROLE_MANUSCRIPT
+    if project.ChildAt(i).structureRole ==# CO.ROLE_MANUSCRIPT
       return project.ChildAt(i)
     endif
   endfor
@@ -74,9 +75,9 @@ enddef
 # does for a new scrive. An empty title becomes the next number among the
 # sibling chapters.
 export def AddChapter(container: BI.BinderItem, row: T.Row, title: string): BI.BinderItem
-  var chapterTitle: string = title ==# '' ? NextRoleNumber(container.children, BI.ROLE_CHAPTER) : title
-  var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterTitle, BI.ROLE_CHAPTER)
-  var relPath: string = $'chapter-{Sl.Slugify(chapterTitle)}/scene-01.md'
+  var chapterTitle: string = title ==# '' ? NextRoleNumber(container.children, CO.ROLE_CHAPTER) : title
+  var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterTitle, CO.ROLE_CHAPTER)
+  var relPath: string = $'chapter-{SU.Slugify(chapterTitle)}/scene-01.md'
   chapter.AddChild(BI.BinderItem.NewDocument('Scene 1', relPath))
   AddIntoContainer(container, row, chapter)
   return chapter
@@ -86,8 +87,8 @@ enddef
 # Part 2 of templates.vim starts empty. An empty title becomes the next
 # number among the sibling parts.
 export def AddPart(manuscript: BI.BinderItem, row: T.Row, title: string): BI.BinderItem
-  var partTitle: string = title ==# '' ? NextRoleNumber(manuscript.children, BI.ROLE_PART) : title
-  var part: BI.BinderItem = BI.BinderItem.NewFolder(partTitle, BI.ROLE_PART)
+  var partTitle: string = title ==# '' ? NextRoleNumber(manuscript.children, CO.ROLE_PART) : title
+  var part: BI.BinderItem = BI.BinderItem.NewFolder(partTitle, CO.ROLE_PART)
   AddIntoContainer(manuscript, row, part)
   return part
 enddef
@@ -98,11 +99,11 @@ enddef
 # it, see DeleteUnderCursor in binder.vim. Rename, indent, and outdent are
 # refused.
 export def IsImmutableFolder(item: BI.BinderItem): bool
-  return item.structureRole ==# BI.ROLE_FRONT_MATTER
-    || item.structureRole ==# BI.ROLE_MANUSCRIPT
-    || item.structureRole ==# BI.ROLE_BACK_MATTER
-    || item.structureRole ==# BI.ROLE_CHARACTERS
-    || item.structureRole ==# BI.ROLE_RESEARCH
+  return item.structureRole ==# CO.ROLE_FRONT_MATTER
+    || item.structureRole ==# CO.ROLE_MANUSCRIPT
+    || item.structureRole ==# CO.ROLE_BACK_MATTER
+    || item.structureRole ==# CO.ROLE_CHARACTERS
+    || item.structureRole ==# CO.ROLE_RESEARCH
 enddef
 
 # FUNCTION: Return true when an item with role may be a child of parent,
@@ -111,16 +112,16 @@ enddef
 # ROLE_CUSTOM may be only at the top level. Other roles and all documents
 # may be anywhere.
 def RoleAllowedUnder(role: string, parent: BI.BinderItem): bool
-  if role ==# BI.ROLE_PART || role ==# BI.ROLE_CHAPTER
+  if role ==# CO.ROLE_PART || role ==# CO.ROLE_CHAPTER
     return parent isnot null_object
-      && (parent.structureRole ==# BI.ROLE_MANUSCRIPT || parent.structureRole ==# BI.ROLE_PART)
+      && (parent.structureRole ==# CO.ROLE_MANUSCRIPT || parent.structureRole ==# CO.ROLE_PART)
   endif
-  if role ==# BI.ROLE_CUSTOM
+  if role ==# CO.ROLE_CUSTOM
     return parent is null_object
   endif
-  if role ==# BI.ROLE_FRONT_MATTER || role ==# BI.ROLE_MANUSCRIPT
-      || role ==# BI.ROLE_BACK_MATTER || role ==# BI.ROLE_CHARACTERS
-      || role ==# BI.ROLE_RESEARCH
+  if role ==# CO.ROLE_FRONT_MATTER || role ==# CO.ROLE_MANUSCRIPT
+      || role ==# CO.ROLE_BACK_MATTER || role ==# CO.ROLE_CHARACTERS
+      || role ==# CO.ROLE_RESEARCH
     return parent is null_object
   endif
   return true
@@ -129,12 +130,12 @@ enddef
 # FUNCTION: Return the list that holds the item of row: the Project for a
 # top-level row, else the folder that owns the row. Both implement
 # ItemContainer, see binderitem.vim, so the callers need one code path.
-def Owner(project: Pj.Project, row: T.Row): BI.ItemContainer
+def Owner(project: PO.Project, row: T.Row): BI.ItemContainer
   return row.ownerItem is null_object ? project : row.ownerItem
 enddef
 
 # FUNCTION: Insert newItem right after row, in the same list.
-def InsertAfter(project: Pj.Project, row: T.Row, newItem: BI.BinderItem): void
+def InsertAfter(project: PO.Project, row: T.Row, newItem: BI.BinderItem): void
   var owner: BI.ItemContainer = Owner(project, row)
   owner.InsertChildAt(owner.IndexOfChild(row.item.id) + 1, newItem)
 enddef
@@ -142,7 +143,7 @@ enddef
 # FUNCTION: Add newItem next to row: as a child when row is a folder, else
 # as the next sibling. row is null_object for an empty binder, or when
 # there is no cursor row. Then newItem goes at the end of the top level.
-export def AddNear(project: Pj.Project, row: T.Row, newItem: BI.BinderItem): void
+export def AddNear(project: PO.Project, row: T.Row, newItem: BI.BinderItem): void
   if row is null_object
     project.AddChild(newItem)
   elseif row.item.IsFolder()
@@ -154,7 +155,7 @@ enddef
 
 # FUNCTION: Remove the item of row from the tree. Its files stay on disk:
 # removing from the binder does not delete work.
-export def Remove(project: Pj.Project, row: T.Row): void
+export def Remove(project: PO.Project, row: T.Row): void
   var owner: BI.ItemContainer = Owner(project, row)
   owner.RemoveChildAt(owner.IndexOfChild(row.item.id))
 enddef
@@ -169,9 +170,9 @@ enddef
 # FUNCTION: Swap the item of row with its next or previous sibling. delta
 # is 1 to move down or -1 to move up. Returns false at the end of the
 # list.
-export def MoveWithinSiblings(project: Pj.Project, row: T.Row, delta: number): bool
-  if row.item.IsFolder() && row.item.structureRole !=# BI.ROLE_CHAPTER
-      && row.item.structureRole !=# BI.ROLE_PART
+export def MoveWithinSiblings(project: PO.Project, row: T.Row, delta: number): bool
+  if row.item.IsFolder() && row.item.structureRole !=# CO.ROLE_CHAPTER
+      && row.item.structureRole !=# CO.ROLE_PART
     return false
   endif
   var owner: BI.ItemContainer = Owner(project, row)
@@ -186,7 +187,7 @@ enddef
 
 # FUNCTION: Move the item of row out of its owner folder, to right after
 # that folder. Returns false when row is already at the top level.
-export def Outdent(project: Pj.Project, rows: list<T.Row>, row: T.Row): bool
+export def Outdent(project: PO.Project, rows: list<T.Row>, row: T.Row): bool
   if row.ownerItem is null_object
     return false
   endif
@@ -203,7 +204,7 @@ enddef
 # FUNCTION: Move the item of row into its previous sibling when that
 # sibling is a folder. Returns false when there is no previous sibling
 # or it is a document.
-export def Indent(project: Pj.Project, row: T.Row): bool
+export def Indent(project: PO.Project, row: T.Row): bool
   var owner: BI.ItemContainer = Owner(project, row)
   var siblingIdx: number = owner.IndexOfChild(row.item.id) - 1
   if siblingIdx < 0

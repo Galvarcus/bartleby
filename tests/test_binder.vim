@@ -13,19 +13,20 @@ vim9script
 
 import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/binderitem.vim' as BI
-import './fixtures.vim' as Fx
+import './fixtures.vim' as FI
+import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Open the Binder for a new copy of the fixture project, with
 # real scene files on disk, and return a dict of project, scene1, and
 # scene2. The caller must call CloseBinderAndCleanup.
 def OpenBinderWithContent(): dict<any>
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var chapter1 = project.ChildAt(1).ChildAt(0)
   var chapter2 = project.ChildAt(1).ChildAt(1)
   var scene1 = chapter1.ChildAt(0)
   var scene2 = chapter2.ChildAt(0)
-  Fx.WriteDocContent(project, scene1, ['Scene one text.'])
-  Fx.WriteDocContent(project, scene2, ['Scene two text.'])
+  FI.WriteDocContent(project, scene1, ['Scene one text.'])
+  FI.WriteDocContent(project, scene2, ['Scene two text.'])
   B.Show(project)
   return {project: project, scene1: scene1, scene2: scene2}
 enddef
@@ -35,7 +36,7 @@ def CloseBinderAndCleanup(fx: dict<any>): void
   # test starts with one clean window.
   only!
   bwipe!
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 def Test_show_renders_project_name_as_title_line(): void
@@ -77,7 +78,7 @@ def Test_cr_on_the_title_line_does_nothing(): void
   cursor(1, 1)
   feedkeys("\<CR>", 'xt')
   # Still in the Binder buffer: no document opened and no text changed.
-  assert_equal('Bartleby-Binder', bufname('%'))
+  assert_equal(CO.BINDER_BUF, bufname('%'))
   assert_equal(before, getline(1, '$'))
   CloseBinderAndCleanup(fx)
 enddef

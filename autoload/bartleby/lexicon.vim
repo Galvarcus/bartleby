@@ -16,11 +16,11 @@ var is_loaded: bool = true
 # curl is installed. Merriam-Webster issues one key per product, so the
 # two kinds are independent.
 #
-# REFERENCES is the hook for other Merriam-Webster references. It holds
-# only the Collegiate Dictionary and Collegiate Thesaurus now. To add one,
-# add an entry with its apiName and the kind whose parser fits its JSON,
-# for example learners: {apiName: 'learners', kind: 'dictionary'}. Then
-# g:bartleby_<kind>_reference selects it.
+# REFERENCES, in constants.vim, is the hook for other Merriam-Webster
+# references. It holds only the Collegiate Dictionary and Collegiate
+# Thesaurus now. To add one, add an entry with its apiName and the kind
+# whose parser fits its JSON, for example learners: {apiName: 'learners',
+# kind: 'dictionary'}. Then g:bartleby_<kind>_reference selects it.
 #
 # curl runs through job_start, so Vim does not wait for the network. The
 # URL contains the key, so curl reads it on stdin as a config line, never
@@ -36,33 +36,20 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 var memory_cache: dict<dict<any>> = {}
 var disk_cache_loaded: bool = false
 
-export const KIND_DICTIONARY: string = 'dictionary'
-export const KIND_THESAURUS: string = 'thesaurus'
 
-export const REFERENCES: dict<dict<string>> = {
-  collegiate: {
-    apiName: 'collegiate',
-    kind: KIND_DICTIONARY,
-    title: 'Merriam-Webster Dictionary',
-  },
-  thesaurus: {
-    apiName: 'thesaurus',
-    kind: KIND_THESAURUS,
-    title: 'Merriam-Webster Thesaurus',
-  },
-}
 
 const CACHE_VERSION: number = 1
 const ENV_KEYS: dict<string> = {
-  [KIND_DICTIONARY]: 'BARTLEBY_MW_DICTIONARY_KEY',
-  [KIND_THESAURUS]: 'BARTLEBY_MW_THESAURUS_KEY',
+  [CO.KIND_DICTIONARY]: 'BARTLEBY_MW_DICTIONARY_KEY',
+  [CO.KIND_THESAURUS]: 'BARTLEBY_MW_THESAURUS_KEY',
 }
 
 # FUNCTION: Return the API key for kind: the g: variable when set, else
@@ -79,7 +66,7 @@ enddef
 # when the name is not registered or belongs to the other kind.
 export def Reference(kind: string): dict<string>
   var name: string = get(g:, $'bartleby_{kind}_reference', '')
-  var ref: dict<string> = get(REFERENCES, name, {})
+  var ref: dict<string> = get(CO.REFERENCES, name, {})
   return get(ref, 'kind', '') ==# kind ? ref : {}
 enddef
 
@@ -176,7 +163,7 @@ export def ParseResponse(kind: string, word: string, body: string): dict<any>
   var matching: list<dict<any>> = raw->copy()->filter((_, e) => IsEntryFor(e, word))
   var chosen: list<dict<any>> = empty(matching) ? raw : matching
 
-  var entries: list<dict<any>> = kind ==# KIND_THESAURUS
+  var entries: list<dict<any>> = kind ==# CO.KIND_THESAURUS
     ? chosen->mapnew((_, e) => ThesaurusEntry(e))
     : chosen->mapnew((_, e) => DictionaryEntry(e))
   entries = entries->filter((_, e) => !empty(e))

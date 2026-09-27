@@ -23,14 +23,14 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/windows.vim' as W
-import autoload 'bartleby/state.vim' as St
-import autoload 'bartleby/persist.vim' as Pe
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/state.vim' as ST
+import autoload 'bartleby/persist.vim' as PE
+import autoload 'bartleby/log.vim' as L
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 export class SessionState
   var activeDocRelPath: string = ''
@@ -55,20 +55,20 @@ export class SessionState
   enddef
 endclass
 
-def SessionPath(project: Pj.Project): string
+def SessionPath(project: PO.Project): string
   return project.scriveDir .. '/session.json'
 enddef
 
-def Load(project: Pj.Project): SessionState
+def Load(project: PO.Project): SessionState
   var path: string = SessionPath(project)
   if !filereadable(path)
     return SessionState.new()
   endif
-  return SessionState.FromDict(Pe.ReadJson(path))
+  return SessionState.FromDict(PE.ReadJson(path))
 enddef
 
-def Save(project: Pj.Project, state: SessionState): void
-  Pe.WriteJson(SessionPath(project), state.ToDict())
+def Save(project: PO.Project, state: SessionState): void
+  PE.WriteJson(SessionPath(project), state.ToDict())
 enddef
 
 ##############################################################################
@@ -81,18 +81,18 @@ def LastScrivePath(): string
 enddef
 
 export def RememberLastScrive(scriveDir: string): void
-  Pe.WriteJson(LastScrivePath(), {scriveDir: scriveDir})
+  PE.WriteJson(LastScrivePath(), {scriveDir: scriveDir})
 enddef
 
 export def LastScrive(): string
-  return get(Pe.ReadJson(LastScrivePath()), 'scriveDir', '')
+  return get(PE.ReadJson(LastScrivePath()), 'scriveDir', '')
 enddef
 
 ##############################################################################
 # SECTION: Capture.
 ##############################################################################
 
-def IsProjectDoc(project: Pj.Project, path: string): bool
+def IsProjectDoc(project: PO.Project, path: string): bool
   return path !=# '' && path =~# '^\V' .. escape(project.BinderRoot(), '\')
 enddef
 
@@ -100,7 +100,7 @@ enddef
 # CursorHold in a document buffer and on VimLeavePre. Both events give
 # the current window, so no other window is looked up.
 export def CaptureCurrentDoc(): void
-  var project: Pj.Project = St.Get()
+  var project: PO.Project = ST.Get()
   if project is null_object
     return
   endif
@@ -118,7 +118,7 @@ enddef
 # FUNCTION: Save the Binder state. binder.vim calls this on its show,
 # hide, and collapse actions, so no autocommand is needed.
 export def CaptureBinderState(): void
-  var project: Pj.Project = St.Get()
+  var project: PO.Project = ST.Get()
   if project is null_object
     return
   endif
@@ -133,7 +133,7 @@ enddef
 ##############################################################################
 # FUNCTION: Restore the session of project, right after it opens.
 
-export def Restore(project: Pj.Project): void
+export def Restore(project: PO.Project): void
   var state: SessionState = Load(project)
 
   # Show the Binder first, whatever the saved state: its buffer must exist

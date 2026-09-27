@@ -24,16 +24,16 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
-import autoload 'bartleby/project.vim' as Pj
-import autoload 'bartleby/mutate.vim' as M
+import autoload 'bartleby/project.vim' as PO
+import autoload 'bartleby/mutate.vim' as MU
 import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/buttonspopup.vim' as BP
 import autoload 'bartleby/inputpopup.vim' as IP
-import autoload 'bartleby/wrap.vim' as Wr
+import autoload 'bartleby/wrap.vim' as WR
 import autoload 'bartleby/helppopup.vim' as H
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 const CARD_CONTENT_WIDTH: number = 24
 const CARD_SPACING: number = 2
@@ -65,7 +65,7 @@ def CardLabel(item: BI.BinderItem, binderRoot: string): string
   var meta: D.DocMeta = item.LoadMeta(binderRoot)
   var cardLines: list<string> = [item.title]
   if meta.synopsis !=# ''
-    var wrapped: list<string> = Wr.Wrap(meta.synopsis, CARD_CONTENT_WIDTH)
+    var wrapped: list<string> = WR.Wrap(meta.synopsis, CARD_CONTENT_WIDTH)
     if len(wrapped) > MAX_SYNOPSIS_LINES
       wrapped = wrapped[0 : MAX_SYNOPSIS_LINES - 1]
       wrapped[-1] = wrapped[-1] .. '…'
@@ -75,7 +75,7 @@ def CardLabel(item: BI.BinderItem, binderRoot: string): string
   return join(cardLines, "\n")
 enddef
 
-def EditSynopsis(project: Pj.Project, folder: BI.BinderItem, doc: BI.BinderItem,
+def EditSynopsis(project: PO.Project, folder: BI.BinderItem, doc: BI.BinderItem,
     OnDocumentPicked: func(BI.BinderItem)): void
   var meta: D.DocMeta = doc.LoadMeta(project.BinderRoot())
   IP.PromptText('Synopsis', meta.synopsis, (newSynopsis: string) => {
@@ -89,12 +89,12 @@ def EditSynopsis(project: Pj.Project, folder: BI.BinderItem, doc: BI.BinderItem,
   })
 enddef
 
-def Reorder(project: Pj.Project, folder: BI.BinderItem, doc: BI.BinderItem,
+def Reorder(project: PO.Project, folder: BI.BinderItem, doc: BI.BinderItem,
     delta: number, OnDocumentPicked: func(BI.BinderItem)): void
   # Build a T.Row by hand. MoveWithinSiblings reads only item and ownerItem,
   # so there is no need to flatten the whole scrive to reorder one folder.
   var row: T.Row = T.Row.new(doc, 0, folder)
-  if M.MoveWithinSiblings(project, row, delta)
+  if MU.MoveWithinSiblings(project, row, delta)
     project.Save()
   else
     log.Info('already at that end of the folder')
@@ -104,7 +104,7 @@ enddef
 
 # FUNCTION: Handle the Corkboard keys that the base popup does not know.
 # Return true when the key is handled.
-def HandleExtraKey(project: Pj.Project, folder: BI.BinderItem, docs: list<BI.BinderItem>,
+def HandleExtraKey(project: PO.Project, folder: BI.BinderItem, docs: list<BI.BinderItem>,
     OnDocumentPicked: func(BI.BinderItem), id: number, selectedIdx: number, key: string): bool
   var doc: BI.BinderItem = docs[selectedIdx]
   if key ==# 'e'
@@ -141,7 +141,7 @@ enddef
 # OnDocumentPicked receives the document that is activated with Enter,
 # Space, or a click. It is not called on cancel. preferredId selects a
 # card again after e, J, or K closes and reopens the Corkboard.
-export def Show(project: Pj.Project, folder: BI.BinderItem,
+export def Show(project: PO.Project, folder: BI.BinderItem,
     OnDocumentPicked: func(BI.BinderItem), preferredId: string = ''): void
   # Copy first: filter changes its list in place, and folder.children is
   # the live tree. Filtering it directly would delete every child that is

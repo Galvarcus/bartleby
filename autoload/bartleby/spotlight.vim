@@ -40,12 +40,13 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/pos.vim' as P
-import autoload 'bartleby/tagger.vim' as Tg
+import autoload 'bartleby/tagger.vim' as TA
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 var spotlightdefaultcoefficient: float = g:bartleby_spotlight_default_coefficient
 var spotlightconcealguifg: string = g:bartleby_spotlight_conceal_guifg
 var spotlightconcealctermfg: string = g:bartleby_spotlight_conceal_ctermfg
@@ -135,12 +136,12 @@ def Always(): bool
 enddef
 
 def TaggerReady(): bool
-  return Tg.IsReady()
+  return TA.IsReady()
 enddef
 
 # FUNCTION: Return true when mode takes its words from the tagger now.
 def UsesTagger(mode: string): bool
-  return mode ==# MODE_PASSIVE || (!empty(get(POS_TAGS, mode, [])) && Tg.IsReady())
+  return mode ==# MODE_PASSIVE || (!empty(get(POS_TAGS, mode, [])) && TA.IsReady())
 enddef
 
 # FUNCTION: Return a regex for everything before and after the paragraph
@@ -195,7 +196,7 @@ def CachedPositions(mode: string, margin: number,
   # Insert mode is part of the key: the tagger sends no requests while you
   # type, so a result computed in Insert mode must not be reused after it.
   var typing: string = mode() =~# '^[iR]' ? 'i' : 'n'
-  var key: string = $'{mode}:{bufNr}:{b:changedtick}:{first}:{last}:{Tg.Generation()}:{typing}'
+  var key: string = $'{mode}:{bufNr}:{b:changedtick}:{first}:{last}:{TA.Generation()}:{typing}'
   var cached: dict<any> = get(span_cache, bufNr, {})
   if get(cached, 'key', '') ==# key
     return cached
@@ -253,10 +254,10 @@ enddef
 # heading. Fountain dialogue has no quotes. The lines after a cue, up to
 # the next blank line, are spoken dialogue.
 def IsFountainCharacterCue(text: string): bool
-  if text ==# '' || text =~# P.FOUNTAIN_SCENE_HEADING_PATTERN
+  if text ==# '' || text =~# CO.FOUNTAIN_SCENE_HEADING_PATTERN
     return false
   endif
-  return text =~# P.FOUNTAIN_CHARACTER_PATTERN
+  return text =~# CO.FOUNTAIN_CHARACTER_PATTERN
 enddef
 
 def FountainDialoguePositions(first: number, last: number): list<any>
@@ -356,7 +357,7 @@ enddef
 # paragraph. While the results are not ready, the paragraph stays
 # undimmed, and the tagger update redraws it later.
 def TaggedPositions(mode: string, blockStart: number, lines: list<string>): list<any>
-  var tags: dict<any> = Tg.Tags(join(lines, "\n"))
+  var tags: dict<any> = TA.Tags(join(lines, "\n"))
   if empty(tags)
     return []
   endif
@@ -580,7 +581,7 @@ def On(mode: string, coeffArg: float): void
     return
   endif
   if !mode_available[actualMode]()
-    var reason: string = Tg.FailureReason()
+    var reason: string = TA.FailureReason()
     log.Error($'Spotlight mode {actualMode} needs a part-of-speech tagger - '
       .. (reason ==# '' ? 'set g:bartleby_spotlight_tagger' : reason))
     return
@@ -664,7 +665,7 @@ def OnTaggerUpdate(): void
   RefreshCurrentWindow()
 enddef
 
-Tg.OnUpdate(OnTaggerUpdate)
+TA.OnUpdate(OnTaggerUpdate)
 
 # FUNCTION: Run :BartlebySpotlight[!] [mode or coefficient]. A bang turns
 # Spotlight off. A mode name switches to that mode and turns Spotlight on

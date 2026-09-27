@@ -22,8 +22,9 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/inputpopup.vim' as IP
-import autoload 'bartleby/spotlight.vim' as Sp
-import autoload 'bartleby/lexicon.vim' as Lx
+import autoload 'bartleby/spotlight.vim' as SP
+import autoload 'bartleby/lexicon.vim' as LE
+import 'bartleby/variables/constants.vim' as CO
 
 # Display name to Ex command, for commands without an argument.
 const COMMANDS: dict<string> = {
@@ -74,7 +75,7 @@ enddef
 def EnabledLookups(): dict<string>
   var lookups: dict<string> = {}
   for [name, kind] in items(LOOKUPS)
-    if Lx.IsEnabled(kind)
+    if LE.IsEnabled(kind)
       lookups[name] = kind
     endif
   endfor
@@ -87,7 +88,7 @@ def Run(choice: string): void
     return
   endif
   if has_key(LOOKUPS, choice)
-    execute LOOKUPS[choice] ==# Lx.KIND_THESAURUS ? 'BartlebyThesaurus' : 'BartlebyDefine'
+    execute LOOKUPS[choice] ==# CO.KIND_THESAURUS ? 'BartlebyThesaurus' : 'BartlebyDefine'
     return
   endif
   if has_key(COMMANDS_WITH_ARG, choice)
@@ -100,6 +101,6 @@ def Run(choice: string): void
     return
   endif
   if choice ==# 'Pick Spotlight Mode'
-    Sp.PickMode()
+    SP.PickMode()
   endif
 enddef

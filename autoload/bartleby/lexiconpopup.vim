@@ -24,12 +24,13 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/lexicon.vim' as Lx
+import autoload 'bartleby/lexicon.vim' as LE
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/helppopup.vim' as H
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 const POPUP_ZINDEX: number = 260
 const MIN_WIDTH: number = 30
@@ -60,7 +61,7 @@ export def LookupAtCursor(kind: string): void
     log.Info('no word under the cursor')
     return
   endif
-  OpenLookup(kind, Lx.CleanWord(target.text), target)
+  OpenLookup(kind, LE.CleanWord(target.text), target)
 enddef
 
 # FUNCTION: Look up the last Visual selection, which must be on one line.
@@ -73,7 +74,7 @@ export def LookupVisual(kind: string): void
   if empty(target)
     return
   endif
-  OpenLookup(kind, Lx.CleanWord(target.text), target)
+  OpenLookup(kind, LE.CleanWord(target.text), target)
 enddef
 
 # FUNCTION: Run :BartlebyDefine or :BartlebyThesaurus. A typed word is
@@ -87,11 +88,11 @@ export def LookupCommand(kind: string, arg: string): void
   if !CanLookUp(kind)
     return
   endif
-  OpenLookup(kind, Lx.CleanWord(arg), {})
+  OpenLookup(kind, LE.CleanWord(arg), {})
 enddef
 
 def CanLookUp(kind: string): bool
-  var reason: string = Lx.DisabledReason(kind)
+  var reason: string = LE.DisabledReason(kind)
   if reason !=# ''
     log.Warn(reason)
     return false
@@ -177,7 +178,7 @@ class LexiconPopup
       line: 'cursor+1',
       col: 'cursor',
       pos: 'topleft',
-      title: $' {Lx.Reference(this.kind).title}: {this.word} ',
+      title: $' {LE.Reference(this.kind).title}: {this.word} ',
       border: [1, 1, 1, 1],
       padding: [0, 1, 0, 1],
       minwidth: MIN_WIDTH,
@@ -190,7 +191,7 @@ class LexiconPopup
     })
     this.rows = [{text: $'Looking up "{this.word}" ...', hl: 'LexiconComment'}]
     this.Render()
-    Lx.Lookup(this.kind, this.word, (result) => this.OnResult(result))
+    LE.Lookup(this.kind, this.word, (result) => this.OnResult(result))
   enddef
 
   def IsOpen(): bool
@@ -227,7 +228,7 @@ class LexiconPopup
           rows->add({text: '  ' .. suggestion, value: suggestion, action: 'lookup'})
         endfor
       endif
-    elseif this.kind ==# Lx.KIND_THESAURUS
+    elseif this.kind ==# CO.KIND_THESAURUS
       rows = this.ThesaurusRows()
     else
       rows = this.DictionaryRows()
@@ -344,7 +345,7 @@ class LexiconPopup
     var row: dict<any> = this.rows[this.selected]
     this.Close()
     if row.action ==# 'lookup'
-      OpenLookup(this.kind, Lx.CleanWord(row.value), this.target)
+      OpenLookup(this.kind, LE.CleanWord(row.value), this.target)
     elseif empty(this.target)
       setreg('"', row.value)
       log.Info($'"{row.value}" copied to the unnamed register')
@@ -364,26 +365,26 @@ class LexiconPopup
       log.Warn('this buffer cannot be changed')
       return
     endif
-    var newText: string = Lx.MatchCase(t.text, replacement)
+    var newText: string = LE.MatchCase(t.text, replacement)
     setbufline(t.bufnr, t.lnum, strpart(line, 0, t.start) .. newText .. strpart(line, t.end))
   enddef
 
   def DefineSelected(): void
-    if this.kind !=# Lx.KIND_THESAURUS || this.selected < 0
+    if this.kind !=# CO.KIND_THESAURUS || this.selected < 0
       return
     endif
-    var reason: string = Lx.DisabledReason(Lx.KIND_DICTIONARY)
+    var reason: string = LE.DisabledReason(CO.KIND_DICTIONARY)
     if reason !=# ''
       log.Warn(reason)
       return
     endif
     var word: string = this.rows[this.selected].value
     this.Close()
-    OpenLookup(Lx.KIND_DICTIONARY, Lx.CleanWord(word), {})
+    OpenLookup(CO.KIND_DICTIONARY, LE.CleanWord(word), {})
   enddef
 
   def ToggleAntonyms(): void
-    if this.kind !=# Lx.KIND_THESAURUS || get(this.result, 'status', '') !=# 'ok'
+    if this.kind !=# CO.KIND_THESAURUS || get(this.result, 'status', '') !=# 'ok'
       return
     endif
     this.showAntonyms = !this.showAntonyms
@@ -396,7 +397,7 @@ class LexiconPopup
       ['j / <Down>', this.selected >= 0 ? 'Next word' : 'Scroll down'],
       ['k / <Up>', this.selected >= 0 ? 'Previous word' : 'Scroll up'],
     ]
-    if this.kind ==# Lx.KIND_THESAURUS
+    if this.kind ==# CO.KIND_THESAURUS
       entries += [
         ['<CR>', empty(this.target) ? 'Copy the word' : 'Replace the word in the text'],
         ['a', 'Toggle antonyms'],

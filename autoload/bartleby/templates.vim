@@ -20,15 +20,15 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/project.vim' as Pj
-import autoload 'bartleby/slug.vim' as Sl
+import autoload 'bartleby/slug.vim' as SU
+import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return a chapter folder with one starter scene. relPath is in
 # the chapter's own slug folder, so the scene files of different
 # chapters do not collide on disk. docExt is always .md here, because
 # screenplays do not use chapters.
 def ChapterWithScene(chapterNumber: string): BI.BinderItem
-  var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterNumber, BI.ROLE_CHAPTER)
+  var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterNumber, CO.ROLE_CHAPTER)
   var relPath: string = 'chapter-' .. chapterNumber .. '/scene-01.md'
   chapter.SetChildren([BI.BinderItem.NewDocument('Scene 1', relPath)])
   return chapter
@@ -38,9 +38,9 @@ enddef
 # a single flat file, such as the draft of a Short Story or the scenes of
 # a Screenplay.
 def FolderWithDoc(folderTitle: string, docTitle: string, docExt: string,
-    role: string = BI.ROLE_NONE): BI.BinderItem
+    role: string = CO.ROLE_NONE): BI.BinderItem
   var folder: BI.BinderItem = BI.BinderItem.NewFolder(folderTitle, role)
-  var relPath: string = Sl.Slugify(folderTitle) .. '/' .. Sl.Slugify(docTitle) .. docExt
+  var relPath: string = SU.Slugify(folderTitle) .. '/' .. SU.Slugify(docTitle) .. docExt
   folder.SetChildren([BI.BinderItem.NewDocument(docTitle, relPath)])
   return folder
 enddef
@@ -48,51 +48,51 @@ enddef
 # FUNCTION: Return the Front Matter folder. It starts empty. Add a
 # dedication, acknowledgments, and similar pages as documents.
 def FrontMatterFolder(): BI.BinderItem
-  return BI.BinderItem.NewFolder('Front Matter', BI.ROLE_FRONT_MATTER)
+  return BI.BinderItem.NewFolder('Front Matter', CO.ROLE_FRONT_MATTER)
 enddef
 
 # FUNCTION: Return the Back Matter folder. It starts empty, like Front
 # Matter, for pages such as an appendix or an author's note.
 def BackMatterFolder(): BI.BinderItem
-  return BI.BinderItem.NewFolder('Back Matter', BI.ROLE_BACK_MATTER)
+  return BI.BinderItem.NewFolder('Back Matter', CO.ROLE_BACK_MATTER)
 enddef
 
 export def DefaultTree(projectType: string, docExt: string): list<BI.BinderItem>
-  if projectType ==# Pj.TYPE_NOVEL
-    var manuscript: BI.BinderItem = BI.BinderItem.NewFolder('Manuscript', BI.ROLE_MANUSCRIPT)
+  if projectType ==# CO.TYPE_NOVEL
+    var manuscript: BI.BinderItem = BI.BinderItem.NewFolder('Manuscript', CO.ROLE_MANUSCRIPT)
     manuscript.SetChildren([ChapterWithScene('1')])
     return [
       FrontMatterFolder(),
       manuscript,
       BackMatterFolder(),
-      BI.BinderItem.NewFolder('Characters', BI.ROLE_CHARACTERS),
-      BI.BinderItem.NewFolder('Research', BI.ROLE_RESEARCH),
+      BI.BinderItem.NewFolder('Characters', CO.ROLE_CHARACTERS),
+      BI.BinderItem.NewFolder('Research', CO.ROLE_RESEARCH),
     ]
-  elseif projectType ==# Pj.TYPE_NOVEL_PARTS
-    var part1: BI.BinderItem = BI.BinderItem.NewFolder('1', BI.ROLE_PART)
+  elseif projectType ==# CO.TYPE_NOVEL_PARTS
+    var part1: BI.BinderItem = BI.BinderItem.NewFolder('1', CO.ROLE_PART)
     part1.SetChildren([ChapterWithScene('1')])
-    var part2: BI.BinderItem = BI.BinderItem.NewFolder('2', BI.ROLE_PART)
-    var manuscript: BI.BinderItem = BI.BinderItem.NewFolder('Manuscript', BI.ROLE_MANUSCRIPT)
+    var part2: BI.BinderItem = BI.BinderItem.NewFolder('2', CO.ROLE_PART)
+    var manuscript: BI.BinderItem = BI.BinderItem.NewFolder('Manuscript', CO.ROLE_MANUSCRIPT)
     manuscript.SetChildren([part1, part2])
     return [
       FrontMatterFolder(),
       manuscript,
       BackMatterFolder(),
-      BI.BinderItem.NewFolder('Characters', BI.ROLE_CHARACTERS),
-      BI.BinderItem.NewFolder('Research', BI.ROLE_RESEARCH),
+      BI.BinderItem.NewFolder('Characters', CO.ROLE_CHARACTERS),
+      BI.BinderItem.NewFolder('Research', CO.ROLE_RESEARCH),
     ]
-  elseif projectType ==# Pj.TYPE_SHORT_STORY
+  elseif projectType ==# CO.TYPE_SHORT_STORY
     return [
       FrontMatterFolder(),
-      FolderWithDoc('Manuscript', 'Draft', docExt, BI.ROLE_MANUSCRIPT),
-      BI.BinderItem.NewFolder('Research', BI.ROLE_RESEARCH),
+      FolderWithDoc('Manuscript', 'Draft', docExt, CO.ROLE_MANUSCRIPT),
+      BI.BinderItem.NewFolder('Research', CO.ROLE_RESEARCH),
     ]
-  elseif projectType ==# Pj.TYPE_SCREENPLAY
+  elseif projectType ==# CO.TYPE_SCREENPLAY
     return [
       FrontMatterFolder(),
-      FolderWithDoc('Screenplay', 'Scene 1', docExt, BI.ROLE_MANUSCRIPT),
-      BI.BinderItem.NewFolder('Characters', BI.ROLE_CHARACTERS),
-      BI.BinderItem.NewFolder('Research', BI.ROLE_RESEARCH),
+      FolderWithDoc('Screenplay', 'Scene 1', docExt, CO.ROLE_MANUSCRIPT),
+      BI.BinderItem.NewFolder('Characters', CO.ROLE_CHARACTERS),
+      BI.BinderItem.NewFolder('Research', CO.ROLE_RESEARCH),
     ]
   else
     return []

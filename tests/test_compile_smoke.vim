@@ -20,8 +20,8 @@ vim9script
 
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/project.vim' as Pj
-import './fixtures.vim' as Fx
+import autoload 'bartleby/project.vim' as PO
+import './fixtures.vim' as FI
 
 const MAX_WAIT_MS: number = 60000
 const POLL_INTERVAL_MS: number = 500
@@ -29,7 +29,7 @@ const POLL_INTERVAL_MS: number = 500
 # FUNCTION: Wait for a file matching pattern in the output folder,
 # project.scriveDir/compile/output, with a size above 0, up to
 # MAX_WAIT_MS. Return its path, or an empty string after the wait.
-def WaitForOutput(project: Pj.Project, pattern: string): string
+def WaitForOutput(project: PO.Project, pattern: string): string
   var outDir: string = project.scriveDir .. '/compile/output'
   var waited: number = 0
   while waited < MAX_WAIT_MS
@@ -45,10 +45,10 @@ def WaitForOutput(project: Pj.Project, pattern: string): string
 enddef
 
 def BuildProjectWithContent(): dict<any>
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var chapter1 = project.ChildAt(1).ChildAt(0)
   var scene1 = chapter1.ChildAt(0)
-  Fx.WriteDocContent(project, scene1, ['It was a dark and stormy night.'])
+  FI.WriteDocContent(project, scene1, ['It was a dark and stormy night.'])
   return {project: project, scene1: scene1}
 enddef
 
@@ -65,7 +65,7 @@ def Test_manuscript_pdf_compiles_to_a_real_nonempty_file(): void
   C.Execute(fx.project, target)
   var outputPath = WaitForOutput(fx.project, '*.pdf')
   assert_true(outputPath !=# '', 'Manuscript PDF did not appear within ' .. MAX_WAIT_MS .. 'ms')
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 def Test_book_pdf_compiles_to_a_real_nonempty_file(): void
@@ -81,7 +81,7 @@ def Test_book_pdf_compiles_to_a_real_nonempty_file(): void
   C.Execute(fx.project, target)
   var outputPath = WaitForOutput(fx.project, '*.pdf')
   assert_true(outputPath !=# '', 'Book PDF did not appear within ' .. MAX_WAIT_MS .. 'ms')
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 # FUNCTION: Wait until logDir has a log whose name is not in before, and
@@ -129,7 +129,7 @@ def Test_pandoc_log_per_run_with_retention(): void
   endfor
   # Only this target's logs: the other smoke tests write logs here too.
   assert_equal(2, len(glob(logDir .. '/bartleby-test-fixture_smoke-log_*.json', false, true)))
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 # FUNCTION: A Book PDF with a font that does not exist, so xelatex fails.
@@ -166,7 +166,7 @@ def Test_failure_writes_a_log_and_asks_to_open_it(): void
   for id in popup_list()
     popup_close(id)
   endfor
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 export def RunAll(): void

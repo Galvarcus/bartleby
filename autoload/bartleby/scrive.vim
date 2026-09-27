@@ -14,25 +14,25 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/project.vim' as Pj
-import autoload 'bartleby/templates.vim' as Tm
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/project.vim' as PO
+import autoload 'bartleby/templates.vim' as TE
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 var binderroot: string = g:bartleby_binder_root
 
-export const SCRIVE_EXT: string = '.bartleby'
 
 # FUNCTION: Return the folder that holds the scrives: a Bartleby folder
 # in g:bartleby_binder_root when it is set, else in ~/Documents. The
 # default is ~/Documents/Bartleby.
 export def BinderRoot(): string
   var normalized: string = substitute(fnamemodify(binderroot, ':p'), '[/\\]$', '', '')
-  return normalized .. '/Bartleby'
+  return normalized .. '/' .. CO.SCRIVE_FOLDER
 enddef
 
 export def ScrivePath(name: string): string
-  return BinderRoot() .. '/' .. name .. SCRIVE_EXT
+  return BinderRoot() .. '/' .. name .. CO.SCRIVE_EXT
 enddef
 
 # FUNCTION: Return the bare name of every .bartleby folder directly in
@@ -42,7 +42,7 @@ export def ListScrives(): list<string>
   if !isdirectory(root)
     return []
   endif
-  return globpath(root, '*' .. SCRIVE_EXT, false, true)
+  return globpath(root, '*' .. CO.SCRIVE_EXT, false, true)
     ->filter((_, p) => isdirectory(p))
     ->mapnew((_, p) => fnamemodify(p, ':t:r'))
 enddef
@@ -86,13 +86,13 @@ enddef
 # FUNCTION: Load a scrive by name, or return null_object when its folder
 # or project.json is missing or cannot be read. A name that differs from
 # one scrive only in case opens that scrive, see ResolveName.
-export def Open(name: string): Pj.Project
+export def Open(name: string): PO.Project
   var dir: string = ScrivePath(ResolveName(name))
   if !isdirectory(dir)
     log.Error($'no scrive named "{name}" under {BinderRoot()}')
     return null_object
   endif
-  var project: Pj.Project = Pj.Project.new(dir)
+  var project: PO.Project = PO.Project.new(dir)
   if !project.Load()
     return null_object
   endif
@@ -102,17 +102,17 @@ enddef
 # FUNCTION: Create a scrive on disk: the binder folder, a project.json
 # with the starter tree of DefaultTree for projectType, and the empty
 # files of that tree. Return it loaded.
-export def Create(name: string, projectType: string = Pj.TYPE_NOVEL): Pj.Project
+export def Create(name: string, projectType: string = CO.TYPE_NOVEL): PO.Project
   var dir: string = ScrivePath(name)
   if isdirectory(dir)
     log.Error($'scrive "{name}" already exists at {dir}')
     return null_object
   endif
   mkdir(dir .. '/binder', 'p')
-  var project: Pj.Project = Pj.Project.new(dir)
+  var project: PO.Project = PO.Project.new(dir)
   project.InitNew(name, projectType)
-  var tree: list<BI.BinderItem> = Tm.DefaultTree(projectType, project.DocExt())
-  Tm.Materialize(tree, project.BinderRoot())
+  var tree: list<BI.BinderItem> = TE.DefaultTree(projectType, project.DocExt())
+  TE.Materialize(tree, project.BinderRoot())
   project.SeedTree(tree)
   project.Save()
   return project

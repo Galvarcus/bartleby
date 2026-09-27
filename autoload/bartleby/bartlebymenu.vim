@@ -22,8 +22,9 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/menu.vim' as M
 import autoload 'bartleby/inputpopup.vim' as IP
-import autoload 'bartleby/spotlight.vim' as Sp
-import autoload 'bartleby/lexicon.vim' as Lx
+import autoload 'bartleby/spotlight.vim' as SP
+import autoload 'bartleby/lexicon.vim' as LE
+import 'bartleby/variables/constants.vim' as CO
 
 var menu: M.Menu = null_object
 
@@ -44,7 +45,7 @@ def PromptThenEx(title: string, cmd: string): func(M.MenuItem)
 enddef
 
 def BuildMenu(): M.Menu
-  var m: M.Menu = M.Menu.new('bartleby', 'Bartleby')
+  var m: M.Menu = M.Menu.new(CO.MENU_NAME, CO.PLUGIN_NAME)
 
   var scrive: M.MenuItem = m.AddItem('Scrive')
   scrive.AddItem('List...', RunEx('BartlebyList'))
@@ -59,16 +60,16 @@ def BuildMenu(): M.Menu
   view.AddItem('Toggle Inspector', RunEx('BartlebyToggleInspector'))
   view.AddItem('Toggle Focus', RunEx('BartlebyFocus'))
   view.AddItem('Toggle Spotlight', RunEx('BartlebySpotlight'))
-  view.AddItem('Pick Spotlight Mode', (_: M.MenuItem) => Sp.PickMode())
+  view.AddItem('Pick Spotlight Mode', (_: M.MenuItem) => SP.PickMode())
   view.AddItem('Toggle Quill', RunEx('BartlebyQuill'))
 
   var doc: M.MenuItem = m.AddItem('Document')
   doc.AddItem('Take Snapshot', RunEx('BartlebySnapshot'))
   doc.AddItem('View Snapshots', RunEx('BartlebySnapshots'))
-  if Lx.IsEnabled(Lx.KIND_DICTIONARY)
+  if LE.IsEnabled(CO.KIND_DICTIONARY)
     doc.AddItem('Define Word', RunEx('BartlebyDefine'))
   endif
-  if Lx.IsEnabled(Lx.KIND_THESAURUS)
+  if LE.IsEnabled(CO.KIND_THESAURUS)
     doc.AddItem('Thesaurus', RunEx('BartlebyThesaurus'))
   endif
 

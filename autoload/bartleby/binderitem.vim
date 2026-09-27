@@ -16,26 +16,14 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/document.vim' as D
+import 'bartleby/variables/constants.vim' as CO
 
-export const KIND_FOLDER: string = 'folder'
-export const KIND_DOCUMENT: string = 'document'
 
-# What a folder is in the structure, independent of its title. The role
-# sets the Binder prefix, as in Chapter: title, which folders become
+# The Binder prefix of each role that has one, as in Chapter: title. The
+# roles are in constants.vim. A role also sets which folders become
 # chapter and part divisions in a compile, and where a folder may move.
-# ROLE_PART and ROLE_CHAPTER exist only under ROLE_MANUSCRIPT, and
-# ROLE_CUSTOM only at the top level. An empty role, the default, is a
-# plain folder. Folders saved before roles existed load with an empty
-# role, so old scrives still work.
-export const ROLE_NONE: string = ''
-export const ROLE_FRONT_MATTER: string = 'front-matter'
-export const ROLE_MANUSCRIPT: string = 'manuscript'
-export const ROLE_PART: string = 'part'
-export const ROLE_CHAPTER: string = 'chapter'
-export const ROLE_CHARACTERS: string = 'characters'
-export const ROLE_RESEARCH: string = 'research'
-export const ROLE_BACK_MATTER: string = 'back-matter'
-export const ROLE_CUSTOM: string = 'custom'
+# A folder saved before roles existed loads with an empty role, a plain
+# folder, so old scrives still work.
 
 const ROLE_LABELS: dict<string> = {part: 'Part', chapter: 'Chapter'}
 
@@ -71,19 +59,19 @@ endinterface
 export class BinderItem implements ItemContainer
   var id: string
   var title: string
-  var kind: string = KIND_FOLDER
-  # Folders only, see the ROLE constants.
-  var structureRole: string = ROLE_NONE
+  var kind: string = CO.KIND_FOLDER
+  # Folders only, see the ROLE constants in constants.vim.
+  var structureRole: string = CO.ROLE_NONE
   # Documents only: the path under binder/.
   var relPath: string = ''
   # Folders only.
   var children: list<BinderItem> = []
 
-  static def NewFolder(title: string, role: string = ROLE_NONE): BinderItem
+  static def NewFolder(title: string, role: string = CO.ROLE_NONE): BinderItem
     var item: BinderItem = BinderItem.new()
     item.id = NewId()
     item.title = title
-    item.kind = KIND_FOLDER
+    item.kind = CO.KIND_FOLDER
     item.structureRole = role
     return item
   enddef
@@ -92,7 +80,7 @@ export class BinderItem implements ItemContainer
     var item: BinderItem = BinderItem.new()
     item.id = NewId()
     item.title = title
-    item.kind = KIND_DOCUMENT
+    item.kind = CO.KIND_DOCUMENT
     item.relPath = relPath
     return item
   enddef
@@ -147,11 +135,11 @@ export class BinderItem implements ItemContainer
   enddef
 
   def IsFolder(): bool
-    return this.kind ==# KIND_FOLDER
+    return this.kind ==# CO.KIND_FOLDER
   enddef
 
   def IsDocument(): bool
-    return this.kind ==# KIND_DOCUMENT
+    return this.kind ==# CO.KIND_DOCUMENT
   enddef
 
   # METHOD: Return the Chapter or Part prefix for roles that have one, or
@@ -201,8 +189,8 @@ export class BinderItem implements ItemContainer
     var item: BinderItem = BinderItem.new()
     item.id = get(src, 'id', '')
     item.title = get(src, 'title', '(untitled)')
-    item.kind = get(src, 'kind', KIND_FOLDER)
-    item.structureRole = get(src, 'structureRole', ROLE_NONE)
+    item.kind = get(src, 'kind', CO.KIND_FOLDER)
+    item.structureRole = get(src, 'structureRole', CO.ROLE_NONE)
     item.relPath = get(src, 'relPath', '')
     var rawChildren: list<dict<any>> = get(src, 'children', [])
     item.children = rawChildren->mapnew((_, c) => BinderItem.FromDict(c))

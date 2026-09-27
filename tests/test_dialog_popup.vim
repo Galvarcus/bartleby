@@ -10,13 +10,13 @@ vim9script
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/dialog_popup.vim' as Dl
+import autoload 'bartleby/dialog_popup.vim' as DP
 
 # FUNCTION: Ask with Confirm, press key, and return whether OnYes ran and
 # whether the popup is still open.
 def Answer(key: string, defaultYes: bool = false): dict<bool>
   var result: dict<bool> = {yes: false}
-  var id = Dl.Confirm('Delete it?', () => {
+  var id = DP.Confirm('Delete it?', () => {
     extend(result, {yes: true})
   }, defaultYes)
   feedkeys(key, 'xt')
@@ -49,7 +49,7 @@ def Test_other_keys_leave_the_question_open(): void
 enddef
 
 def Test_default_answer_is_highlighted(): void
-  var id = Dl.Confirm('Open it?', () => {
+  var id = DP.Confirm('Open it?', () => {
   }, true)
   var buf = winbufnr(id)
   var last = getbufline(buf, '$')[0]

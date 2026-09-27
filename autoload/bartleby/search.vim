@@ -14,19 +14,19 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/inputpopup.vim' as IP
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
-export def Run(project: Pj.Project): void
+export def Run(project: PO.Project): void
   IP.PromptText('Search scrive', '', (query: string) => {
     RunSearch(project, query)
   })
 enddef
 
-def RunSearch(project: Pj.Project, query: string): void
+def RunSearch(project: PO.Project, query: string): void
   if query ==# ''
     return
   endif

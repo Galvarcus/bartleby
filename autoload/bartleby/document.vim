@@ -15,13 +15,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/persist.vim' as Pe
-
-# Display strings that are also the stored values. PickOne shows them
-# unchanged, see picker.vim, so there is no second list of names to keep
-# in step.
-export const LABELS: list<string> = ['None', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple']
-export const STATUSES: list<string> = ['To Do', 'First Draft', 'Revised', 'Done']
+import autoload 'bartleby/persist.vim' as PE
 
 export class DocMeta
   var label: string = 'None'
@@ -62,11 +56,11 @@ export class DocMeta
     if !filereadable(sidecarPath)
       return DocMeta.new()
     endif
-    return DocMeta.FromDict(Pe.ReadJson(sidecarPath))
+    return DocMeta.FromDict(PE.ReadJson(sidecarPath))
   enddef
 
   def Save(sidecarPath: string): void
-    Pe.WriteJson(sidecarPath, this.ToDict())
+    PE.WriteJson(sidecarPath, this.ToDict())
   enddef
 
   # METHOD: Set the label. Fields are written only inside the class, error

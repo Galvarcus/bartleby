@@ -28,11 +28,11 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/state.vim' as St
-import autoload 'bartleby/project.vim' as Pj
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/state.vim' as ST
+import autoload 'bartleby/project.vim' as PO
+import autoload 'bartleby/log.vim' as L
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 # FUNCTION: Return true when the current buffer is a document of the open
 # scrive.
@@ -40,7 +40,7 @@ export def IsScriveDocument(): bool
   if &buftype !=# '' || expand('%:p') ==# ''
     return false
   endif
-  var project: Pj.Project = St.Get()
+  var project: PO.Project = ST.Get()
   if project is null_object
     return false
   endif

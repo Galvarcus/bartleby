@@ -22,7 +22,7 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/project.vim' as PO
 
 # CLASS: One visible item of the tree, with its depth and its owner.
 # ownerItem is null_object when item is at the top level, where the owner
@@ -33,7 +33,7 @@ export class Row
   var ownerItem: BI.BinderItem
 endclass
 
-export def Flatten(project: Pj.Project, collapsed: dict<bool> = {}): list<Row>
+export def Flatten(project: PO.Project, collapsed: dict<bool> = {}): list<Row>
   var rows: list<Row> = []
   def Walk(items: list<BI.BinderItem>, depth: number, ownerItem: BI.BinderItem): void
     for item in items

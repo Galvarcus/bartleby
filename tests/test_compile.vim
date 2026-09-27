@@ -6,20 +6,20 @@ vim9script
 # JoinSiblingBlocks, and the other helpers are local to the script and
 # reached through them. Needs real files on disk, because ReadDocLines
 # reads them, so each test writes fixture text under the binder root of
-# the project and removes it with Fx.CleanupProjectFiles.
+# the project and removes it with FI.CleanupProjectFiles.
 # License: GNU GPL 3.0
 ##############################################################################
 
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/binderitem.vim' as BI
-import './fixtures.vim' as Fx
+import './fixtures.vim' as FI
 
 # FUNCTION: Build the shared fixture project, add one document each to
 # Front Matter and Back Matter, which the fixture leaves empty, and write
 # real text for every document. The caller must call
-# Fx.CleanupProjectFiles on the project.
+# FI.CleanupProjectFiles on the project.
 def BuildProjectWithContent(): dict<any>
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var frontMatter = project.ChildAt(0)
   var manuscript = project.ChildAt(1)
   var backMatter = project.ChildAt(2)
@@ -34,10 +34,10 @@ def BuildProjectWithContent(): dict<any>
   var chapter2 = manuscript.ChildAt(1)
   var scene2 = chapter2.ChildAt(0)
 
-  Fx.WriteDocContent(project, dedication, ['For my family.'])
-  Fx.WriteDocContent(project, scene1, ['It was a dark and stormy night.'])
-  Fx.WriteDocContent(project, scene2, ['The end was near.'])
-  Fx.WriteDocContent(project, acknowledgments, ['Thanks to everyone.'])
+  FI.WriteDocContent(project, dedication, ['For my family.'])
+  FI.WriteDocContent(project, scene1, ['It was a dark and stormy night.'])
+  FI.WriteDocContent(project, scene2, ['The end was near.'])
+  FI.WriteDocContent(project, acknowledgments, ['Thanks to everyone.'])
 
   return {project: project, dedication: dedication, scene1: scene1,
     scene2: scene2, acknowledgments: acknowledgments}
@@ -57,7 +57,7 @@ def Test_concatenate_manuscript_full_structure(): void
     '# 2', '', 'The end was near.', '',
     '# Acknowledgments {-}', '', 'Thanks to everyone.',
   ], lines)
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 def Test_concatenate_manuscript_respects_content_selection(): void
@@ -66,7 +66,7 @@ def Test_concatenate_manuscript_respects_content_selection(): void
   var target = C.CompileTarget.FromDict({includedIds: [fx.dedication.id]})
   var lines = C.ConcatenateManuscript(fx.project, target)
   assert_equal(['# Dedication {-}', '', 'For my family.'], lines)
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 def Test_concatenate_manuscript_separator_appears_between_scenes_in_same_chapter(): void
@@ -74,7 +74,7 @@ def Test_concatenate_manuscript_separator_appears_between_scenes_in_same_chapter
   var chapter1 = fx.project.ChildAt(1).ChildAt(0)
   var scene1b = BI.BinderItem.NewDocument('Scene 2', 'chapter-1/scene-02.md')
   chapter1.AddChild(scene1b)
-  Fx.WriteDocContent(fx.project, scene1b, ['Morning came.'])
+  FI.WriteDocContent(fx.project, scene1b, ['Morning came.'])
 
   var target = C.CompileTarget.FromDict({includedIds: [fx.scene1.id, scene1b.id]})
   var lines = C.ConcatenateManuscript(fx.project, target)
@@ -83,7 +83,7 @@ def Test_concatenate_manuscript_separator_appears_between_scenes_in_same_chapter
   assert_equal([
     '# 1', '', 'It was a dark and stormy night.', '', '* * *', '', 'Morning came.',
   ], lines)
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 def Test_concatenate_manuscript_with_nothing_included_is_empty(): void
@@ -91,7 +91,7 @@ def Test_concatenate_manuscript_with_nothing_included_is_empty(): void
   var target = C.CompileTarget.FromDict({includedIds: []})
   var lines = C.ConcatenateManuscript(fx.project, target)
   assert_equal([], lines)
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 def Test_concatenate_book_wraps_frontmatter_mainmatter_backmatter(): void
@@ -111,7 +111,7 @@ def Test_concatenate_book_wraps_frontmatter_mainmatter_backmatter(): void
     '```{=latex}', '\backmatter', '```', '',
     '# Acknowledgments {-}', '', 'Thanks to everyone.',
   ], lines)
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 def Test_concatenate_book_omits_mainmatter_when_front_matter_not_included(): void
@@ -123,7 +123,7 @@ def Test_concatenate_book_omits_mainmatter_when_front_matter_not_included(): voi
   assert_equal(-1, index(lines, '\mainmatter'))
   # The Manuscript text is still present, without a wrapper.
   assert_true(index(lines, '# 1') >= 0)
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 export def RunAll(): void

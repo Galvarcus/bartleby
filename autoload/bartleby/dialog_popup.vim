@@ -24,7 +24,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/wrap.vim' as Wr
+import autoload 'bartleby/wrap.vim' as WR
 
 const WIDTH: number = 60
 const ZINDEX: number = 320
@@ -40,7 +40,7 @@ export def Confirm(question: string, OnYes: func(), defaultYes: bool = false): n
   endif
   var lines: list<string> = []
   for paragraph in split(question, "\n")
-    lines += Wr.Wrap(paragraph, WIDTH)
+    lines += WR.Wrap(paragraph, WIDTH)
   endfor
   var yesLabel: string = '[Y]es'
   var noLabel: string = '[N]o'

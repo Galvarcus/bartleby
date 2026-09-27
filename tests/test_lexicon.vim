@@ -8,7 +8,7 @@ vim9script
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/lexicon.vim' as Lx
+import autoload 'bartleby/lexicon.vim' as LE
 
 const DICTIONARY_BODY: string = json_encode([
   {
@@ -39,7 +39,7 @@ const THESAURUS_BODY: string = json_encode([
 ])
 
 def Test_parse_dictionary_keeps_only_matching_entries(): void
-  var result = Lx.ParseResponse('dictionary', 'murmurous', DICTIONARY_BODY)
+  var result = LE.ParseResponse('dictionary', 'murmurous', DICTIONARY_BODY)
   assert_equal('ok', result.status)
   assert_equal(1, len(result.entries))
   assert_equal('murmurous', result.entries[0].headword)
@@ -50,12 +50,12 @@ def Test_parse_dictionary_keeps_only_matching_entries(): void
 enddef
 
 def Test_parse_dictionary_keeps_all_entries_when_none_match(): void
-  var result = Lx.ParseResponse('dictionary', 'murmurings', DICTIONARY_BODY)
+  var result = LE.ParseResponse('dictionary', 'murmurings', DICTIONARY_BODY)
   assert_equal(2, len(result.entries))
 enddef
 
 def Test_parse_thesaurus_senses_and_antonyms(): void
-  var result = Lx.ParseResponse('thesaurus', 'component', THESAURUS_BODY)
+  var result = LE.ParseResponse('thesaurus', 'component', THESAURUS_BODY)
   assert_equal('ok', result.status)
   var entry = result.entries[0]
   assert_equal('one of the parts that make up a whole', entry.senses[0].label)
@@ -64,50 +64,50 @@ def Test_parse_thesaurus_senses_and_antonyms(): void
 enddef
 
 def Test_parse_suggestion_list_is_notfound_with_suggestions(): void
-  var result = Lx.ParseResponse('dictionary', 'murmerous', '["murmurous", "murmurs"]')
+  var result = LE.ParseResponse('dictionary', 'murmerous', '["murmurous", "murmurs"]')
   assert_equal('notfound', result.status)
   assert_equal(['murmurous', 'murmurs'], result.suggestions)
 enddef
 
 def Test_parse_empty_list_is_notfound_without_suggestions(): void
-  var result = Lx.ParseResponse('dictionary', 'zzzq', '[]')
+  var result = LE.ParseResponse('dictionary', 'zzzq', '[]')
   assert_equal('notfound', result.status)
   assert_equal([], result.suggestions)
 enddef
 
 def Test_parse_plain_text_is_an_error_with_its_first_line(): void
-  var result = Lx.ParseResponse('dictionary', 'word', "Invalid API key. Not subscribed for this reference.\n")
+  var result = LE.ParseResponse('dictionary', 'word', "Invalid API key. Not subscribed for this reference.\n")
   assert_equal('error', result.status)
   assert_match('Invalid API key', result.message)
 enddef
 
 def Test_parse_empty_body_is_an_error(): void
-  assert_equal('error', Lx.ParseResponse('dictionary', 'word', '  ').status)
+  assert_equal('error', LE.ParseResponse('dictionary', 'word', '  ').status)
 enddef
 
 def Test_parse_entries_without_definitions_are_notfound(): void
   var body = json_encode([{meta: {id: 'x', stems: ['x']}, hwi: {hw: 'x'}, fl: 'noun'}])
-  assert_equal('notfound', Lx.ParseResponse('dictionary', 'x', body).status)
+  assert_equal('notfound', LE.ParseResponse('dictionary', 'x', body).status)
 enddef
 
 def Test_clean_word(): void
-  assert_equal('quiet', Lx.CleanWord('  Quiet, '))
-  assert_equal('sam', Lx.CleanWord("Sam's"))
-  assert_equal('go-between', Lx.CleanWord('"go-between"'))
-  assert_equal('ice cream', Lx.CleanWord('Ice   Cream'))
+  assert_equal('quiet', LE.CleanWord('  Quiet, '))
+  assert_equal('sam', LE.CleanWord("Sam's"))
+  assert_equal('go-between', LE.CleanWord('"go-between"'))
+  assert_equal('ice cream', LE.CleanWord('Ice   Cream'))
 enddef
 
 def Test_url_encode(): void
-  assert_equal('ice%20cream', Lx.UrlEncode('ice cream'))
-  assert_equal('go-between', Lx.UrlEncode('go-between'))
-  assert_equal('caf%C3%A9', Lx.UrlEncode('café'))
+  assert_equal('ice%20cream', LE.UrlEncode('ice cream'))
+  assert_equal('go-between', LE.UrlEncode('go-between'))
+  assert_equal('caf%C3%A9', LE.UrlEncode('café'))
 enddef
 
 def Test_match_case(): void
-  assert_equal('calm', Lx.MatchCase('quiet', 'calm'))
-  assert_equal('Calm', Lx.MatchCase('Quiet', 'calm'))
-  assert_equal('CALM', Lx.MatchCase('QUIET', 'calm'))
-  assert_equal('Calm', Lx.MatchCase('I', 'calm'))
+  assert_equal('calm', LE.MatchCase('quiet', 'calm'))
+  assert_equal('Calm', LE.MatchCase('Quiet', 'calm'))
+  assert_equal('CALM', LE.MatchCase('QUIET', 'calm'))
+  assert_equal('Calm', LE.MatchCase('I', 'calm'))
 enddef
 
 def Test_disabled_without_a_key(): void
@@ -115,8 +115,8 @@ def Test_disabled_without_a_key(): void
   var savedEnv = getenv('BARTLEBY_MW_DICTIONARY_KEY')
   g:bartleby_dictionary_api_key = ''
   setenv('BARTLEBY_MW_DICTIONARY_KEY', v:null)
-  assert_false(Lx.IsEnabled('dictionary'))
-  assert_match('g:bartleby_dictionary_api_key', Lx.DisabledReason('dictionary'))
+  assert_false(LE.IsEnabled('dictionary'))
+  assert_match('g:bartleby_dictionary_api_key', LE.DisabledReason('dictionary'))
   g:bartleby_dictionary_api_key = saved
   setenv('BARTLEBY_MW_DICTIONARY_KEY', savedEnv)
 enddef
@@ -126,9 +126,9 @@ def Test_environment_key_is_the_fallback(): void
   var savedEnv = getenv('BARTLEBY_MW_THESAURUS_KEY')
   g:bartleby_thesaurus_api_key = ''
   setenv('BARTLEBY_MW_THESAURUS_KEY', 'env-key')
-  assert_equal('env-key', Lx.ApiKey('thesaurus'))
+  assert_equal('env-key', LE.ApiKey('thesaurus'))
   g:bartleby_thesaurus_api_key = 'global-key'
-  assert_equal('global-key', Lx.ApiKey('thesaurus'))
+  assert_equal('global-key', LE.ApiKey('thesaurus'))
   g:bartleby_thesaurus_api_key = saved
   setenv('BARTLEBY_MW_THESAURUS_KEY', savedEnv)
 enddef
@@ -138,10 +138,10 @@ def Test_unknown_or_wrong_kind_reference_is_disabled(): void
   var savedRef = g:bartleby_dictionary_reference
   g:bartleby_dictionary_api_key = 'k'
   g:bartleby_dictionary_reference = 'thesaurus'
-  assert_equal({}, Lx.Reference('dictionary'))
-  assert_false(Lx.IsEnabled('dictionary'))
+  assert_equal({}, LE.Reference('dictionary'))
+  assert_false(LE.IsEnabled('dictionary'))
   g:bartleby_dictionary_reference = 'nosuch'
-  assert_false(Lx.IsEnabled('dictionary'))
+  assert_false(LE.IsEnabled('dictionary'))
   g:bartleby_dictionary_api_key = savedKey
   g:bartleby_dictionary_reference = savedRef
 enddef
@@ -150,7 +150,7 @@ def Test_build_url(): void
   var savedKey = g:bartleby_dictionary_api_key
   g:bartleby_dictionary_api_key = 'abc'
   assert_equal('https://www.dictionaryapi.com/api/v3/references/collegiate/json/ice%20cream?key=abc',
-    Lx.BuildUrl('dictionary', 'ice cream'))
+    LE.BuildUrl('dictionary', 'ice cream'))
   g:bartleby_dictionary_api_key = savedKey
 enddef
 

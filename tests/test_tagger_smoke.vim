@@ -10,7 +10,7 @@ vim9script
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/tagger.vim' as Tg
+import autoload 'bartleby/tagger.vim' as TA
 
 const TEXT: string = "The door was opened by her.\nShe runs fast. The run was long."
 
@@ -33,14 +33,14 @@ def Test_real_tagger(): void
     return
   endif
   g:bartleby_spotlight_tagger = 'spacy'
-  Tg.Reset()
-  Tg.Tags(TEXT)
+  TA.Reset()
+  TA.Tags(TEXT)
   var tags: dict<any> = {}
   var waited: number = 0
   while empty(tags) && waited < 60000
     sleep 200m
     waited += 200
-    tags = Tg.Tags(TEXT)
+    tags = TA.Tags(TEXT)
   endwhile
   assert_false(empty(tags), 'no tagger result within 60 seconds')
   if empty(tags)
@@ -55,7 +55,7 @@ def Test_real_tagger(): void
   assert_equal('VERB', tagOf[string(stridx(TEXT, 'runs'))])
   assert_equal('NOUN', tagOf[string(stridx(TEXT, 'run was'))])
   assert_equal('NOUN', tagOf[string(stridx(TEXT, 'door'))])
-  Tg.Reset()
+  TA.Reset()
 enddef
 
 execute 'source ' .. expand('<sfile>:h') .. '/../plugin/bartleby.vim'

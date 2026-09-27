@@ -23,12 +23,12 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import 'Logger/logger.vim' as Log
-import autoload 'bartleby/state.vim' as St
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/state.vim' as ST
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/windows.vim' as W
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 var quillwrapmodedefault: string = g:bartleby_quill_wrap_mode_default
 var quilltextwidth: number = g:bartleby_quill_textwidth
 var quillautoformat: bool = g:bartleby_quill_autoformat
@@ -460,7 +460,7 @@ export def AutoApply(): void
   if W.IsChromeBuffer(bufnr('%'))
     return
   endif
-  var project: Pj.Project = St.Get()
+  var project: PO.Project = ST.Get()
   if project is null_object
     return
   endif

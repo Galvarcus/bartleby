@@ -91,9 +91,9 @@ var is_loaded: bool = true
 #   Esc, C-c                        Cancel. The callback receives null.
 ##############################################################################
 
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 
 # FUNCTION: Return the box corners and edges in this order: top left,
 # top right, bottom left, bottom right, horizontal, vertical.

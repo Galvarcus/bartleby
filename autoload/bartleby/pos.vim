@@ -17,34 +17,20 @@ var is_loaded: bool = true
 # and g:bartleby_spotlight_words_remove change the list of a mode, by
 # mode name, with single words:
 #   {Fillers: ['anyway'], Pronouns: ['yall']}
-# MODE_LISTS maps mode names to list keys.
+# MODE_LISTS in constants.vim maps mode names to list keys.
 #
 # A span is [start, end]: byte offsets in a line, 0-based, end exclusive.
 # License: GNU GPL 3.0
 ##############################################################################
 
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/log.vim' as L
+import 'bartleby/variables/constants.vim' as CO
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 var posscriptpath: string = expand('<sfile>:p')
 var loaded_lists: dict<dict<any>> = {}
 
 # Mode name to its list key in tools/pos/<language>.json.
-export const MODE_LISTS: dict<string> = {
-  Pronouns: 'pronouns',
-  Determiners: 'determiners',
-  Prepositions: 'prepositions',
-  Conjunctions: 'conjunctions',
-  Auxiliaries: 'auxiliaries',
-  Fillers: 'fillers',
-  Adverbs: 'adverbs',
-  Contractions: 's_contraction_words',
-}
-
-# Shared with the fountainCharacter and fountainSceneHeading rules in
-# syntax/fountain.vim. Keep them the same.
-export const FOUNTAIN_CHARACTER_PATTERN: string = '^\L*$'
-export const FOUNTAIN_SCENE_HEADING_PATTERN: string = '^\c\(int\|ext\|est\|i\/e\)\([.\/]\| \)\|^\.\a'
 
 # A word: letters, with inner apostrophes, as in don't.
 const WORD_PATTERN: string = '\v[[:alpha:]]+%([''’][[:alpha:]]+)*'
@@ -80,13 +66,13 @@ export def Lists(language: string): dict<any>
     endif
   endfor
   for [mode, words] in items(get(g:, 'bartleby_spotlight_words_add', {}))
-    var key: string = get(MODE_LISTS, mode, '')
+    var key: string = get(CO.MODE_LISTS, mode, '')
     if key !=# ''
       extend(lists, {[key]: extend(get(lists, key, {}), ToSet(words))})
     endif
   endfor
   for [mode, words] in items(get(g:, 'bartleby_spotlight_words_remove', {}))
-    var key: string = get(MODE_LISTS, mode, '')
+    var key: string = get(CO.MODE_LISTS, mode, '')
     if key !=# '' && has_key(lists, key)
       for word in words
         if has_key(lists[key], tolower(word))
@@ -146,7 +132,7 @@ enddef
 # or pattern.
 export def LexicalSpans(mode: string, text: string, lists: dict<any>): list<list<number>>
   var spans: list<list<number>> = []
-  var key: string = get(MODE_LISTS, mode, '')
+  var key: string = get(CO.MODE_LISTS, mode, '')
   var words: dict<any> = get(lists, key, {})
   for [start, end] in Tokens(text)
     var word: string = strpart(text, start, end - start)
@@ -177,8 +163,8 @@ export def IsProseLine(text: string, filetype: string): bool
     return false
   endif
   if filetype ==# 'fountain'
-    return text !~# FOUNTAIN_SCENE_HEADING_PATTERN
-      && text !~# FOUNTAIN_CHARACTER_PATTERN
+    return text !~# CO.FOUNTAIN_SCENE_HEADING_PATTERN
+      && text !~# CO.FOUNTAIN_CHARACTER_PATTERN
       && text !~# '^\s*>'
   endif
   return text !~# '^\s*#'

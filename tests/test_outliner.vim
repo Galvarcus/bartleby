@@ -13,17 +13,17 @@ vim9script
 
 import autoload 'bartleby/outliner.vim' as O
 import autoload 'bartleby/binderitem.vim' as BI
-import './fixtures.vim' as Fx
+import './fixtures.vim' as FI
 
 def OpenOutlinerWithContent(): dict<any>
-  var project = Fx.BuildProject()
+  var project = FI.BuildProject()
   var manuscript = project.ChildAt(1)
   var chapter1 = manuscript.ChildAt(0)
   var scene1 = chapter1.ChildAt(0)
   var chapter2 = manuscript.ChildAt(1)
   var scene2 = chapter2.ChildAt(0)
-  Fx.WriteDocContent(project, scene1, ['Scene one content.'])
-  Fx.WriteDocContent(project, scene2, ['Scene two content.'])
+  FI.WriteDocContent(project, scene1, ['Scene one content.'])
+  FI.WriteDocContent(project, scene2, ['Scene two content.'])
   O.Show(project, manuscript)
   return {project: project, scene1: scene1, scene2: scene2}
 enddef
@@ -32,7 +32,7 @@ def ClosePopupsAndCleanup(fx: dict<any>): void
   for id in popup_list()
     popup_close(id)
   endfor
-  Fx.CleanupProjectFiles(fx.project)
+  FI.CleanupProjectFiles(fx.project)
 enddef
 
 # FUNCTION: Regression test for a real bug: CR on a document row opened

@@ -20,12 +20,12 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/persist.vim' as Pe
-import 'Logger/logger.vim' as Log
+import autoload 'bartleby/persist.vim' as PE
+import autoload 'bartleby/log.vim' as L
 
-var log: Log.Logger = Log.Logger.new('Bartleby', expand('<sfile>:t'))
+var log = L.New(expand('<sfile>:t'))
 var snapshotretention: number = g:bartleby_snapshot_retention
 
 var id_counter: number = 0
@@ -66,25 +66,25 @@ export class Snapshot
   enddef
 endclass
 
-def SnapshotDir(project: Pj.Project, doc: BI.BinderItem): string
+def SnapshotDir(project: PO.Project, doc: BI.BinderItem): string
   return $'{project.scriveDir}/snapshots/{doc.id}'
 enddef
 
-def SnapshotPath(project: Pj.Project, doc: BI.BinderItem, timestamp: string): string
+def SnapshotPath(project: PO.Project, doc: BI.BinderItem, timestamp: string): string
   return $'{SnapshotDir(project, doc)}/{timestamp}.json'
 enddef
 
 # FUNCTION: Return the snapshots of doc, oldest first.
-export def List(project: Pj.Project, doc: BI.BinderItem): list<Snapshot>
+export def List(project: PO.Project, doc: BI.BinderItem): list<Snapshot>
   var dir: string = SnapshotDir(project, doc)
   if !isdirectory(dir)
     return []
   endif
   var files: list<string> = sort(globpath(dir, '*.json', false, true))
-  return files->mapnew((_, f) => Snapshot.FromDict(Pe.ReadJson(f)))
+  return files->mapnew((_, f) => Snapshot.FromDict(PE.ReadJson(f)))
 enddef
 
-def EnforceRetention(project: Pj.Project, doc: BI.BinderItem): void
+def EnforceRetention(project: PO.Project, doc: BI.BinderItem): void
   var snapshots: list<Snapshot> = List(project, doc)
   var excess: number = len(snapshots) - snapshotretention
   if excess <= 0
@@ -102,7 +102,7 @@ enddef
 # caller that wants unsaved changes must write first. Take only copies
 # the file and knows no buffers, so it works the same from the Binder and
 # from an open buffer.
-export def Take(project: Pj.Project, doc: BI.BinderItem, label: string): void
+export def Take(project: PO.Project, doc: BI.BinderItem, label: string): void
   var path: string = doc.AbsPath(project.BinderRoot())
   if !filereadable(path)
     log.Error($'missing file on disk: {path}')
@@ -112,7 +112,7 @@ export def Take(project: Pj.Project, doc: BI.BinderItem, label: string): void
   v.timestamp = NewTimestamp()
   v.label = label
   v.lines = readfile(path)
-  Pe.WriteJson(SnapshotPath(project, doc, v.timestamp), v)
+  PE.WriteJson(SnapshotPath(project, doc, v.timestamp), v)
   EnforceRetention(project, doc)
   log.Info($'snapshot taken: {doc.title}{label ==# "" ? "" : $" ({label})"}')
 enddef
@@ -121,7 +121,7 @@ enddef
 # takes a snapshot of the current text, so a restore can always be
 # undone. Reloads the buffer when the document is open, so the editor
 # shows the restored text at once.
-export def Restore(project: Pj.Project, doc: BI.BinderItem, snapshot: Snapshot): void
+export def Restore(project: PO.Project, doc: BI.BinderItem, snapshot: Snapshot): void
   Take(project, doc, 'before restore')
   var path: string = doc.AbsPath(project.BinderRoot())
   writefile(snapshot.lines, path)

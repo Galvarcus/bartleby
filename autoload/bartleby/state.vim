@@ -14,14 +14,14 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/project.vim' as Pj
+import autoload 'bartleby/project.vim' as PO
 
-var current_project: Pj.Project
+var current_project: PO.Project
 
-export def Get(): Pj.Project
+export def Get(): PO.Project
   return current_project
 enddef
 
-export def Set(project: Pj.Project): void
+export def Set(project: PO.Project): void
   current_project = project
 enddef
