@@ -18,6 +18,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/inputpopup.vim' as IP
@@ -113,7 +114,7 @@ enddef
 
 def SaveAndValidate(path: string, values: dict<any>, requireName: bool): void
   if requireName && get(values, 'name', '') ==# ''
-    log.Error('Name is required')
+    log.Error(IN.T("Name is required"))
     return
   endif
   PE.WriteJson(path, values)

@@ -23,6 +23,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/windows.vim' as W
@@ -151,7 +152,7 @@ export def Restore(project: PO.Project): void
       execute 'edit ' .. fnameescape(path)
       cursor(state.cursorLine, state.cursorCol)
     else
-      log.Warn($'session: previously active document no longer exists: {path}')
+      log.Warn(printf(IN.T("session: previously active document no longer exists: %s"), path))
     endif
   endif
 

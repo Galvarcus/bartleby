@@ -21,6 +21,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/lexicon.vim' as LE
@@ -64,7 +65,7 @@ const LOOKUPS: dict<string> = {
 export def Open(): void
   var names: list<string> = sort(keys(COMMANDS) + keys(COMMANDS_WITH_ARG)
     + keys(DIRECT_ACTIONS) + keys(EnabledLookups()))
-  IP.PromptFilter('Command Palette', names, (choice: string) => {
+  IP.PromptFilter(IN.T("Command Palette"), names, (choice: string) => {
     Run(choice)
   })
 enddef

@@ -33,6 +33,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as PO
@@ -252,7 +253,7 @@ class OutlinerPopup
     endif
     var path: string = row.item.AbsPath(this.project.BinderRoot())
     if !filereadable(path)
-      log.Error($'missing file on disk: {path}')
+      log.Error(printf(IN.T("missing file on disk: %s"), path))
       return
     endif
     this.Close()
@@ -267,7 +268,7 @@ class OutlinerPopup
     endif
     var item: BI.BinderItem = row.item
     var currentMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
-    PI.PickOne('Label', CO.LABELS, (choice: string) => {
+    PI.PickOne(IN.T("Label"), CO.LABELS, (choice: string) => {
       var meta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
       meta.SetLabel(choice)
       meta.Save(item.MetaPath(this.project.BinderRoot()))
@@ -283,7 +284,7 @@ class OutlinerPopup
     endif
     var item: BI.BinderItem = row.item
     var currentMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
-    PI.PickOne('Status', CO.STATUSES, (choice: string) => {
+    PI.PickOne(IN.T("Status"), CO.STATUSES, (choice: string) => {
       var meta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
       meta.SetStatus(choice)
       meta.Save(item.MetaPath(this.project.BinderRoot()))
@@ -293,7 +294,7 @@ class OutlinerPopup
   enddef
 
   def PickSort(): void
-    PI.PickOne('Sort by', SORT_KEYS, (choice: string) => {
+    PI.PickOne(IN.T("Sort by"), SORT_KEYS, (choice: string) => {
       this.sortKey = choice
       this.Rebuild()
       this.Render()
@@ -301,13 +302,13 @@ class OutlinerPopup
   enddef
 
   def ShowHelp(): void
-    H.Show('Outliner', [
-      ['<CR>', 'Open document under cursor'],
-      ['l', 'Set label'],
-      ['s', 'Set status'],
-      ['gs', 'Sort'],
-      ['q', 'Close Outliner'],
-      ['?', 'This help'],
+    H.Show(IN.T("Outliner"), [
+      ['<CR>', IN.T("Open document under cursor")],
+      ['l', IN.T("Set label")],
+      ['s', IN.T("Set status")],
+      ['gs', IN.T("Sort")],
+      ['q', IN.T("Close Outliner")],
+      ['?', IN.T("This help")],
     ])
   enddef
 

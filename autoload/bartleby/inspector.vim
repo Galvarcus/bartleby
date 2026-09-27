@@ -26,6 +26,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as PO
@@ -102,7 +103,7 @@ def EditUnderCursor(): void
 
   if lnum == LINE_LABEL
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    PI.PickOne('Label', CO.LABELS, (choice: string) => {
+    PI.PickOne(IN.T("Label"), CO.LABELS, (choice: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetLabel(choice)
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -110,7 +111,7 @@ def EditUnderCursor(): void
     }, meta.label)
   elseif lnum == LINE_STATUS
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    PI.PickOne('Status', CO.STATUSES, (choice: string) => {
+    PI.PickOne(IN.T("Status"), CO.STATUSES, (choice: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetStatus(choice)
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -119,7 +120,7 @@ def EditUnderCursor(): void
   elseif lnum == LINE_TARGET
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     var current: string = meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : ''
-    IP.PromptText('Target word count', current, (text: string) => {
+    IP.PromptText(IN.T("Target word count"), current, (text: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetWordCountTarget(max([0, str2nr(text)]))
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -127,7 +128,7 @@ def EditUnderCursor(): void
     })
   elseif lnum == LINE_KEYWORDS
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    IP.PromptText('Keywords', join(meta.keywords, ', '), (text: string) => {
+    IP.PromptText(IN.T("Keywords"), join(meta.keywords, ', '), (text: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetKeywords(text ==# '' ? [] : split(text, ',\s*'))
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -135,7 +136,7 @@ def EditUnderCursor(): void
     })
   elseif lnum >= LINE_SYNOPSIS_HEADER
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    IP.PromptMultiline('Synopsis', meta.synopsis, (text: string) => {
+    IP.PromptMultiline(IN.T("Synopsis"), meta.synopsis, (text: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetSynopsis(text)
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -181,13 +182,13 @@ export def Toggle(): void
 
   var project: PO.Project = ST.Get()
   if project is null_object
-    log.Warn('no scrive open')
+    log.Warn(IN.T("no scrive open"))
     return
   endif
   var path: string = expand('%:p')
   var item: BI.BinderItem = project.FindItemByPath(path)
   if item is null_object
-    log.Info('current buffer is not a document in the open scrive')
+    log.Info(IN.T("current buffer is not a document in the open scrive"))
     return
   endif
 

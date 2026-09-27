@@ -22,6 +22,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as PO
@@ -78,7 +79,7 @@ enddef
 def EditSynopsis(project: PO.Project, folder: BI.BinderItem, doc: BI.BinderItem,
     OnDocumentPicked: func(BI.BinderItem)): void
   var meta: D.DocMeta = doc.LoadMeta(project.BinderRoot())
-  IP.PromptText('Synopsis', meta.synopsis, (newSynopsis: string) => {
+  IP.PromptText(IN.T("Synopsis"), meta.synopsis, (newSynopsis: string) => {
     if newSynopsis !=# meta.synopsis
       meta.SetSynopsis(newSynopsis)
       meta.Save(doc.MetaPath(project.BinderRoot()))
@@ -97,7 +98,7 @@ def Reorder(project: PO.Project, folder: BI.BinderItem, doc: BI.BinderItem,
   if MU.MoveWithinSiblings(project, row, delta)
     project.Save()
   else
-    log.Info('already at that end of the folder')
+    log.Info(IN.T("already at that end of the folder"))
   endif
   Show(project, folder, OnDocumentPicked, doc.id)
 enddef
@@ -127,13 +128,13 @@ def HandleExtraKey(project: PO.Project, folder: BI.BinderItem, docs: list<BI.Bin
 enddef
 
 def ShowHelp(): void
-  H.Show('Corkboard', [
-    ['Arrows / h j k l', 'Move between cards'],
-    ['<CR> / <Space>', 'Open the selected document'],
-    ['e', 'Edit the synopsis'],
-    ['J / K', 'Move the card later / earlier'],
-    ['<Esc>', 'Close'],
-    ['?', 'This help'],
+  H.Show(IN.T("Corkboard"), [
+    ['Arrows / h j k l', IN.T("Move between cards")],
+    ['<CR> / <Space>', IN.T("Open the selected document")],
+    ['e', IN.T("Edit the synopsis")],
+    ['J / K', IN.T("Move the card later / earlier")],
+    ['<Esc>', IN.T("Close")],
+    ['?', IN.T("This help")],
   ])
 enddef
 
@@ -148,7 +149,7 @@ export def Show(project: PO.Project, folder: BI.BinderItem,
   # not a document from the binder.
   var docs: list<BI.BinderItem> = copy(folder.children)->filter((_, c) => c.IsDocument())
   if empty(docs)
-    log.Info($'"{folder.title}" has no documents to show on the corkboard')
+    log.Info(printf(IN.T("\"%s\" has no documents to show on the corkboard"), folder.title))
     return
   endif
 

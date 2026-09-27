@@ -45,6 +45,7 @@ import './test_binder.vim' as TB
 import './test_syntax.vim' as TSY
 import './test_pos.vim' as TP
 import './test_lang.vim' as TLA
+import './test_i18n.vim' as TIN
 import './test_spotlight_pos.vim' as TSP
 import './test_inputpopup.vim' as TI
 import './test_dialog_popup.vim' as TDP
@@ -65,6 +66,7 @@ var suites: list<func(): void> = [
   TSY.RunAll,
   TP.RunAll,
   TLA.RunAll,
+  TIN.RunAll,
   TSP.RunAll,
   TI.RunAll,
   TDP.RunAll,

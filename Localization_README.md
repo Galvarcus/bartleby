@@ -4,8 +4,8 @@ This document describes how to add support for another language of
 writing to Bartleby. Bartleby supports English. Each other language is
 added on its own, when it is needed.
 
-Bartleby's own messages, menus, and help are in English. Their
-translation is a separate task and is not part of this process yet.
+Bartleby's own messages, titles, and key help can also be translated.
+That is a separate process, described in the section on messages.
 
 ## How Bartleby chooses the language
 
@@ -132,6 +132,88 @@ contraction rules. `tests/test_lang.vim` shows how to switch the
 language during a test. When the language has a tagger model, check a
 normal sentence and a passive sentence with the real tagger, as
 `tests/test_tagger_smoke.vim` does for English.
+
+## Messages
+
+Bartleby's messages, popup titles, questions, and key help use Vim's
+`gettext()` and `ngettext()` through `autoload/bartleby/i18n.vim`. Vim
+chooses the language from its message language. See `:help :language`.
+A text without a translation shows in English.
+
+### Rules for code
+
+- Pass every text that the user sees to `IN.T`, or to `IN.N` when it has
+  plural forms. The text must be a double-quoted literal in the call:
+
+  ```vim
+  log.Info(IN.T("compiled"))
+  log.Warn(printf(IN.T("skipping missing file: %s"), path))
+  echo printf(IN.N("%d document", "%d documents", count), count)
+  ```
+
+- Use `printf` with `%s` for values. Never build a text from pieces or
+  with an interpolated string: a translation needs the whole sentence.
+  Where a value changes the sentence, such as a folder kind, write one
+  whole sentence for each case.
+- Do not translate text that is also data, such as a stored label or a
+  command name. Translate it only where it is shown, and map the shown
+  text back to the stored value.
+
+`tools/i18n/extract.py` reads the calls from the source and writes the
+template, `lang/bartleby.pot`. It stops with an error at a call whose
+text is not a literal. Run it after every change to a translated text.
+CI fails when the template is not up to date.
+
+### Add a translation
+
+The commands below use German, `de`, as the example. They need the GNU
+gettext tools.
+
+1. Update the template:
+
+   ```sh
+   python3 tools/i18n/extract.py
+   ```
+
+2. Create the translation file from it. `msginit` fills in the header,
+   including the plural rule of the language:
+
+   ```sh
+   msginit -i lang/bartleby.pot -l de_DE.UTF-8 -o lang/de.po
+   ```
+
+3. Translate each `msgstr` in `lang/de.po`. Keep every `%s` and `%d`. A
+   translation may reorder them with positional placeholders, such as
+   `%2$s` before `%1$s`.
+4. Compile it into the file that Vim reads,
+   `lang/de/LC_MESSAGES/bartleby.mo`:
+
+   ```sh
+   sh tools/i18n/compile.sh
+   ```
+
+5. Check it in Vim:
+
+   ```vim
+   :language messages de_DE.UTF-8
+   ```
+
+Commit both the `.po` file and the compiled `.mo` file, so that users
+need no gettext tools.
+
+### Update a translation
+
+After the English texts change, merge the new template into each
+translation, translate the new and changed texts, and compile again:
+
+```sh
+python3 tools/i18n/extract.py
+msgmerge -U lang/de.po lang/bartleby.pot
+sh tools/i18n/compile.sh
+```
+
+`msgmerge` marks changed texts as fuzzy. Vim does not use a fuzzy
+translation until a translator checks it and removes the mark.
 
 ## Known limits
 

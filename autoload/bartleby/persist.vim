@@ -13,13 +13,14 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 
 var log = L.New(expand('<sfile>:t'))
 
 export def ReadJson(path: string): dict<any>
   if !filereadable(path)
-    log.Warn($'no such file: {path}')
+    log.Warn(printf(IN.T("no such file: %s"), path))
     return {}
   endif
   try

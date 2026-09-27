@@ -60,6 +60,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 
 var log = L.New(expand('<sfile>:t'))
@@ -324,7 +325,7 @@ export class InputPopup
 
   def Open(): void
     if empty(this.fields)
-      log.Error('InputPopup: fieldRows produced no fields')
+      log.Error(IN.T("InputPopup: fieldRows produced no fields"))
       return
     endif
 

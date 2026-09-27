@@ -23,6 +23,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/project.vim' as PO
@@ -230,7 +231,7 @@ export def SetAutoFormat(af: number): void
       autocmd! * <buffer>
     augroup END
     if newAf && !isHard
-      log.Warn('autoformat can only be enabled in hard line break mode')
+      log.Warn(IN.T("autoformat can only be enabled in hard line break mode"))
       return
     endif
   endif

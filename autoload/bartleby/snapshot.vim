@@ -20,6 +20,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/persist.vim' as PE
@@ -105,7 +106,7 @@ enddef
 export def Take(project: PO.Project, doc: BI.BinderItem, label: string): void
   var path: string = doc.AbsPath(project.BinderRoot())
   if !filereadable(path)
-    log.Error($'missing file on disk: {path}')
+    log.Error(printf(IN.T("missing file on disk: %s"), path))
     return
   endif
   var v: dict<any> = {}
@@ -114,7 +115,7 @@ export def Take(project: PO.Project, doc: BI.BinderItem, label: string): void
   v.lines = readfile(path)
   PE.WriteJson(SnapshotPath(project, doc, v.timestamp), v)
   EnforceRetention(project, doc)
-  log.Info($'snapshot taken: {doc.title}{label ==# "" ? "" : $" ({label})"}')
+  log.Info(printf(IN.T("snapshot taken: %s%s"), doc.title, label ==# "" ? "" : $" ({label})"))
 enddef
 
 # FUNCTION: Replace the file of doc with the content of snapshot. First
@@ -129,5 +130,5 @@ export def Restore(project: PO.Project, doc: BI.BinderItem, snapshot: Snapshot):
   if winId != -1
     win_execute(winId, 'edit!')
   endif
-  log.Info($'restored "{doc.title}" to snapshot from {snapshot.DisplayName()}')
+  log.Info(printf(IN.T("restored \"%s\" to snapshot from %s"), doc.title, snapshot.DisplayName()))
 enddef

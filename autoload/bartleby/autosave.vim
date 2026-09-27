@@ -28,6 +28,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/log.vim' as L
@@ -67,7 +68,7 @@ export def Save(force: bool): void
     lockmarks silent update
     b:bartleby_autosave_time = now
   catch
-    log.Warn($'auto-save failed for {expand("%:t")}: {v:exception}')
+    log.Warn(printf(IN.T("auto-save failed for %s: %s"), expand("%:t"), v:exception))
   endtry
 enddef
 

@@ -29,6 +29,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 
 var log = L.New(expand('<sfile>:t'))
@@ -192,7 +193,7 @@ def Enter(dimExpr: string): void
 
   var dim: Dimensions = Dimensions.Parse(dimExpr)
   if dim is null_object
-    log.Error($'invalid dimension expression: {dimExpr}')
+    log.Error(printf(IN.T("invalid dimension expression: %s"), dimExpr))
     return
   endif
 
@@ -351,7 +352,7 @@ def ApplyGuiSettings(saved: dict<any>): void
     try
       execute $'&guifont = {string(focusguifont)}'
     catch
-      log.Error($'could not set g:bartleby_focus_guifont "{focusguifont}": {v:exception}')
+      log.Error(printf(IN.T("could not set g:bartleby_focus_guifont \"%s\": %s"), focusguifont, v:exception))
       remove(saved, 'guifont')
     endtry
   endif
@@ -364,7 +365,7 @@ def ApplyGuiSettings(saved: dict<any>): void
   elseif has('gui_gtk') || has('gui_win32')
     set guioptions+=s
   else
-    log.Warn('this GUI has no fullscreen mode - g:bartleby_focus_fullscreen has no effect')
+    log.Warn(IN.T("this GUI has no fullscreen mode - g:bartleby_focus_fullscreen has no effect"))
   endif
 enddef
 

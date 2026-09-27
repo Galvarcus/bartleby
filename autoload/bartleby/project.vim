@@ -13,6 +13,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/log.vim' as L
@@ -102,7 +103,7 @@ export class Project implements BI.ItemContainer
   def Load(): bool
     var path: string = this.ProjectFilePath()
     if !filereadable(path)
-      log.Warn($'project.json not found in {this.scriveDir}')
+      log.Warn(printf(IN.T("project.json not found in %s"), this.scriveDir))
       return false
     endif
     var data: dict<any> = PE.ReadJson(path)

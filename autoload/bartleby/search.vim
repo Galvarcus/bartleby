@@ -14,6 +14,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/log.vim' as L
@@ -21,7 +22,7 @@ import autoload 'bartleby/log.vim' as L
 var log = L.New(expand('<sfile>:t'))
 
 export def Run(project: PO.Project): void
-  IP.PromptText('Search scrive', '', (query: string) => {
+  IP.PromptText(IN.T("Search scrive"), '', (query: string) => {
     RunSearch(project, query)
   })
 enddef
@@ -33,7 +34,7 @@ def RunSearch(project: PO.Project, query: string): void
 
   var files: list<string> = globpath(project.BinderRoot(), '**/*' .. project.DocExt(), false, true)
   if empty(files)
-    log.Info('no documents to search')
+    log.Info(IN.T("no documents to search"))
     return
   endif
 
@@ -45,7 +46,7 @@ def RunSearch(project: PO.Project, query: string): void
   execute $'silent! vimgrep /{pattern}/j {fileArgs}'
 
   if empty(getqflist())
-    log.Info($'no matches for "{query}"')
+    log.Info(printf(IN.T("no matches for \"%s\""), query))
     return
   endif
   copen

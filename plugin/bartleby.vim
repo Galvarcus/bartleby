@@ -13,6 +13,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/scrive.vim' as S
 import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/project.vim' as PO
@@ -131,7 +132,7 @@ enddef
 def OpenScrive(name: string): void
   var scriveName: string = name ==# '' ? fnamemodify(SS.LastScrive(), ':t:r') : name
   if scriveName ==# ''
-    log.Warn('no scrive name given, and no previously-opened scrive to fall back to - showing the scrive list')
+    log.Warn(IN.T("no scrive name given, and no previously-opened scrive to fall back to - showing the scrive list"))
     SL.Show()
     return
   endif
@@ -153,7 +154,7 @@ enddef
 # do, then create the scrive. Esc creates nothing.
 def NewScrive(name: string): void
   var types: list<list<string>> = ProjectTypes()
-  PI.PickOne('Scrive Type', types->mapnew((_, t) => t[0]), (choice: string) => {
+  PI.PickOne(IN.T("Scrive Type"), types->mapnew((_, t) => t[0]), (choice: string) => {
     var match: list<list<string>> = types->copy()->filter((_, t) => t[0] ==# choice)
     if !empty(match)
       CreateScrive(name, match[0][1])
@@ -173,7 +174,7 @@ enddef
 
 def ToggleBinder(): void
   if ST.Get() is null_object
-    log.Warn('no scrive open - run :BartlebyOpen <name> first')
+    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
     return
   endif
   B.Toggle(ST.Get())
@@ -181,7 +182,7 @@ enddef
 
 def RunSearch(): void
   if ST.Get() is null_object
-    log.Warn('no scrive open - run :BartlebyOpen <name> first')
+    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
     return
   endif
   SE.Run(ST.Get())
@@ -198,7 +199,7 @@ command! -bar -bang -nargs=? BartlebyFocus F.Execute('<bang>' ==# '!', <q-args>)
 command! -bar -bang -nargs=? BartlebySpotlight SP.Execute('<bang>' ==# '!', <q-args>)
 def EditProjectInfo(): void
   if ST.Get() is null_object
-    log.Warn('no scrive open - run :BartlebyOpen <name> first')
+    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
     return
   endif
   PR.EditForScrive(ST.Get())
@@ -210,12 +211,12 @@ enddef
 def CurrentDoc(): BI.BinderItem
   var project: PO.Project = ST.Get()
   if project is null_object
-    log.Warn('no scrive open - run :BartlebyOpen <name> first')
+    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
     return null_object
   endif
   var doc: BI.BinderItem = project.FindItemByPath(expand('%:p'))
   if doc is null_object
-    log.Warn('current buffer is not a document of the open scrive')
+    log.Warn(IN.T("current buffer is not a document of the open scrive"))
   endif
   return doc
 enddef
@@ -226,7 +227,7 @@ def SnapshotCurrentDoc(): void
   if doc is null_object
     return
   endif
-  IP.PromptText('Snapshot label (optional)', '', (label: string) => {
+  IP.PromptText(IN.T("Snapshot label (optional)"), '', (label: string) => {
     SN.Take(project, doc, label)
   })
 enddef
@@ -239,13 +240,13 @@ def ViewSnapshotsForCurrentDoc(): void
   endif
   var snapshots: list<SN.Snapshot> = reverse(SN.List(project, doc))
   if empty(snapshots)
-    log.Info($'no snapshots for "{doc.title}"')
+    log.Info(printf(IN.T("no snapshots for \"%s\""), doc.title))
     return
   endif
   var names: list<string> = snapshots->mapnew((_, s) => s.DisplayName())
-  PI.PickOne('Snapshots', names, (choice: string) => {
+  PI.PickOne(IN.T("Snapshots"), names, (choice: string) => {
     var snapshot: SN.Snapshot = snapshots[index(names, choice)]
-    PI.PickOne($' {choice} ', ['Restore', 'Cancel'], (action: string) => {
+    PI.PickOne(printf(IN.T(" %s "), choice), ['Restore', 'Cancel'], (action: string) => {
       if action ==# 'Restore'
         SN.Restore(project, doc, snapshot)
       endif
@@ -261,7 +262,7 @@ command! -bar BartlebyProjectInfo EditProjectInfo()
 
 def RunCompile(): void
   if ST.Get() is null_object
-    log.Warn('no scrive open - run :BartlebyOpen <name> first')
+    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
     return
   endif
   C.Run(ST.Get())

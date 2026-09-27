@@ -36,6 +36,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/lexicon_mw.vim' as LM
 import autoload 'bartleby/lexicon_result.vim' as LR
@@ -81,14 +82,15 @@ export def DisabledReason(kind: string): string
   var provider: dict<any> = Provider(get(ref, 'provider', ''))
   if empty(ref) || empty(provider)
     var name: string = get(g:, $'bartleby_{kind}_reference', '')
-    return $'no {kind} reference "{name ==# '' ? LA.Get($"{kind}_reference", '') : name}" for this language'
+    return printf(IN.T("no %s reference \"%s\" for this language"), KindName(kind),
+      name ==# '' ? LA.Get($'{kind}_reference', '') : name)
   endif
   if provider.needsKey && ApiKey(kind) ==# ''
     var envName: string = get(provider.envKeys, kind, '')
-    return $'{kind} lookups are off - set g:bartleby_{kind}_api_key (or ${envName})'
+    return printf(IN.T("%s lookups are off: set g:bartleby_%s_api_key or $%s"), KindName(kind), kind, envName)
   endif
   if !executable('curl')
-    return $'{kind} lookups need curl, which was not found'
+    return printf(IN.T("%s lookups need curl, which was not found"), KindName(kind))
   endif
   return ''
 enddef
@@ -165,6 +167,11 @@ export def ClearCache(): void
   if filereadable(CachePath())
     delete(CachePath())
   endif
+enddef
+
+# FUNCTION: Return the translated name of kind, for messages.
+def KindName(kind: string): string
+  return kind ==# CO.KIND_THESAURUS ? IN.T("thesaurus") : IN.T("dictionary")
 enddef
 
 # FUNCTION: Return the provider name to its functions and key settings.
@@ -258,7 +265,7 @@ def LoadDiskCache(): void
       memory_cache = extend(get(data, 'entries', {}), memory_cache)
     endif
   catch
-    log.Warn($'ignoring unreadable lexicon cache: {CachePath()}')
+    log.Warn(printf(IN.T("ignoring unreadable lexicon cache: %s"), CachePath()))
   endtry
 enddef
 
@@ -285,6 +292,6 @@ def CachePut(key: string, result: dict<any>): void
     mkdir(fnamemodify(CachePath(), ':h'), 'p')
     writefile([json_encode({version: CACHE_VERSION, entries: memory_cache})], CachePath())
   catch
-    log.Warn($'could not write lexicon cache: {CachePath()}')
+    log.Warn(printf(IN.T("could not write lexicon cache: %s"), CachePath()))
   endtry
 enddef

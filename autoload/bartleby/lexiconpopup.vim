@@ -24,6 +24,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lexicon.vim' as LE
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/helppopup.vim' as H
@@ -53,12 +54,12 @@ export def LookupAtCursor(kind: string): void
     return
   endif
   if W.IsChromeBuffer(bufnr('%'))
-    log.Info('lookups are not available in Bartleby panes')
+    log.Info(IN.T("lookups are not available in Bartleby panes"))
     return
   endif
   var target: dict<any> = WordAtCursor()
   if empty(target)
-    log.Info('no word under the cursor')
+    log.Info(IN.T("no word under the cursor"))
     return
   endif
   OpenLookup(kind, LE.CleanWord(target.text), target)
@@ -102,7 +103,7 @@ enddef
 
 def OpenLookup(kind: string, word: string, target: dict<any>): void
   if word ==# ''
-    log.Info('nothing to look up')
+    log.Info(IN.T("nothing to look up"))
     return
   endif
   LexiconPopup.new(kind, word, target).Open()
@@ -133,7 +134,7 @@ def VisualSelection(): dict<any>
   var first: list<number> = getpos("'<")
   var last: list<number> = getpos("'>")
   if first[1] != last[1]
-    log.Info('select text on one line only')
+    log.Info(IN.T("select text on one line only"))
     return {}
   endif
   var line: string = getline(first[1])
@@ -142,7 +143,7 @@ def VisualSelection(): dict<any>
   var end: number = lastStart + strlen(matchstr(strpart(line, lastStart), '^.'))
   var text: string = strpart(line, start, end - start)
   if trim(text) ==# ''
-    log.Info('the selection is empty')
+    log.Info(IN.T("the selection is empty"))
     return {}
   endif
   return {text: text, bufnr: bufnr('%'), lnum: first[1], start: start, end: end}
@@ -348,7 +349,7 @@ class LexiconPopup
       OpenLookup(this.kind, LE.CleanWord(row.value), this.target)
     elseif empty(this.target)
       setreg('"', row.value)
-      log.Info($'"{row.value}" copied to the unnamed register')
+      log.Info(printf(IN.T("\"%s\" copied to the unnamed register"), row.value))
     else
       this.ReplaceTarget(row.value)
     endif
@@ -358,11 +359,11 @@ class LexiconPopup
     var t: dict<any> = this.target
     var line: string = get(getbufline(t.bufnr, t.lnum), 0, '')
     if strpart(line, t.start, t.end - t.start) !=# t.text
-      log.Warn($'"{t.text}" changed since the lookup - not replaced')
+      log.Warn(printf(IN.T("\"%s\" changed since the lookup - not replaced"), t.text))
       return
     endif
     if !getbufvar(t.bufnr, '&modifiable')
-      log.Warn('this buffer cannot be changed')
+      log.Warn(IN.T("this buffer cannot be changed"))
       return
     endif
     var newText: string = LE.MatchCase(t.text, replacement)
@@ -394,20 +395,20 @@ class LexiconPopup
 
   def ShowHelp(): void
     var entries: list<list<string>> = [
-      ['j / <Down>', this.selected >= 0 ? 'Next word' : 'Scroll down'],
-      ['k / <Up>', this.selected >= 0 ? 'Previous word' : 'Scroll up'],
+      ['j / <Down>', this.selected >= 0 ? IN.T("Next word") : IN.T("Scroll down")],
+      ['k / <Up>', this.selected >= 0 ? IN.T("Previous word") : IN.T("Scroll up")],
     ]
     if this.kind ==# CO.KIND_THESAURUS
       entries += [
-        ['<CR>', empty(this.target) ? 'Copy the word' : 'Replace the word in the text'],
-        ['a', 'Toggle antonyms'],
-        ['d', 'Define the selected word'],
+        ['<CR>', empty(this.target) ? IN.T("Copy the word") : IN.T("Replace the word in the text")],
+        ['a', IN.T("Toggle antonyms")],
+        ['d', IN.T("Define the selected word")],
       ]
     else
-      entries->add(['<CR>', 'Look up the selected suggestion'])
+      entries->add(['<CR>', IN.T("Look up the selected suggestion")])
     endif
-    entries += [['q / <Esc>', 'Close'], ['?', 'This help']]
-    H.Show('Lookup', entries)
+    entries += [['q / <Esc>', IN.T("Close")], ['?', IN.T("This help")]]
+    H.Show(IN.T("Lookup"), entries)
   enddef
 
   def Filter(id: number, key: string): bool

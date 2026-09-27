@@ -25,6 +25,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/scrive.vim' as S
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/helppopup.vim' as H
@@ -120,7 +121,8 @@ export def Show(): void
   var entries: list<ScriveEntry> = FindScrives()
   var skipped: number = len(dirs) - len(entries)
   if skipped > 0
-    log.Warn($'skipped {skipped} folder(s) under {S.BinderRoot()} with no valid project.json')
+    log.Warn(printf(IN.N("skipped %d folder under %s with no valid project.json",
+      "skipped %d folders under %s with no valid project.json", skipped), skipped, S.BinderRoot()))
   endif
   if empty(entries)
     PromptNewScrive()
@@ -134,8 +136,8 @@ def Pad(text: string, width: number): string
 enddef
 
 def PromptNewScrive(): void
-  log.Info($'no scrives found under {S.BinderRoot()} - name a new one to create it')
-  IP.PromptText('No scrives - create one', '', (name: string) => {
+  log.Info(printf(IN.T("no scrives found under %s - name a new one to create it"), S.BinderRoot()))
+  IP.PromptText(IN.T("No scrives - create one"), '', (name: string) => {
     if name !=# ''
       execute $'BartlebyNewScrive {name}'
     endif
@@ -253,12 +255,12 @@ class ScriveListPopup
   enddef
 
   def ShowHelp(): void
-    H.Show('Scrives', [
-      ['<CR>', 'Open the selected scrive'],
-      ['j / <Down>', 'Next scrive'],
-      ['k / <Up>', 'Previous scrive'],
-      ['q / <Esc>', 'Close'],
-      ['?', 'This help'],
+    H.Show(IN.T("Scrives"), [
+      ['<CR>', IN.T("Open the selected scrive")],
+      ['j / <Down>', IN.T("Next scrive")],
+      ['k / <Up>', IN.T("Previous scrive")],
+      ['q / <Esc>', IN.T("Close")],
+      ['?', IN.T("This help")],
     ])
   enddef
 

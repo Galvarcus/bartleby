@@ -13,6 +13,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/templates.vim' as TE
@@ -89,7 +90,7 @@ enddef
 export def Open(name: string): PO.Project
   var dir: string = ScrivePath(ResolveName(name))
   if !isdirectory(dir)
-    log.Error($'no scrive named "{name}" under {BinderRoot()}')
+    log.Error(printf(IN.T("no scrive named \"%s\" under %s"), name, BinderRoot()))
     return null_object
   endif
   var project: PO.Project = PO.Project.new(dir)
@@ -105,7 +106,7 @@ enddef
 export def Create(name: string, projectType: string = CO.TYPE_NOVEL): PO.Project
   var dir: string = ScrivePath(name)
   if isdirectory(dir)
-    log.Error($'scrive "{name}" already exists at {dir}')
+    log.Error(printf(IN.T("scrive \"%s\" already exists at %s"), name, dir))
     return null_object
   endif
   mkdir(dir .. '/binder', 'p')

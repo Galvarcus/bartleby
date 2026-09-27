@@ -68,6 +68,29 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
+      # tests/test_i18n.vim compiles a small German translation with
+      # msgfmt and switches Vim's message language to German, which needs
+      # the gettext tools and a German locale. Without them it skips its
+      # translation check.
+      - name: Install gettext and a German locale
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext locales
+          sudo locale-gen de_DE.UTF-8
+
+      # Every IN.T and IN.N call must have literal text, and the template
+      # must list all of them. See Localization_README.md.
+      - name: Check the translation template
+        run: python3 tools/i18n/extract.py --check
+
+      - name: Check the translations
+        run: |
+          for po in lang/*.po; do
+            if [ -e "$po" ]; then
+              msgfmt --check -o /dev/null "$po"
+            fi
+          done
+
       - name: Run tests
         run: |
           vim -es -u NONE -N -V20/tmp/vim.log \

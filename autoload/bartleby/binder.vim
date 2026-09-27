@@ -14,6 +14,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/document.vim' as D
@@ -129,7 +130,7 @@ def OpenUnderCursor(): void
   endif
   var path: string = ctx.row.item.AbsPath(ctx.project.BinderRoot())
   if !filereadable(path)
-    log.Error($'missing file on disk: {path}')
+    log.Error(printf(IN.T("missing file on disk: %s"), path))
     return
   endif
   W.GoToEditorWindow()
@@ -145,7 +146,7 @@ def OpenCorkboard(): void
   CR.Show(project, ctx.row.item, (doc: BI.BinderItem) => {
     var path: string = doc.AbsPath(project.BinderRoot())
     if !filereadable(path)
-      log.Error($'missing file on disk: {path}')
+      log.Error(printf(IN.T("missing file on disk: %s"), path))
       return
     endif
     W.GoToEditorWindow()
@@ -160,7 +161,7 @@ def TakeSnapshot(): void
   endif
   var project: PO.Project = ctx.project
   var doc: BI.BinderItem = ctx.row.item
-  IP.PromptText('Snapshot label (optional)', '', (label: string) => {
+  IP.PromptText(IN.T("Snapshot label (optional)"), '', (label: string) => {
     SN.Take(project, doc, label)
   })
 enddef
@@ -182,13 +183,13 @@ def ViewSnapshots(): void
   var doc: BI.BinderItem = ctx.row.item
   var snapshots: list<SN.Snapshot> = reverse(SN.List(project, doc))
   if empty(snapshots)
-    log.Info($'no snapshots for "{doc.title}"')
+    log.Info(printf(IN.T("no snapshots for \"%s\""), doc.title))
     return
   endif
   var names: list<string> = snapshots->mapnew((_, s) => s.DisplayName())
-  PI.PickOne('Snapshots', names, (choice: string) => {
+  PI.PickOne(IN.T("Snapshots"), names, (choice: string) => {
     var snapshot: SN.Snapshot = snapshots[index(names, choice)]
-    PI.PickOne($' {choice} ', ['Restore', 'View', 'Cancel'], (action: string) => {
+    PI.PickOne(printf(IN.T(" %s "), choice), ['Restore', 'View', 'Cancel'], (action: string) => {
       if action ==# 'Restore'
         SN.Restore(project, doc, snapshot)
       elseif action ==# 'View'
@@ -233,7 +234,7 @@ def AddDocument(): void
   if ctx.project is null_object
     return
   endif
-  IP.PromptText('New document title', '', (title: string) => {
+  IP.PromptText(IN.T("New document title"), '', (title: string) => {
     FinishAddDocument(ctx, title)
   })
 enddef
@@ -277,14 +278,16 @@ def AddFolder(): void
   if len(options) ==# 1
     CreateFolder(ctx, 'Custom')
   else
-    PI.PickOne('Add Folder', options, (choice: string) => {
+    PI.PickOne(IN.T("Add Folder"), options, (choice: string) => {
       CreateFolder(ctx, choice)
     })
   endif
 enddef
 
 def CreateFolder(ctx: dict<any>, kind: string): void
-  var promptTitle: string = kind ==# 'Custom' ? 'New folder title' : $'New {kind} title (blank for next number)'
+  var promptTitle: string = kind ==# 'Custom' ? IN.T("New folder title")
+    : kind ==# 'Part' ? IN.T("New Part title, or blank for the next number")
+    : IN.T("New Chapter title, or blank for the next number")
   IP.PromptText(promptTitle, '', (title: string) => {
     FinishCreateFolder(ctx, kind, title)
   })
@@ -310,7 +313,7 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
       container = MU.FindManuscript(ctx.project)
     endif
     if container is null_object
-      log.Error('no Manuscript/Part folder found to add a chapter into')
+      log.Error(IN.T("no Manuscript/Part folder found to add a chapter into"))
       return
     endif
     var chapter: BI.BinderItem = MU.AddChapter(container, ctx.row, title)
@@ -318,7 +321,7 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
   else
     var manuscript: BI.BinderItem = MU.FindManuscript(ctx.project)
     if manuscript is null_object
-      log.Error('no Manuscript folder found to add a part into')
+      log.Error(IN.T("no Manuscript folder found to add a part into"))
       return
     endif
     MU.AddPart(manuscript, ctx.row, title)
@@ -336,13 +339,13 @@ def DeleteUnderCursor(): void
 
   if MU.IsImmutableFolder(item)
     if item.ChildCount() == 0
-      log.Info($'"{item.title}" is already empty')
+      log.Info(printf(IN.T("\"%s\" is already empty"), item.title))
       return
     endif
-    var clearPrompt: string = $'Clear all contents of "{item.title}"? The folder itself will remain.'
+    var clearPrompt: string = printf(IN.T("Clear all contents of \"%s\"? The folder itself will remain."), item.title)
     DP.Confirm(clearPrompt, () => {
       MU.ClearChildren(item)
-      log.Info($'cleared "{item.title}" - any files on disk were left untouched')
+      log.Info(printf(IN.T("cleared \"%s\" - any files on disk were left untouched"), item.title))
       ctx.project.Save()
       Render(ctx.project)
     })
@@ -350,11 +353,11 @@ def DeleteUnderCursor(): void
   endif
 
   var prompt: string = item.IsFolder() && item.ChildCount() > 0
-    ? $'Delete "{item.title}" and everything inside it?'
-    : $'Delete "{item.title}"?'
+    ? printf(IN.T("Delete \"%s\" and everything inside it?"), item.title)
+    : printf(IN.T("Delete \"%s\"?"), item.title)
   DP.Confirm(prompt, () => {
     MU.Remove(ctx.project, ctx.row)
-    log.Info('removed from binder - any files on disk were left untouched')
+    log.Info(IN.T("removed from binder - any files on disk were left untouched"))
     ctx.project.Save()
     Render(ctx.project)
   })
@@ -366,11 +369,11 @@ def RenameUnderCursor(): void
     return
   endif
   if MU.IsImmutableFolder(ctx.row.item)
-    log.Info($'"{ctx.row.item.title}" cannot be renamed')
+    log.Info(printf(IN.T("\"%s\" cannot be renamed"), ctx.row.item.title))
     return
   endif
   var oldTitle: string = ctx.row.item.title
-  IP.PromptText('Rename to', oldTitle, (newTitle: string) => {
+  IP.PromptText(IN.T("Rename to"), oldTitle, (newTitle: string) => {
     if newTitle ==# '' || newTitle ==# oldTitle
       return
     endif
@@ -386,7 +389,7 @@ def Move(delta: number): void
     return
   endif
   if !MU.MoveWithinSiblings(ctx.project, ctx.row, delta)
-    log.Info('this item cannot be reordered here')
+    log.Info(IN.T("this item cannot be reordered here"))
     return
   endif
   ctx.project.Save()
@@ -399,7 +402,7 @@ def IndentUnderCursor(): void
     return
   endif
   if !MU.Indent(ctx.project, ctx.row)
-    log.Info('no valid folder above to indent into')
+    log.Info(IN.T("no valid folder above to indent into"))
     return
   endif
   ctx.project.Save()
@@ -412,7 +415,7 @@ def OutdentUnderCursor(): void
     return
   endif
   if !MU.Outdent(ctx.project, ctx.rows, ctx.row)
-    log.Info('already at the top level, or not a valid destination for this item')
+    log.Info(IN.T("already at the top level, or not a valid destination for this item"))
     return
   endif
   ctx.project.Save()
@@ -427,7 +430,7 @@ def PickLabel(): void
   var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.row.item
   var currentMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-  PI.PickOne('Label', CO.LABELS, (choice: string) => {
+  PI.PickOne(IN.T("Label"), CO.LABELS, (choice: string) => {
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     meta.SetLabel(choice)
     meta.Save(item.MetaPath(project.BinderRoot()))
@@ -443,7 +446,7 @@ def PickStatus(): void
   var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.row.item
   var currentMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-  PI.PickOne('Status', CO.STATUSES, (choice: string) => {
+  PI.PickOne(IN.T("Status"), CO.STATUSES, (choice: string) => {
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     meta.SetStatus(choice)
     meta.Save(item.MetaPath(project.BinderRoot()))
@@ -462,25 +465,25 @@ def ToggleRoleLabels(): void
 enddef
 
 def ShowHelp(): void
-  H.Show('Binder', [
-    ['<CR>', 'Open document / toggle folder'],
-    ['<Tab>', 'Toggle folder collapse'],
-    ['a', 'New document'],
-    ['A', 'New folder (Chapter/Part when applicable)'],
-    ['dd', 'Delete item under cursor'],
-    ['r', 'Rename item under cursor'],
-    ['J / K', 'Move item down / up'],
-    ['>> / <<', 'Indent / outdent item'],
-    ['l', 'Set label'],
-    ['s', 'Set status'],
-    ['L', 'Toggle Chapter:/Part: labels'],
-    ['S', 'Take snapshot'],
-    ['gS', 'View/restore snapshots'],
-    ['gc', 'Open Corkboard'],
-    ['go', 'Open Outliner'],
-    ['/', 'Search project'],
-    ['q', 'Close Binder'],
-    ['?', 'This help'],
+  H.Show(IN.T("Binder"), [
+    ['<CR>', IN.T("Open document / toggle folder")],
+    ['<Tab>', IN.T("Toggle folder collapse")],
+    ['a', IN.T("New document")],
+    ['A', IN.T("New folder (Chapter/Part when applicable)")],
+    ['dd', IN.T("Delete item under cursor")],
+    ['r', IN.T("Rename item under cursor")],
+    ['J / K', IN.T("Move item down / up")],
+    ['>> / <<', IN.T("Indent / outdent item")],
+    ['l', IN.T("Set label")],
+    ['s', IN.T("Set status")],
+    ['L', IN.T("Toggle Chapter:/Part: labels")],
+    ['S', IN.T("Take snapshot")],
+    ['gS', IN.T("View/restore snapshots")],
+    ['gc', IN.T("Open Corkboard")],
+    ['go', IN.T("Open Outliner")],
+    ['/', IN.T("Search project")],
+    ['q', IN.T("Close Binder")],
+    ['?', IN.T("This help")],
   ])
 enddef
 

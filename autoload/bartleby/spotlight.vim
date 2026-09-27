@@ -40,6 +40,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/inputpopup.vim' as IP
@@ -591,13 +592,16 @@ enddef
 def On(mode: string, coeffArg: float): void
   var actualMode: string = mode ==# '' ? current_mode : mode
   if !has_key(mode_handlers, actualMode)
-    log.Error($'unknown Spotlight mode: {actualMode}')
+    log.Error(printf(IN.T("unknown Spotlight mode: %s"), actualMode))
     return
   endif
   if !mode_available[actualMode]()
     var reason: string = TA.FailureReason()
-    log.Error($'Spotlight mode {actualMode} needs a part-of-speech tagger - '
-      .. (reason ==# '' ? 'set g:bartleby_spotlight_tagger' : reason))
+    if reason ==# ''
+      log.Error(printf(IN.T("Spotlight mode %s needs a part-of-speech tagger. Set g:bartleby_spotlight_tagger"), actualMode))
+    else
+      log.Error(printf(IN.T("Spotlight mode %s needs a part-of-speech tagger: %s"), actualMode, reason))
+    endif
     return
   endif
   current_mode = actualMode

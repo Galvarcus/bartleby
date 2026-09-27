@@ -31,6 +31,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/log.vim' as L
 
@@ -149,7 +150,7 @@ def Start(): bool
     exit_cb: (j, code) => OnExit(j, code),
   })
   if job_status(tagger_job) !=# 'run'
-    Fail('the tagger command could not start: ' .. join(Command(), ' '))
+    Fail(printf(IN.T("the tagger command could not start: %s"), join(Command(), ' ')))
     return false
   endif
   return true
@@ -190,8 +191,8 @@ def OnExit(exited: job, code: number): void
     return
   endif
   if code != 0 && !failed
-    var detail: string = empty(stderr_lines) ? $'exit code {code}' : stderr_lines[-1]
-    Fail($'the part-of-speech tagger stopped: {detail}')
+    var detail: string = empty(stderr_lines) ? printf(IN.T("exit code %s"), code) : stderr_lines[-1]
+    Fail(printf(IN.T("the part-of-speech tagger stopped: %s"), detail))
   endif
   tagger_job = null_job
   pending = {}

@@ -1,0 +1,599 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: bartleby\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: autoload/bartleby/autosave.vim:71
+msgid "auto-save failed for %s: %s"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:133 autoload/bartleby/binder.vim:149 autoload/bartleby/outliner.vim:256 autoload/bartleby/snapshot.vim:109
+msgid "missing file on disk: %s"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:237
+msgid "New document title"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:281
+msgid "Add Folder"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:288
+msgid "New folder title"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:289
+msgid "New Part title, or blank for the next number"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:290
+msgid "New Chapter title, or blank for the next number"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:316
+msgid "no Manuscript/Part folder found to add a chapter into"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:324
+msgid "no Manuscript folder found to add a part into"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:342
+msgid "\"%s\" is already empty"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:345
+msgid "Clear all contents of \"%s\"? The folder itself will remain."
+msgstr ""
+
+#: autoload/bartleby/binder.vim:348
+msgid "cleared \"%s\" - any files on disk were left untouched"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:356
+msgid "Delete \"%s\" and everything inside it?"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:357
+msgid "Delete \"%s\"?"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:360
+msgid "removed from binder - any files on disk were left untouched"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:372
+msgid "\"%s\" cannot be renamed"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:376
+msgid "Rename to"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:392
+msgid "this item cannot be reordered here"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:405
+msgid "no valid folder above to indent into"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:418
+msgid "already at the top level, or not a valid destination for this item"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:433 autoload/bartleby/inspector.vim:106 autoload/bartleby/outliner.vim:271
+msgid "Label"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:449 autoload/bartleby/inspector.vim:114 autoload/bartleby/outliner.vim:287
+msgid "Status"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:468
+msgid "Binder"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:469
+msgid "Open document / toggle folder"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:470
+msgid "Toggle folder collapse"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:471
+msgid "New document"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:472
+msgid "New folder (Chapter/Part when applicable)"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:473
+msgid "Delete item under cursor"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:474
+msgid "Rename item under cursor"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:475
+msgid "Move item down / up"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:476
+msgid "Indent / outdent item"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:477 autoload/bartleby/outliner.vim:307
+msgid "Set label"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:478 autoload/bartleby/outliner.vim:308
+msgid "Set status"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:479
+msgid "Toggle Chapter:/Part: labels"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:480
+msgid "Take snapshot"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:481
+msgid "View/restore snapshots"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:482
+msgid "Open Corkboard"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:483
+msgid "Open Outliner"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:484
+msgid "Search project"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:485
+msgid "Close Binder"
+msgstr ""
+
+#: autoload/bartleby/binder.vim:486 autoload/bartleby/compile.vim:293 autoload/bartleby/corkboard.vim:137 autoload/bartleby/lexiconpopup.vim:410 autoload/bartleby/outliner.vim:311 autoload/bartleby/scrivelist.vim:263
+msgid "This help"
+msgstr ""
+
+#: autoload/bartleby/buttonspopup.vim:143
+msgid "PopupButtonMenu: buttons list must not be empty"
+msgstr ""
+
+#: autoload/bartleby/buttonspopup.vim:151
+msgid "PopupButtonMenu: opts.callback is required"
+msgstr ""
+
+#: autoload/bartleby/commandpalette.vim:68
+msgid "Command Palette"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:289
+msgid "Compile - Select Contents"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:290
+msgid "Toggle inclusion (folders toggle all descendants)"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:291
+msgid "Confirm selection and continue"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:292
+msgid "Cancel"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:325
+msgid "compile target name is required"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:354
+msgid "Compile Kind"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:358
+msgid "Format"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:363
+msgid "Line Spacing"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:375
+msgid "Delete compile target \"%s\"?"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:377
+msgid "deleted compile target: %s"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:427 autoload/bartleby/compile.vim:441
+msgid "skipping missing file: %s"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:717
+msgid "compiled: %s"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:718
+msgid "Compiled \"%s\". Open it?"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:734
+msgid "compiling \"%s\" (%s)..."
+msgstr ""
+
+#: autoload/bartleby/compile.vim:741
+msgid "%s exited with status %s: %s"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:764
+msgid "Compiling \"%s\" failed. Open the log?"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:771
+msgid "screenplain not found (%s) - install via pip, or set g:bartleby_compile_screenplain_bin"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:811
+msgid "pandoc not found (%s) - install it or set g:bartleby_compile_pandoc_bin"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:911
+msgid "Compile"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:918
+msgid "target not found: %s"
+msgstr ""
+
+#: autoload/bartleby/compile.vim:921
+msgid "\"%s\""
+msgstr ""
+
+#: autoload/bartleby/corkboard.vim:101
+msgid "already at that end of the folder"
+msgstr ""
+
+#: autoload/bartleby/corkboard.vim:131
+msgid "Corkboard"
+msgstr ""
+
+#: autoload/bartleby/corkboard.vim:132
+msgid "Move between cards"
+msgstr ""
+
+#: autoload/bartleby/corkboard.vim:133
+msgid "Open the selected document"
+msgstr ""
+
+#: autoload/bartleby/corkboard.vim:134
+msgid "Edit the synopsis"
+msgstr ""
+
+#: autoload/bartleby/corkboard.vim:135
+msgid "Move the card later / earlier"
+msgstr ""
+
+#: autoload/bartleby/corkboard.vim:136 autoload/bartleby/lexiconpopup.vim:410 autoload/bartleby/scrivelist.vim:262
+msgid "Close"
+msgstr ""
+
+#: autoload/bartleby/corkboard.vim:152
+msgid "\"%s\" has no documents to show on the corkboard"
+msgstr ""
+
+#: autoload/bartleby/corkboard.vim:82 autoload/bartleby/inspector.vim:139
+msgid "Synopsis"
+msgstr ""
+
+#: autoload/bartleby/focus.vim:196
+msgid "invalid dimension expression: %s"
+msgstr ""
+
+#: autoload/bartleby/focus.vim:355
+msgid "could not set g:bartleby_focus_guifont \"%s\": %s"
+msgstr ""
+
+#: autoload/bartleby/focus.vim:368
+msgid "this GUI has no fullscreen mode - g:bartleby_focus_fullscreen has no effect"
+msgstr ""
+
+#: autoload/bartleby/inputpopup.vim:328
+msgid "InputPopup: fieldRows produced no fields"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:123
+msgid "Target word count"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:131
+msgid "Keywords"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:185
+msgid "no scrive open"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:191
+msgid "current buffer is not a document in the open scrive"
+msgstr ""
+
+#: autoload/bartleby/lang.vim:56
+msgid "missing language file: %s"
+msgstr ""
+
+#: autoload/bartleby/lang.vim:61
+msgid "no language file for \"%s\", using English: %s"
+msgstr ""
+
+#: autoload/bartleby/lang.vim:69
+msgid "cannot read language file: %s"
+msgstr ""
+
+#: autoload/bartleby/lexicon.vim:174
+msgid "thesaurus"
+msgstr ""
+
+#: autoload/bartleby/lexicon.vim:174
+msgid "dictionary"
+msgstr ""
+
+#: autoload/bartleby/lexicon.vim:268
+msgid "ignoring unreadable lexicon cache: %s"
+msgstr ""
+
+#: autoload/bartleby/lexicon.vim:295
+msgid "could not write lexicon cache: %s"
+msgstr ""
+
+#: autoload/bartleby/lexicon.vim:85
+msgid "no %s reference \"%s\" for this language"
+msgstr ""
+
+#: autoload/bartleby/lexicon.vim:90
+msgid "%s lookups are off: set g:bartleby_%s_api_key or $%s"
+msgstr ""
+
+#: autoload/bartleby/lexicon.vim:93
+msgid "%s lookups need curl, which was not found"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:106
+msgid "nothing to look up"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:137
+msgid "select text on one line only"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:146
+msgid "the selection is empty"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:352
+msgid "\"%s\" copied to the unnamed register"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:362
+msgid "\"%s\" changed since the lookup - not replaced"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:366
+msgid "this buffer cannot be changed"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:398
+msgid "Next word"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:398
+msgid "Scroll down"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:399
+msgid "Previous word"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:399
+msgid "Scroll up"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:403
+msgid "Copy the word"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:403
+msgid "Replace the word in the text"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:404
+msgid "Toggle antonyms"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:405
+msgid "Define the selected word"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:408
+msgid "Look up the selected suggestion"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:411
+msgid "Lookup"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:57
+msgid "lookups are not available in Bartleby panes"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:62
+msgid "no word under the cursor"
+msgstr ""
+
+#: autoload/bartleby/outliner.vim:297
+msgid "Sort by"
+msgstr ""
+
+#: autoload/bartleby/outliner.vim:305
+msgid "Outliner"
+msgstr ""
+
+#: autoload/bartleby/outliner.vim:306
+msgid "Open document under cursor"
+msgstr ""
+
+#: autoload/bartleby/outliner.vim:309
+msgid "Sort"
+msgstr ""
+
+#: autoload/bartleby/outliner.vim:310
+msgid "Close Outliner"
+msgstr ""
+
+#: autoload/bartleby/persist.vim:23
+msgid "no such file: %s"
+msgstr ""
+
+#: autoload/bartleby/profile.vim:117
+msgid "Name is required"
+msgstr ""
+
+#: autoload/bartleby/project.vim:106
+msgid "project.json not found in %s"
+msgstr ""
+
+#: autoload/bartleby/quill.vim:234
+msgid "autoformat can only be enabled in hard line break mode"
+msgstr ""
+
+#: autoload/bartleby/scrive.vim:109
+msgid "scrive \"%s\" already exists at %s"
+msgstr ""
+
+#: autoload/bartleby/scrive.vim:93
+msgid "no scrive named \"%s\" under %s"
+msgstr ""
+
+#: autoload/bartleby/scrivelist.vim:124
+msgid "skipped %d folder under %s with no valid project.json"
+msgid_plural "skipped %d folders under %s with no valid project.json"
+msgstr[0] ""
+msgstr[1] ""
+
+#: autoload/bartleby/scrivelist.vim:139
+msgid "no scrives found under %s - name a new one to create it"
+msgstr ""
+
+#: autoload/bartleby/scrivelist.vim:140
+msgid "No scrives - create one"
+msgstr ""
+
+#: autoload/bartleby/scrivelist.vim:258
+msgid "Scrives"
+msgstr ""
+
+#: autoload/bartleby/scrivelist.vim:259
+msgid "Open the selected scrive"
+msgstr ""
+
+#: autoload/bartleby/scrivelist.vim:260
+msgid "Next scrive"
+msgstr ""
+
+#: autoload/bartleby/scrivelist.vim:261
+msgid "Previous scrive"
+msgstr ""
+
+#: autoload/bartleby/search.vim:25
+msgid "Search scrive"
+msgstr ""
+
+#: autoload/bartleby/search.vim:37
+msgid "no documents to search"
+msgstr ""
+
+#: autoload/bartleby/search.vim:49
+msgid "no matches for \"%s\""
+msgstr ""
+
+#: autoload/bartleby/session.vim:155
+msgid "session: previously active document no longer exists: %s"
+msgstr ""
+
+#: autoload/bartleby/snapshot.vim:118
+msgid "snapshot taken: %s%s"
+msgstr ""
+
+#: autoload/bartleby/snapshot.vim:133
+msgid "restored \"%s\" to snapshot from %s"
+msgstr ""
+
+#: autoload/bartleby/spotlight.vim:595
+msgid "unknown Spotlight mode: %s"
+msgstr ""
+
+#: autoload/bartleby/spotlight.vim:601
+msgid "Spotlight mode %s needs a part-of-speech tagger. Set g:bartleby_spotlight_tagger"
+msgstr ""
+
+#: autoload/bartleby/spotlight.vim:603
+msgid "Spotlight mode %s needs a part-of-speech tagger: %s"
+msgstr ""
+
+#: autoload/bartleby/tagger.vim:153
+msgid "the tagger command could not start: %s"
+msgstr ""
+
+#: autoload/bartleby/tagger.vim:194
+msgid "exit code %s"
+msgstr ""
+
+#: autoload/bartleby/tagger.vim:195
+msgid "the part-of-speech tagger stopped: %s"
+msgstr ""
+
+#: plugin/bartleby.vim:135
+msgid "no scrive name given, and no previously-opened scrive to fall back to - showing the scrive list"
+msgstr ""
+
+#: plugin/bartleby.vim:157
+msgid "Scrive Type"
+msgstr ""
+
+#: plugin/bartleby.vim:177 plugin/bartleby.vim:185 plugin/bartleby.vim:202 plugin/bartleby.vim:214 plugin/bartleby.vim:265
+msgid "no scrive open - run :BartlebyOpen <name> first"
+msgstr ""
+
+#: plugin/bartleby.vim:219
+msgid "current buffer is not a document of the open scrive"
+msgstr ""
+
+#: plugin/bartleby.vim:230 autoload/bartleby/binder.vim:164
+msgid "Snapshot label (optional)"
+msgstr ""
+
+#: plugin/bartleby.vim:243 autoload/bartleby/binder.vim:186
+msgid "no snapshots for \"%s\""
+msgstr ""
+
+#: plugin/bartleby.vim:247 autoload/bartleby/binder.vim:190
+msgid "Snapshots"
+msgstr ""
+
+#: plugin/bartleby.vim:249 autoload/bartleby/binder.vim:192
+msgid " %s "
+msgstr ""

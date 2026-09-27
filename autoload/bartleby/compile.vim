@@ -27,6 +27,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binderitem.vim' as BI
@@ -285,11 +286,11 @@ export def SelectContents(project: PO.Project, preselected: list<string>,
 enddef
 
 def ShowSelectHelp(): void
-  H.Show('Compile - Select Contents', [
-    ['x', 'Toggle inclusion (folders toggle all descendants)'],
-    ['<CR>', 'Confirm selection and continue'],
-    ['q', 'Cancel'],
-    ['?', 'This help'],
+  H.Show(IN.T("Compile - Select Contents"), [
+    ['x', IN.T("Toggle inclusion (folders toggle all descendants)")],
+    ['<CR>', IN.T("Confirm selection and continue")],
+    ['q', IN.T("Cancel")],
+    ['?', IN.T("This help")],
   ])
 enddef
 
@@ -321,7 +322,7 @@ def FinishWizard(project: PO.Project, kind: string, format: string,
   form.OnSubmit((values: dict<any>) => {
     var name: string = get(values, 'name', '')
     if name ==# ''
-      log.Error('compile target name is required')
+      log.Error(IN.T("compile target name is required"))
       return
     endif
     var v: dict<any> = {}
@@ -350,16 +351,16 @@ def RunTargetForm(project: PO.Project, existing: CompileTarget): void
   var preselected: list<string> = existing is null_object ? [] : existing.includedIds
   var kindDefault: string = existing is null_object ? KIND_MANUSCRIPT : existing.kind
   SelectContents(project, preselected, (ids: list<string>) => {
-    PI.PickOne('Compile Kind', KINDS, (kind: string) => {
+    PI.PickOne(IN.T("Compile Kind"), KINDS, (kind: string) => {
       var formats: list<string> = get(KIND_FORMATS, kind, [])
       var formatDefault: string = (existing isnot null_object && existing.kind ==# kind)
         ? existing.format : formats[0]
-      PI.PickOne('Format', formats, (format: string) => {
+      PI.PickOne(IN.T("Format"), formats, (format: string) => {
         if kind ==# KIND_MANUSCRIPT
           var spacingDefault: string = existing isnot null_object
             ? (existing.doubleSpaced ? 'Double' : 'Single')
             : (compilemanuscriptdoublespaced ? 'Double' : 'Single')
-          PI.PickOne('Line Spacing', ['Double', 'Single'], (spacing: string) => {
+          PI.PickOne(IN.T("Line Spacing"), ['Double', 'Single'], (spacing: string) => {
             FinishWizard(project, kind, format, spacing ==# 'Double', ids, existing)
           }, spacingDefault)
         else
@@ -371,9 +372,9 @@ def RunTargetForm(project: PO.Project, existing: CompileTarget): void
 enddef
 
 def DeleteTargetConfirm(project: PO.Project, target: CompileTarget): void
-  DP.Confirm($'Delete compile target "{target.name}"?', () => {
+  DP.Confirm(printf(IN.T("Delete compile target \"%s\"?"), target.name), () => {
     DeleteTarget(project, target.name)
-    log.Info($'deleted compile target: {target.name}')
+    log.Info(printf(IN.T("deleted compile target: %s"), target.name))
   })
 enddef
 
@@ -423,7 +424,7 @@ def ConcatenateDocs(project: PO.Project, target: CompileTarget, separator: strin
   for i in range(len(rows))
     var path: string = rows[i].item.AbsPath(project.BinderRoot())
     if !filereadable(path)
-      log.Warn($'skipping missing file: {path}')
+      log.Warn(printf(IN.T("skipping missing file: %s"), path))
       continue
     endif
     if i > 0
@@ -437,7 +438,7 @@ enddef
 def ReadDocLines(item: BI.BinderItem, binderRoot: string): list<string>
   var path: string = item.AbsPath(binderRoot)
   if !filereadable(path)
-    log.Warn($'skipping missing file: {path}')
+    log.Warn(printf(IN.T("skipping missing file: %s"), path))
     return []
   endif
   return readfile(path)
@@ -713,8 +714,8 @@ enddef
 # replaced. Every other format opens in the system viewer with Vim's
 # dist#vim9#Open, the function behind :Open.
 def OfferToOpen(target: CompileTarget, outputPath: string): void
-  log.Info($'compiled: {fnamemodify(outputPath, ":~")}')
-  DP.Confirm($'Compiled "{target.name}". Open it?', () => {
+  log.Info(printf(IN.T("compiled: %s"), fnamemodify(outputPath, ":~")))
+  DP.Confirm(printf(IN.T("Compiled \"%s\". Open it?"), target.name), () => {
     if target.format ==# 'Markdown'
       execute 'tabedit ' .. fnameescape(outputPath)
     else
@@ -730,14 +731,14 @@ enddef
 def RunJob(label: string, cmd: list<string>, target: CompileTarget,
     outputPath: string, logBase: string): void
   var errLines: list<string> = []
-  log.Info($'compiling "{target.name}" ({label})...')
+  log.Info(printf(IN.T("compiling \"%s\" (%s)..."), target.name, label))
   job_start(cmd, {
     err_cb: (_, line) => errLines->add(line),
     exit_cb: (_, status) => {
       if status ==# 0
         OfferToOpen(target, outputPath)
       else
-        log.Error($'{cmd[0]} exited with status {status}: {join(errLines, " | ")}')
+        log.Error(printf(IN.T("%s exited with status %s: %s"), cmd[0], status, join(errLines, " | ")))
         OfferFailureLog(target, WriteFailureLog(logBase .. '.log', cmd, status, errLines))
       endif
     },
@@ -760,14 +761,14 @@ enddef
 # FUNCTION: Ask whether to open the failure log, with yes as the default.
 # It opens in a new tab, so that no scrive window is replaced.
 def OfferFailureLog(target: CompileTarget, path: string): void
-  DP.Confirm($'Compiling "{target.name}" failed. Open the log?', () => {
+  DP.Confirm(printf(IN.T("Compiling \"%s\" failed. Open the log?"), target.name), () => {
     execute 'tabedit ' .. fnameescape(path)
   }, true)
 enddef
 
 def ExecuteScreenplay(project: PO.Project, target: CompileTarget): void
   if !executable(compilescreenplainbin)
-    log.Error($'screenplain not found ({compilescreenplainbin}) - install via pip, or set g:bartleby_compile_screenplain_bin')
+    log.Error(printf(IN.T("screenplain not found (%s) - install via pip, or set g:bartleby_compile_screenplain_bin"), compilescreenplainbin))
     return
   endif
   var outDir: string = OutputDir(project)
@@ -807,7 +808,7 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   endif
 
   if !executable(compilepandocbin)
-    log.Error($'pandoc not found ({compilepandocbin}) - install it or set g:bartleby_compile_pandoc_bin')
+    log.Error(printf(IN.T("pandoc not found (%s) - install it or set g:bartleby_compile_pandoc_bin"), compilepandocbin))
     return
   endif
 
@@ -907,17 +908,17 @@ enddef
 export def Run(project: PO.Project): void
   var names: list<string> = ListTargets(project)
   var options: list<string> = names + ['+ New Target']
-  PI.PickOne('Compile', options, (choice: string) => {
+  PI.PickOne(IN.T("Compile"), options, (choice: string) => {
     if choice ==# '+ New Target'
       RunTargetForm(project, null_object)
       return
     endif
     var target: CompileTarget = LoadTarget(project, choice)
     if target is null_object
-      log.Error($'target not found: {choice}')
+      log.Error(printf(IN.T("target not found: %s"), choice))
       return
     endif
-    PI.PickOne($'"{choice}"', ['Run', 'Edit', 'Delete'], (action: string) => {
+    PI.PickOne(printf(IN.T("\"%s\""), choice), ['Run', 'Edit', 'Delete'], (action: string) => {
       if action ==# 'Run'
         Execute(project, target)
       elseif action ==# 'Edit'

@@ -21,6 +21,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 
 var log = L.New(expand('<sfile>:t'))
@@ -52,12 +53,12 @@ export def Profile(code: string = ''): dict<any>
   var path: string = $'{PluginRoot()}/tools/lang/{lang}.json'
   if !filereadable(path)
     if lang ==# FALLBACK
-      log.Error($'missing language file: {path}')
+      log.Error(printf(IN.T("missing language file: %s"), path))
       profiles[lang] = {}
       return {}
     endif
     if get(g:, 'bartleby_language', '') ==# lang
-      log.Warn($'no language file for "{lang}", using English: {path}')
+      log.Warn(printf(IN.T("no language file for \"%s\", using English: %s"), lang, path))
     endif
     profiles[lang] = Profile(FALLBACK)
     return profiles[lang]
@@ -65,7 +66,7 @@ export def Profile(code: string = ''): dict<any>
   try
     profiles[lang] = json_decode(join(readfile(path), "\n"))
   catch
-    log.Error($'cannot read language file: {path}')
+    log.Error(printf(IN.T("cannot read language file: %s"), path))
     profiles[lang] = {}
   endtry
   return profiles[lang]

@@ -24,6 +24,9 @@ var is_loaded: bool = true
 
 export const PLUGIN_NAME: string = 'Bartleby'
 export const MENU_NAME: string = tolower(PLUGIN_NAME)
+# The gettext package of Bartleby's messages, and the name of its .mo
+# files, see i18n.vim.
+export const TEXT_DOMAIN: string = tolower(PLUGIN_NAME)
 export const PROFILE_TITLE: string = $' {PLUGIN_NAME} Profile '
 export const SCRIVE_EXT: string = '.bartleby'
 export const SCRIVE_FOLDER: string = 'Bartleby'

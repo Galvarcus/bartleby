@@ -91,6 +91,7 @@ var is_loaded: bool = true
 #   Esc, C-c                        Cancel. The callback receives null.
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 
 var log = L.New(expand('<sfile>:t'))
@@ -139,7 +140,7 @@ export class PopupButtonMenu
 
   def new(this.buttons, opts: dict<any> = {})
     if empty(this.buttons)
-      log.Error('PopupButtonMenu: buttons list must not be empty')
+      log.Error(IN.T("PopupButtonMenu: buttons list must not be empty"))
       throw 'PopupButtonMenu: buttons list must not be empty'
     endif
 
@@ -147,7 +148,7 @@ export class PopupButtonMenu
     this.popupOpts = copy(get(opts, 'popup', {}))
     this.callback = get(opts, 'callback', null)
     if this.callback == null
-      log.Error('PopupButtonMenu: opts.callback is required')
+      log.Error(IN.T("PopupButtonMenu: opts.callback is required"))
       throw 'PopupButtonMenu: opts.callback is required'
     endif
 
