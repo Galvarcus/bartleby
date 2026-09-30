@@ -63,11 +63,37 @@ const LOOKUPS: dict<string> = {
 }
 
 export def Open(): void
-  var names: list<string> = sort(keys(COMMANDS) + keys(COMMANDS_WITH_ARG)
+  var shown: dict<string> = CommandNames()
+  var options: list<string> = (keys(COMMANDS) + keys(COMMANDS_WITH_ARG)
     + keys(DIRECT_ACTIONS) + keys(EnabledLookups()))
-  IP.PromptFilter(IN.T("Command Palette"), names, (choice: string) => {
+    ->sort((a, b) => get(shown, a, a) ==? get(shown, b, b) ? 0 : get(shown, a, a) >? get(shown, b, b) ? 1 : -1)
+  IP.PromptFilter(IN.T("Command Palette"), options, (choice: string) => {
     Run(choice)
-  })
+  }, 10, 0, shown)
+enddef
+
+# FUNCTION: Return each entry, by the name that the tables above use, to
+# its name in the message language. The list shows these names, sorted.
+def CommandNames(): dict<string>
+  return {
+    'List Scrives': IN.T("List Scrives"),
+    'Toggle Binder': IN.T("Toggle Binder"),
+    'Search Scrive': IN.T("Search Scrive"),
+    'Toggle Inspector': IN.T("Toggle Inspector"),
+    'Toggle Focus': IN.T("Toggle Focus"),
+    'Toggle Spotlight': IN.T("Toggle Spotlight"),
+    'Toggle Quill': IN.T("Toggle Quill"),
+    'Edit Profile': IN.T("Edit Profile"),
+    'Edit Project Info': IN.T("Edit Project Info"),
+    'Compile': IN.T("Compile"),
+    'Take Snapshot': IN.T("Take Snapshot"),
+    'View Snapshots': IN.T("View Snapshots"),
+    'Open Scrive': IN.T("Open Scrive"),
+    'New Scrive': IN.T("New Scrive"),
+    'Pick Spotlight Mode': IN.T("Pick Spotlight Mode"),
+    'Define Word': IN.T("Define Word"),
+    'Thesaurus': IN.T("Thesaurus"),
+  }
 enddef
 
 # FUNCTION: Return the lookup entries for the kinds that have an API key.
@@ -94,7 +120,7 @@ def Run(choice: string): void
   endif
   if has_key(COMMANDS_WITH_ARG, choice)
     var cmd: string = COMMANDS_WITH_ARG[choice]
-    IP.PromptText(choice, '', (name: string) => {
+    IP.PromptText(get(CommandNames(), choice, choice), '', (name: string) => {
       if name !=# ''
         execute $'{cmd} {name}'
       endif

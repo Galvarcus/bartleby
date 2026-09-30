@@ -173,6 +173,15 @@ def Test_failing_tagger_turns_spotlight_off_and_hides_modes(): void
   UseTagger('')
 enddef
 
+# FUNCTION: Every registered mode needs a display name.
+def Test_mode_names_cover_every_mode(): void
+  g:bartleby_spotlight_tagger = ['python3', MOCK_TAGGER]
+  TA.Reset()
+  assert_equal(sort(SP.AvailableModes()), sort(keys(SP.ModeNames())))
+  g:bartleby_spotlight_tagger = ''
+  TA.Reset()
+enddef
+
 export def RunAll(): void
   # Spotlight computes its dim color from Normal.
   highlight Normal ctermfg=252 ctermbg=235 guifg=#d0d0d0 guibg=#262626
@@ -184,4 +193,5 @@ export def RunAll(): void
   Test_dialogue_lights_curly_quotes()
   Test_mock_tagger_modes()
   Test_failing_tagger_turns_spotlight_off_and_hides_modes()
+  Test_mode_names_cover_every_mode()
 enddef

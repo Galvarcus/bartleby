@@ -24,6 +24,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/wrap.vim' as WR
 
 const WIDTH: number = 60
@@ -42,13 +43,14 @@ export def Confirm(question: string, OnYes: func(), defaultYes: bool = false): n
   for paragraph in split(question, "\n")
     lines += WR.Wrap(paragraph, WIDTH)
   endfor
-  var yesLabel: string = '[Y]es'
-  var noLabel: string = '[N]o'
+  # A translation keeps the y and n keys visible, such as [Y] Ja.
+  var yesLabel: string = IN.T("[Y]es")
+  var noLabel: string = IN.T("[N]o")
   var answers: string = $'{yesLabel}   {noLabel}'
   lines += ['', answers]
 
   var id: number = popup_dialog(lines, {
-    title: ' Confirm ',
+    title: printf(' %s ', IN.T("Confirm")),
     zindex: ZINDEX,
     padding: [0, 1, 0, 1],
     filter: (winid, key) => Filter(winid, key, defaultYes),

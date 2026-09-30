@@ -135,7 +135,7 @@ export def ParseResponse(kind: string, word: string, body: string): dict<any>
   var ref: dict<string> = Reference(kind)
   var provider: dict<any> = Provider(get(ref, 'provider', ''))
   if empty(provider)
-    return LR.Error($'no {kind} reference for this language')
+    return LR.Error(printf(IN.T("no %s reference for this language"), KindName(kind)))
   endif
   var F: func(string, string, string): dict<any> = provider.parse
   return F(kind, word, body)
@@ -207,8 +207,8 @@ def StartRequest(kind: string, word: string, cacheKey: string,
     endif
     state.done = true
     if state.code != 0
-      var detail: string = empty(err) ? $'exit code {state.code}' : trim(split(join(err, ''), "\n")[0])
-      Callback(LR.Error($'lookup failed: {detail}'))
+      var detail: string = empty(err) ? printf(IN.T("exit code %s"), state.code) : trim(split(join(err, ''), "\n")[0])
+      Callback(LR.Error(printf(IN.T("lookup failed: %s"), detail)))
       return
     endif
     var result: dict<any> = ParseResponse(kind, word, join(out, ''))
@@ -240,7 +240,7 @@ def StartRequest(kind: string, word: string, cacheKey: string,
     },
   })
   if job_status(job) ==# 'fail'
-    Callback(LR.Error('could not start curl'))
+    Callback(LR.Error(IN.T("could not start curl")))
     return
   endif
   ch_sendraw(job, $'url = "{BuildUrl(kind, word)}"' .. "\n")

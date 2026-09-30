@@ -108,8 +108,17 @@ def FormLayout(): list<list<string>>
 enddef
 
 def FormLabels(): dict<string>
-  return {authorname: 'Author Name', countrycode: 'Country Code',
-    zip: 'Zip Code', phonenumber: 'Phone Number'}
+  return {
+    name: IN.T("Name"),
+    authorname: IN.T("Author Name"),
+    address: IN.T("Address"),
+    city: IN.T("City"),
+    state: IN.T("State"),
+    countrycode: IN.T("Country Code"),
+    zip: IN.T("Zip Code"),
+    phonenumber: IN.T("Phone Number"),
+    email: IN.T("Email"),
+  }
 enddef
 
 def SaveAndValidate(path: string, values: dict<any>, requireName: bool): void
@@ -123,7 +132,7 @@ enddef
 export def EditGlobal(): void
   var current: dict<any> = LoadGlobal().ToDict()
   var form: IP.InputPopup = IP.InputPopup.new(IP.TextFields(FormLayout()), current,
-    {title: CO.PROFILE_TITLE, labels: FormLabels()})
+    {title: printf(IN.T(" %s Profile "), CO.PLUGIN_NAME), labels: FormLabels()})
   form.OnSubmit((values: dict<any>) => {
     SaveAndValidate(GlobalPath(), values, true)
   })
@@ -134,7 +143,7 @@ export def EditForScrive(project: PO.Project): void
   var globalDict: dict<any> = LoadGlobal().ToDict()
   var current: dict<any> = Resolve(project).ToDict()
   var form: IP.InputPopup = IP.InputPopup.new(IP.TextFields(FormLayout()), current,
-    {title: $' {project.name} Info ', labels: FormLabels()})
+    {title: printf(IN.T(" %s Info "), project.name), labels: FormLabels()})
   form.OnSubmit((values: dict<any>) => {
     var overrides: dict<any> = {}
     for key in keys(values)

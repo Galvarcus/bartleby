@@ -15,17 +15,11 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/document.vim' as D
 import 'bartleby/variables/constants.vim' as CO
 
 
-# The Binder prefix of each role that has one, as in Chapter: title. The
-# roles are in constants.vim. A role also sets which folders become
-# chapter and part divisions in a compile, and where a folder may move.
-# A folder saved before roles existed loads with an empty role, a plain
-# folder, so old scrives still work.
-
-const ROLE_LABELS: dict<string> = {part: 'Part', chapter: 'Chapter'}
 
 # Ids are a timestamp and a counter: unique within one Vim session, not
 # across machines or clocks.
@@ -55,6 +49,16 @@ export interface ItemContainer
   def IndexOfChild(id: string): number
   def SwapChildren(i: number, j: number): void
 endinterface
+
+# FUNCTION: Return the Binder prefix of each role that has one, in the
+# message language, as in Chapter: title. The roles are in constants.vim.
+# A role also sets which folders become chapter and part divisions in a
+# compile, and where a folder may move. A folder saved before roles
+# existed loads with an empty role, a plain folder, so old scrives still
+# work. syntax/bartleby-binder.vim matches these prefixes.
+export def RolePrefixes(): dict<string>
+  return {[CO.ROLE_PART]: IN.T("Part: "), [CO.ROLE_CHAPTER]: IN.T("Chapter: ")}
+enddef
 
 export class BinderItem implements ItemContainer
   var id: string
@@ -145,8 +149,7 @@ export class BinderItem implements ItemContainer
   # METHOD: Return the Chapter or Part prefix for roles that have one, or
   # an empty string for other folders and for documents.
   def DisplayLabel(): string
-    var label: string = get(ROLE_LABELS, this.structureRole, '')
-    return label ==# '' ? '' : $'{label}: '
+    return get(RolePrefixes(), this.structureRole, '')
   enddef
 
   # METHOD: Return the absolute path of this document's text file, or an

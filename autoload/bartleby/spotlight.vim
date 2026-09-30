@@ -69,7 +69,6 @@ var spotlightpriority: number = g:bartleby_spotlight_priority
 const MODE_PARAGRAPH: string = 'Paragraph'
 const MODE_DIALOGUE: string = 'Dialogue'
 const MODE_PASSIVE: string = 'Passive'
-const PICKER_TITLE: string = 'Spotlight Mode: '
 
 var mode_handlers: dict<func(string): dict<any>> = {}
 var mode_available: dict<func(): bool> = {}
@@ -452,7 +451,7 @@ enddef
 def ValidateCoeff(coeff: float): float
   var c: float = coeff < 0 ? spotlightdefaultcoefficient : coeff
   if c < 0 || c > 1
-    throw 'Invalid g:bartleby_spotlight_default_coefficient. Expected: 0.0 ~ 1.0'
+    throw IN.T("Invalid g:bartleby_spotlight_default_coefficient. Expected: 0.0 to 1.0")
   endif
   return c
 enddef
@@ -462,9 +461,9 @@ def Unsupported(): string
   var varName: string = $'g:bartleby_spotlight_conceal_{isGui ? "gui" : "cterm"}fg'
   var concealSet: bool = isGui ? spotlightconcealguifg !=# '' : spotlightconcealctermfg !=# ''
   if concealSet
-    return 'Cannot calculate background color.'
+    return IN.T("Cannot calculate background color.")
   endif
-  return $'Unsupported color scheme. {varName} required.'
+  return printf(IN.T("Unsupported color scheme. %s required."), varName)
 enddef
 
 # FUNCTION: Compute and set the SpotlightDim highlight group for the
@@ -507,7 +506,7 @@ def Dim(coeff: float): void
     endif
     execute $'highlight SpotlightDim ctermfg={dim}'
   else
-    throw 'Unsupported terminal. Sorry.'
+    throw IN.T("Unsupported terminal.")
   endif
 enddef
 
@@ -598,9 +597,9 @@ def On(mode: string, coeffArg: float): void
   if !mode_available[actualMode]()
     var reason: string = TA.FailureReason()
     if reason ==# ''
-      log.Error(printf(IN.T("Spotlight mode %s needs a part-of-speech tagger. Set g:bartleby_spotlight_tagger"), actualMode))
+      log.Error(printf(IN.T("Spotlight mode %s needs a part-of-speech tagger. Set g:bartleby_spotlight_tagger"), ModeName(actualMode)))
     else
-      log.Error(printf(IN.T("Spotlight mode %s needs a part-of-speech tagger: %s"), actualMode, reason))
+      log.Error(printf(IN.T("Spotlight mode %s needs a part-of-speech tagger: %s"), ModeName(actualMode), reason))
     endif
     return
   endif
@@ -655,6 +654,31 @@ export def Toggle(): void
   endif
 enddef
 
+# FUNCTION: Return each mode, by the name that code, :BartlebySpotlight,
+# and the word-list settings use, to its name in the message language.
+export def ModeNames(): dict<string>
+  return {
+    Paragraph: IN.T("Paragraph"),
+    Dialogue: IN.T("Dialogue"),
+    Nouns: IN.T("Nouns"),
+    Verbs: IN.T("Verbs"),
+    Adjectives: IN.T("Adjectives"),
+    Adverbs: IN.T("Adverbs"),
+    Pronouns: IN.T("Pronouns"),
+    Determiners: IN.T("Determiners"),
+    Prepositions: IN.T("Prepositions"),
+    Conjunctions: IN.T("Conjunctions"),
+    Auxiliaries: IN.T("Auxiliaries"),
+    Contractions: IN.T("Contractions"),
+    Fillers: IN.T("Fillers"),
+    Passive: IN.T("Passive"),
+  }
+enddef
+
+export def ModeName(mode: string): string
+  return get(ModeNames(), mode, mode)
+enddef
+
 # FUNCTION: Show a searchable list of the available modes. <leader>bL
 # calls this. Picking a mode turns Spotlight on with it, or switches to
 # it when Spotlight is already on.
@@ -662,11 +686,12 @@ export def PickMode(): void
   var modes: list<string> = AvailableModes()
   # Wide enough for the title with the longest mode name plus 2, so the
   # title is never cut and the width does not change with the current mode.
-  var longest: number = max(modes->mapnew((_, m) => strdisplaywidth(m)))
-  var width: number = strdisplaywidth(PICKER_TITLE) + longest + 2
-  IP.PromptFilter(PICKER_TITLE .. current_mode, modes, (choice: string) => {
+  var names: dict<string> = ModeNames()
+  var longest: number = max(modes->mapnew((_, m) => strdisplaywidth(get(names, m, m))))
+  var width: number = strdisplaywidth(printf(IN.T("Spotlight Mode: %s"), repeat('x', longest))) + 2
+  IP.PromptFilter(printf(IN.T("Spotlight Mode: %s"), ModeName(current_mode)), modes, (choice: string) => {
     On(choice, current_coeff)
-  }, 10, width)
+  }, 10, width, names)
 enddef
 
 # FUNCTION: Handle a tagger update: results arrived, or the tagger failed.

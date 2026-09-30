@@ -27,7 +27,6 @@ export const MENU_NAME: string = tolower(PLUGIN_NAME)
 # The gettext package of Bartleby's messages, and the name of its .mo
 # files, see i18n.vim.
 export const TEXT_DOMAIN: string = tolower(PLUGIN_NAME)
-export const PROFILE_TITLE: string = $' {PLUGIN_NAME} Profile '
 export const SCRIVE_EXT: string = '.bartleby'
 export const SCRIVE_FOLDER: string = 'Bartleby'
 export const PROJECT_FILE: string = 'project.json'
@@ -65,6 +64,8 @@ export const TYPE_NOVEL: string = 'novel'
 export const TYPE_NOVEL_PARTS: string = 'novel_parts'
 export const TYPE_SHORT_STORY: string = 'short_story'
 export const TYPE_SCREENPLAY: string = 'screenplay'
+# Every scrive type, in the order that pickers show them.
+export const TYPES: list<string> = [TYPE_NOVEL, TYPE_NOVEL_PARTS, TYPE_SHORT_STORY, TYPE_SCREENPLAY]
 
 ##############################################################################
 # SECTION: Document metadata. The display strings are also the stored

@@ -18,6 +18,7 @@ import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/slug.vim' as SU
+import autoload 'bartleby/templates.vim' as TE
 import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return the nearest ancestor of row whose structureRole is
@@ -78,7 +79,7 @@ export def AddChapter(container: BI.BinderItem, row: T.Row, title: string): BI.B
   var chapterTitle: string = title ==# '' ? NextRoleNumber(container.children, CO.ROLE_CHAPTER) : title
   var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterTitle, CO.ROLE_CHAPTER)
   var relPath: string = $'chapter-{SU.Slugify(chapterTitle)}/scene-01.md'
-  chapter.AddChild(BI.BinderItem.NewDocument('Scene 1', relPath))
+  chapter.AddChild(BI.BinderItem.NewDocument(TE.FirstSceneTitle(), relPath))
   AddIntoContainer(container, row, chapter)
   return chapter
 enddef

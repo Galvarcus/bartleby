@@ -15,7 +15,44 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/persist.vim' as PE
+
+# FUNCTION: Return each label, as stored in CO.LABELS, to its name in the
+# message language. The stored value stays English, so a scrive keeps its
+# labels in any language. tests/test_document.vim checks that the keys
+# match CO.LABELS.
+export def LabelNames(): dict<string>
+  return {
+    None: IN.T("None"),
+    Red: IN.T("Red"),
+    Orange: IN.T("Orange"),
+    Yellow: IN.T("Yellow"),
+    Green: IN.T("Green"),
+    Blue: IN.T("Blue"),
+    Purple: IN.T("Purple"),
+  }
+enddef
+
+# FUNCTION: Return each status, as stored in CO.STATUSES, to its name in
+# the message language, as LabelNames does for labels.
+export def StatusNames(): dict<string>
+  return {
+    'To Do': IN.T("To Do"),
+    'First Draft': IN.T("First Draft"),
+    Revised: IN.T("Revised"),
+    Done: IN.T("Done"),
+  }
+enddef
+
+# FUNCTION: Return the shown name of a stored label or status.
+export def LabelName(label: string): string
+  return get(LabelNames(), label, label)
+enddef
+
+export def StatusName(status: string): string
+  return get(StatusNames(), status, status)
+enddef
 
 export class DocMeta
   var label: string = 'None'

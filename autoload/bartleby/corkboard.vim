@@ -129,7 +129,7 @@ enddef
 
 def ShowHelp(): void
   H.Show(IN.T("Corkboard"), [
-    ['Arrows / h j k l', IN.T("Move between cards")],
+    [IN.T("Arrows") .. ' / h j k l', IN.T("Move between cards")],
     ['<CR> / <Space>', IN.T("Open the selected document")],
     ['e', IN.T("Edit the synopsis")],
     ['J / K', IN.T("Move the card later / earlier")],

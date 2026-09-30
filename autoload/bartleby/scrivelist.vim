@@ -25,6 +25,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/scrive.vim' as S
 import autoload 'bartleby/inputpopup.vim' as IP
@@ -34,16 +35,9 @@ import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
 
-const HEADERS: list<string> = ['Title', 'Type']
 const COLUMN_GAP: string = '    '
 const MAX_VISIBLE_ROWS: number = 15
 const SCRIVELIST_ZINDEX: number = 250
-const TYPE_LABELS: dict<string> = {
-  [CO.TYPE_NOVEL]: 'Novel',
-  [CO.TYPE_NOVEL_PARTS]: 'Novel with Parts',
-  [CO.TYPE_SHORT_STORY]: 'Short Story',
-  [CO.TYPE_SCREENPLAY]: 'Screenplay',
-}
 
 # CLASS: One valid scrive. name is the bare folder name, which
 # :BartlebyOpen takes. title is the name in project.json, shown to the
@@ -86,7 +80,7 @@ export def ReadEntry(dir: string): ScriveEntry
     return null_object
   endif
   var projectType: any = get(data, 'projectType', '')
-  if type(projectType) != v:t_string || !has_key(TYPE_LABELS, projectType)
+  if type(projectType) != v:t_string || index(CO.TYPES, projectType) < 0
     return null_object
   endif
   var folderName: string = fnamemodify(dir, ':t:r')
@@ -112,7 +106,7 @@ export def FindScrives(root: string = ''): list<ScriveEntry>
 enddef
 
 export def TypeLabel(projectType: string): string
-  return get(TYPE_LABELS, projectType, projectType)
+  return get(PO.TypeNames(), projectType, projectType)
 enddef
 
 # FUNCTION: Run :BartlebyList.
@@ -153,7 +147,7 @@ class ScriveListPopup
   var bufnr: number = -1
 
   def new(this.entries)
-    this.titleWidth = strdisplaywidth(HEADERS[0])
+    this.titleWidth = strdisplaywidth(Headers()[0])
     for entry in this.entries
       this.titleWidth = max([this.titleWidth, strdisplaywidth(entry.title)])
     endfor
@@ -164,7 +158,7 @@ class ScriveListPopup
   enddef
 
   def Width(): number
-    var typeWidth: number = strdisplaywidth(HEADERS[1])
+    var typeWidth: number = strdisplaywidth(Headers()[1])
     for entry in this.entries
       typeWidth = max([typeWidth, strdisplaywidth(TypeLabel(entry.projectType))])
     endfor
@@ -190,7 +184,7 @@ class ScriveListPopup
     var width: number = this.Width()
     var height: number = min([len(this.entries), MAX_VISIBLE_ROWS]) + 2
     this.winid = popup_create(this.bufnr, {
-      title: ' Scrives ',
+      title: printf(' %s ', IN.T("Scrives")),
       border: [1, 1, 1, 1],
       padding: [0, 1, 0, 1],
       minwidth: width,
@@ -221,7 +215,7 @@ class ScriveListPopup
   enddef
 
   def Render(): void
-    var header: string = this.FormatRow(HEADERS[0], HEADERS[1])
+    var header: string = this.FormatRow(Headers()[0], Headers()[1])
     var lines: list<string> = [header, repeat('-', this.Width())]
     var [first: number, last: number] = this.VisibleSlice()
     for i in range(first, last - 1)
@@ -281,3 +275,8 @@ class ScriveListPopup
     return true
   enddef
 endclass
+
+# FUNCTION: Return the column headers in the message language.
+def Headers(): list<string>
+  return [IN.T("Title"), IN.T("Type")]
+enddef

@@ -190,7 +190,7 @@ class LexiconPopup
       mapping: false,
       filter: (id, key) => this.Filter(id, key),
     })
-    this.rows = [{text: $'Looking up "{this.word}" ...', hl: 'LexiconComment'}]
+    this.rows = [{text: printf(IN.T("Looking up \"%s\" ..."), this.word), hl: 'LexiconComment'}]
     this.Render()
     LE.Lookup(this.kind, this.word, (result) => this.OnResult(result))
   enddef
@@ -221,10 +221,10 @@ class LexiconPopup
     if status ==# 'error'
       rows->add({text: this.result.message, hl: 'LexiconError'})
     elseif status ==# 'notfound'
-      rows->add({text: $'No entry for "{this.word}".'})
+      rows->add({text: printf(IN.T("No entry for \"%s\"."), this.word)})
       if !empty(this.result.suggestions)
         rows->add({text: ''})
-        rows->add({text: 'Did you mean:', hl: 'LexiconTitle'})
+        rows->add({text: IN.T("Did you mean:"), hl: 'LexiconTitle'})
         for suggestion in this.result.suggestions
           rows->add({text: '  ' .. suggestion, value: suggestion, action: 'lookup'})
         endfor
@@ -264,7 +264,7 @@ class LexiconPopup
       rows->add({text: heading, hl: 'LexiconTitle'})
       if this.showAntonyms
         if empty(entry.ants)
-          rows->add({text: '  (no antonyms)', hl: 'LexiconComment'})
+          rows->add({text: '  ' .. IN.T("(no antonyms)"), hl: 'LexiconComment'})
         endif
         for ant in entry.ants
           rows->add({text: '    ' .. ant, value: ant, action: 'replace'})

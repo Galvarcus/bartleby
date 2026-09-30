@@ -118,17 +118,6 @@ g:bartleby_lexicon_timeout = get(g:, 'bartleby_lexicon_timeout', 10)
 g:bartleby_lexicon_base_url = get(g:, 'bartleby_lexicon_base_url',
   'https://www.dictionaryapi.com/api/v3/references')
 
-# FUNCTION: Return the scrive types as display name to project type, in
-# picker order.
-def ProjectTypes(): list<list<string>>
-  return [
-    ['Novel', CO.TYPE_NOVEL],
-    ['Novel with Parts', CO.TYPE_NOVEL_PARTS],
-    ['Short Story', CO.TYPE_SHORT_STORY],
-    ['Screenplay', CO.TYPE_SCREENPLAY],
-  ]
-enddef
-
 def OpenScrive(name: string): void
   var scriveName: string = name ==# '' ? fnamemodify(SS.LastScrive(), ':t:r') : name
   if scriveName ==# ''
@@ -153,13 +142,9 @@ enddef
 # FUNCTION: Ask for the scrive type with PickOne, as the other pickers
 # do, then create the scrive. Esc creates nothing.
 def NewScrive(name: string): void
-  var types: list<list<string>> = ProjectTypes()
-  PI.PickOne(IN.T("Scrive Type"), types->mapnew((_, t) => t[0]), (choice: string) => {
-    var match: list<list<string>> = types->copy()->filter((_, t) => t[0] ==# choice)
-    if !empty(match)
-      CreateScrive(name, match[0][1])
-    endif
-  }, 'Novel')
+  PI.PickOne(IN.T("Scrive Type"), CO.TYPES, (projectType: string) => {
+    CreateScrive(name, projectType)
+  }, CO.TYPE_NOVEL, PO.TypeNames())
 enddef
 
 def CreateScrive(name: string, projectType: string): void
@@ -250,7 +235,7 @@ def ViewSnapshotsForCurrentDoc(): void
       if action ==# 'Restore'
         SN.Restore(project, doc, snapshot)
       endif
-    })
+    }, '', {Restore: IN.T("Restore"), Cancel: IN.T("Cancel")})
   })
 enddef
 

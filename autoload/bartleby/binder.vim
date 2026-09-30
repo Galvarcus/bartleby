@@ -53,7 +53,7 @@ def RenderLines(rows: list<T.Row>, binderRoot: string, collapsed: dict<bool>): l
     if row.item.IsDocument()
       var meta: D.DocMeta = row.item.LoadMeta(binderRoot)
       if meta.label !=# CO.LABELS[0]
-        suffix = $' ({meta.label})'
+        suffix = $' ({D.LabelName(meta.label)})'
       endif
     endif
     var label: string = binderShowRoleLabels ? row.item.DisplayLabel() : ''
@@ -195,7 +195,7 @@ def ViewSnapshots(): void
       elseif action ==# 'View'
         ShowSnapshotReadOnly(doc, snapshot)
       endif
-    })
+    }, '', {Restore: IN.T("Restore"), View: IN.T("View"), Cancel: IN.T("Cancel")})
   })
 enddef
 
@@ -280,7 +280,7 @@ def AddFolder(): void
   else
     PI.PickOne(IN.T("Add Folder"), options, (choice: string) => {
       CreateFolder(ctx, choice)
-    })
+    }, '', {Custom: IN.T("Folder"), Chapter: IN.T("Chapter"), Part: IN.T("Part")})
   endif
 enddef
 
@@ -435,7 +435,7 @@ def PickLabel(): void
     meta.SetLabel(choice)
     meta.Save(item.MetaPath(project.BinderRoot()))
     Render(project)
-  }, currentMeta.label)
+  }, currentMeta.label, D.LabelNames())
 enddef
 
 def PickStatus(): void
@@ -451,7 +451,7 @@ def PickStatus(): void
     meta.SetStatus(choice)
     meta.Save(item.MetaPath(project.BinderRoot()))
     Render(project)
-  }, currentMeta.status)
+  }, currentMeta.status, D.StatusNames())
 enddef
 
 # FUNCTION: Show or hide the Chapter and Part prefixes and draw again.

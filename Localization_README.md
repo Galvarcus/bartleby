@@ -155,9 +155,19 @@ A text without a translation shows in English.
   with an interpolated string: a translation needs the whole sentence.
   Where a value changes the sentence, such as a folder kind, write one
   whole sentence for each case.
-- Do not translate text that is also data, such as a stored label or a
-  command name. Translate it only where it is shown, and map the shown
-  text back to the stored value.
+- Do not translate text that is also data, such as a stored label, a
+  scrive type, or a Spotlight mode name. Keep the English value in code
+  and in files, and translate it only where it is shown. The functions
+  that do this are `LabelNames` and `StatusNames` in `document.vim`,
+  `TypeNames` in `project.vim`, `RolePrefixes` in `binderitem.vim`,
+  `FieldLabels` in `inspector.vim`, and `ModeNames` in `spotlight.vim`.
+- A picker of values passes such a map to `PickOne` or `PromptFilter` as
+  its `names` argument. The picker shows the translated names and returns
+  the value.
+- A syntax file that matches shown text builds its pattern from the same
+  function, so that it matches the translated text. The Binder syntax
+  uses `LabelNames` and `RolePrefixes`, and the Inspector syntax uses
+  `FieldLabels`.
 
 `tools/i18n/extract.py` reads the calls from the source and writes the
 template, `lang/bartleby.pot`. It stops with an error at a call whose
@@ -184,7 +194,11 @@ gettext tools.
 
 3. Translate each `msgstr` in `lang/de.po`. Keep every `%s` and `%d`. A
    translation may reorder them with positional placeholders, such as
-   `%2$s` before `%1$s`.
+   `%2$s` before `%1$s`. Field labels and prefixes, such as `Chapter: `,
+   include their colon and space: place them as the language needs. Keep
+   the key letter in `[Y]es` and `[N]o`, because the keys stay `y` and `n`
+   in every language, as in `[Y] Ja`. Keep the spaces at both ends of
+   popup titles, such as ` %s Info `.
 4. Compile it into the file that Vim reads,
    `lang/de/LC_MESSAGES/bartleby.mo`:
 
@@ -197,6 +211,9 @@ gettext tools.
    ```vim
    :language messages de_DE.UTF-8
    ```
+
+   The menu keeps the language that was active when it first opened.
+   Restart Vim to see a changed language in the menu.
 
 Commit both the `.po` file and the compiled `.mo` file, so that users
 need no gettext tools.

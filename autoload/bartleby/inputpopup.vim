@@ -93,16 +93,19 @@ enddef
 # type, with matchfuzzy. Call OnSubmit with the selected option. Nothing
 # is called on cancel, or on Enter with no match. Up, Down, C-k, C-j,
 # PageUp, PageDown, and the mouse wheel move the selection, and the list
-# scrolls with it. One Enter submits, as in PickOne.
+# scrolls with it. One Enter submits, as in PickOne. names, optional, maps
+# an option to the text shown and matched for it, as in PickOne, and
+# OnSubmit still receives the option.
 export def PromptFilter(title: string, options: list<string>, OnSubmit: func(string),
-    maxVisible: number = 10, minWidth: number = 0): void
+    maxVisible: number = 10, minWidth: number = 0, names: dict<string> = {}): void
+  var shown: list<string> = options->mapnew((_, o) => get(names, o, o))
   var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'filter',
-    options: options, maxVisible: maxVisible}]]
+    options: shown, maxVisible: maxVisible}]]
   var form: InputPopup = InputPopup.new(fields, {},
     {title: $' {title} ', buttons: [], min_width: minWidth})
   form.OnSubmit((values: dict<any>) => {
     if values.choice !=# ''
-      OnSubmit(values.choice)
+      OnSubmit(options[index(shown, values.choice)])
     endif
   })
   form.Open()
@@ -118,7 +121,7 @@ export def PromptMultiline(title: string, default: string, OnSubmit: func(string
   var fields: list<list<dict<any>>> = [[{name: 'text', type: 'multiline',
     rows: rows}]]
   var form: InputPopup = InputPopup.new(fields, {text: default},
-    {title: $' {title} (<C-s> to save) ', widths: {text: width}, buttons: []})
+    {title: printf(IN.T(" %s (C-s to save) "), title), widths: {text: width}, buttons: []})
   form.OnSubmit((values: dict<any>) => {
     OnSubmit(values.text)
   })
@@ -216,8 +219,8 @@ export class InputPopup
       return
     endif
     this.buttons = [
-      {label: get(this.opts, 'submit_label', 'Submit'), action: 'submit'},
-      {label: get(this.opts, 'cancel_label', 'Cancel'), action: 'cancel'},
+      {label: get(this.opts, 'submit_label', IN.T("Submit")), action: 'submit'},
+      {label: get(this.opts, 'cancel_label', IN.T("Cancel")), action: 'cancel'},
     ]
   enddef
 
@@ -722,7 +725,7 @@ export class InputPopup
       endfor
     endif
     if empty(f.filtered)
-      lines[1] = '  (no matches)'
+      lines[1] = '  ' .. IN.T("(no matches)")
     endif
 
     setbufline(this.bufnr, 1, lines)

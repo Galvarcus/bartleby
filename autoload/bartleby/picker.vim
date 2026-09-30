@@ -19,14 +19,17 @@ import autoload 'bartleby/inputpopup.vim' as IP
 # FUNCTION: Show options as one choice field titled title, and call OnPick
 # with the chosen option. Nothing is called on cancel. current, optional,
 # selects the matching option first, so the picker also shows the active
-# choice. Without it, no option is marked as current.
+# choice. Without it, no option is marked as current. names, optional,
+# maps an option to the text shown for it, such as a translation: the
+# popup shows that text, and OnPick still receives the option.
 export def PickOne(title: string, options: list<string>, OnPick: func(string),
-    current: string = ''): void
-  var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'choice', options: options}]]
-  var defaults: dict<any> = current ==# '' ? {} : {choice: current}
+    current: string = '', names: dict<string> = {}): void
+  var shown: list<string> = options->mapnew((_, o) => get(names, o, o))
+  var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'choice', options: shown}]]
+  var defaults: dict<any> = current ==# '' ? {} : {choice: get(names, current, current)}
   var form: IP.InputPopup = IP.InputPopup.new(fields, defaults, {title: $' {title} ', buttons: []})
   form.OnSubmit((values: dict<any>) => {
-    OnPick(values.choice)
+    OnPick(options[index(shown, values.choice)])
   })
   form.Open()
 enddef

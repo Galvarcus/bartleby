@@ -20,6 +20,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/menu.vim' as M
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/spotlight.vim' as SP
@@ -47,36 +48,36 @@ enddef
 def BuildMenu(): M.Menu
   var m: M.Menu = M.Menu.new(CO.MENU_NAME, CO.PLUGIN_NAME)
 
-  var scrive: M.MenuItem = m.AddItem('Scrive')
-  scrive.AddItem('List...', RunEx('BartlebyList'))
-  scrive.AddItem('Open...', PromptThenEx('Open Scrive', 'BartlebyOpen'))
-  scrive.AddItem('New...', PromptThenEx('New Scrive', 'BartlebyNewScrive'))
+  var scrive: M.MenuItem = m.AddItem(IN.T("Scrive"))
+  scrive.AddItem(IN.T("List..."), RunEx('BartlebyList'))
+  scrive.AddItem(IN.T("Open..."), PromptThenEx(IN.T("Open Scrive"), 'BartlebyOpen'))
+  scrive.AddItem(IN.T("New..."), PromptThenEx(IN.T("New Scrive"), 'BartlebyNewScrive'))
 
-  var binder: M.MenuItem = m.AddItem('Binder')
-  binder.AddItem('Toggle', RunEx('BartlebyToggleBinder'))
-  binder.AddItem('Search', RunEx('BartlebySearch'))
+  var binder: M.MenuItem = m.AddItem(IN.T("Binder"))
+  binder.AddItem(IN.T("Toggle"), RunEx('BartlebyToggleBinder'))
+  binder.AddItem(IN.T("Search"), RunEx('BartlebySearch'))
 
-  var view: M.MenuItem = m.AddItem('View')
-  view.AddItem('Toggle Inspector', RunEx('BartlebyToggleInspector'))
-  view.AddItem('Toggle Focus', RunEx('BartlebyFocus'))
-  view.AddItem('Toggle Spotlight', RunEx('BartlebySpotlight'))
-  view.AddItem('Pick Spotlight Mode', (_: M.MenuItem) => SP.PickMode())
-  view.AddItem('Toggle Quill', RunEx('BartlebyQuill'))
+  var view: M.MenuItem = m.AddItem(IN.T("View"))
+  view.AddItem(IN.T("Toggle Inspector"), RunEx('BartlebyToggleInspector'))
+  view.AddItem(IN.T("Toggle Focus"), RunEx('BartlebyFocus'))
+  view.AddItem(IN.T("Toggle Spotlight"), RunEx('BartlebySpotlight'))
+  view.AddItem(IN.T("Pick Spotlight Mode"), (_: M.MenuItem) => SP.PickMode())
+  view.AddItem(IN.T("Toggle Quill"), RunEx('BartlebyQuill'))
 
-  var doc: M.MenuItem = m.AddItem('Document')
-  doc.AddItem('Take Snapshot', RunEx('BartlebySnapshot'))
-  doc.AddItem('View Snapshots', RunEx('BartlebySnapshots'))
+  var doc: M.MenuItem = m.AddItem(IN.T("Document"))
+  doc.AddItem(IN.T("Take Snapshot"), RunEx('BartlebySnapshot'))
+  doc.AddItem(IN.T("View Snapshots"), RunEx('BartlebySnapshots'))
   if LE.IsEnabled(CO.KIND_DICTIONARY)
-    doc.AddItem('Define Word', RunEx('BartlebyDefine'))
+    doc.AddItem(IN.T("Define Word"), RunEx('BartlebyDefine'))
   endif
   if LE.IsEnabled(CO.KIND_THESAURUS)
-    doc.AddItem('Thesaurus', RunEx('BartlebyThesaurus'))
+    doc.AddItem(IN.T("Thesaurus"), RunEx('BartlebyThesaurus'))
   endif
 
-  var project: M.MenuItem = m.AddItem('Project')
-  project.AddItem('Edit Profile', RunEx('BartlebyProfile'))
-  project.AddItem('Edit Info', RunEx('BartlebyProjectInfo'))
-  project.AddItem('Compile', RunEx('BartlebyCompile'))
+  var project: M.MenuItem = m.AddItem(IN.T("Project"))
+  project.AddItem(IN.T("Edit Profile"), RunEx('BartlebyProfile'))
+  project.AddItem(IN.T("Edit Info"), RunEx('BartlebyProjectInfo'))
+  project.AddItem(IN.T("Compile"), RunEx('BartlebyCompile'))
 
   return m
 enddef

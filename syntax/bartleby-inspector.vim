@@ -17,17 +17,23 @@ if exists('b:current_syntax')
   finish
 endif
 
+import autoload 'bartleby/inspector.vim' as I
+
 # Line 1 is always the Inspector header, see RenderContent in
 # inspector.vim.
 syntax match bartlebyInspectorHeader /\%1l.*/
 
 # A field label, only at the start of a line, the only place where
 # RenderContent writes one.
-syntax match bartlebyInspectorField /^\(Title\|Label\|Status\|Target\|Keywords\): /
+var labels: dict<string> = I.FieldLabels()
+var fields: string = [labels.title, labels.label, labels.status, labels.target, labels.keywords]
+  ->mapnew((_, l) => escape(l, '\/.*$^~[]'))->join('\|')
+execute $'syntax match bartlebyInspectorField /^\%({fields}\) /'
 
 # The Synopsis header. Unlike the fields above, it has no value on its own
 # line, so it has its own exact rule.
-syntax match bartlebyInspectorSynopsisHeader /^Synopsis:$/
+var synopsis: string = escape(labels.synopsis, '\/.*$^~[]')
+execute $'syntax match bartlebyInspectorSynopsisHeader /^{synopsis}$/'
 
 highlight default link bartlebyInspectorHeader Title
 highlight default link bartlebyInspectorField Keyword

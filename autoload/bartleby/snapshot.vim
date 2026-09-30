@@ -123,7 +123,7 @@ enddef
 # undone. Reloads the buffer when the document is open, so the editor
 # shows the restored text at once.
 export def Restore(project: PO.Project, doc: BI.BinderItem, snapshot: Snapshot): void
-  Take(project, doc, 'before restore')
+  Take(project, doc, IN.T("before restore"))
   var path: string = doc.AbsPath(project.BinderRoot())
   writefile(snapshot.lines, path)
   var winId: number = bufwinid(bufnr(path))

@@ -63,6 +63,8 @@ const KIND_MANUSCRIPT: string = 'Manuscript'
 const KIND_BOOK: string = 'Book'
 const KIND_SCREENPLAY: string = 'Screenplay'
 const KINDS: list<string> = [KIND_MANUSCRIPT, KIND_BOOK, KIND_SCREENPLAY]
+# The picker option that starts a new target, shown translated.
+const NEW_TARGET: string = '+ New Target'
 
 const KIND_FORMATS: dict<list<string>> = {
   Manuscript: ['PDF'],
@@ -145,7 +147,6 @@ enddef
 # separate from the settings popup, and all documents are included by
 # default.
 
-const SELECT_HEADER: string = '*** Compile ***'
 # Lines above the tree: the header and the project title. Every mapping
 # from a cursor line to a row subtracts this.
 const SELECT_HEADER_LINES: number = 2
@@ -227,7 +228,7 @@ def RedrawSelect(): void
   var state: SelectState = b:bartleby_compile_select
   setlocal modifiable
   deletebufline('%', 1, '$')
-  setline(1, [SELECT_HEADER, state.project.name]
+  setline(1, [printf('*** %s ***', IN.T("Compile")), state.project.name]
     + RenderSelectLines(state.rows, state.included))
   setlocal nomodifiable
 enddef
@@ -285,6 +286,16 @@ export def SelectContents(project: PO.Project, preselected: list<string>,
   nnoremap <buffer> <silent> ? <ScriptCmd>ShowSelectHelp()<CR>
 enddef
 
+# FUNCTION: Return each compile kind, as stored in a target, to its name
+# in the message language.
+def KindNames(): dict<string>
+  return {
+    [KIND_MANUSCRIPT]: IN.T("Manuscript"),
+    [KIND_BOOK]: IN.T("Book"),
+    [KIND_SCREENPLAY]: IN.T("Screenplay"),
+  }
+enddef
+
 def ShowSelectHelp(): void
   H.Show(IN.T("Compile - Select Contents"), [
     ['x', IN.T("Toggle inclusion (folders toggle all descendants)")],
@@ -318,7 +329,9 @@ def FinishWizard(project: PO.Project, kind: string, format: string,
     : {name: existing.name, font: existing.font, coverimage: existing.coverImage,
        separator: existing.separator}
   var form: IP.InputPopup = IP.InputPopup.new(IP.TextFields(fields), defaults,
-    {title: ' Compile Settings ', labels: {coverimage: 'Cover Image'}})
+    {title: printf(' %s ', IN.T("Compile Settings")), labels: {
+      name: IN.T("Name"), font: IN.T("Font"), coverimage: IN.T("Cover Image"),
+      separator: IN.T("Separator")}})
   form.OnSubmit((values: dict<any>) => {
     var name: string = get(values, 'name', '')
     if name ==# ''
@@ -362,12 +375,12 @@ def RunTargetForm(project: PO.Project, existing: CompileTarget): void
             : (compilemanuscriptdoublespaced ? 'Double' : 'Single')
           PI.PickOne(IN.T("Line Spacing"), ['Double', 'Single'], (spacing: string) => {
             FinishWizard(project, kind, format, spacing ==# 'Double', ids, existing)
-          }, spacingDefault)
+          }, spacingDefault, {Double: IN.T("Double"), Single: IN.T("Single")})
         else
           FinishWizard(project, kind, format, true, ids, existing)
         endif
       }, formatDefault)
-    }, kindDefault)
+    }, kindDefault, KindNames())
   })
 enddef
 
@@ -750,11 +763,11 @@ enddef
 def WriteFailureLog(path: string, cmd: list<string>, status: number,
     errLines: list<string>): string
   var lines: list<string> = [
-    $'Command: {join(cmd, " ")}',
-    $'Exit status: {status}',
+    printf(IN.T("Command: %s"), join(cmd, " ")),
+    printf(IN.T("Exit status: %s"), status),
     '',
   ]
-  writefile(lines + (empty(errLines) ? ['No error output.'] : errLines), path)
+  writefile(lines + (empty(errLines) ? [IN.T("No error output.")] : errLines), path)
   return path
 enddef
 
@@ -907,9 +920,9 @@ enddef
 
 export def Run(project: PO.Project): void
   var names: list<string> = ListTargets(project)
-  var options: list<string> = names + ['+ New Target']
+  var options: list<string> = names + [NEW_TARGET]
   PI.PickOne(IN.T("Compile"), options, (choice: string) => {
-    if choice ==# '+ New Target'
+    if choice ==# NEW_TARGET
       RunTargetForm(project, null_object)
       return
     endif
@@ -926,6 +939,6 @@ export def Run(project: PO.Project): void
       elseif action ==# 'Delete'
         DeleteTargetConfirm(project, target)
       endif
-    })
-  })
+    }, '', {Run: IN.T("Run"), Edit: IN.T("Edit"), Delete: IN.T("Delete")})
+  }, '', {[NEW_TARGET]: IN.T("+ New Target")})
 enddef

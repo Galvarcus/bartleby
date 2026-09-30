@@ -12,6 +12,8 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/i18n.vim' as IN
+import autoload 'bartleby/binderitem.vim' as BI
+import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/lang.vim' as LA
 import 'bartleby/variables/constants.vim' as CO
 
@@ -28,6 +30,15 @@ const PO: list<string> = [
   'msgid_plural "%d documents"',
   'msgstr[0] "%d Dokument"',
   'msgstr[1] "%d Dokumente"',
+  '',
+  'msgid "Chapter: "',
+  'msgstr "Kapitel: "',
+  '',
+  'msgid "Red"',
+  'msgstr "Rot"',
+  '',
+  'msgid "Label:"',
+  'msgstr "Markierung:"',
 ]
 
 def Test_untranslated_text_is_english(): void
@@ -58,9 +69,32 @@ def Test_translation_is_used(): void
   assert_equal('1 Dokument', printf(IN.N("%d document", "%d documents", 1), 1))
   assert_equal('3 Dokumente', printf(IN.N("%d document", "%d documents", 3), 3))
   assert_equal('Close', IN.T("Close"))
+  CheckTranslatedDisplay()
   execute 'language messages ' .. saved
   bindtextdomain(CO.TEXT_DOMAIN, LA.PluginRoot() .. '/lang')
   delete(dir, 'rf')
+enddef
+
+# FUNCTION: With the German test translation active, the display names
+# are German, and the Binder and Inspector syntax files, which build their
+# patterns from those names, highlight the German texts.
+def CheckTranslatedDisplay(): void
+  assert_equal('Kapitel: ', BI.RolePrefixes()[CO.ROLE_CHAPTER])
+  assert_equal('Rot', D.LabelName('Red'))
+  syntax on
+  new
+  setline(1, ['Title', '  ▾ Kapitel: 1/', '    · Scene (Rot)'])
+  setlocal filetype=bartleby-binder
+  assert_equal('bartlebyBinderRoleLabel', synIDattr(synID(2, 7, 1), 'name'))
+  # The folder name after the German prefix is still a folder name.
+  assert_equal('bartlebyBinderDirectory', synIDattr(synID(2, 16, 1), 'name'))
+  assert_equal('bartlebyBinderItemLabel', synIDattr(synID(3, 15, 1), 'name'))
+  bwipe!
+  new
+  setline(1, ['::Inspector::', 'Markierung: Rot'])
+  setlocal filetype=bartleby-inspector
+  assert_equal('bartlebyInspectorField', synIDattr(synID(2, 1, 1), 'name'))
+  bwipe!
 enddef
 
 export def RunAll(): void

@@ -14,10 +14,12 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/i18n.vim' as IN
+
 # FUNCTION: Show entries, a list of key and description pairs in the
 # caller's order. title is the border title, or Help when it is empty.
 export def Show(title: string, entries: list<list<string>>): void
-  var popupTitle: string = title ==# '' ? ' Help ' : $' {title} '
+  var popupTitle: string = printf(' %s ', title ==# '' ? IN.T("Help") : title)
 
   var keyWidth: number = 0
   for entry in entries
@@ -29,7 +31,7 @@ export def Show(title: string, entries: list<list<string>>): void
     lines->add(printf('  %-' .. keyWidth .. 's   %s', entry[0], entry[1]))
   endfor
   lines->add('')
-  lines->add('  Press <Esc> to close')
+  lines->add('  ' .. IN.T("Press Esc to close"))
 
   popup_create(lines, {
     title: popupTitle,

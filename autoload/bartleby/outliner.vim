@@ -46,8 +46,9 @@ import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
 
+const TREE_ORDER: string = 'Tree Order'
 const HEADERS: list<string> = ['Title', 'Label', 'Status', 'Words', 'Target', 'Keywords']
-const SORT_KEYS: list<string> = ['Tree Order', 'Title', 'Label', 'Status', 'Words']
+const SORT_KEYS: list<string> = [TREE_ORDER, 'Title', 'Label', 'Status', 'Words']
 const MAX_VISIBLE_ROWS: number = 20
 const OUTLINER_ZINDEX: number = 250
 
@@ -62,6 +63,20 @@ export class Row
   var target: string
   var keywords: string
 endclass
+
+# FUNCTION: Return each column and sort key, as used in code, to its name
+# in the message language, for the header and the sort picker.
+def ColumnNames(): dict<string>
+  return {
+    [TREE_ORDER]: IN.T("Tree Order"),
+    Title: IN.T("Title"),
+    Label: IN.T("Label"),
+    Status: IN.T("Status"),
+    Words: IN.T("Words"),
+    Target: IN.T("Target"),
+    Keywords: IN.T("Keywords"),
+  }
+enddef
 
 def FlattenFolder(folder: BI.BinderItem): list<T.Row>
   var rows: list<T.Row> = []
@@ -89,7 +104,7 @@ def BuildRow(treeRow: T.Row, binderRoot: string, showIndent: bool): Row
 
   var meta: D.DocMeta = treeRow.item.LoadMeta(binderRoot)
   var target: string = meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : '-'
-  return Row.new(treeRow.item, titleText, meta.label, meta.status, words, target,
+  return Row.new(treeRow.item, titleText, D.LabelName(meta.label), D.StatusName(meta.status), words, target,
     join(meta.keywords, ', '))
 enddef
 
@@ -112,7 +127,8 @@ def Pad(text: string, width: number): string
 enddef
 
 def ColumnWidths(rows: list<Row>): list<number>
-  var widths: list<number> = HEADERS->mapnew((_, h) => strdisplaywidth(h))
+  var names: dict<string> = ColumnNames()
+  var widths: list<number> = HEADERS->mapnew((_, h) => strdisplaywidth(names[h]))
   for row in rows
     widths[0] = max([widths[0], strdisplaywidth(row.title)])
     widths[1] = max([widths[1], strdisplaywidth(row.label)])
@@ -133,7 +149,7 @@ enddef
 class OutlinerPopup
   var project: PO.Project
   var folder: BI.BinderItem
-  var sortKey: string = 'Tree Order'
+  var sortKey: string = TREE_ORDER
   var rows: list<Row> = []
   var widths: list<number> = []
   var selectedIdx: number = 0
@@ -146,7 +162,7 @@ class OutlinerPopup
   enddef
 
   def Rebuild(): void
-    var showIndent: bool = this.sortKey ==# 'Tree Order'
+    var showIndent: bool = this.sortKey ==# TREE_ORDER
     var treeRows: list<T.Row> = FlattenFolder(this.folder)
     var built: list<Row> = treeRows->mapnew(
       (_, tr) => BuildRow(tr, this.project.BinderRoot(), showIndent))
@@ -177,7 +193,7 @@ class OutlinerPopup
     var height: number = min([max([len(this.rows), 1]), MAX_VISIBLE_ROWS]) + 2
 
     this.winid = popup_create(this.bufnr, {
-      title: $' Outliner: {this.folder.title} ',
+      title: printf(IN.T(" Outliner: %s "), this.folder.title),
       border: [1, 1, 1, 1],
       padding: [0, 1, 0, 1],
       minwidth: width,
@@ -212,8 +228,9 @@ class OutlinerPopup
     if this.bufnr == -1
       return
     endif
-    var header: string = FormatRow(this.widths, HEADERS[0], HEADERS[1], HEADERS[2],
-      HEADERS[3], HEADERS[4], HEADERS[5])
+    var shown: list<string> = HEADERS->mapnew((_, h) => ColumnNames()[h])
+    var header: string = FormatRow(this.widths, shown[0], shown[1], shown[2],
+      shown[3], shown[4], shown[5])
     var lines: list<string> = [header, repeat('-', strdisplaywidth(header))]
 
     var [first: number, last: number] = this.VisibleSlice()
@@ -274,7 +291,7 @@ class OutlinerPopup
       meta.Save(item.MetaPath(this.project.BinderRoot()))
       this.Rebuild()
       this.Render()
-    }, currentMeta.label)
+    }, currentMeta.label, D.LabelNames())
   enddef
 
   def PickStatus(): void
@@ -290,7 +307,7 @@ class OutlinerPopup
       meta.Save(item.MetaPath(this.project.BinderRoot()))
       this.Rebuild()
       this.Render()
-    }, currentMeta.status)
+    }, currentMeta.status, D.StatusNames())
   enddef
 
   def PickSort(): void
@@ -298,7 +315,7 @@ class OutlinerPopup
       this.sortKey = choice
       this.Rebuild()
       this.Render()
-    }, this.sortKey)
+    }, this.sortKey, ColumnNames())
   enddef
 
   def ShowHelp(): void

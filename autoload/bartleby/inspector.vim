@@ -39,7 +39,6 @@ import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
 
-const FRAME_TITLE: string = '::Inspector::'
 # Line numbers in the output of RenderContent, so that EditUnderCursor
 # knows which field is on which line. Line 2, the title, has no
 # constant: the title cannot be changed here.
@@ -49,17 +48,32 @@ const LINE_TARGET: number = 5
 const LINE_KEYWORDS: number = 7
 const LINE_SYNOPSIS_HEADER: number = 9
 
+# FUNCTION: Return the field labels in the message language, each with
+# its colon, because the punctuation differs between languages.
+# syntax/bartleby-inspector.vim matches these labels.
+export def FieldLabels(): dict<string>
+  return {
+    title: IN.T("Title:"),
+    label: IN.T("Label:"),
+    status: IN.T("Status:"),
+    target: IN.T("Target:"),
+    keywords: IN.T("Keywords:"),
+    synopsis: IN.T("Synopsis:"),
+  }
+enddef
+
 def RenderContent(item: BI.BinderItem, meta: D.DocMeta): list<string>
+  var labels: dict<string> = FieldLabels()
   var lines: list<string> = [
-    FRAME_TITLE,
-    $'Title: {item.title}',
-    $'Label: {meta.label}',
-    $'Status: {meta.status}',
-    $'Target: {meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : "-"}',
+    $'::{IN.T("Inspector")}::',
+    $'{labels.title} {item.title}',
+    $'{labels.label} {D.LabelName(meta.label)}',
+    $'{labels.status} {D.StatusName(meta.status)}',
+    $'{labels.target} {meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : "-"}',
     '',
-    $'Keywords: {join(meta.keywords, ", ")}',
+    $'{labels.keywords} {join(meta.keywords, ", ")}',
     '',
-    'Synopsis:',
+    labels.synopsis,
   ]
   if meta.synopsis !=# ''
     lines += split(meta.synopsis, "\n")
@@ -108,7 +122,7 @@ def EditUnderCursor(): void
       m.SetLabel(choice)
       m.Save(item.MetaPath(project.BinderRoot()))
       RefreshFor(project, item)
-    }, meta.label)
+    }, meta.label, D.LabelNames())
   elseif lnum == LINE_STATUS
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     PI.PickOne(IN.T("Status"), CO.STATUSES, (choice: string) => {
@@ -116,7 +130,7 @@ def EditUnderCursor(): void
       m.SetStatus(choice)
       m.Save(item.MetaPath(project.BinderRoot()))
       RefreshFor(project, item)
-    }, meta.status)
+    }, meta.status, D.StatusNames())
   elseif lnum == LINE_TARGET
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     var current: string = meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : ''

@@ -23,6 +23,17 @@ var log = L.New(expand('<sfile>:t'))
 
 
 
+# FUNCTION: Return each scrive type, as stored in project.json, to its
+# name in the message language. CO.TYPES gives the order.
+export def TypeNames(): dict<string>
+  return {
+    [CO.TYPE_NOVEL]: IN.T("Novel"),
+    [CO.TYPE_NOVEL_PARTS]: IN.T("Novel with Parts"),
+    [CO.TYPE_SHORT_STORY]: IN.T("Short Story"),
+    [CO.TYPE_SCREENPLAY]: IN.T("Screenplay"),
+  }
+enddef
+
 export class Project implements BI.ItemContainer
   # Absolute path of the .bartleby folder.
   var scriveDir: string
