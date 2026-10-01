@@ -25,18 +25,27 @@
 %     \doublespacing via setspace (a supported setspace pattern) -
 %     sffms itself has no documented single-spacing toggle, since
 %     double-spacing is the submission format's defining trait.
-\documentclass[$if(isnovel)$novel,$endif$$if(usecourier)$courier,$endif$smart]{sffms}
+%   - Paper size: sffms sets no PDF page size by itself, so without
+%     the geometry option the page size depends on the TeX installation.
+%     The geometry option makes sffms set its own margins through the
+%     geometry package, which also sets the PDF page size to papersize.
+\documentclass[$if(papersize)$$papersize$paper,$endif$geometry,$if(isnovel)$novel,$endif$$if(usecourier)$courier,$endif$smart]{sffms}
 
 % Pandoc always emits \hypertarget/\label for headings, standalone or
 % not - hyperref is what provides those, loaded last per its own
 % convention. hidelinks suppresses the colored-box link styling, which
 % has no place on a plain-text submission manuscript.
 \usepackage[hidelinks]{hyperref}
+% PDF metadata, from Pandoc's plain-text title-meta and author-meta.
+\hypersetup{pdftitle={$title-meta$}, pdfauthor={$author-meta$}$if(lang)$, pdflang={$lang$}$endif$}
 
 \title{$title$}
 $if(runningtitle)$\runningtitle{$runningtitle$}$endif$
 \author{$if(author)$$author$$else$Author Name$endif$}
 $if(realname)$\authorname{$realname$}$endif$
+% The page header is surname / TITLE / page. Without a surname, sffms
+% uses the whole author name.
+$if(surname)$\surname{$surname$}$endif$
 
 \address{$if(address)$$address$\\$endif$$if(citystateline)$$citystateline$\\$endif$$if(phonenumber)$$phonenumber$\\$endif$$if(email)$$email$$endif$}
 

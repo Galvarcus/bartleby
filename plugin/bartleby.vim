@@ -109,6 +109,7 @@ g:bartleby_compile_book_chapter_style = get(g:, 'bartleby_compile_book_chapter_s
 g:bartleby_compile_book_part_style = get(g:, 'bartleby_compile_book_part_style', 'numeral')
 g:bartleby_compile_extra_args = get(g:, 'bartleby_compile_extra_args', [])
 g:bartleby_compile_lang = get(g:, 'bartleby_compile_lang', '')
+g:bartleby_compile_papersize = get(g:, 'bartleby_compile_papersize', '')
 g:bartleby_compile_log_retention = get(g:, 'bartleby_compile_log_retention', 10)
 g:bartleby_dictionary_api_key = get(g:, 'bartleby_dictionary_api_key', '')
 g:bartleby_thesaurus_api_key = get(g:, 'bartleby_thesaurus_api_key', '')

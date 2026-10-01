@@ -43,6 +43,9 @@ var is_loaded: bool = true
 # snake_case:
 #   field_width   number        Width of a text field. Default 20.
 #   widths        dict<number>  Width per text field, by field name.
+#   maxlengths    dict<number>  Maximum characters per text field, by
+#                               field name. Typing stops there. A longer
+#                               starting value is kept.
 #   labels        dict<string>  Label per field, by field name. Default:
 #                               the field name.
 #   submit_label  string        Text of the Submit button.
@@ -207,6 +210,7 @@ export class InputPopup
           field.offset = 0
           field.isComplex = isComplex
           field.width = get(widths, name, defaultWidth)
+          field.maxLength = get(get(this.opts, 'maxlengths', {}), name, 0)
         endif
         add(this.fields, field)
       endfor
@@ -590,6 +594,7 @@ export class InputPopup
       var f: dict<any> = this.fields[this.currentIdx]
       f.cursor = strchars(f.value)
     elseif strchars(key) == 1 && char2nr(key) >= 32
+        && !this.AtMaxLength(this.fields[this.currentIdx])
       var f: dict<any> = this.fields[this.currentIdx]
       var chars: list<string> = split(f.value, '\zs')
       insert(chars, key, f.cursor)
@@ -697,6 +702,11 @@ export class InputPopup
   ############################################################################
   # SECTION: Rendering.
   ############################################################################
+
+  # METHOD: Return true when a text field with a maximum length is full.
+  def AtMaxLength(f: dict<any>): bool
+    return get(f, 'maxLength', 0) > 0 && strchars(f.value) >= f.maxLength
+  enddef
 
   # METHOD: Move the selection of a filter list by step rows, and scroll so
   # that the selection stays visible.

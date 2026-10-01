@@ -2,17 +2,32 @@
 % Typeset reading-copy layout: styled chapter openings, running headers
 % (author verso / title recto), optional full-page cover image, table
 % of contents.
-\documentclass[11pt]{book}
+\documentclass[11pt$if(babel-lang)$,$babel-lang$$endif$]{book}
 
 % Pandoc always emits \hypertarget/\label for headings, standalone or
 % not - hyperref is what provides those.
 \usepackage[hidelinks]{hyperref}
 
+% PDF metadata, from Pandoc's plain-text title-meta and author-meta.
+\hypersetup{pdftitle={$title-meta$}, pdfauthor={$author-meta$}$if(lang)$, pdflang={$lang$}$endif$}
+
 \usepackage{fontspec}
 \setmainfont{$mainfont$}
+
+% The language of the text, from the lang metadata, as in Pandoc's own
+% template: Pandoc turns the code into babel-lang, a class option above.
+% The language sets hyphenation, and words such as Chapter and Contents.
+% fmtcount spells numbers in it. shorthands=off keeps characters such as
+% quotation marks from becoming babel commands.
+$if(lang)$
+\usepackage[bidi=default,shorthands=off]{babel}
+$endif$
+
+% Better justification and fewer bad line breaks.
+\usepackage{microtype}
 \usepackage{graphicx}
 
-\usepackage[margin=1in]{geometry}
+\usepackage[$if(papersize)$$papersize$paper,$endif$margin=1in]{geometry}
 
 \usepackage{fancyhdr}
 \pagestyle{fancy}
@@ -21,6 +36,14 @@
 \fancyhead[RO]{\textsc{$title$}}
 \fancyfoot[C]{\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
+
+% The book class starts every chapter and part on a right-hand page, so a
+% left-hand page can be blank. Such a page gets no header and no page
+% number.
+\makeatletter
+\renewcommand{\cleardoublepage}{\clearpage\if@twoside\ifodd\c@page\else
+  \hbox{}\thispagestyle{empty}\newpage\if@twocolumn\hbox{}\newpage\fi\fi\fi}
+\makeatother
 
 $if(indentparagraphs)$
 \setlength{\parindent}{1.5em}

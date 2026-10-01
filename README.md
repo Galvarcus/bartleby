@@ -68,8 +68,11 @@ these files with any editor.
   logging utility that Bartleby uses. Install it the same way as
   Bartleby.
 - **Compile** needs [Pandoc](https://pandoc.org) 3.x and a LaTeX
-  distribution with `pdflatex`, `xelatex`, and the
-  [sffms](https://ctan.org/pkg/sffms) class. Screenplays need
+  distribution with `pdflatex`, `xelatex`, `microtype`, and the
+  [sffms](https://ctan.org/pkg/sffms) class. A Book in a language
+  other than English also needs the LaTeX support for that language,
+  such as `texlive-lang-german`. Without it, words such as Contents
+  stay English. Screenplays need
   [screenplain](https://github.com/vilcans/screenplain) instead.
 - **Dictionary and thesaurus** need `curl` and your own free
   [Merriam-Webster API keys](https://dictionaryapi.com), one for the
@@ -562,6 +565,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_compile_extra_args` | `[]` | More arguments for every Pandoc run |
 | `g:bartleby_compile_log_retention` | `10` | Compile logs kept per target. `0` keeps all |
 | `g:bartleby_compile_lang` | `''` | Language code for Pandoc, such as `'en-GB'`. Empty uses the code of the language, `en-US` for English |
+| `g:bartleby_compile_papersize` | `''` | Paper size of PDF output, `'letter'` or `'a4'`. Empty uses the paper size of the language, `letter` for English |
 
 **Dictionary and thesaurus**
 

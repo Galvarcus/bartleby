@@ -127,6 +127,20 @@ def Test_popup_is_wide_enough_for_its_title(): void
   popup.Close()
 enddef
 
+# FUNCTION: A text field with a maximum length stops taking characters
+# there, and keeps a longer starting value whole.
+def Test_text_field_stops_at_its_maximum_length(): void
+  var fields: list<list<dict<any>>> = [[{name: 'zip', type: 'text'}, {name: 'state', type: 'text'}]]
+  var popup = IP.InputPopup.new(fields, {state: 'Ontario'}, {maxlengths: {zip: 5, state: 3}})
+  popup.Open()
+  for c in '1234567'
+    popup.Filter(popup.winid, c)
+  endfor
+  assert_equal('12345', popup.Values().zip)
+  assert_equal('Ontario', popup.Values().state)
+  popup.Close()
+enddef
+
 export def RunAll(): void
   Test_enter_inserts_a_newline_rather_than_submitting()
   Test_typed_text_is_inserted_at_the_cursor()
@@ -136,4 +150,5 @@ export def RunAll(): void
   Test_filter_list_scrolls_with_the_selection()
   Test_filter_scrollbar_only_when_the_list_scrolls()
   Test_popup_is_wide_enough_for_its_title()
+  Test_text_field_stops_at_its_maximum_length()
 enddef

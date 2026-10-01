@@ -1,6 +1,7 @@
 {
   "language": "English",
   "pandoc_lang": "en-US",
+  "papersize": "letter",
   "spacy_model": "en_core_web_sm",
   "tagger_passive": true,
   "dictionary_reference": "collegiate",

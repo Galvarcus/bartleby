@@ -33,6 +33,7 @@ reads it.
 | `spacy_model` | The tagger | `en_core_web_sm` |
 | `tagger_passive` | Whether the tagger has a passive rule for the language | `true` |
 | `pandoc_lang` | Compile: the language code for Pandoc | `en-US` |
+| `papersize` | Compile: the paper size of PDF output, `letter` or `a4` | `letter` |
 | `dictionary_reference`, `thesaurus_reference` | The dictionary and thesaurus lookups | `collegiate`, `thesaurus` |
 
 Every field is optional. A missing rule means the language has none: no
@@ -60,11 +61,15 @@ words in lowercase.
    line, which Spanish and French often use, is not a pair of quotes.
    It needs a new rule in `autoload/bartleby/spotlight.vim`.
 5. **Set up the tagger.** See the next section.
-6. **Set the compile language.** Set `pandoc_lang` to the full language
-   code, such as `fr-FR`. Pandoc uses it for HTML and EPUB. For PDF, the
-   LaTeX templates in `tools/latex/` must also load a language package,
-   such as `babel`, from Pandoc's `$lang$` variable. That gives correct
-   hyphenation and words such as "Chapter" in the language.
+6. **Set the compile language and paper.** Set `pandoc_lang` to the
+   full language code, such as `fr-FR`, and `papersize` to the usual
+   paper of that market, such as `a4`. Pandoc uses the code for HTML and
+   EPUB, and the Book template loads `babel` with it. That gives the
+   hyphenation, and words such as Chapter and Contents, in the language.
+   The LaTeX support for the language must be installed, such as
+   `texlive-lang-french`. Without it, babel quietly uses English words.
+   The Manuscript template follows the sffms submission format, which
+   is English: its title page and headings stay English.
 7. **Choose the lookups.** See the section on the dictionary and
    thesaurus. Without a reference for the language, set both reference
    fields to an empty string, and the lookups are off.

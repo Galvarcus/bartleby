@@ -48,6 +48,7 @@ var compilescriptpath: string = expand('<sfile>:p')
 var compilepandocbin: string = g:bartleby_compile_pandoc_bin
 var compilescreenplainbin: string = g:bartleby_compile_screenplain_bin
 var compilelang: string = g:bartleby_compile_lang
+var compilepapersize: string = g:bartleby_compile_papersize
 var compiletoc: bool = g:bartleby_compile_toc
 var compilestandalone: bool = g:bartleby_compile_standalone
 var compilemanuscriptfont: string = g:bartleby_compile_manuscript_font
@@ -701,10 +702,14 @@ def PandocMetadataArgs(project: PO.Project): list<string>
   if info.EffectiveAuthor() !=# ''
     args->add($'--metadata=author:{info.EffectiveAuthor()}')
   endif
-  # realname, from info.name, is the legal name for the contact block on
+  # realname, the full legal name, is for the contact block on
   # the title page. author is the byline, which may be a pen name.
-  if info.name !=# ''
-    args->add($'--metadata=realname:{info.name}')
+  if info.FullName() !=# ''
+    args->add($'--metadata=realname:{info.FullName()}')
+  endif
+  # The surname heads every manuscript page, as surname / TITLE / page.
+  if info.surname !=# ''
+    args->add($'--metadata=surname:{info.surname}')
   endif
   if info.address !=# ''
     args->add($'--metadata=address:{info.address}')
@@ -874,11 +879,24 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   if lang !=# ''
     args->add($'--metadata=lang:{lang}')
   endif
+  args->add($'--metadata=papersize:{PaperSize()}')
   args += compileextraargs
   var logBase: string = NewLogBase(project, target)
   args->add($'--log={logBase}.json')
 
   RunJob($'{target.kind}/{target.format}', [compilepandocbin] + args, target, outputPath, logBase)
+enddef
+
+# FUNCTION: Return the paper size for PDF: g:bartleby_compile_papersize
+# when set, else the papersize of the language file. letter and a4 are the
+# sizes that sffms supports, so any other value warns and uses letter.
+def PaperSize(): string
+  var size: string = compilepapersize ==# '' ? LA.Get('papersize', 'letter') : compilepapersize
+  if index(['letter', 'a4'], size) < 0
+    log.Warn(printf(IN.T("unknown paper size \"%s\", using letter"), size))
+    return 'letter'
+  endif
+  return size
 enddef
 
 # FUNCTION: Return a new timestamped log path for this run, without an

@@ -424,6 +424,14 @@ all scrives. Bartleby puts it on the title page of a manuscript.
 `:BartlebyProjectInfo` changes any of these details for the current
 scrive only, for example to use a pen name.
 
+Your legal name has five parts: Prefix, First, Middle, Surname, and
+Suffix. Fill in the ones you use. The manuscript puts your surname at
+the top of every page, with the title and the page number. Author Name
+is the name printed on the title page, which can be a pen name. State,
+Country, and Zip hold codes: a state or province code of up to 3
+characters, a 2-letter country code, and a postal code of up to 10
+characters.
+
 ## Keys
 
 These keys work in any document:
