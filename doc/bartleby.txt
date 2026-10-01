@@ -5,39 +5,36 @@
 
                                        Type |gO| to see the table of contents.
 
-Bartleby ................................................... |bartleby-bartleby|
-  Bartleby ............................................... |bartleby-bartleby-1|
-  Requirements ......................................... |bartleby-requirements|
-  Installation ......................................... |bartleby-installation|
-  Quick start ........................................... |bartleby-quick-start|
-  Concepts ................................................. |bartleby-concepts|
-  Binder ..................................................... |bartleby-binder|
-  Corkboard ............................................... |bartleby-corkboard|
-  Outliner ................................................. |bartleby-outliner|
-  Inspector ............................................... |bartleby-inspector|
-  Scrive list ........................................... |bartleby-scrive-list|
-  Focus, Spotlight, and Quill ............. |bartleby-focus-spotlight-and-quill|
-  Spotlight modes ................................... |bartleby-spotlight-modes|
-  Fountain ................................................. |bartleby-fountain|
-  Palette and menu ................................. |bartleby-palette-and-menu|
-  Session, snapshots, and search ....... |bartleby-session-snapshots-and-search|
-  Auto-save ............................................... |bartleby-auto-save|
-  Dictionary and thesaurus ................. |bartleby-dictionary-and-thesaurus|
-  Compile ................................................... |bartleby-compile|
-  Commands ................................................. |bartleby-commands|
-  Mappings ................................................. |bartleby-mappings|
-  Configuration ....................................... |bartleby-configuration|
-  Logging ................................................... |bartleby-logging|
-  License ................................................... |bartleby-license|
+Introduction ........................................... |bartleby-introduction|
+Requirements ........................................... |bartleby-requirements|
+Installation ........................................... |bartleby-installation|
+Quick start ............................................. |bartleby-quick-start|
+Concepts ................................................... |bartleby-concepts|
+Binder ....................................................... |bartleby-binder|
+Corkboard ................................................. |bartleby-corkboard|
+Outliner ................................................... |bartleby-outliner|
+Inspector ................................................. |bartleby-inspector|
+Scrive list ............................................. |bartleby-scrive-list|
+Focus, Spotlight, and Quill ............... |bartleby-focus-spotlight-and-quill|
+Spotlight modes ..................................... |bartleby-spotlight-modes|
+Fountain ................................................... |bartleby-fountain|
+Palette and menu ................................... |bartleby-palette-and-menu|
+Session, snapshots, and search ......... |bartleby-session-snapshots-and-search|
+Auto-save ................................................. |bartleby-auto-save|
+Dictionary and thesaurus ................... |bartleby-dictionary-and-thesaurus|
+Compile ..................................................... |bartleby-compile|
+Commands ................................................... |bartleby-commands|
+Mappings ................................................... |bartleby-mappings|
+Configuration ......................................... |bartleby-configuration|
+Logging ..................................................... |bartleby-logging|
+License ..................................................... |bartleby-license|
 
-==============================================================================
-Bartleby                                                     *bartleby-bartleby*
 
 A structured writing environment for Vim. It provides a binder, a corkboard,
 an outliner, and a compile pipeline for long-form prose and screenplays.
 
-------------------------------------------------------------------------------
-Bartleby                                                   *bartleby-bartleby-1*
+==============================================================================
+Introduction                                             *bartleby-introduction*
 
 A project, called a scrive, is a tree of folders and documents. You build and
 arrange the tree in a sidebar, shuffle scenes on a corkboard, review them in
@@ -49,7 +46,7 @@ small JSON file next to each document holds its metadata: label, status,
 synopsis, keywords, and word-count target. The tree itself is one
 `project.json` per scrive. You can edit all of these files with any editor.
 
-------------------------------------------------------------------------------
+==============================================================================
 Requirements                                             *bartleby-requirements*
 
 - Vim 9.2 or newer, with `+popupwin`. |bartleby-footnote1|
@@ -68,7 +65,7 @@ Requirements                                             *bartleby-requirements*
 Writing needs only Vim. Compile, the lookups, and the tagger modes are the
 only features with other requirements.
 
-------------------------------------------------------------------------------
+==============================================================================
 Installation                                             *bartleby-installation*
 
 Install Logger and Bartleby the same way.
@@ -97,7 +94,7 @@ Restart Vim, then create a scrive to confirm that Bartleby loaded:
     :BartlebyNewScrive TestProject
 <
 
-------------------------------------------------------------------------------
+==============================================================================
 Quick start                                               *bartleby-quick-start*
 
 >vim
@@ -121,7 +118,7 @@ Elsewhere:
 - `:BartlebyCompile` compiles the scrive.
 - `:BartlebyOpen` reopens the last scrive. `:BartlebyList` lists all scrives.
 
-------------------------------------------------------------------------------
+==============================================================================
 Concepts                                                     *bartleby-concepts*
 
 Scrive - one writing project. It is a folder under `g:bartleby_binder_root`
@@ -137,7 +134,7 @@ delete, or move them. `dd` on one clears its contents after a confirmation.
 Chapter and Part folders inside Manuscript are also structural, but you can
 add, move, and delete them.
 
-------------------------------------------------------------------------------
+==============================================================================
 Binder                                                         *bartleby-binder*
 
 The Binder is the sidebar with the scrive's tree. It opens with the scrive,
@@ -191,7 +188,7 @@ Long titles wrap.
 A confirmation question takes `y` for yes, and `n` or `<Esc>` for no.
 `<Enter>` gives the default answer, which is No for every deletion.
 
-------------------------------------------------------------------------------
+==============================================================================
 Corkboard                                                   *bartleby-corkboard*
 
 `gc` on a folder shows its documents as index cards with each document's title
@@ -205,7 +202,7 @@ and synopsis.
     `?`                         Show this key list
     `<Esc>`                     Close the Corkboard
 
-------------------------------------------------------------------------------
+==============================================================================
 Outliner                                                     *bartleby-outliner*
 
 `go` on a folder shows all items under it as a table: Title, Label, Status,
@@ -220,7 +217,7 @@ Words, Target, and Keywords. Rows are indented like the tree.
     `?`         Show this key list
     `q`         Close the Outliner
 
-------------------------------------------------------------------------------
+==============================================================================
 Inspector                                                   *bartleby-inspector*
 
 `<leader>bi` or `:BartlebyToggleInspector` opens a read-only pane with the
@@ -232,7 +229,7 @@ follows the document in the editor window.
     `e` on Target or Keywords   Type a value
     `e` on Synopsis             Edit the synopsis. `<CR>` adds a line. `<C-s>` saves
 
-------------------------------------------------------------------------------
+==============================================================================
 Scrive list                                               *bartleby-scrive-list*
 
 `:BartlebyList` shows every scrive with its title and type. If no scrive
@@ -245,7 +242,7 @@ no previous scrive also shows this list.
     `?`         Show this key list
     `q`         Close the list
 
-------------------------------------------------------------------------------
+==============================================================================
 Focus, Spotlight, and Quill                 *bartleby-focus-spotlight-and-quill*
 
 Three independent writing aids:
@@ -273,7 +270,7 @@ Three independent writing aids:
                                                            detected from
                                                            the document
 
-------------------------------------------------------------------------------
+==============================================================================
 Spotlight modes                                       *bartleby-spotlight-modes*
 
 `<leader>bL` opens a searchable list of the modes, and
@@ -363,21 +360,21 @@ name as a key:
 With a tagger, all modes except Contractions and Fillers use the tagger, so
 list changes affect only those two.
 
-------------------------------------------------------------------------------
+==============================================================================
 Fountain                                                     *bartleby-fountain*
 
 Screenplay scrives use `.fountain` files. They have their own filetype and
 syntax highlighting. Spotlight's Dialogue mode finds character cues and scene
 headings in them.
 
-------------------------------------------------------------------------------
+==============================================================================
 Palette and menu                                     *bartleby-palette-and-menu*
 
 `:BartlebyCommands` or `<leader>b<Space>` opens a searchable list of all
 Bartleby commands. `:BartlebyMenu` or `<leader>bm` shows the same commands in
 groups: Scrive, Binder, View, Document, and Project.
 
-------------------------------------------------------------------------------
+==============================================================================
 Session, snapshots, and search           *bartleby-session-snapshots-and-search*
 
 Session - Bartleby remembers, for each scrive, the open document, the cursor
@@ -391,7 +388,7 @@ A restore first takes a snapshot of the current text.
 Search - `/` in the Binder or `:BartlebySearch` searches the scrive and puts
 the results in the quickfix list.
 
-------------------------------------------------------------------------------
+==============================================================================
 Auto-save                                                   *bartleby-auto-save*
 
 Bartleby saves changed scrive documents while you work, in the editor window
@@ -405,7 +402,7 @@ and in Focus mode. Other files are not affected.
 It writes only changed documents. To turn it off, set `g:bartleby_autosave` to
 `0`.
 
-------------------------------------------------------------------------------
+==============================================================================
 Dictionary and thesaurus                     *bartleby-dictionary-and-thesaurus*
 
 These need Merriam-Webster API keys. See Configuration #configuration.
@@ -447,7 +444,7 @@ Set the keys before Bartleby loads, or use the `$BARTLEBY_MW_DICTIONARY_KEY`
 and `$BARTLEBY_MW_THESAURUS_KEY` environment variables to keep them out of a
 shared vimrc.
 
-------------------------------------------------------------------------------
+==============================================================================
 Compile                                                       *bartleby-compile*
 
 `:BartlebyCompile` asks for the documents to include, a kind, a format, and
@@ -500,7 +497,7 @@ target.
     `?`                         Show this key list
     `q`                         Cancel
 
-------------------------------------------------------------------------------
+==============================================================================
 Commands                                                     *bartleby-commands*
 
     Command                                                 Description ~
@@ -552,7 +549,7 @@ Commands                                                     *bartleby-commands*
 
     `:BartlebyLexiconClearCache`                            Delete the lookup cache
 
-------------------------------------------------------------------------------
+==============================================================================
 Mappings                                                     *bartleby-mappings*
 
     Mapping                            Action ~
@@ -581,7 +578,7 @@ Mappings                                                     *bartleby-mappings*
 Binder, Corkboard, Outliner, and other panes have their own keys, listed in
 their sections.
 
-------------------------------------------------------------------------------
+==============================================================================
 Configuration                                           *bartleby-configuration*
 
 Set these variables in your vimrc before Bartleby loads. Each has a default,
@@ -835,7 +832,7 @@ Dictionary and thesaurus
     `g:bartleby_lexicon_base_url`            `'https://www.dictionaryapi.com/api/v3/references'`   API address. Change it only for
                                                                                                    a proxy or a test server
 
-------------------------------------------------------------------------------
+==============================================================================
 Logging                                                       *bartleby-logging*
 
 Bartleby shows its messages through Logger
@@ -850,7 +847,7 @@ file, one file per Vim session in `~/.Logger/`:
 README for the other options, such as the message level and the number of log
 files to keep.
 
-------------------------------------------------------------------------------
+==============================================================================
 License                                                       *bartleby-license*
 
 GNU GPL 3.0. See LICENSE LICENSE.
