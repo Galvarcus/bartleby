@@ -110,6 +110,24 @@ def Test_cursor_stays_on_the_same_item_after_a_collapse_rerender(): void
   CloseBinderAndCleanup(fx)
 enddef
 
+# FUNCTION: Regression test for a real bug: closing the Binder saved its
+# state after its window had closed, when GetCollapsedIds found no window
+# and returned nothing, so every close erased the collapsed folders.
+def Test_collapsed_folders_survive_closing_the_binder(): void
+  var fx = OpenBinderWithContent()
+  var manuscript = fx.project.ChildAt(1)
+  cursor(3, 1)
+  feedkeys("\<Tab>", 'xt')
+  B.Toggle(fx.project)
+  assert_false(B.IsOpen())
+  assert_equal([manuscript.id], B.GetCollapsedIds())
+  B.Toggle(fx.project)
+  assert_true(B.IsOpen())
+  assert_equal(0, search('Chapter\|^\s*1$', 'n'))
+  CloseBinderAndCleanup(fx)
+  execute 'silent! bwipe! ' .. CO.BINDER_BUF
+enddef
+
 export def RunAll(): void
   Test_show_renders_project_name_as_title_line()
   Test_show_renders_the_tree_starting_at_line_2()
@@ -117,4 +135,5 @@ export def RunAll(): void
   Test_cr_on_the_title_line_does_nothing()
   Test_tab_on_the_title_line_does_nothing()
   Test_cursor_stays_on_the_same_item_after_a_collapse_rerender()
+  Test_collapsed_folders_survive_closing_the_binder()
 enddef

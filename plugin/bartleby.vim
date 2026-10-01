@@ -26,6 +26,7 @@ import autoload 'bartleby/quill.vim' as Q
 import autoload 'bartleby/profile.vim' as PR
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/session.vim' as SS
+import autoload 'bartleby/restore.vim' as R
 import autoload 'bartleby/snapshot.vim' as SN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/inputpopup.vim' as IP
@@ -136,7 +137,7 @@ def OpenScrive(name: string): void
   endif
   ST.Set(project)
   SS.RememberLastScrive(project.scriveDir)
-  SS.Restore(project)
+  R.Restore(project)
 enddef
 
 # FUNCTION: Ask for the scrive type with PickOne, as the other pickers

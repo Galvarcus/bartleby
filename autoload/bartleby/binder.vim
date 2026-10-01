@@ -501,7 +501,7 @@ def ToggleCollapse(): void
   endif
   b:bartleby_collapsed = collapsed
   Render(ctx.project)
-  SS.CaptureBinderState()
+  SS.CaptureBinderState(IsOpen(), GetCollapsedIds())
 enddef
 
 def SetupKeymaps(): void
@@ -540,11 +540,11 @@ export def Toggle(project: PO.Project): void
   var winNr: number = bufwinnr(CO.BINDER_BUF)
   if winNr != -1
     execute ':' .. winNr .. 'close'
-    SS.CaptureBinderState()
+    SS.CaptureBinderState(IsOpen(), GetCollapsedIds())
     return
   endif
   Show(project)
-  SS.CaptureBinderState()
+  SS.CaptureBinderState(IsOpen(), GetCollapsedIds())
 enddef
 
 export def IsOpen(): bool
@@ -553,23 +553,22 @@ enddef
 
 # FUNCTION: Return the ids of the collapsed folders, for the session. The
 # set lives in b:bartleby_collapsed on the Binder buffer, and other
-# scripts use these two functions instead of that variable.
+# scripts use these two functions instead of that variable. They read the
+# buffer, not the window: the buffer stays loaded while the Binder is
+# closed, and Toggle saves the state after the window has closed.
 export def GetCollapsedIds(): list<string>
-  var winNr: number = bufwinnr(CO.BINDER_BUF)
-  if winNr == -1
-    return []
-  endif
-  return keys(getbufvar(winbufnr(winNr), 'bartleby_collapsed', {}))
+  var buf: number = bufnr(CO.BINDER_BUF)
+  return buf == -1 ? [] : keys(getbufvar(buf, 'bartleby_collapsed', {}))
 enddef
 
 export def ApplyCollapsedIds(ids: list<string>): void
-  var winNr: number = bufwinnr(CO.BINDER_BUF)
-  if winNr == -1
+  var buf: number = bufnr(CO.BINDER_BUF)
+  if buf == -1
     return
   endif
   var collapsed: dict<bool> = {}
   for id in ids
     collapsed[id] = true
   endfor
-  setbufvar(winbufnr(winNr), 'bartleby_collapsed', collapsed)
+  setbufvar(buf, 'bartleby_collapsed', collapsed)
 enddef

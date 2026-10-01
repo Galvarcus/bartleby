@@ -7,15 +7,18 @@ var is_loaded: bool = true
 
 ##############################################################################
 # Plugin_Name: Bartleby
-# session.vim: saves and restores the session of each scrive: the active
+# session.vim: saves and loads the session of each scrive: the active
 # document, the cursor position, whether the Binder is open, and which
 # Binder folders are collapsed. Also remembers the last opened scrive.
+# restore.vim restores a loaded session. This script imports nothing that
+# leads back to binder.vim, so the two import each other in one direction
+# only: binder.vim reports its state here.
 #
 # Two capture functions, for two kinds of events. CaptureCurrentDoc runs
 # on CursorHold, which Vim limits to idle moments, so it saves often
-# without a change counter, and on VimLeavePre. CaptureBinderState runs
-# when binder.vim shows, hides, or collapses, which are rare, explicit
-# actions that need no autocommand.
+# without a change counter, and on VimLeavePre. binder.vim calls
+# CaptureBinderState with its state when it shows, hides, or collapses,
+# which are rare, explicit actions that need no autocommand.
 #
 # SessionState is defined before the functions that use it because Load
 # and Save name it in a parameter or return type, and Vim9 resolves a
@@ -23,10 +26,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/project.vim' as PO
-import autoload 'bartleby/binder.vim' as B
-import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/log.vim' as L
@@ -60,7 +60,7 @@ def SessionPath(project: PO.Project): string
   return project.scriveDir .. '/session.json'
 enddef
 
-def Load(project: PO.Project): SessionState
+export def Load(project: PO.Project): SessionState
   var path: string = SessionPath(project)
   if !filereadable(path)
     return SessionState.new()
@@ -116,47 +116,16 @@ export def CaptureCurrentDoc(): void
   Save(project, SessionState.FromDict(v))
 enddef
 
-# FUNCTION: Save the Binder state. binder.vim calls this on its show,
-# hide, and collapse actions, so no autocommand is needed.
-export def CaptureBinderState(): void
+# FUNCTION: Save the Binder state: whether it is open, and the ids of its
+# collapsed folders. binder.vim calls this on its show, hide, and collapse
+# actions, so no autocommand is needed.
+export def CaptureBinderState(binderOpen: bool, collapsedIds: list<string>): void
   var project: PO.Project = ST.Get()
   if project is null_object
     return
   endif
   var v: dict<any> = Load(project).ToDict()
-  v.binderOpen = B.IsOpen()
-  v.collapsedIds = B.GetCollapsedIds()
+  v.binderOpen = binderOpen
+  v.collapsedIds = collapsedIds
   Save(project, SessionState.FromDict(v))
-enddef
-
-##############################################################################
-# SECTION: Restore.
-##############################################################################
-# FUNCTION: Restore the session of project, right after it opens.
-
-export def Restore(project: PO.Project): void
-  var state: SessionState = Load(project)
-
-  # Show the Binder first, whatever the saved state: its buffer must exist
-  # to apply the collapsed folders. Its bufhidden is hide, so closing it
-  # afterward, when the saved state says closed, keeps that state for the
-  # next time it opens.
-  B.Show(project)
-  B.ApplyCollapsedIds(state.collapsedIds)
-  B.Show(project)
-
-  if state.activeDocRelPath !=# ''
-    var path: string = project.BinderRoot() .. '/' .. state.activeDocRelPath
-    if filereadable(path)
-      W.GoToEditorWindow()
-      execute 'edit ' .. fnameescape(path)
-      cursor(state.cursorLine, state.cursorCol)
-    else
-      log.Warn(printf(IN.T("session: previously active document no longer exists: %s"), path))
-    endif
-  endif
-
-  if !state.binderOpen
-    B.Toggle(project)
-  endif
 enddef

@@ -880,6 +880,10 @@ msgstr ""
 msgid "autoformat can only be enabled in hard line break mode"
 msgstr ""
 
+#: autoload/bartleby/restore.vim:47
+msgid "session: previously active document no longer exists: %s"
+msgstr ""
+
 #: autoload/bartleby/scrive.vim:109
 msgid "scrive \"%s\" already exists at %s"
 msgstr ""
@@ -932,10 +936,6 @@ msgstr ""
 
 #: autoload/bartleby/search.vim:49
 msgid "no matches for \"%s\""
-msgstr ""
-
-#: autoload/bartleby/session.vim:155
-msgid "session: previously active document no longer exists: %s"
 msgstr ""
 
 #: autoload/bartleby/snapshot.vim:118
@@ -1070,42 +1070,42 @@ msgstr ""
 msgid "Draft"
 msgstr ""
 
-#: plugin/bartleby.vim:124
+#: plugin/bartleby.vim:125
 msgid "no scrive name given, and no previously-opened scrive to fall back to - showing the scrive list"
 msgstr ""
 
-#: plugin/bartleby.vim:145
+#: plugin/bartleby.vim:146
 msgid "Scrive Type"
 msgstr ""
 
-#: plugin/bartleby.vim:162 plugin/bartleby.vim:170 plugin/bartleby.vim:187 plugin/bartleby.vim:199 plugin/bartleby.vim:250
+#: plugin/bartleby.vim:163 plugin/bartleby.vim:171 plugin/bartleby.vim:188 plugin/bartleby.vim:200 plugin/bartleby.vim:251
 msgid "no scrive open - run :BartlebyOpen <name> first"
 msgstr ""
 
-#: plugin/bartleby.vim:204
+#: plugin/bartleby.vim:205
 msgid "current buffer is not a document of the open scrive"
 msgstr ""
 
-#: plugin/bartleby.vim:215 autoload/bartleby/binder.vim:164
+#: plugin/bartleby.vim:216 autoload/bartleby/binder.vim:164
 msgid "Snapshot label (optional)"
 msgstr ""
 
-#: plugin/bartleby.vim:228 autoload/bartleby/binder.vim:186
+#: plugin/bartleby.vim:229 autoload/bartleby/binder.vim:186
 msgid "no snapshots for \"%s\""
 msgstr ""
 
-#: plugin/bartleby.vim:232 autoload/bartleby/binder.vim:190
+#: plugin/bartleby.vim:233 autoload/bartleby/binder.vim:190
 msgid "Snapshots"
 msgstr ""
 
-#: plugin/bartleby.vim:234 autoload/bartleby/binder.vim:192
+#: plugin/bartleby.vim:235 autoload/bartleby/binder.vim:192
 msgid " %s "
 msgstr ""
 
-#: plugin/bartleby.vim:238 autoload/bartleby/binder.vim:198
+#: plugin/bartleby.vim:239 autoload/bartleby/binder.vim:198
 msgid "Restore"
 msgstr ""
 
-#: plugin/bartleby.vim:238 autoload/bartleby/binder.vim:198 autoload/bartleby/compile.vim:303 autoload/bartleby/inputpopup.vim:223
+#: plugin/bartleby.vim:239 autoload/bartleby/binder.vim:198 autoload/bartleby/compile.vim:303 autoload/bartleby/inputpopup.vim:223
 msgid "Cancel"
 msgstr ""
