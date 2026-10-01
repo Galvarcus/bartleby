@@ -8,6 +8,12 @@ screenplays.
 
 [![Vim](https://img.shields.io/badge/Vim-9.2%2B-019733?logo=vim)](https://www.vim.org)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
+main: 
+[![Generate Vimdoc](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml/badge.svg?branch=main)](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml) 
+[![Tests](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml)
+Development:
+[![Generate Vimdoc](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml/badge.svg?branch=Development)](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml) 
+[![Tests](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml/badge.svg?branch=Development)](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml)
 
 **Contents**
 
