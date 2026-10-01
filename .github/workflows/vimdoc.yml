@@ -20,6 +20,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # --shift-heading-level-by=-1 makes the README's single H1 the
+      # document title instead of a section. The H1 repeats the title line
+      # of the help file, and as a section its tag would be the doubled
+      # bartleby-bartleby. Keep exactly one H1 in README.md, at the top.
       - name: Generate Vimdoc
         uses: docker://pandoc/core:3.8
         with:
@@ -30,6 +34,7 @@ jobs:
             --standalone
             --columns=78
             --toc=true
+            --shift-heading-level-by=-1
             --metadata-file=doc/pandoc.yaml
             --lua-filter=doc/vimdoc-filter.lua
             --output=doc/bartleby.txt

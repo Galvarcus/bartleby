@@ -11,7 +11,7 @@ screenplays.
 
 **Contents**
 
-- [Bartleby](#bartleby-1)
+- [Introduction](#introduction)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quick start](#quick-start)
@@ -41,7 +41,7 @@ see [Localization_README.md](Localization_README.md).
 
 <!-- vimdoc-ignore-end -->
 
-## Bartleby
+## Introduction
 
 A project, called a scrive, is a tree of folders and documents. You
 build and arrange the tree in a sidebar, shuffle scenes on a
