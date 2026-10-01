@@ -12,7 +12,6 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/binder.vim' as B
-import autoload 'bartleby/binderitem.vim' as BI
 import './fixtures.vim' as FI
 import 'bartleby/variables/constants.vim' as CO
 

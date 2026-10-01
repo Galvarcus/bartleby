@@ -12,7 +12,6 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/outliner.vim' as O
-import autoload 'bartleby/binderitem.vim' as BI
 import './fixtures.vim' as FI
 
 def OpenOutlinerWithContent(): dict<any>

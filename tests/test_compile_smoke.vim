@@ -19,7 +19,6 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/compile.vim' as C
-import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
 import './fixtures.vim' as FI
 

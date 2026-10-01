@@ -29,9 +29,6 @@ var is_loaded: bool = true
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/persist.vim' as PE
-import autoload 'bartleby/log.vim' as L
-
-var log = L.New(expand('<sfile>:t'))
 
 export class SessionState
   var activeDocRelPath: string = ''
