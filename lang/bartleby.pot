@@ -572,19 +572,19 @@ msgstr ""
 msgid "Press Esc to close"
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:127
+#: autoload/bartleby/inputpopup.vim:128
 msgid " %s (C-s to save) "
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:226
+#: autoload/bartleby/inputpopup.vim:229
 msgid "Submit"
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:335
+#: autoload/bartleby/inputpopup.vim:338
 msgid "InputPopup: fieldRows produced no fields"
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:738
+#: autoload/bartleby/inputpopup.vim:741
 msgid "(no matches)"
 msgstr ""
 
@@ -820,67 +820,67 @@ msgstr ""
 msgid "no such file: %s"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:156
+#: autoload/bartleby/profile.vim:157
 msgid "Prefix"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:157
+#: autoload/bartleby/profile.vim:158
 msgid "First"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:158
+#: autoload/bartleby/profile.vim:159
 msgid "Middle"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:159
+#: autoload/bartleby/profile.vim:160
 msgid "Surname"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:160
+#: autoload/bartleby/profile.vim:161
 msgid "Suffix"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:161
+#: autoload/bartleby/profile.vim:162
 msgid "Author Name"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:162
+#: autoload/bartleby/profile.vim:163
 msgid "Address"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:163
+#: autoload/bartleby/profile.vim:164
 msgid "City"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:164
+#: autoload/bartleby/profile.vim:165
 msgid "State"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:165
+#: autoload/bartleby/profile.vim:166
 msgid "Country"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:166
+#: autoload/bartleby/profile.vim:167
 msgid "Zip"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:167
+#: autoload/bartleby/profile.vim:168
 msgid "Phone Number"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:168
+#: autoload/bartleby/profile.vim:169
 msgid "Email"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:174
+#: autoload/bartleby/profile.vim:175
 msgid "Name is required"
 msgstr ""
 
-#: autoload/bartleby/profile.vim:183
+#: autoload/bartleby/profile.vim:184
 msgid " %s Profile "
 msgstr ""
 
-#: autoload/bartleby/profile.vim:195
+#: autoload/bartleby/profile.vim:196
 msgid " %s Info "
 msgstr ""
 
@@ -1130,6 +1130,6 @@ msgstr ""
 msgid "Restore"
 msgstr ""
 
-#: plugin/bartleby.vim:240 autoload/bartleby/binder.vim:198 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:227
+#: plugin/bartleby.vim:240 autoload/bartleby/binder.vim:198 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:230
 msgid "Cancel"
 msgstr ""
