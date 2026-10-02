@@ -139,6 +139,14 @@ def Test_text_field_stops_at_its_maximum_length(): void
   assert_equal('12345', popup.Values().zip)
   assert_equal('Ontario', popup.Values().state)
   popup.Close()
+  # A full field still shows all of its text: the field has a column
+  # for the cursor after the last character.
+  popup = IP.InputPopup.new([[{name: 'cc', type: 'text'}]], {}, {widths: {cc: 2}, maxlengths: {cc: 2}})
+  popup.Open()
+  popup.Filter(popup.winid, 'U')
+  popup.Filter(popup.winid, 'S')
+  assert_match('US', getbufline(winbufnr(popup.winid), 1)[0])
+  popup.Close()
 enddef
 
 export def RunAll(): void

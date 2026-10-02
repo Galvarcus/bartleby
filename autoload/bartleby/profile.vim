@@ -134,8 +134,9 @@ def FormLayout(): list<list<string>>
 enddef
 
 # FUNCTION: Return the width of each form field. A field with a fixed
-# international maximum is exactly that wide, see FormMaxLengths. The
-# others are wide enough for usual values, and longer text scrolls.
+# international maximum is that wide, see FormMaxLengths, and
+# inputpopup.vim adds one column for the cursor. The others are wide
+# enough for usual values, and longer text scrolls.
 def FormWidths(): dict<number>
   return {
     prefix: 8, firstname: 16, middlename: 16, surname: 20, suffix: 6,

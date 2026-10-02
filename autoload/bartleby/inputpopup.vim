@@ -45,7 +45,8 @@ var is_loaded: bool = true
 #   widths        dict<number>  Width per text field, by field name.
 #   maxlengths    dict<number>  Maximum characters per text field, by
 #                               field name. Typing stops there. A longer
-#                               starting value is kept.
+#                               starting value is kept. The field is at
+#                               least one column wider, for the cursor.
 #   labels        dict<string>  Label per field, by field name. Default:
 #                               the field name.
 #   submit_label  string        Text of the Submit button.
@@ -209,8 +210,10 @@ export class InputPopup
           field.cursor = strchars(text)
           field.offset = 0
           field.isComplex = isComplex
-          field.width = get(widths, name, defaultWidth)
           field.maxLength = get(get(this.opts, 'maxlengths', {}), name, 0)
+          # One column more than the maximum, for the cursor after the last
+          # character. Without it the field scrolls and hides the text.
+          field.width = max([get(widths, name, defaultWidth), field.maxLength + 1])
         endif
         add(this.fields, field)
       endfor
