@@ -15,6 +15,7 @@ Bartleby without losing anything.
 - [Binder](#binder)
 - [Writing](#writing)
 - [Spotlight modes](#spotlight-modes)
+- [Text consoles](#text-consoles)
 - [Structure](#structure)
 - [Dictionary and thesaurus](#dictionary-and-thesaurus)
 - [Document details](#document-details)
@@ -187,6 +188,23 @@ let g:bartleby_spotlight_tagger = 'spacy'
 With spaCy set, the other modes use it too and become more accurate.
 spaCy does not check a paragraph while you type in it. It checks the
 paragraph again when you press `Esc`.
+
+## Text consoles
+
+A text console with 8 or 16 colors, such as the Linux virtual terminal,
+cannot show the colors of a normal theme. On one, Bartleby sets its own
+colors at startup, with a black background. Any other terminal keeps
+the colors of your theme.
+
+If you set a color scheme in your vimrc, Bartleby uses yours and sets
+nothing. To turn Bartleby's colors off, put `let g:bartleby_tty_colors = 0`
+in your vimrc. To use them on another terminal, run
+`:colorscheme bartleby`.
+
+Spotlight dims to dark gray on these consoles, and its coefficient has no
+effect. Some terminals show bold black as plain black. If the dimmed text
+vanishes, set `g:bartleby_spotlight_conceal_ctermfg` to a color that
+shows, such as `7`.
 
 ## Structure
 

@@ -30,6 +30,7 @@ Development:
 - [Scrive list](#scrive-list)
 - [Focus, Spotlight, and Quill](#focus-spotlight-and-quill)
 - [Spotlight modes](#spotlight-modes)
+- [Consoles with 8 or 16 colors](#consoles-with-8-or-16-colors)
 - [Fountain](#fountain)
 - [Palette and menu](#palette-and-menu)
 - [Session, snapshots, and search](#session-snapshots-and-search)
@@ -328,6 +329,24 @@ let g:bartleby_spotlight_words_remove = {'Adverbs': ['well']}
 With a tagger, all modes except Contractions and Fillers use the
 tagger, so list changes affect only those two.
 
+## Consoles with 8 or 16 colors
+
+On a text console with 8 or 16 colors, such as the Linux virtual
+terminal, Bartleby sets its own colors, with a black background. A
+terminal with more colors keeps the colors of your own theme, and
+Bartleby sets none.
+
+- Bartleby applies its colors at startup, only when you have not
+  chosen a color scheme. Choose one in your vimrc and Bartleby leaves
+  the colors alone. Set `g:bartleby_tty_colors` to `0` to turn this off.
+- `:colorscheme bartleby` applies the colors by hand, on any terminal.
+- The colors set the background option to `dark`. Vim assumes a light
+  background on 16 colors, and its colors for it are hard to read on
+  black.
+- Spotlight dims to dark gray. There is nothing to blend toward with so
+  few colors, so a coefficient has no effect. If dark gray does not show
+  on your console, set `g:bartleby_spotlight_conceal_ctermfg`.
+
 ## Fountain
 
 Screenplay scrives use `.fountain` files. They have their own
@@ -515,9 +534,10 @@ default, so set only the ones you want to change.
 
 | Variable | Default | Description |
 | --- | --- | --- |
-| `g:bartleby_spotlight_default_coefficient` | `0.5` | Dim strength when no mode or coefficient is given |
+| `g:bartleby_tty_colors` | `1` | Apply Bartleby's colors on a console with 8 or 16 colors, when no color scheme is set |
+| `g:bartleby_spotlight_default_coefficient` | `0.5` | Dim strength when no mode or coefficient is given. Not used on 8 or 16 colors |
 | `g:bartleby_spotlight_conceal_guifg` | `''` | GUI color of dimmed text. Empty uses the colorscheme |
-| `g:bartleby_spotlight_conceal_ctermfg` | `''` | Terminal color of dimmed text |
+| `g:bartleby_spotlight_conceal_ctermfg` | `''` | Terminal color of dimmed text. Also for a console with 8 or 16 colors, where Spotlight otherwise dims to dark gray |
 | `g:bartleby_spotlight_bop` | `'^\s*$\n\zs'` | Pattern for the start of a paragraph |
 | `g:bartleby_spotlight_eop` | `'^\s*$'` | Pattern for the end of a paragraph |
 | `g:bartleby_spotlight_paragraph_span` | `0` | Extra paragraphs kept bright around the cursor |
