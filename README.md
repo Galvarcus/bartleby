@@ -113,12 +113,11 @@ git clone https://github.com/Galvarcus/Logger ~/.vim/pack/plugins/start/Logger
 git clone https://github.com/Galvarcus/bartleby ~/.vim/pack/plugins/start/bartleby
 ```
 
-With [Lazy.nvim](https://github.com/folke/lazy.nvim) or a similar
-manager:
+With [Vundle](https://github.com/vundlevim/vundle.vim):
 
-```lua
-{ 'Galvarcus/Logger' },
-{ 'Galvarcus/bartleby' }
+```vim
+Plugin 'Galvarcus/Logger'
+Plugin 'Galvarcus/bartleby'
 ```
 
 Restart Vim, then create a scrive to confirm that Bartleby loaded:
