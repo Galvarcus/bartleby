@@ -12,6 +12,8 @@ screenplays.
 main: 
 [![Generate Vimdoc](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml/badge.svg?branch=main)](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml) 
 [![Tests](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml)
+[![Publish Wiki](https://github.com/Galvarcus/bartleby/actions/workflows/wiki.yml/badge.svg?branch=main)](https://github.com/Galvarcus/bartleby/actions/workflows/wiki.yml)
+
 Development:
 [![Generate Vimdoc](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml/badge.svg?branch=Development)](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml) 
 [![Tests](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml/badge.svg?branch=Development)](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml)
