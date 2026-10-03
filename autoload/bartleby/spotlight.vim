@@ -46,12 +46,14 @@ import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/pos.vim' as P
 import autoload 'bartleby/tagger.vim' as TA
+import autoload 'bartleby/tty.vim' as TY
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
 var spotlightdefaultcoefficient: float = g:bartleby_spotlight_default_coefficient
 var spotlightconcealguifg: string = g:bartleby_spotlight_conceal_guifg
-var spotlightconcealctermfg: string = g:bartleby_spotlight_conceal_ctermfg
+# A terminal color is a number, which a user may write without quotes.
+var spotlightconcealctermfg: string = $'{g:bartleby_spotlight_conceal_ctermfg}'
 var spotlightbop: string = g:bartleby_spotlight_bop
 var spotlighteop: string = g:bartleby_spotlight_eop
 var spotlightparagraphspan: number = g:bartleby_spotlight_paragraph_span
@@ -505,6 +507,15 @@ def Dim(coeff: float): void
       dim = GrayAnsi(float2nr(bgGray * c + fgGray * (1 - c)))
     endif
     execute $'highlight SpotlightDim ctermfg={dim}'
+  elseif TY.IsLowColor()
+    # With 8 or 16 colors there is nothing to blend toward. The background
+    # is black, so the dimmed text is dark gray. A coefficient does not
+    # apply here.
+    if coeff < 0 && spotlightconcealctermfg !=# ''
+      execute $'highlight SpotlightDim ctermfg={spotlightconcealctermfg}'
+    else
+      execute 'highlight SpotlightDim ' .. TY.DimArguments()
+    endif
   else
     throw IN.T("Unsupported terminal.")
   endif

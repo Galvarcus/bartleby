@@ -41,6 +41,7 @@ const COMMANDS: dict<string> = {
   'Compile': 'BartlebyCompile',
   'Take Snapshot': 'BartlebySnapshot',
   'View Snapshots': 'BartlebySnapshots',
+  'Empty Trash': 'BartlebyEmptyTrash',
 }
 
 # Display name to Ex command, for commands that need an argument, asked
@@ -88,6 +89,7 @@ def CommandNames(): dict<string>
     'Compile': IN.T("Compile"),
     'Take Snapshot': IN.T("Take Snapshot"),
     'View Snapshots': IN.T("View Snapshots"),
+    'Empty Trash': IN.T("Empty Trash"),
     'Open Scrive': IN.T("Open Scrive"),
     'New Scrive': IN.T("New Scrive"),
     'Pick Spotlight Mode': IN.T("Pick Spotlight Mode"),

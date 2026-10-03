@@ -38,6 +38,7 @@ import autoload 'bartleby/lexicon.vim' as LE
 import autoload 'bartleby/lexiconpopup.vim' as LP
 import autoload 'bartleby/autosave.vim' as A
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/tty.vim' as TY
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -60,6 +61,7 @@ g:bartleby_focus_linenr = get(g:, 'bartleby_focus_linenr', 0)
 g:bartleby_focus_bg = get(g:, 'bartleby_focus_bg', 'black')
 g:bartleby_focus_fullscreen = get(g:, 'bartleby_focus_fullscreen', false)
 g:bartleby_focus_guifont = get(g:, 'bartleby_focus_guifont', '')
+g:bartleby_tty_colors = get(g:, 'bartleby_tty_colors', true)
 g:bartleby_spotlight_default_coefficient = get(g:, 'bartleby_spotlight_default_coefficient', 0.5)
 g:bartleby_spotlight_conceal_guifg = get(g:, 'bartleby_spotlight_conceal_guifg', '')
 g:bartleby_spotlight_conceal_ctermfg = get(g:, 'bartleby_spotlight_conceal_ctermfg', '')
@@ -256,6 +258,16 @@ def RunCompile(): void
 enddef
 
 command! -bar BartlebyCompile RunCompile()
+
+def EmptyTrash(): void
+  if ST.Get() is null_object
+    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    return
+  endif
+  B.EmptyTrash(ST.Get())
+enddef
+
+command! -bar BartlebyEmptyTrash EmptyTrash()
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
 command! -bar -nargs=? BartlebyDefine LP.LookupCommand(CO.KIND_DICTIONARY, <q-args>)
@@ -280,6 +292,18 @@ endif
 if LE.IsEnabled(CO.KIND_THESAURUS)
   nnoremap <silent> <leader>bt <ScriptCmd>LP.LookupAtCursor(CO.KIND_THESAURUS)<CR>
   xnoremap <silent> <leader>bt <Esc><ScriptCmd>LP.LookupVisual(CO.KIND_THESAURUS)<CR>
+endif
+
+# Colors for a console with 8 or 16 colors, after the vimrc has chosen a
+# color scheme or not. A plugin that loads late has missed VimEnter.
+if v:vim_did_enter
+  TY.AutoApply()
+else
+  augroup bartleby_tty_colors
+    autocmd!
+    # nested, so that the ColorScheme event of the scheme still fires.
+    autocmd VimEnter * ++once ++nested TY.AutoApply()
+  augroup END
 endif
 
 augroup bartleby_quill_auto

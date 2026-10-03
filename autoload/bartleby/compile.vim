@@ -431,8 +431,10 @@ def FlattenSubheadings(lines: list<string>): list<string>
   return lines->mapnew((_, line) => substitute(line, '^#\{2,\}\s*', '', ''))
 enddef
 
-def ConcatenateDocs(project: PO.Project, target: CompileTarget, separator: string): list<string>
-  var rows: list<T.Row> = T.Flatten(project)->copy()->filter((_, row) => row.item.IsDocument()
+export def ConcatenateDocs(project: PO.Project, target: CompileTarget, separator: string): list<string>
+  # Only the folders that compile, so that an included document that was
+  # moved to the Trash is left out.
+  var rows: list<T.Row> = SelectableRows(project)->filter((_, row) => row.item.IsDocument()
     && index(target.includedIds, row.item.id) >= 0)
   var lines: list<string> = []
   for i in range(len(rows))
@@ -856,7 +858,8 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
     if target.format ==# 'PDF'
       args->add('--pdf-engine=xelatex')
       args->add($'--template={BookTemplatePath()}')
-      var hasPart: bool = HasIncludedPart(project.items, target.includedIds)
+      var hasPart: bool = HasIncludedPart(project.items->copy()->filter((_, item) => item.structureRole !=# CO.ROLE_TRASH),
+        target.includedIds)
       args->add($'--top-level-division={hasPart ? "part" : "chapter"}')
       args->add($'--variable=indentparagraphs:{compileindentparagraphs ? "true" : "false"}')
       args += BookNumberStyleArgs('chapter', compilebookchapterstyle)

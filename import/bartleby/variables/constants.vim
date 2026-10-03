@@ -57,6 +57,8 @@ export const ROLE_PART: string = 'part'
 export const ROLE_CHAPTER: string = 'chapter'
 export const ROLE_CHARACTERS: string = 'characters'
 export const ROLE_RESEARCH: string = 'research'
+# The Trash, always the last folder at the top level, see trash.vim.
+export const ROLE_TRASH: string = 'trash'
 export const ROLE_BACK_MATTER: string = 'back-matter'
 export const ROLE_CUSTOM: string = 'custom'
 

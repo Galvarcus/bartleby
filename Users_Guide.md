@@ -15,6 +15,7 @@ Bartleby without losing anything.
 - [Binder](#binder)
 - [Writing](#writing)
 - [Spotlight modes](#spotlight-modes)
+- [Text consoles](#text-consoles)
 - [Structure](#structure)
 - [Dictionary and thesaurus](#dictionary-and-thesaurus)
 - [Document details](#document-details)
@@ -92,19 +93,30 @@ Move with the arrow keys or `j` and `k`. Then:
 | `a` | Add a document |
 | `A` | Add a folder. You can choose Chapter, Part, or a plain folder, depending on the scrive type |
 | `r` | Rename |
-| `dd` | Delete, after a confirmation |
-| `J` / `K` | Move a chapter or part down or up |
+| `dd` | Move to the Trash. In the Trash, delete for good, after a confirmation |
+| `u` | In the Trash, put the item back where it was |
+| `J` / `K` | Move a scene, chapter, or part down or up. A scene at the end of its chapter moves on into the next chapter, or the previous one |
+| `m` | Move the item into another folder, which you pick from a list. Type to filter the list. The item goes to the end of the folder |
 | `>>` / `<<` | Move a chapter into a part, or out of it |
 | `q` | Close the Binder. It opens again with the scrive |
 
-Before Bartleby deletes anything, it asks you to confirm. Press `y` to
-delete, or `n` or `Esc` to keep it. `Enter` keeps it too.
+`dd` moves an item to the **Trash**, the last folder of the Binder.
+Its files stay on disk, so nothing is lost yet. In the Trash, press `u`
+to put the item back where it was. If its folder is gone, Bartleby asks
+where to put it. `m` moves an item out of the Trash to any folder.
+
+To delete for good, press `dd` on an item in the Trash, or on the Trash
+itself to empty it. The command `:BartlebyEmptyTrash` empties it too.
+Bartleby asks you to confirm first. Press `y` to delete, or `n` or
+`Esc` to keep it. `Enter` keeps it too. Deleting for good removes the
+text, its label, status, and synopsis, and its snapshots, and cannot be
+undone.
 
 Five folders are permanent: **Front Matter**, **Manuscript**, **Back
 Matter**, **Characters**, and **Research**. You cannot rename, move, or
-delete them. `dd` on one of them deletes everything inside it, after a
-confirmation, and keeps the empty folder. You can add, move, and
-delete everything that you create inside them.
+delete them. `dd` on one of them moves everything inside it to the
+Trash, after a confirmation, and keeps the empty folder. You can add,
+move, and delete everything that you create inside them.
 
 ## Writing
 
@@ -187,6 +199,23 @@ let g:bartleby_spotlight_tagger = 'spacy'
 With spaCy set, the other modes use it too and become more accurate.
 spaCy does not check a paragraph while you type in it. It checks the
 paragraph again when you press `Esc`.
+
+## Text consoles
+
+A text console with 8 or 16 colors, such as the Linux virtual terminal,
+cannot show the colors of a normal theme. On one, Bartleby sets its own
+colors at startup, with a black background. Any other terminal keeps
+the colors of your theme.
+
+If you set a color scheme in your vimrc, Bartleby uses yours and sets
+nothing. To turn Bartleby's colors off, put `let g:bartleby_tty_colors = 0`
+in your vimrc. To use them on another terminal, run
+`:colorscheme bartleby`.
+
+Spotlight dims to dark gray on these consoles, and its coefficient has no
+effect. Some terminals show bold black as plain black. If the dimmed text
+vanishes, set `g:bartleby_spotlight_conceal_ctermfg` to a color that
+shows, such as `7`.
 
 ## Structure
 
