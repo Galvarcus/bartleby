@@ -1,4 +1,5 @@
 # Localization
+![Bartleby Logo](images/bartleby-logo-346x221.png)
 
 This document describes how to add support for another language of
 writing to Bartleby. Bartleby supports English. Each other language is
