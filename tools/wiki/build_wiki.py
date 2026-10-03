@@ -324,26 +324,34 @@ def page_text(document, body, linker, navigation):
 
 
 def navigation(document, index, linker):
-    """Return the line that leads to the previous, overview, and next page."""
+    """Return the line that leads to the previous page, the overview, and
+    the next page. The overview is index -1, and comes before the first
+    section. A page never links to itself, and the first section, whose
+    previous page is the overview, does not repeat it."""
+    pages = [(document.title, document.root_page)] + [(s.title, s.page) for s in document.sections]
+    position = index + 1
     links = []
-    sections = document.sections
-    if index > 0:
-        links.append(f"[← {sections[index - 1].title}]({linker.page_url(sections[index - 1].page)})")
-    links.append(f"[{document.title}]({linker.page_url(document.root_page)})")
-    if index + 1 < len(sections):
-        links.append(f"[{sections[index + 1].title} →]({linker.page_url(sections[index + 1].page)})")
+    if position > 0:
+        title, page = pages[position - 1]
+        links.append(f"[← {title}]({linker.page_url(page)})")
+    if position > 1:
+        links.append(f"[{document.title}]({linker.page_url(document.root_page)})")
+    if position + 1 < len(pages):
+        title, page = pages[position + 1]
+        links.append(f"[{title} →]({linker.page_url(page)})")
     return " · ".join(links)
 
 
 def sidebar(documents, linker):
-    """Return _Sidebar.md: one collapsible branch per document."""
+    """Return _Sidebar.md: one collapsible branch per document, open at
+    first, as are the branches of the sections inside it."""
     def link(url, text):
         return f'<a href="{html.escape(url)}">{html.escape(text)}</a>'
 
     out = [f"{GENERATED_MARK} {', '.join(d.source for d in documents)}. Edit those files instead. -->",
            "", f'<p>{link(f"/{linker.repo}/wiki", "Home")}</p>', ""]
     for document in documents:
-        out.append("<details>")
+        out.append("<details open>")
         out.append(f"<summary>{link(linker.page_url(document.root_page), document.title)}</summary>")
         out.append("<ul>")
         for section in document.sections:
@@ -351,7 +359,7 @@ def sidebar(documents, linker):
             if not section.headings:
                 out.append(f"<li>{link(url, section.title)}</li>")
                 continue
-            out.append(f"<li><details><summary>{link(url, section.title)}</summary>")
+            out.append(f"<li><details open><summary>{link(url, section.title)}</summary>")
             out.append("<ul>")
             for _, title, anchor in section.headings:
                 out.append(f"<li>{link(linker.page_url(section.page, anchor), title)}</li>")
@@ -372,7 +380,8 @@ def build(source_dir, repo, branch):
     linker = Linker(documents, repo, branch)
     files = {}
     for document in documents:
-        files[f"{document.root_page}.md"] = page_text(document, document.intro, linker, "")
+        files[f"{document.root_page}.md"] = page_text(
+            document, document.intro, linker, navigation(document, -1, linker))
         for index, section in enumerate(document.sections):
             files[f"{section.page}.md"] = page_text(
                 document, section.lines, linker, navigation(document, index, linker))

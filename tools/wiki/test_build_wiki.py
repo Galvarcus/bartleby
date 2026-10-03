@@ -137,11 +137,22 @@ class BuildWikiTest(unittest.TestCase):
         self.assertIn(f'<a href="{WIKI}/Bartleby-User%27s-Guide">Bartleby User&#x27;s Guide</a>', sidebar)
         self.assertIn(f'<a href="{WIKI}/Localization-Messages#rules-for-code">Rules for code</a>', sidebar)
         self.assertLess(sidebar.index(">Bartleby<"), sidebar.index(">Localization<"))
+        # Every branch is open at first.
+        self.assertIn("<details open>", sidebar)
+        self.assertNotIn("<details>", sidebar)
 
     def test_pages_link_to_the_previous_and_next_section(self):
         files = self.build()
         self.assertIn(f"[Setup →]({WIKI}/Bartleby-Setup)", files["Bartleby-Binder.md"])
         self.assertIn(f"[← Binder]({WIKI}/Bartleby-Binder)", files["Bartleby-Setup.md"])
+        self.assertIn(f"[Bartleby]({WIKI}/Bartleby)", files["Bartleby-Setup.md"])
+
+    def test_the_overview_and_the_first_section_link_to_each_other(self):
+        files = self.build()
+        overview = files["Bartleby.md"].splitlines()[-1]
+        first = files["Bartleby-Binder.md"].splitlines()[-1]
+        self.assertEqual(f"[Binder →]({WIKI}/Bartleby-Binder)", overview)
+        self.assertEqual(f"[← Bartleby]({WIKI}/Bartleby) · [Setup →]({WIKI}/Bartleby-Setup)", first)
 
     def test_repeated_page_names_fail(self):
         readme = README + "\n## Binder\n\nAgain.\n"
