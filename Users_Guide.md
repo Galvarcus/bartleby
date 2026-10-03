@@ -1,4 +1,5 @@
 # Bartleby User's Guide
+![Bartleby Logo](images/bartleby-logo-346x221.png)
 
 This guide explains Bartleby for writers. You need to know only how to
 open Vim, type text, and move with the arrow keys. For a compact
