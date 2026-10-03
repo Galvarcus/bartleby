@@ -185,7 +185,8 @@ label color after its title. Long titles wrap.
 | `A` | Add a folder: Chapter or Part where the scrive type allows |
 | `dd` | Delete the item after a confirmation. On a structural folder, clear its contents |
 | `r` | Rename the item |
-| `J` / `K` | Move a Chapter or Part down or up |
+| `J` / `K` | Move the item down or up. A scene at the end of its chapter moves on into the next chapter, or the previous one |
+| `m` | Move the item to another folder, picked from a list, to the end of it |
 | `>>` / `<<` | Indent or outdent the item |
 | `l` | Set the document's label |
 | `s` | Set the document's status |

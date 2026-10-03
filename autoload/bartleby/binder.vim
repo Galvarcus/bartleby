@@ -388,12 +388,75 @@ def Move(delta: number): void
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
+  # At the edge of its folder, a scene moves on into the next or previous
+  # chapter.
   if !MU.MoveWithinSiblings(ctx.project, ctx.row, delta)
-    log.Info(IN.T("this item cannot be reordered here"))
-    return
+    var target: BI.BinderItem = MU.MoveAcrossFolders(ctx.project, ctx.row, delta)
+    if target is null_object
+      log.Info(IN.T("this item cannot be reordered here"))
+      return
+    endif
+    ShowFolder(ctx.project, target)
   endif
   ctx.project.Save()
   Render(ctx.project)
+enddef
+
+# FUNCTION: Ask for a folder and move the item under the cursor to its
+# end. The picker shows each folder with the folders above it, as in
+# Manuscript / Part: 1 / Chapter: 3, because many chapters have the same
+# title.
+def MoveToUnderCursor(): void
+  var ctx: dict<any> = CursorContext()
+  if ctx.project is null_object || ctx.row is null_object
+    return
+  endif
+  var targets: list<list<BI.BinderItem>> = MU.MoveTargets(ctx.project, ctx.row)
+  if empty(targets)
+    log.Info(IN.T("this item cannot be moved to another folder"))
+    return
+  endif
+  var ids: list<string> = []
+  var names: dict<string> = {}
+  var folders: dict<BI.BinderItem> = {}
+  var seen: dict<number> = {}
+  for path in targets
+    var folder: BI.BinderItem = path[-1]
+    var name: string = path->mapnew((_, f) => f.DisplayLabel() .. f.title)->join(' / ')
+    # Two folders with the same path get a number, so each name is unique.
+    seen[name] = get(seen, name, 0) + 1
+    ids->add(folder.id)
+    names[folder.id] = seen[name] == 1 ? name : $'{name} {seen[name]}'
+    folders[folder.id] = folder
+  endfor
+  var project: PO.Project = ctx.project
+  var row: T.Row = ctx.row
+  # The list is as wide as its longest name, so that no path is cut, but
+  # never wider than the screen.
+  var width: number = min([max(values(names)->mapnew((_, name) => strdisplaywidth(name))) + 4,
+    &columns - 4])
+  IP.PromptFilter(IN.T("Move to"), ids, (id: string) => {
+    MU.MoveInto(project, row, folders[id])
+    ShowFolder(project, folders[id])
+    project.Save()
+    Render(project)
+  }, 12, width, names)
+enddef
+
+# FUNCTION: Expand folder and the folders that hold it, so that an item
+# just moved into it shows, with the cursor still on it.
+def ShowFolder(project: PO.Project, folder: BI.BinderItem): void
+  var collapsed: dict<bool> = get(b:, 'bartleby_collapsed', {})
+  var rows: list<T.Row> = T.Flatten(project)
+  var row: T.Row = T.FindRowById(rows, folder.id)
+  while row isnot null_object
+    if has_key(collapsed, row.item.id)
+      remove(collapsed, row.item.id)
+    endif
+    row = row.ownerItem is null_object ? null_object : T.FindRowById(rows, row.ownerItem.id)
+  endwhile
+  b:bartleby_collapsed = collapsed
+  SS.CaptureBinderState(IsOpen(), GetCollapsedIds())
 enddef
 
 def IndentUnderCursor(): void
@@ -472,7 +535,8 @@ def ShowHelp(): void
     ['A', IN.T("New folder (Chapter/Part when applicable)")],
     ['dd', IN.T("Delete item under cursor")],
     ['r', IN.T("Rename item under cursor")],
-    ['J / K', IN.T("Move item down / up")],
+    ['J / K', IN.T("Move item down / up, and a scene into the next chapter")],
+    ['m', IN.T("Move item to another folder")],
     ['>> / <<', IN.T("Indent / outdent item")],
     ['l', IN.T("Set label")],
     ['s', IN.T("Set status")],
@@ -514,6 +578,7 @@ def SetupKeymaps(): void
   nnoremap <buffer> <silent> r <ScriptCmd>RenameUnderCursor()<CR>
   nnoremap <buffer> <silent> J <ScriptCmd>Move(1)<CR>
   nnoremap <buffer> <silent> K <ScriptCmd>Move(-1)<CR>
+  nnoremap <buffer> <silent> m <ScriptCmd>MoveToUnderCursor()<CR>
   nnoremap <buffer> <silent> >> <ScriptCmd>IndentUnderCursor()<CR>
   nnoremap <buffer> <silent> << <ScriptCmd>OutdentUnderCursor()<CR>
   nnoremap <buffer> <silent> l <ScriptCmd>PickLabel()<CR>

@@ -94,7 +94,8 @@ Move with the arrow keys or `j` and `k`. Then:
 | `A` | Add a folder. You can choose Chapter, Part, or a plain folder, depending on the scrive type |
 | `r` | Rename |
 | `dd` | Delete, after a confirmation |
-| `J` / `K` | Move a chapter or part down or up |
+| `J` / `K` | Move a scene, chapter, or part down or up. A scene at the end of its chapter moves on into the next chapter, or the previous one |
+| `m` | Move the item into another folder, which you pick from a list. Type to filter the list. The item goes to the end of the folder |
 | `>>` / `<<` | Move a chapter into a part, or out of it |
 | `q` | Close the Binder. It opens again with the scrive |
 

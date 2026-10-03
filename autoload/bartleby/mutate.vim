@@ -186,6 +186,91 @@ export def MoveWithinSiblings(project: PO.Project, row: T.Row, delta: number): b
   return true
 enddef
 
+# FUNCTION: Return the folders inside item, item included, whose role is
+# role, in reading order.
+def FoldersWithRole(item: BI.BinderItem, role: string): list<BI.BinderItem>
+  var found: list<BI.BinderItem> = []
+  if !item.IsFolder()
+    return found
+  endif
+  if item.structureRole ==# role
+    found->add(item)
+  endif
+  for child in item.children
+    found += FoldersWithRole(child, role)
+  endfor
+  return found
+enddef
+
+# FUNCTION: Move the document of row into the next folder with the role of
+# its own folder, as the first item, when delta is 1, or into the previous
+# one, as the last item, when delta is -1. J and K use it at the edge of a
+# folder. Only folders in the same top level folder count, in reading
+# order, so a scene moves from the last chapter of a Part into the first
+# chapter of the next Part. Returns the folder that the document moved
+# into, or null_object for a folder, an item at the top level, or when
+# there is no such folder.
+export def MoveAcrossFolders(project: PO.Project, row: T.Row, delta: number): BI.BinderItem
+  if row.item.IsFolder() || row.ownerItem is null_object
+    return null_object
+  endif
+  var owner: BI.BinderItem = row.ownerItem
+  for top in project.items
+    var folders: list<BI.BinderItem> = FoldersWithRole(top, owner.structureRole)
+    var idx: number = indexof(folders, (_, folder) => folder.id ==# owner.id)
+    if idx < 0
+      continue
+    endif
+    var targetIdx: number = idx + delta
+    if targetIdx < 0 || targetIdx >= len(folders)
+      return null_object
+    endif
+    var target: BI.BinderItem = folders[targetIdx]
+    owner.RemoveChildAt(owner.IndexOfChild(row.item.id))
+    if delta > 0
+      target.InsertChildAt(0, row.item)
+    else
+      target.AddChild(row.item)
+    endif
+    return target
+  endfor
+  return null_object
+enddef
+
+# FUNCTION: Return the folders that the item of row may move into with
+# MoveInto, each as the list of folders from the top level down to it.
+# The folder that holds the item, the item, and the folders inside it are
+# left out, and so is each folder whose role rules refuse the item. A
+# structural folder cannot move, so it gets an empty list.
+export def MoveTargets(project: PO.Project, row: T.Row): list<list<BI.BinderItem>>
+  var item: BI.BinderItem = row.item
+  var targets: list<list<BI.BinderItem>> = []
+  if IsImmutableFolder(item)
+    return targets
+  endif
+  var ownerId: string = row.ownerItem is null_object ? '' : row.ownerItem.id
+  def Walk(folders: list<BI.BinderItem>, path: list<BI.BinderItem>): void
+    for folder in folders
+      if !folder.IsFolder() || folder.id ==# item.id
+        continue
+      endif
+      var here: list<BI.BinderItem> = path + [folder]
+      if folder.id !=# ownerId && RoleAllowedUnder(item.structureRole, folder)
+        targets->add(here)
+      endif
+      Walk(folder.children, here)
+    endfor
+  enddef
+  Walk(project.items, [])
+  return targets
+enddef
+
+# FUNCTION: Move the item of row to the end of the folder target.
+export def MoveInto(project: PO.Project, row: T.Row, target: BI.BinderItem): void
+  Remove(project, row)
+  target.AddChild(row.item)
+enddef
+
 # FUNCTION: Move the item of row out of its owner folder, to right after
 # that folder. Returns false when row is already at the top level.
 export def Outdent(project: PO.Project, rows: list<T.Row>, row: T.Row): bool

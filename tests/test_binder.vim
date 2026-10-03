@@ -127,6 +127,60 @@ def Test_collapsed_folders_survive_closing_the_binder(): void
   execute 'silent! bwipe! ' .. CO.BINDER_BUF
 enddef
 
+# FUNCTION: Return the id of item, or an empty string for null_object.
+def IdOf(item: any): string
+  return item is null_object ? '' : item.id
+enddef
+
+# FUNCTION: Return the id of the item on the cursor line of the Binder,
+# or an empty string on the title line or below the tree.
+def IdAtCursor(): string
+  var idx: number = line('.') - 2
+  return idx >= 0 && idx < len(b:bartleby_rows) ? b:bartleby_rows[idx].item.id : ''
+enddef
+
+# FUNCTION: J on the last scene of a chapter moves it to the top of the
+# next chapter, which opens if it was collapsed, and the cursor follows.
+def Test_j_moves_a_scene_into_a_collapsed_next_chapter(): void
+  var fx = OpenBinderWithContent()
+  var chapter1 = fx.project.ChildAt(1).ChildAt(0)
+  var chapter2 = fx.project.ChildAt(1).ChildAt(1)
+  var scene = chapter1.ChildAt(0)
+  b:bartleby_collapsed = {[chapter2.id]: true}
+  cursor(search('Scene 1', 'n'), 1)
+  feedkeys('J', 'xt')
+  assert_equal(scene.id, IdOf(chapter2.ChildAt(0)))
+  assert_false(has_key(b:bartleby_collapsed, chapter2.id))
+  assert_equal(scene.id, IdAtCursor())
+  CloseBinderAndCleanup(fx)
+  execute 'silent! bwipe! ' .. CO.BINDER_BUF
+enddef
+
+# FUNCTION: m opens a picker of folders. Typing 2 leaves the second
+# chapter, and Enter moves the scene to its end.
+def Test_m_moves_a_scene_to_the_chosen_folder(): void
+  var fx = OpenBinderWithContent()
+  var chapter1 = fx.project.ChildAt(1).ChildAt(0)
+  var chapter2 = fx.project.ChildAt(1).ChildAt(1)
+  var scene = chapter1.ChildAt(0)
+  cursor(search('Scene 1', 'n'), 1)
+  # Without the mapping, m would wait for the name of a mark and stop the
+  # tests, so check it first.
+  if maparg('m', 'n') ==# ''
+    assert_report('m is not mapped in the Binder')
+  else
+    feedkeys("m2\<CR>", 'xt')
+  endif
+  assert_equal(0, chapter1.ChildCount())
+  assert_equal(2, chapter2.ChildCount())
+  if chapter2.ChildCount() == 2
+    assert_equal(scene.id, chapter2.ChildAt(1).id)
+  endif
+  assert_equal(scene.id, IdAtCursor())
+  CloseBinderAndCleanup(fx)
+  execute 'silent! bwipe! ' .. CO.BINDER_BUF
+enddef
+
 export def RunAll(): void
   Test_show_renders_project_name_as_title_line()
   Test_show_renders_the_tree_starting_at_line_2()
@@ -135,4 +189,6 @@ export def RunAll(): void
   Test_tab_on_the_title_line_does_nothing()
   Test_cursor_stays_on_the_same_item_after_a_collapse_rerender()
   Test_collapsed_folders_survive_closing_the_binder()
+  Test_j_moves_a_scene_into_a_collapsed_next_chapter()
+  Test_m_moves_a_scene_to_the_chosen_folder()
 enddef
