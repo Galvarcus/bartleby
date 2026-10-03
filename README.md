@@ -1,5 +1,5 @@
 # Bartleby
-
+![Bartleby Banner](images/bartleby.png)
 A structured writing environment for Vim. It provides a binder, a
 corkboard, an outliner, and a compile pipeline for long-form prose and
 screenplays.
