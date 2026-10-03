@@ -11,11 +11,12 @@ import './fixtures.vim' as FI
 def Test_flatten_produces_all_rows_in_depth_first_order(): void
   var project = FI.BuildProject()
   var rows = T.Flatten(project)
-  # 5 top-level folders, 2 chapters, and 2 scenes.
-  assert_equal(9, len(rows))
+  # The five structural folders, two chapters with a scene each, and the
+  # Trash, which every project has.
+  assert_equal(10, len(rows))
   var titles = rows->mapnew((_, r) => r.item.title)
   assert_equal(['Front Matter', 'Manuscript', '1', 'Scene 1', '2', 'Scene 1',
-    'Back Matter', 'Characters', 'Research'], titles)
+    'Back Matter', 'Characters', 'Research', 'Trash'], titles)
 enddef
 
 def Test_flatten_assigns_correct_depth(): void
@@ -23,9 +24,9 @@ def Test_flatten_assigns_correct_depth(): void
   var rows = T.Flatten(project)
   var depths = rows->mapnew((_, r) => r.depth)
   # Depths in tree order: Front Matter 0, Manuscript 0, Chapter 1 1, its
-  # scene 2, Chapter 2 1, its scene 2, Back Matter 0, Characters 0, and
-  # Research 0.
-  assert_equal([0, 0, 1, 2, 1, 2, 0, 0, 0], depths)
+  # scene 2, Chapter 2 1, its scene 2, Back Matter 0, Characters 0,
+  # Research 0, and the Trash 0.
+  assert_equal([0, 0, 1, 2, 1, 2, 0, 0, 0, 0], depths)
 enddef
 
 def Test_flatten_assigns_correct_owner(): void
@@ -45,7 +46,7 @@ def Test_flatten_skips_children_of_a_collapsed_folder(): void
   var manuscriptId = project.ChildAt(1).id
   var rows = T.Flatten(project, {[manuscriptId]: true})
   # The Manuscript row still shows. Its 2 chapters and their scenes do not.
-  assert_equal(5, len(rows))
+  assert_equal(6, len(rows))
   var titles = rows->mapnew((_, r) => r.item.title)
   assert_equal(-1, index(titles, '1'))
   assert_equal(-1, index(titles, '2'))
@@ -59,7 +60,7 @@ def Test_flatten_nested_collapse_hides_grandchildren_too(): void
   var rows = T.Flatten(project, {[chapter1Id]: true})
   # Chapter 1 still shows, and its scene does not. Chapter 2 and its scene
   # do not change.
-  assert_equal(8, len(rows))
+  assert_equal(9, len(rows))
   var chapter1Row = rows->copy()->filter((_, r) => r.item.id ==# chapter1Id)[0]
   assert_equal(0, len(rows->copy()->filter((_, r) => r.ownerItem isnot null_object
     && r.ownerItem.id ==# chapter1Id)))

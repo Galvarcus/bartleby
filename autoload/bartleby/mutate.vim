@@ -105,6 +105,7 @@ export def IsImmutableFolder(item: BI.BinderItem): bool
     || item.structureRole ==# CO.ROLE_BACK_MATTER
     || item.structureRole ==# CO.ROLE_CHARACTERS
     || item.structureRole ==# CO.ROLE_RESEARCH
+    || item.structureRole ==# CO.ROLE_TRASH
 enddef
 
 # FUNCTION: Return true when an item with role may be a child of parent,
@@ -122,7 +123,7 @@ def RoleAllowedUnder(role: string, parent: BI.BinderItem): bool
   endif
   if role ==# CO.ROLE_FRONT_MATTER || role ==# CO.ROLE_MANUSCRIPT
       || role ==# CO.ROLE_BACK_MATTER || role ==# CO.ROLE_CHARACTERS
-      || role ==# CO.ROLE_RESEARCH
+      || role ==# CO.ROLE_RESEARCH || role ==# CO.ROLE_TRASH
     return parent is null_object
   endif
   return true
@@ -180,6 +181,7 @@ export def MoveWithinSiblings(project: PO.Project, row: T.Row, delta: number): b
   var idx: number = owner.IndexOfChild(row.item.id)
   var target: number = idx + delta
   if target < 0 || target >= owner.ChildCount()
+      || owner.ChildAt(target).structureRole ==# CO.ROLE_TRASH
     return false
   endif
   owner.SwapChildren(idx, target)
@@ -216,6 +218,10 @@ export def MoveAcrossFolders(project: PO.Project, row: T.Row, delta: number): BI
   endif
   var owner: BI.BinderItem = row.ownerItem
   for top in project.items
+    # Scenes in the Trash wait there, see trash.vim.
+    if top.structureRole ==# CO.ROLE_TRASH
+      continue
+    endif
     var folders: list<BI.BinderItem> = FoldersWithRole(top, owner.structureRole)
     var idx: number = indexof(folders, (_, folder) => folder.id ==# owner.id)
     if idx < 0
@@ -251,7 +257,8 @@ export def MoveTargets(project: PO.Project, row: T.Row): list<list<BI.BinderItem
   var ownerId: string = row.ownerItem is null_object ? '' : row.ownerItem.id
   def Walk(folders: list<BI.BinderItem>, path: list<BI.BinderItem>): void
     for folder in folders
-      if !folder.IsFolder() || folder.id ==# item.id
+      # The Trash takes items only through dd.
+      if !folder.IsFolder() || folder.id ==# item.id || folder.structureRole ==# CO.ROLE_TRASH
         continue
       endif
       var here: list<BI.BinderItem> = path + [folder]
@@ -269,6 +276,8 @@ enddef
 export def MoveInto(project: PO.Project, row: T.Row, target: BI.BinderItem): void
   Remove(project, row)
   target.AddChild(row.item)
+  # An item moved out of the Trash is restored.
+  row.item.ClearTrashOrigin()
 enddef
 
 # FUNCTION: Move the item of row out of its owner folder, to right after
@@ -297,7 +306,9 @@ export def Indent(project: PO.Project, row: T.Row): bool
     return false
   endif
   var sibling: BI.BinderItem = owner.ChildAt(siblingIdx)
-  if !sibling.IsFolder() || !RoleAllowedUnder(row.item.structureRole, sibling)
+  # The Trash takes items only through dd, see trash.vim.
+  if !sibling.IsFolder() || sibling.structureRole ==# CO.ROLE_TRASH
+      || !RoleAllowedUnder(row.item.structureRole, sibling)
     return false
   endif
   sibling.AddChild(row.item)

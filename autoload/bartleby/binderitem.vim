@@ -70,6 +70,11 @@ export class BinderItem implements ItemContainer
   var relPath: string = ''
   # Folders only.
   var children: list<BinderItem> = []
+  # Where an item directly in the Trash came from, for Restore in
+  # trash.vim: the id of its folder, empty for the top level, and its index
+  # there. trashIndex is -1 for every other item.
+  var trashOrigin: string = ''
+  var trashIndex: number = -1
 
   static def NewFolder(title: string, role: string = CO.ROLE_NONE): BinderItem
     var item: BinderItem = BinderItem.new()
@@ -87,6 +92,19 @@ export class BinderItem implements ItemContainer
     item.kind = CO.KIND_DOCUMENT
     item.relPath = relPath
     return item
+  enddef
+
+  # METHOD: Remember where an item in the Trash came from: the id of its
+  # folder, empty for the top level, and its index there.
+  def MarkTrashed(origin: string, index: number): void
+    this.trashOrigin = origin
+    this.trashIndex = index
+  enddef
+
+  # METHOD: Forget where the item came from, once it leaves the Trash.
+  def ClearTrashOrigin(): void
+    this.trashOrigin = ''
+    this.trashIndex = -1
   enddef
 
   # METHOD: Replace all children of this folder. A var field can be written
@@ -195,6 +213,8 @@ export class BinderItem implements ItemContainer
     item.kind = get(src, 'kind', CO.KIND_FOLDER)
     item.structureRole = get(src, 'structureRole', CO.ROLE_NONE)
     item.relPath = get(src, 'relPath', '')
+    item.trashOrigin = get(src, 'trashOrigin', '')
+    item.trashIndex = get(src, 'trashIndex', -1)
     var rawChildren: list<dict<any>> = get(src, 'children', [])
     item.children = rawChildren->mapnew((_, c) => BinderItem.FromDict(c))
     return item
@@ -207,6 +227,10 @@ export class BinderItem implements ItemContainer
     else
       result.structureRole = this.structureRole
       result.children = this.children->mapnew((_, c) => c.ToDict())
+    endif
+    if this.trashIndex >= 0
+      result.trashOrigin = this.trashOrigin
+      result.trashIndex = this.trashIndex
     endif
     return result
   enddef

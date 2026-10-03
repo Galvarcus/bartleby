@@ -181,6 +181,71 @@ def Test_m_moves_a_scene_to_the_chosen_folder(): void
   execute 'silent! bwipe! ' .. CO.BINDER_BUF
 enddef
 
+# FUNCTION: Return the id of the first item in the Trash, or an empty
+# string when it is empty.
+def FirstInTrash(project: any): string
+  var trash = project.TrashFolder()
+  return trash.ChildCount() == 0 ? '' : trash.ChildAt(0).id
+enddef
+
+# FUNCTION: dd moves a scene into the Trash without a question, and u in
+# the Trash puts it back where it was.
+def Test_dd_and_u_move_a_scene_to_the_trash_and_back(): void
+  var fx = OpenBinderWithContent()
+  var chapter1 = fx.project.ChildAt(1).ChildAt(0)
+  cursor(search('Scene 1', 'n'), 1)
+  feedkeys('dd', 'xt')
+  assert_equal(0, chapter1.ChildCount())
+  assert_equal(fx.scene1.id, FirstInTrash(fx.project))
+  # The cursor stays on the scene, now in the Trash.
+  assert_equal(fx.scene1.id, IdAtCursor())
+  feedkeys('u', 'xt')
+  assert_equal(fx.scene1.id, chapter1.ChildCount() == 0 ? '' : chapter1.ChildAt(0).id)
+  assert_equal('', FirstInTrash(fx.project))
+  assert_true(filereadable(fx.scene1.AbsPath(fx.project.BinderRoot())))
+  CloseBinderAndCleanup(fx)
+  execute 'silent! bwipe! ' .. CO.BINDER_BUF
+enddef
+
+# FUNCTION: dd in the Trash asks first. n keeps the scene and its file, and
+# y deletes them for good.
+def Test_dd_in_the_trash_deletes_for_good_only_after_yes(): void
+  var fx = OpenBinderWithContent()
+  var path: string = fx.scene1.AbsPath(fx.project.BinderRoot())
+  cursor(search('Scene 1', 'n'), 1)
+  feedkeys('dd', 'xt')
+  feedkeys('dd', 'xt')
+  feedkeys('n', 'xt')
+  assert_equal(fx.scene1.id, FirstInTrash(fx.project))
+  assert_true(filereadable(path))
+  feedkeys('dd', 'xt')
+  feedkeys('y', 'xt')
+  assert_equal('', FirstInTrash(fx.project))
+  assert_false(filereadable(path))
+  CloseBinderAndCleanup(fx)
+  execute 'silent! bwipe! ' .. CO.BINDER_BUF
+enddef
+
+# FUNCTION: dd on the Trash itself empties it, after a yes.
+def Test_dd_on_the_trash_empties_it(): void
+  var fx = OpenBinderWithContent()
+  var paths: list<string> = [fx.scene1, fx.scene2]->mapnew((_, s) => s.AbsPath(fx.project.BinderRoot()))
+  # From the top each time, so that the search finds a scene in a chapter,
+  # not the one already in the Trash.
+  for _ in range(2)
+    cursor(1, 1)
+    cursor(search('Scene 1', 'n'), 1)
+    feedkeys('dd', 'xt')
+  endfor
+  cursor(search('Trash/', 'n'), 1)
+  feedkeys('dd', 'xt')
+  feedkeys('y', 'xt')
+  assert_equal('', FirstInTrash(fx.project))
+  assert_equal([0, 0], paths->mapnew((_, p) => filereadable(p)))
+  CloseBinderAndCleanup(fx)
+  execute 'silent! bwipe! ' .. CO.BINDER_BUF
+enddef
+
 export def RunAll(): void
   Test_show_renders_project_name_as_title_line()
   Test_show_renders_the_tree_starting_at_line_2()
@@ -191,4 +256,7 @@ export def RunAll(): void
   Test_collapsed_folders_survive_closing_the_binder()
   Test_j_moves_a_scene_into_a_collapsed_next_chapter()
   Test_m_moves_a_scene_to_the_chosen_folder()
+  Test_dd_and_u_move_a_scene_to_the_trash_and_back()
+  Test_dd_in_the_trash_deletes_for_good_only_after_yes()
+  Test_dd_on_the_trash_empties_it()
 enddef

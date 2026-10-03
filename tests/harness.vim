@@ -49,6 +49,7 @@ import './test_i18n.vim' as TIN
 import './test_profile.vim' as TPR
 import './test_spotlight_pos.vim' as TSP
 import './test_tty.vim' as TTY
+import './test_trash.vim' as TTR
 import './test_inputpopup.vim' as TI
 import './test_dialog_popup.vim' as TDP
 import './test_outliner.vim' as TO
@@ -72,6 +73,7 @@ var suites: list<func(): void> = [
   TPR.RunAll,
   TSP.RunAll,
   TTY.RunAll,
+  TTR.RunAll,
   TI.RunAll,
   TDP.RunAll,
   TO.RunAll,

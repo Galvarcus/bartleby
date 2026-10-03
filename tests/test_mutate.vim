@@ -38,7 +38,7 @@ def Test_indent_refused_on_an_immutable_folder(): void
   var backMatterRow = T.FindRowById(rows, project.ChildAt(2).id)
   assert_false(MU.Indent(project, backMatterRow))
   # Confirm that nothing moved.
-  assert_equal(5, project.ChildCount())
+  assert_equal(6, project.ChildCount())
 enddef
 
 def Test_indent_allowed_for_a_chapter_into_a_preceding_chapter(): void
@@ -84,7 +84,7 @@ def Test_remove_deletes_a_root_level_item(): void
   var rows = T.Flatten(project)
   var researchRow = T.FindRowById(rows, project.ChildAt(4).id)
   MU.Remove(project, researchRow)
-  assert_equal(4, project.ChildCount())
+  assert_equal(5, project.ChildCount())
 enddef
 
 def Test_remove_deletes_a_nested_item_from_its_owner(): void
@@ -104,7 +104,7 @@ def Test_clear_children_empties_a_folder_without_removing_it(): void
   MU.ClearChildren(manuscript)
   assert_equal(0, manuscript.ChildCount())
   # The folder itself is not touched: still there, the same object.
-  assert_equal(5, project.ChildCount())
+  assert_equal(6, project.ChildCount())
   assert_equal(manuscript.id, project.ChildAt(1).id)
 enddef
 

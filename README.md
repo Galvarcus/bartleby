@@ -165,10 +165,17 @@ metadata file, `<name>.meta.json`.
 
 **Structural folders** - Front Matter, Manuscript, Back Matter,
 Characters, and Research. Every scrive has them, and compile uses
-them. You cannot rename, delete, or move them. `dd` on one clears its
-contents after a confirmation. Chapter and Part folders inside
-Manuscript are also structural, but you can add, move, and delete
-them.
+them. You cannot rename, delete, or move them. `dd` on one moves its
+contents to the Trash, after a confirmation. Chapter and Part folders
+inside Manuscript are also structural, but you can add, move, and
+delete them.
+
+**Trash** - the last folder of every Binder. `dd` moves an item into
+it, and its files stay on disk. In the Trash, `u` puts an item back
+where it was, and `m` moves it anywhere else. `dd` on an item in the
+Trash deletes it and its files for good, and `dd` on the Trash itself
+empties it, both after a confirmation. The Trash shows only what is
+still on disk, and compile and search leave it out.
 
 ## Binder
 
@@ -183,7 +190,8 @@ label color after its title. Long titles wrap.
 | `<Tab>` | Expand or collapse the folder |
 | `a` | Add a document |
 | `A` | Add a folder: Chapter or Part where the scrive type allows |
-| `dd` | Delete the item after a confirmation. On a structural folder, clear its contents |
+| `dd` | Move the item to the Trash. On a structural folder, move its contents there, after a confirmation. In the Trash, delete for good, after a confirmation |
+| `u` | Restore the item from the Trash to where it was |
 | `r` | Rename the item |
 | `J` / `K` | Move the item down or up. A scene at the end of its chapter moves on into the next chapter, or the previous one |
 | `m` | Move the item to another folder, picked from a list, to the end of it |
@@ -477,6 +485,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyProfile` | Edit your author profile |
 | `:BartlebyProjectInfo` | Edit the profile for this scrive only |
 | `:BartlebyCompile` | Compile the scrive |
+| `:BartlebyEmptyTrash` | Delete everything in the Trash for good, after a confirmation |
 | `:BartlebyCommands` | Open the command palette |
 | `:BartlebyMenu` | Open the command menu |
 | `:BartlebyDefine [word]` | Define the word under the cursor or `word` |

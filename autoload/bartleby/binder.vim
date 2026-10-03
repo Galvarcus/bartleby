@@ -20,6 +20,7 @@ import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/trash.vim' as TR
 import autoload 'bartleby/mutate.vim' as MU
 import autoload 'bartleby/templates.vim' as TE
 import autoload 'bartleby/corkboard.vim' as CR
@@ -231,6 +232,9 @@ enddef
 
 def AddDocument(): void
   var ctx: dict<any> = CursorContext()
+  if RefusedInTrash(ctx)
+    return
+  endif
   if ctx.project is null_object
     return
   endif
@@ -261,6 +265,9 @@ enddef
 
 def AddFolder(): void
   var ctx: dict<any> = CursorContext()
+  if RefusedInTrash(ctx)
+    return
+  endif
   if ctx.project is null_object
     return
   endif
@@ -330,37 +337,143 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
   Render(ctx.project)
 enddef
 
+# FUNCTION: dd. Outside the Trash, move the item into it, without asking,
+# because u brings it back. An item with no file on disk is removed at
+# once, since the Trash shows only what is on disk. On a structural
+# folder, move all its contents there, after a confirmation. In the
+# Trash, delete the item and its files for good, and on the Trash itself,
+# empty it, both after a confirmation.
 def DeleteUnderCursor(): void
   var ctx: dict<any> = CursorContext()
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
-  var item: BI.BinderItem = ctx.row.item
+  var project: PO.Project = ctx.project
+  var row: T.Row = ctx.row
+  var item: BI.BinderItem = row.item
+
+  if item.structureRole ==# CO.ROLE_TRASH
+    EmptyTrash(project)
+    return
+  endif
+
+  if TR.IsInTrash(project, item)
+    DP.Confirm(printf(IN.T("Delete \"%s\" and its files for good? This cannot be undone."), item.title), () => {
+      ReportFailed(TR.DeleteForever(project, row))
+      log.Info(printf(IN.T("deleted \"%s\" for good"), item.title))
+      project.Save()
+      Render(project)
+    })
+    return
+  endif
 
   if MU.IsImmutableFolder(item)
     if item.ChildCount() == 0
       log.Info(printf(IN.T("\"%s\" is already empty"), item.title))
       return
     endif
-    var clearPrompt: string = printf(IN.T("Clear all contents of \"%s\"? The folder itself will remain."), item.title)
+    var clearPrompt: string = printf(IN.T("Move all contents of \"%s\" to the Trash? The folder itself will remain."), item.title)
     DP.Confirm(clearPrompt, () => {
-      MU.ClearChildren(item)
-      log.Info(printf(IN.T("cleared \"%s\" - any files on disk were left untouched"), item.title))
-      ctx.project.Save()
-      Render(ctx.project)
+      TR.MoveAllToTrash(project, item)
+      log.Info(printf(IN.T("moved the contents of \"%s\" to the Trash"), item.title))
+      project.Save()
+      Render(project)
     })
     return
   endif
 
-  var prompt: string = item.IsFolder() && item.ChildCount() > 0
-    ? printf(IN.T("Delete \"%s\" and everything inside it?"), item.title)
-    : printf(IN.T("Delete \"%s\"?"), item.title)
-  DP.Confirm(prompt, () => {
-    MU.Remove(ctx.project, ctx.row)
-    log.Info(IN.T("removed from binder - any files on disk were left untouched"))
-    ctx.project.Save()
-    Render(ctx.project)
+  if TR.HasFilesOnDisk(project, item)
+    TR.MoveToTrash(project, row)
+    log.Info(printf(IN.T("moved \"%s\" to the Trash"), item.title))
+  else
+    MU.Remove(project, row)
+    log.Info(printf(IN.T("removed \"%s\", which had no files on disk"), item.title))
+  endif
+  project.Save()
+  Render(project)
+enddef
+
+# FUNCTION: u. Put the item, which must be directly in the Trash, back
+# where it was. When its folder is gone, ask where, with the picker of m.
+def RestoreUnderCursor(): void
+  var ctx: dict<any> = CursorContext()
+  if ctx.project is null_object || ctx.row is null_object
+    return
+  endif
+  var project: PO.Project = ctx.project
+  var item: BI.BinderItem = ctx.row.item
+  if !TR.IsInTrash(project, item) || item.structureRole ==# CO.ROLE_TRASH
+    log.Info(IN.T("u restores an item from the Trash"))
+    return
+  endif
+  if ctx.row.ownerItem.structureRole !=# CO.ROLE_TRASH
+    log.Info(IN.T("restore the folder that holds this item, or move it out with m"))
+    return
+  endif
+  if TR.Restore(project, ctx.row)
+    ShowItem(project, item)
+    project.Save()
+    Render(project)
+    log.Info(printf(IN.T("restored \"%s\""), item.title))
+  else
+    log.Info(printf(IN.T("the folder of \"%s\" is gone. Choose where to restore it"), item.title))
+    MoveToUnderCursor()
+  endif
+enddef
+
+# FUNCTION: Ask, then delete everything in the Trash for good. The
+# command BartlebyEmptyTrash and dd on the Trash use it.
+export def EmptyTrash(project: PO.Project): void
+  var trash: BI.BinderItem = project.TrashFolder()
+  var count: number = trash is null_object ? 0 : trash.ChildCount()
+  if count == 0
+    log.Info(IN.T("the Trash is empty"))
+    return
+  endif
+  DP.Confirm(printf(IN.N("Delete the %d item in the Trash and its files for good? This cannot be undone.",
+      "Delete the %d items in the Trash and their files for good? This cannot be undone.", count), count), () => {
+    ReportFailed(TR.EmptyTrash(project))
+    log.Info(IN.T("emptied the Trash"))
+    project.Save()
+    RenderIfOpen(project)
   })
+enddef
+
+# FUNCTION: Warn about the paths that could not be deleted, if any.
+def ReportFailed(failed: list<string>): void
+  if !empty(failed)
+    log.Warn(printf(IN.T("could not delete: %s"), join(failed, ', ')))
+  endif
+enddef
+
+# FUNCTION: Show the Binder again, from any window, when it is open.
+def RenderIfOpen(project: PO.Project): void
+  var winid: number = bufwinid(CO.BINDER_BUF)
+  if winid == -1
+    return
+  endif
+  var current: number = win_getid()
+  win_gotoid(winid)
+  Render(project)
+  win_gotoid(current)
+enddef
+
+# FUNCTION: Expand the folders that hold item, so that it shows.
+def ShowItem(project: PO.Project, item: BI.BinderItem): void
+  var row: T.Row = T.FindRowById(T.Flatten(project), item.id)
+  if row isnot null_object && row.ownerItem isnot null_object
+    ShowFolder(project, row.ownerItem)
+  endif
+enddef
+
+# FUNCTION: Return true, with a message, when the item under the cursor is
+# the Trash or in it, where only u, m, and dd act.
+def RefusedInTrash(ctx: dict<any>): bool
+  if ctx.project is null_object || ctx.row is null_object || !TR.IsInTrash(ctx.project, ctx.row.item)
+    return false
+  endif
+  log.Info(IN.T("in the Trash, u restores, m moves out, and dd deletes for good"))
+  return true
 enddef
 
 def RenameUnderCursor(): void
@@ -385,6 +498,9 @@ enddef
 
 def Move(delta: number): void
   var ctx: dict<any> = CursorContext()
+  if RefusedInTrash(ctx)
+    return
+  endif
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
@@ -461,6 +577,9 @@ enddef
 
 def IndentUnderCursor(): void
   var ctx: dict<any> = CursorContext()
+  if RefusedInTrash(ctx)
+    return
+  endif
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
@@ -474,6 +593,9 @@ enddef
 
 def OutdentUnderCursor(): void
   var ctx: dict<any> = CursorContext()
+  if RefusedInTrash(ctx)
+    return
+  endif
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
@@ -533,7 +655,8 @@ def ShowHelp(): void
     ['<Tab>', IN.T("Toggle folder collapse")],
     ['a', IN.T("New document")],
     ['A', IN.T("New folder (Chapter/Part when applicable)")],
-    ['dd', IN.T("Delete item under cursor")],
+    ['dd', IN.T("Move item to the Trash, or in the Trash delete it for good")],
+    ['u', IN.T("Restore item from the Trash")],
     ['r', IN.T("Rename item under cursor")],
     ['J / K', IN.T("Move item down / up, and a scene into the next chapter")],
     ['m', IN.T("Move item to another folder")],
@@ -575,6 +698,7 @@ def SetupKeymaps(): void
   nnoremap <buffer> <silent> a <ScriptCmd>AddDocument()<CR>
   nnoremap <buffer> <silent> A <ScriptCmd>AddFolder()<CR>
   nnoremap <buffer> <silent> dd <ScriptCmd>DeleteUnderCursor()<CR>
+  nnoremap <buffer> <silent> u <ScriptCmd>RestoreUnderCursor()<CR>
   nnoremap <buffer> <silent> r <ScriptCmd>RenameUnderCursor()<CR>
   nnoremap <buffer> <silent> J <ScriptCmd>Move(1)<CR>
   nnoremap <buffer> <silent> K <ScriptCmd>Move(-1)<CR>
@@ -597,6 +721,10 @@ enddef
 export def Show(project: PO.Project): void
   var winNr: number = FindOrCreateWindow()
   execute ':' .. winNr .. 'wincmd w'
+  # Drop what was deleted from the Trash outside Bartleby.
+  if TR.Prune(project)
+    project.Save()
+  endif
   Render(project)
   SetupKeymaps()
 enddef

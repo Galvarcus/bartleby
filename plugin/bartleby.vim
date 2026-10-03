@@ -258,6 +258,16 @@ def RunCompile(): void
 enddef
 
 command! -bar BartlebyCompile RunCompile()
+
+def EmptyTrash(): void
+  if ST.Get() is null_object
+    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    return
+  endif
+  B.EmptyTrash(ST.Get())
+enddef
+
+command! -bar BartlebyEmptyTrash EmptyTrash()
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
 command! -bar -nargs=? BartlebyDefine LP.LookupCommand(CO.KIND_DICTIONARY, <q-args>)

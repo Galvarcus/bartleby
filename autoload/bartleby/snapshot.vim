@@ -67,7 +67,7 @@ export class Snapshot
   enddef
 endclass
 
-def SnapshotDir(project: PO.Project, doc: BI.BinderItem): string
+export def SnapshotDir(project: PO.Project, doc: BI.BinderItem): string
   return $'{project.scriveDir}/snapshots/{doc.id}'
 enddef
 

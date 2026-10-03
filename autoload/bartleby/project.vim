@@ -57,17 +57,22 @@ export class Project implements BI.ItemContainer
   # after InitNew and before the first Save, for the same reason as InitNew.
   def SeedTree(newItems: list<BI.BinderItem>): void
     this.items = newItems
+    this.EnsureTrash()
   enddef
 
-  # METHOD: Add a top-level item. This and the next methods implement
-  # ItemContainer, see binderitem.vim, for the top-level items, which have
-  # no owning folder.
+  # METHOD: Add a top-level item, at the end but before the Trash, which
+  # stays last. This and the next methods implement ItemContainer, see
+  # binderitem.vim, for the top-level items, which have no owning folder.
   def AddChild(child: BI.BinderItem): void
-    this.items->add(child)
+    this.InsertChildAt(len(this.items), child)
   enddef
 
+  # METHOD: Insert child at idx, but never after the Trash.
   def InsertChildAt(idx: number, child: BI.BinderItem): void
-    this.items->insert(child, idx)
+    var trashIdx: number = indexof(this.items, (_, item) => item.structureRole ==# CO.ROLE_TRASH)
+    var at: number = trashIdx >= 0 && child.structureRole !=# CO.ROLE_TRASH
+      ? min([idx, trashIdx]) : idx
+    this.items->insert(child, at)
   enddef
 
   def RemoveChildAt(idx: number): void
@@ -122,15 +127,41 @@ export class Project implements BI.ItemContainer
     this.projectType = get(data, 'projectType', CO.TYPE_NOVEL)
     var rawItems: list<dict<any>> = get(data, 'items', [])
     this.items = rawItems->mapnew((_, i) => BI.BinderItem.FromDict(i))
+    this.EnsureTrash()
     return true
   enddef
 
   def Save(): void
+    this.EnsureTrash()
     PE.WriteJson(this.ProjectFilePath(), {
       name: this.name,
       projectType: this.projectType,
       items: this.items->mapnew((_, i) => i.ToDict()),
     })
+  enddef
+
+  # METHOD: Return the Trash, the top level folder with ROLE_TRASH, or
+  # null_object.
+  def TrashFolder(): BI.BinderItem
+    for item in this.items
+      if item.structureRole ==# CO.ROLE_TRASH
+        return item
+      endif
+    endfor
+    return null_object
+  enddef
+
+  # METHOD: Make sure that the Trash exists and is the last folder at the
+  # top level, whatever moved or was added after it. A scrive saved before
+  # the Trash existed gets an empty one.
+  def EnsureTrash(): void
+    var trash: BI.BinderItem = this.TrashFolder()
+    if trash is null_object
+      trash = BI.BinderItem.NewFolder(IN.T("Trash"), CO.ROLE_TRASH)
+    else
+      this.items->filter((_, item) => item.id !=# trash.id)
+    endif
+    this.items->add(trash)
   enddef
 
   # METHOD: Find an item by id, depth first, or return null_object.

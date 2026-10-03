@@ -18,6 +18,8 @@ import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/trash.vim' as TR
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -27,12 +29,22 @@ export def Run(project: PO.Project): void
   })
 enddef
 
+# FUNCTION: Return the files that a search reads: the documents of the
+# Binder that are on disk, without those in the Trash.
+export def SearchFiles(project: PO.Project): list<string>
+  var trashed: dict<bool> = TR.IdsInTrash(project)
+  return T.Flatten(project)
+    ->filter((_, row) => row.item.IsDocument() && !has_key(trashed, row.item.id))
+    ->mapnew((_, row) => row.item.AbsPath(project.BinderRoot()))
+    ->filter((_, path) => filereadable(path))
+enddef
+
 def RunSearch(project: PO.Project, query: string): void
   if query ==# ''
     return
   endif
 
-  var files: list<string> = globpath(project.BinderRoot(), '**/*' .. project.DocExt(), false, true)
+  var files: list<string> = SearchFiles(project)
   if empty(files)
     log.Info(IN.T("no documents to search"))
     return
