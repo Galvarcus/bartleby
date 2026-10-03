@@ -13,6 +13,11 @@ named Contents or Table of Contents, or a **Contents** line with its list
 of links. The image right below the H1 is left out too, because every
 page gets the logo instead.
 
+A GitHub wiki does not render footnotes, so footnotes are rendered here.
+Each reference becomes a superscript number, counted on each page, that
+links to a Footnotes heading at the bottom of the page. Under it come the
+footnotes that the page references, wherever the document defines them.
+
 Links are rewritten for the wiki: a link to a section or a document
 leads to its page, a relative link to another file leads to the file in
 the repository, and a relative image path, now or in the future, loads
@@ -62,7 +67,10 @@ CONTENTS_LABEL = re.compile(r"^\s*(\*\*|__)(table of contents|contents)\1:?\s*$"
 ANCHOR_ITEM = re.compile(r"^\s*([-*+]|\d+\.)\s+\[[^\]]*\]\(#[^)]*\)\s*$")
 SCHEME = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.-]*:")
 HTML_ATTRIBUTE = re.compile(r"(<(?:img|a)\b[^>]*?\s(?:src|href)=)([\"'])([^\"']*)\2", re.IGNORECASE)
-REFERENCE = re.compile(r"^(\s{0,3}\[[^\]]+\]:\s*)(\S+)(.*)$")
+REFERENCE = re.compile(r"^(\s{0,3}\[(?!\^)[^\]]+\]:\s*)(\S+)(.*)$")
+FOOTNOTE_DEFINITION = re.compile(r"^\s{0,3}\[\^([^\]\s]+)\]:\s?(.*)$")
+FOOTNOTE_REFERENCE = re.compile(r"\[\^([^\]\s]+)\]")
+FOOTNOTES_TITLE = "Footnotes"
 
 
 class Section:
@@ -89,6 +97,8 @@ class Document:
         self.sections = []
         # Each anchor of the document: slug to (page, fragment or None).
         self.anchors = {}
+        # Each footnote of the document: label to the lines of its text.
+        self.footnotes = {}
 
 
 def plain_text(text):
@@ -150,6 +160,39 @@ def drop_contents_lists(lines):
     return result
 
 
+def take_footnotes(lines, footnotes):
+    """Remove the footnote definitions from lines, outside code, and add
+    them to footnotes, label to lines. A definition goes on in the lines
+    that are indented, and in blank lines followed by an indented line. The
+    first definition of a label counts."""
+    result = []
+    marked = list(lines_and_code(lines))
+    k = 0
+    while k < len(marked):
+        line, code = marked[k]
+        match = None if code else FOOTNOTE_DEFINITION.match(line)
+        if not match:
+            result.append(line)
+            k += 1
+            continue
+        text = [match.group(2)]
+        k += 1
+        while k < len(marked):
+            line = marked[k][0]
+            if line.strip() == "":
+                following = next((l for l, _ in marked[k:] if l.strip()), "")
+                if not following[:1].isspace():
+                    break
+                text.append("")
+            elif line[:1].isspace():
+                text.append(re.sub(r"^( {1,4}|\t)", "", line))
+            else:
+                break
+            k += 1
+        footnotes.setdefault(match.group(1), text)
+    return result
+
+
 def parse(source, label, text):
     """Split the text of one document into its overview and sections."""
     document = Document(source, label)
@@ -197,7 +240,9 @@ def parse(source, label, text):
             section.lines.append(line)
     if not document.title:
         raise ValueError(f"{source} has no H1")
-    document.intro = drop_contents_lists(document.intro)
+    document.intro = take_footnotes(drop_contents_lists(document.intro), document.footnotes)
+    for section in document.sections:
+        section.lines = take_footnotes(section.lines, document.footnotes)
     return document
 
 
@@ -316,11 +361,62 @@ def trim(lines):
     return lines
 
 
+def outside_code_spans(line, change):
+    """Return line with change applied to its text outside code spans."""
+    parts = re.split(r"(`+[^`]*`+)", line)
+    return "".join(change(part) if k % 2 == 0 else part for k, part in enumerate(parts))
+
+
+def footnote_section(footnotes, lines, anchor):
+    """Number the footnote references in lines, as superscripts that link to
+    anchor. footnotes maps each label to the lines of its text. Returns the
+    new lines, and the lines of the footnotes, with the footnotes that the
+    footnotes reference."""
+    numbers = {}
+    order = []
+
+    def number(match):
+        label = match.group(1)
+        if label not in footnotes:
+            return match.group(0)
+        if label not in numbers:
+            numbers[label] = len(numbers) + 1
+            order.append(label)
+        return f"<sup>[{numbers[label]}](#{anchor})</sup>"
+
+    def convert(text_lines):
+        return [line if code else outside_code_spans(line, lambda part: FOOTNOTE_REFERENCE.sub(number, part))
+                for line, code in lines_and_code(text_lines)]
+
+    body = convert(lines)
+    notes = []
+    k = 0
+    while k < len(order):
+        text = convert(footnotes[order[k]])
+        notes.append(f"{k + 1}. {text[0]}")
+        notes += [("   " + line) if line else "" for line in text[1:]]
+        k += 1
+    return body, notes
+
+
 def page_text(document, body, linker, navigation):
     head = [f"{GENERATED_MARK} {document.source}. Edit that file instead. -->",
             logo_html(linker.repo, linker.branch), ""]
+    body = trim(linker.rewrite(document, body))
+    # The anchor of the Footnotes heading, after the headings of the page.
+    seen = {}
+    for line, code in lines_and_code(body):
+        match = None if code else HEADING.match(line)
+        if match:
+            unique_slug(match.group(2), seen)
+    anchor = unique_slug(FOOTNOTES_TITLE, seen)
+    # The links of the footnotes are rewritten as the links of the page.
+    footnotes = {label: linker.rewrite(document, text) for label, text in document.footnotes.items()}
+    body, notes = footnote_section(footnotes, body, anchor)
+    if notes:
+        body += ["", f"### {FOOTNOTES_TITLE}", ""] + notes
     tail = ["", "---", "", navigation] if navigation else []
-    return "\n".join(head + trim(linker.rewrite(document, body)) + tail) + "\n"
+    return "\n".join(head + body + tail) + "\n"
 
 
 def navigation(document, index, linker):

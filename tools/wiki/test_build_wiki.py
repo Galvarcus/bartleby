@@ -69,6 +69,30 @@ About languages.
 ### Rules for code
 """
 
+FOOTNOTED = """# Bartleby
+
+## Needs
+
+Vim 9.2.[^vim] A pattern `«[^»]*»` and `[^vim]` in code, and an [^unknown].
+
+[^vim]: The binder needs it. See [the notes](notes.md)
+    and a second line.[^other]
+
+[^other]: Another note.
+
+## Settings
+
+Fullscreen.[^full] Again.[^vim] And [^full] twice.
+
+[^full]: GUI only.
+
+## Notes
+
+### Footnotes
+
+A heading of the page that the footnotes must not take.[^full]
+"""
+
 
 class BuildWikiTest(unittest.TestCase):
 
@@ -153,6 +177,38 @@ class BuildWikiTest(unittest.TestCase):
         first = files["Bartleby-Binder.md"].splitlines()[-1]
         self.assertEqual(f"[Binder →]({WIKI}/Bartleby-Binder)", overview)
         self.assertEqual(f"[← Bartleby]({WIKI}/Bartleby) · [Setup →]({WIKI}/Bartleby-Setup)", first)
+
+    def test_footnotes_are_numbered_and_listed_on_the_page_that_uses_them(self):
+        needs = self.build(readme=FOOTNOTED)["Bartleby-Needs.md"]
+        self.assertIn("Vim 9.2.<sup>[1](#footnotes)</sup>", needs)
+        self.assertIn("### Footnotes\n\n1. The binder needs it. See "
+                      f"[the notes](https://github.com/{REPO}/blob/main/notes.md)\n"
+                      "   and a second line.<sup>[2](#footnotes)</sup>\n2. Another note.", needs)
+        self.assertNotIn("[^vim]:", needs)
+        self.assertNotIn("GUI only", needs)
+
+    def test_a_footnote_defined_in_another_section_follows_its_reference(self):
+        settings = self.build(readme=FOOTNOTED)["Bartleby-Settings.md"]
+        self.assertIn("Fullscreen.<sup>[1](#footnotes)</sup> Again.<sup>[2](#footnotes)</sup>"
+                      " And <sup>[1](#footnotes)</sup> twice.", settings)
+        self.assertIn("1. GUI only.\n2. The binder needs it.", settings)
+
+    def test_code_and_unknown_labels_are_not_footnotes(self):
+        needs = self.build(readme=FOOTNOTED)["Bartleby-Needs.md"]
+        self.assertIn("`«[^»]*»`", needs)
+        self.assertIn("`[^vim]`", needs)
+        self.assertIn("an [^unknown].", needs)
+
+    def test_footnotes_come_before_the_navigation(self):
+        lines = self.build(readme=FOOTNOTED)["Bartleby-Needs.md"].splitlines()
+        self.assertLess(lines.index("### Footnotes"), lines.index("---"))
+
+    def test_the_footnotes_heading_takes_the_next_anchor(self):
+        notes = self.build(readme=FOOTNOTED)["Bartleby-Notes.md"]
+        self.assertIn("<sup>[1](#footnotes-1)</sup>", notes)
+
+    def test_a_page_without_footnotes_has_no_footnotes_heading(self):
+        self.assertNotIn("Footnotes", self.build()["Bartleby-Binder.md"])
 
     def test_repeated_page_names_fail(self):
         readme = README + "\n## Binder\n\nAgain.\n"
