@@ -25,6 +25,7 @@ import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/snapshot.vim' as SN
 import autoload 'bartleby/tree.vim' as T
+import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return the ids of the items in the Trash, the Trash included,
 # as a set.
@@ -38,6 +39,12 @@ export def IdsInTrash(project: PO.Project): dict<bool>
     endfor
   endif
   return ids
+enddef
+
+# FUNCTION: Return true when the item of row is the Trash or is inside it,
+# from the top item of the row, without a walk of the tree.
+export def RowInTrash(row: T.Row): bool
+  return row.topItem isnot null_object && row.topItem.structureRole ==# CO.ROLE_TRASH
 enddef
 
 # FUNCTION: Return true when item is the Trash or is inside it.

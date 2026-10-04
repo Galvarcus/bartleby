@@ -26,27 +26,37 @@ import autoload 'bartleby/project.vim' as PO
 
 # CLASS: One visible item of the tree, with its depth and its owner.
 # ownerItem is null_object when item is at the top level, where the owner
-# is the Project, not a folder.
+# is the Project, not a folder. topItem is the item at the top level that
+# holds item, or item itself there, so that a question about where an item
+# is, such as whether it is in the Trash, needs no walk of the tree. Rows
+# that Flatten does not make may leave it null_object.
 export class Row
   var item: BI.BinderItem
   var depth: number
   var ownerItem: BI.BinderItem
+  var topItem: BI.BinderItem = null_object
+
+  # topItem is optional. v:none takes the value above.
+  def new(this.item, this.depth, this.ownerItem, this.topItem = v:none)
+  enddef
 endclass
 
 export def Flatten(project: PO.Project, collapsed: dict<bool> = {}): list<Row>
   var rows: list<Row> = []
-  def Walk(items: list<BI.BinderItem>, depth: number, ownerItem: BI.BinderItem): void
+  def Walk(items: list<BI.BinderItem>, depth: number, ownerItem: BI.BinderItem,
+      topItem: BI.BinderItem): void
     for item in items
-      rows->add(Row.new(item, depth, ownerItem))
+      var top: BI.BinderItem = topItem is null_object ? item : topItem
+      rows->add(Row.new(item, depth, ownerItem, top))
       # A collapsed folder still gets its row, but its children are not
       # visited, so they get no rows. A folder inside a collapsed folder is
       # never visited either, whatever its own state.
       if item.IsFolder() && !get(collapsed, item.id, false)
-        Walk(item.children, depth + 1, item)
+        Walk(item.children, depth + 1, item, top)
       endif
     endfor
   enddef
-  Walk(project.items, 0, null_object)
+  Walk(project.items, 0, null_object, null_object)
   return rows
 enddef
 

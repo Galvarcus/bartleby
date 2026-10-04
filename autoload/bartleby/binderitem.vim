@@ -188,24 +188,6 @@ export class BinderItem implements ItemContainer
     return this.IsDocument() ? D.DocMeta.Load(this.MetaPath(binderRoot)) : D.DocMeta.new()
   enddef
 
-  # METHOD: Return the word count: a document's own, read from disk, or the
-  # sum of a folder's descendants. The file is read on every call, which is
-  # fast enough for a scrive, as with LoadMeta.
-  def WordCount(binderRoot: string): number
-    if this.IsDocument()
-      var path: string = this.AbsPath(binderRoot)
-      if !filereadable(path)
-        return 0
-      endif
-      return len(split(join(readfile(path), ' ')))
-    endif
-    var total: number = 0
-    for child in this.children
-      total += child.WordCount(binderRoot)
-    endfor
-    return total
-  enddef
-
   static def FromDict(src: dict<any>): BinderItem
     var item: BinderItem = BinderItem.new()
     item.id = get(src, 'id', '')

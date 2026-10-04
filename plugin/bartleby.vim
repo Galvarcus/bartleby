@@ -141,6 +141,7 @@ def OpenScrive(name: string): void
     return
   endif
   ST.Set(project)
+  StartScriveHooks()
   SS.RememberLastScrive(project.scriveDir)
   R.Restore(project)
 enddef
@@ -159,6 +160,7 @@ def CreateScrive(name: string, projectType: string): void
     return
   endif
   ST.Set(project)
+  StartScriveHooks()
   SS.RememberLastScrive(project.scriveDir)
   B.Show(project)
 enddef
@@ -349,10 +351,14 @@ else
   augroup END
 endif
 
-augroup bartleby_quill_auto
-  autocmd!
-  autocmd BufEnter * Q.AutoApply()
-augroup END
+# FUNCTION: Start the hooks that serve an open scrive. Until a scrive
+# opens, Vim runs none of them for the buffers it enters.
+def StartScriveHooks(): void
+  augroup bartleby_quill_auto
+    autocmd!
+    autocmd BufEnter * Q.AutoApply()
+  augroup END
+enddef
 
 def AutoRestoreSession(): void
   if g:bartleby_session_auto_restore && SS.LastScrive() !=# ''

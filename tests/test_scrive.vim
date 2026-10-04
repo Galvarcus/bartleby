@@ -156,6 +156,36 @@ def Test_a_save_keeps_a_backup_that_a_failed_load_names(): void
   RemoveScrives(paths)
 enddef
 
+# FUNCTION: Run a real Vim with the plugin, and return whether Quill's
+# hook on entering a buffer exists before any scrive opens, and after one
+# opens. A plugin that loads at startup must not run it for every buffer.
+def QuillHookBeforeAndAfter(): list<number>
+  var root: string = tempname()
+  var log: string = tempname()
+  var script: string = tempname()
+  var plugin: string = fnamemodify(expand('<script>'), ':p:h:h')
+  writefile([
+    'vim9script',
+    $'g:bartleby_binder_root = "{root}"',
+    'runtime plugin/bartleby.vim',
+    'var before: number = exists("#bartleby_quill_auto#BufEnter")',
+    'bartleby#scrive#Create("Hooks", "novel")',
+    'BartlebyOpen Hooks',
+    $'writefile([string(before), string(exists("#bartleby_quill_auto#BufEnter"))], "{log}")',
+    'qa!',
+  ], script)
+  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={plugin},{plugin}/deps/Logger" -S {script}')
+  var result: list<number> = filereadable(log) ? readfile(log)->mapnew((_, v) => str2nr(v)) : []
+  delete(log)
+  delete(script)
+  delete(root, 'rf')
+  return result
+enddef
+
+def Test_quills_hook_starts_when_a_scrive_opens(): void
+  assert_equal([0, 1], QuillHookBeforeAndAfter())
+enddef
+
 export def RunAll(): void
   Test_prefix_match_ignores_case_and_is_sorted()
   Test_empty_argument_lists_every_name()
@@ -169,4 +199,5 @@ export def RunAll(): void
   Test_a_project_that_did_not_load_never_saves()
   Test_a_sound_project_file_opens_and_saves()
   Test_a_save_keeps_a_backup_that_a_failed_load_names()
+  Test_quills_hook_starts_when_a_scrive_opens()
 enddef

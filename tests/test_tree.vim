@@ -79,6 +79,22 @@ def Test_index_of_row_by_id_returns_minus_one_for_unknown_id(): void
   assert_equal(-1, T.IndexOfRowById(rows, 'no-such-id'))
 enddef
 
+# FUNCTION: Each row knows the item at the top level that holds it, so that
+# questions such as whether it is in the Trash need no walk of the tree.
+def Test_flatten_gives_each_row_its_top_item(): void
+  var project = FI.BuildProject()
+  var manuscript = project.ChildAt(1)
+  var rows = T.Flatten(project)
+  for row in rows
+    var expected = row.depth == 0 ? row.item.id : manuscript.id
+    if row.depth > 0 || row.item.id ==# manuscript.id
+      assert_equal(expected, row.topItem.id, row.item.title)
+    endif
+  endfor
+  # A row made elsewhere may leave it out.
+  assert_true(T.Row.new(manuscript, 0, null_object).topItem is null_object)
+enddef
+
 export def RunAll(): void
   Test_flatten_produces_all_rows_in_depth_first_order()
   Test_flatten_assigns_correct_depth()
@@ -87,4 +103,5 @@ export def RunAll(): void
   Test_flatten_nested_collapse_hides_grandchildren_too()
   Test_index_of_row_by_id_finds_known_row()
   Test_index_of_row_by_id_returns_minus_one_for_unknown_id()
+  Test_flatten_gives_each_row_its_top_item()
 enddef

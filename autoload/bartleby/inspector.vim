@@ -164,6 +164,14 @@ enddef
 # open. Ignores Bartleby's own panes, such as the Binder and the
 # Inspector, and anything that is not a document of the open scrive.
 def FollowEditor(): void
+  # Closed in another way than with Toggle, the Inspector stops following,
+  # so that this hook does not run for every buffer after it.
+  if bufwinnr(CO.INSPECTOR_BUF) == -1
+    augroup bartleby_inspector_follow
+      autocmd!
+    augroup END
+    return
+  endif
   if W.IsChromeBuffer(bufnr('%'))
     return
   endif

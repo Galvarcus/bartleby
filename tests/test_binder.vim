@@ -181,6 +181,17 @@ def Test_m_moves_a_scene_to_the_chosen_folder(): void
   execute 'silent! bwipe! ' .. CO.BINDER_BUF
 enddef
 
+# FUNCTION: Answer an open confirmation with key. With none open, report
+# it instead, because y or n alone would start a Vim command that waits
+# for input and stops the tests.
+def Answer(key: string): void
+  if empty(popup_list())
+    assert_report($'no confirmation was open to answer {key}')
+    return
+  endif
+  feedkeys(key, 'xt')
+enddef
+
 # FUNCTION: Return the id of the first item in the Trash, or an empty
 # string when it is empty.
 def FirstInTrash(project: any): string
@@ -215,11 +226,11 @@ def Test_dd_in_the_trash_deletes_for_good_only_after_yes(): void
   cursor(search('Scene 1', 'n'), 1)
   feedkeys('dd', 'xt')
   feedkeys('dd', 'xt')
-  feedkeys('n', 'xt')
+  Answer('n')
   assert_equal(fx.scene1.id, FirstInTrash(fx.project))
   assert_true(filereadable(path))
   feedkeys('dd', 'xt')
-  feedkeys('y', 'xt')
+  Answer('y')
   assert_equal('', FirstInTrash(fx.project))
   assert_false(filereadable(path))
   CloseBinderAndCleanup(fx)
@@ -239,9 +250,42 @@ def Test_dd_on_the_trash_empties_it(): void
   endfor
   cursor(search('Trash/', 'n'), 1)
   feedkeys('dd', 'xt')
-  feedkeys('y', 'xt')
+  Answer('y')
   assert_equal('', FirstInTrash(fx.project))
   assert_equal([0, 0], paths->mapnew((_, p) => filereadable(p)))
+  CloseBinderAndCleanup(fx)
+  execute 'silent! bwipe! ' .. CO.BINDER_BUF
+enddef
+
+# FUNCTION: In the Trash, J and >> change nothing. They act without a
+# prompt, so a broken guard fails here instead of waiting for input.
+def Test_keys_that_change_the_tree_are_refused_in_the_trash(): void
+  var fx = OpenBinderWithContent()
+  cursor(search('Scene 1', 'n'), 1)
+  feedkeys('dd', 'xt')
+  var trash = fx.project.TrashFolder()
+  assert_equal(fx.scene1.id, FirstInTrash(fx.project))
+  feedkeys('J', 'xt')
+  feedkeys('>>', 'xt')
+  assert_equal(1, trash.ChildCount())
+  assert_equal(fx.scene1.id, FirstInTrash(fx.project))
+  CloseBinderAndCleanup(fx)
+  execute 'silent! bwipe! ' .. CO.BINDER_BUF
+enddef
+
+# FUNCTION: u into a collapsed chapter, inside a collapsed Manuscript,
+# opens both, and the cursor follows.
+def Test_u_opens_the_collapsed_folder_it_restores_into(): void
+  var fx = OpenBinderWithContent()
+  var chapter1 = fx.project.ChildAt(1).ChildAt(0)
+  cursor(search('Scene 1', 'n'), 1)
+  feedkeys('dd', 'xt')
+  var manuscript = fx.project.ChildAt(1)
+  b:bartleby_collapsed = {[chapter1.id]: true, [manuscript.id]: true}
+  feedkeys('u', 'xt')
+  assert_false(has_key(b:bartleby_collapsed, chapter1.id))
+  assert_false(has_key(b:bartleby_collapsed, manuscript.id))
+  assert_equal(fx.scene1.id, IdAtCursor())
   CloseBinderAndCleanup(fx)
   execute 'silent! bwipe! ' .. CO.BINDER_BUF
 enddef
@@ -259,4 +303,6 @@ export def RunAll(): void
   Test_dd_and_u_move_a_scene_to_the_trash_and_back()
   Test_dd_in_the_trash_deletes_for_good_only_after_yes()
   Test_dd_on_the_trash_empties_it()
+  Test_keys_that_change_the_tree_are_refused_in_the_trash()
+  Test_u_opens_the_collapsed_folder_it_restores_into()
 enddef

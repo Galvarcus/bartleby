@@ -38,6 +38,7 @@ import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/wordcount.vim' as WC
 import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/helppopup.vim' as H
@@ -92,11 +93,11 @@ def FlattenFolder(folder: BI.BinderItem): list<T.Row>
   return rows
 enddef
 
-def BuildRow(treeRow: T.Row, binderRoot: string, showIndent: bool): Row
+def BuildRow(treeRow: T.Row, binderRoot: string, showIndent: bool, totals: dict<number>): Row
   var titleText: string = showIndent
     ? repeat('  ', treeRow.depth) .. treeRow.item.title
     : treeRow.item.title
-  var words: string = string(treeRow.item.WordCount(binderRoot))
+  var words: string = string(get(totals, treeRow.item.id, 0))
 
   if !treeRow.item.IsDocument()
     return Row.new(treeRow.item, titleText, '-', '-', words, '-', '')
@@ -164,8 +165,10 @@ class OutlinerPopup
   def Rebuild(): void
     var showIndent: bool = this.sortKey ==# TREE_ORDER
     var treeRows: list<T.Row> = FlattenFolder(this.folder)
+    # Counted once for the whole folder, see wordcount.vim.
+    var totals: dict<number> = WC.Totals(this.folder.children, this.project.BinderRoot())
     var built: list<Row> = treeRows->mapnew(
-      (_, tr) => BuildRow(tr, this.project.BinderRoot(), showIndent))
+      (_, tr) => BuildRow(tr, this.project.BinderRoot(), showIndent, totals))
     this.rows = showIndent ? built : SortRows(built, this.sortKey)
     this.widths = ColumnWidths(this.rows)
     this.selectedIdx = min([this.selectedIdx, max([0, len(this.rows) - 1])])

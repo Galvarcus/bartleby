@@ -65,8 +65,36 @@ export def Load(project: PO.Project): SessionState
   return SessionState.FromDict(PE.ReadJson(path))
 enddef
 
+# The state last read or written for each session file. A capture starts
+# from it instead of the file, and writes only a state that differs, so
+# that a pause with nothing changed costs no file access.
+var known: dict<dict<any>> = {}
+
+# FUNCTION: Return the state of the session of project, as a dict that the
+# caller may change: the state last read or written, or else the file.
+def Current(project: PO.Project): dict<any>
+  var path: string = SessionPath(project)
+  if !has_key(known, path)
+    known[path] = Load(project).ToDict()
+  endif
+  return deepcopy(known[path])
+enddef
+
 def Save(project: PO.Project, state: SessionState): void
-  PE.WriteJson(SessionPath(project), state.ToDict())
+  var path: string = SessionPath(project)
+  var data: dict<any> = state.ToDict()
+  if get(known, path, {}) == data
+    return
+  endif
+  if PE.WriteJson(path, data)
+    known[path] = data
+  endif
+enddef
+
+# FUNCTION: Forget the states read and written, so that the next capture
+# reads the file. The tests use it.
+export def ForgetKnownStates(): void
+  known = {}
 enddef
 
 ##############################################################################
@@ -106,7 +134,7 @@ export def CaptureCurrentDoc(): void
   if !IsProjectDoc(project, path)
     return
   endif
-  var v: dict<any> = Load(project).ToDict()
+  var v: dict<any> = Current(project)
   v.activeDocRelPath = path[len(project.BinderRoot()) + 1 : ]
   v.cursorLine = line('.')
   v.cursorCol = col('.')
@@ -121,7 +149,7 @@ export def CaptureBinderState(binderOpen: bool, collapsedIds: list<string>): voi
   if project is null_object
     return
   endif
-  var v: dict<any> = Load(project).ToDict()
+  var v: dict<any> = Current(project)
   v.binderOpen = binderOpen
   v.collapsedIds = collapsedIds
   Save(project, SessionState.FromDict(v))

@@ -263,6 +263,17 @@ def Test_compile_leaves_out_what_is_in_the_trash(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+def Test_a_row_knows_whether_it_is_in_the_trash(): void
+  var project = ProjectOnDisk()
+  var chapter1 = project.ChildAt(1).ChildAt(0)
+  TR.MoveToTrash(project, RowOf(project, chapter1.id))
+  var rows = T.Flatten(project)
+  assert_true(TR.RowInTrash(T.FindRowById(rows, project.TrashFolder().id)))
+  assert_true(TR.RowInTrash(T.FindRowById(rows, chapter1.ChildAt(0).id)))
+  assert_false(TR.RowInTrash(T.FindRowById(rows, project.ChildAt(1).ChildAt(0).id)))
+  FI.CleanupProjectFiles(project)
+enddef
+
 export def RunAll(): void
   Test_every_project_ends_with_the_trash()
   Test_a_scrive_saved_before_the_trash_gets_one_on_load()
@@ -280,4 +291,5 @@ export def RunAll(): void
   Test_the_trash_takes_items_only_through_dd()
   Test_search_skips_the_trash()
   Test_compile_leaves_out_what_is_in_the_trash()
+  Test_a_row_knows_whether_it_is_in_the_trash()
 enddef

@@ -357,7 +357,7 @@ def DeleteUnderCursor(): void
     return
   endif
 
-  if TR.IsInTrash(project, item)
+  if TR.RowInTrash(row)
     DP.Confirm(printf(IN.T("Delete \"%s\" and its files for good? This cannot be undone."), item.title), () => {
       ReportFailed(TR.DeleteForever(project, row))
       log.Info(printf(IN.T("deleted \"%s\" for good"), item.title))
@@ -402,7 +402,7 @@ def RestoreUnderCursor(): void
   endif
   var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.row.item
-  if !TR.IsInTrash(project, item) || item.structureRole ==# CO.ROLE_TRASH
+  if !TR.RowInTrash(ctx.row) || item.structureRole ==# CO.ROLE_TRASH
     log.Info(IN.T("u restores an item from the Trash"))
     return
   endif
@@ -460,16 +460,16 @@ enddef
 
 # FUNCTION: Expand the folders that hold item, so that it shows.
 def ShowItem(project: PO.Project, item: BI.BinderItem): void
-  var row: T.Row = T.FindRowById(T.Flatten(project), item.id)
-  if row isnot null_object && row.ownerItem isnot null_object
-    ShowFolder(project, row.ownerItem)
+  var byId: dict<T.Row> = RowsById(project)
+  if has_key(byId, item.id) && byId[item.id].ownerItem isnot null_object
+    ExpandUp(byId, byId[item.id].ownerItem.id)
   endif
 enddef
 
 # FUNCTION: Return true, with a message, when the item under the cursor is
 # the Trash or in it, where only u, m, and dd act.
 def RefusedInTrash(ctx: dict<any>): bool
-  if ctx.project is null_object || ctx.row is null_object || !TR.IsInTrash(ctx.project, ctx.row.item)
+  if ctx.project is null_object || ctx.row is null_object || !TR.RowInTrash(ctx.row)
     return false
   endif
   log.Info(IN.T("in the Trash, u restores, m moves out, and dd deletes for good"))
@@ -562,14 +562,30 @@ enddef
 # FUNCTION: Expand folder and the folders that hold it, so that an item
 # just moved into it shows, with the cursor still on it.
 def ShowFolder(project: PO.Project, folder: BI.BinderItem): void
+  ExpandUp(RowsById(project), folder.id)
+enddef
+
+# FUNCTION: Return the rows of the whole tree by the id of their item, so
+# that a walk up to the top level takes one step per folder.
+def RowsById(project: PO.Project): dict<T.Row>
+  var byId: dict<T.Row> = {}
+  for row in T.Flatten(project)
+    byId[row.item.id] = row
+  endfor
+  return byId
+enddef
+
+# FUNCTION: Expand the folder with id and the folders that hold it, and
+# save the collapsed folders in the session.
+def ExpandUp(byId: dict<T.Row>, id: string): void
   var collapsed: dict<bool> = get(b:, 'bartleby_collapsed', {})
-  var rows: list<T.Row> = T.Flatten(project)
-  var row: T.Row = T.FindRowById(rows, folder.id)
-  while row isnot null_object
-    if has_key(collapsed, row.item.id)
-      remove(collapsed, row.item.id)
+  var current: string = id
+  while has_key(byId, current)
+    if has_key(collapsed, current)
+      remove(collapsed, current)
     endif
-    row = row.ownerItem is null_object ? null_object : T.FindRowById(rows, row.ownerItem.id)
+    var owner: BI.BinderItem = byId[current].ownerItem
+    current = owner is null_object ? '' : owner.id
   endwhile
   b:bartleby_collapsed = collapsed
   SS.CaptureBinderState(IsOpen(), GetCollapsedIds())
