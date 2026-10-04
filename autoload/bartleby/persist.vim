@@ -10,6 +10,10 @@ var is_loaded: bool = true
 # persist.vim: reads and writes JSON files: a dict in, a dict out. It
 # knows nothing of projects or the Binder. Its callers, such as
 # project.vim and document.vim, do.
+#
+# A write goes to a temporary file first, which then replaces the file in
+# one step, so that a crash or a full disk leaves the old file or the new
+# one, never a part of one.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -17,6 +21,11 @@ import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 
 var log = L.New(expand('<sfile>:t'))
+
+# The suffix of the file that a write fills before it replaces the file.
+const TEMPORARY_SUFFIX: string = '.tmp'
+# The suffix of the copy of a file before its last write, see WriteJson.
+export const BACKUP_SUFFIX: string = '.bak'
 
 export def ReadJson(path: string): dict<any>
   if !filereadable(path)
@@ -31,14 +40,40 @@ export def ReadJson(path: string): dict<any>
   endtry
 enddef
 
-export def WriteJson(path: string, data: dict<any>): void
+# FUNCTION: Write data to path as JSON, into a temporary file that then
+# replaces path. With keepBackup, the file as it was is copied first, to
+# path with BACKUP_SUFFIX. Returns false, with an error, when a step fails.
+# path is then as it was.
+export def WriteJson(path: string, data: dict<any>, keepBackup: bool = false): bool
+  var temporary: string = path .. TEMPORARY_SUFFIX
   try
     var dir: string = fnamemodify(path, ':h')
     if !isdirectory(dir)
       mkdir(dir, 'p')
     endif
-    writefile([json_encode(data)], path)
+    if writefile([json_encode(data)], temporary) != 0
+      return WriteFailed(path, temporary)
+    endif
+    if keepBackup && filereadable(path)
+        && writefile(readfile(path, 'b'), path .. BACKUP_SUFFIX, 'b') != 0
+      return WriteFailed(path, path .. BACKUP_SUFFIX)
+    endif
+    if rename(temporary, path) != 0
+      return WriteFailed(path, temporary)
+    endif
   catch
-    log.Exception()
+    return WriteFailed(path, v:exception)
   endtry
+  return true
+enddef
+
+# FUNCTION: Report that path was not written, because of detail, and remove
+# the temporary file. Returns false, for WriteJson to return.
+def WriteFailed(path: string, detail: string): bool
+  log.Error(printf(IN.T("%s could not be written, so it was not changed: %s"), path, detail))
+  var temporary: string = path .. TEMPORARY_SUFFIX
+  if filereadable(temporary)
+    delete(temporary)
+  endif
+  return false
 enddef

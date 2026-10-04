@@ -385,6 +385,15 @@ current text.
 **Search** - `/` in the Binder or `:BartlebySearch` searches the
 scrive and puts the results in the quickfix list.
 
+**Backup and recovery** - each save of the Binder keeps the version
+before it as `project.json.bak`. A `project.json` that cannot be read
+does not open, and is never saved over. `:BartlebyRecover` adds the
+documents on disk that the Binder does not list to a folder named
+Recovered. `:BartlebyRecover <name>` rebuilds the Binder of a scrive
+that does not open, after a confirmation. It keeps the damaged file as
+`project.json.damaged`, starts from the backup when that loads, and
+recovers every other document.
+
 ## Auto-save
 
 Bartleby saves changed scrive documents while you work, in the editor
@@ -488,6 +497,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyProjectInfo` | Edit the profile for this scrive only |
 | `:BartlebyCompile` | Compile the scrive |
 | `:BartlebyEmptyTrash` | Delete everything in the Trash for good, after a confirmation |
+| `:BartlebyRecover [name]` | Add documents on disk that the Binder does not list to Recovered. With a name, rebuild the Binder of a scrive that does not open |
 | `:BartlebyCommands` | Open the command palette |
 | `:BartlebyMenu` | Open the command menu |
 | `:BartlebyDefine [word]` | Define the word under the cursor or `word` |

@@ -41,6 +41,12 @@ export class Project implements BI.ItemContainer
   var projectType: string = CO.TYPE_NOVEL
   # The top-level binder items.
   var items: list<BI.BinderItem> = []
+  # True once Load read project.json, or InitNew made a new scrive. Save
+  # refuses before that, so that a project.json that failed to load is
+  # never overwritten with an empty tree.
+  var saveAllowed: bool = false
+  # Why the last Load failed, empty after a good load.
+  var loadError: string = ''
 
   def new(this.scriveDir)
   enddef
@@ -51,6 +57,7 @@ export class Project implements BI.ItemContainer
   def InitNew(newName: string, newType: string = CO.TYPE_NOVEL): void
     this.name = newName
     this.projectType = newType
+    this.saveAllowed = true
   enddef
 
   # METHOD: Give a new, empty scrive its starter Binder tree. Called once,
@@ -116,28 +123,59 @@ export class Project implements BI.ItemContainer
     return this.projectType ==# CO.TYPE_SCREENPLAY ? '.fountain' : '.md'
   enddef
 
+  # METHOD: Read project.json. Returns false, and changes nothing, when the
+  # file is missing, is not valid JSON, or does not hold a list of binder
+  # items, as after a crash during a save. The error names the file.
   def Load(): bool
     var path: string = this.ProjectFilePath()
+    this.loadError = ''
     if !filereadable(path)
-      log.Warn(printf(IN.T("project.json not found in %s"), this.scriveDir))
-      return false
+      return this.LoadFailed(printf(IN.T("project.json not found in %s"), this.scriveDir))
     endif
-    var data: dict<any> = PE.ReadJson(path)
+    var data: any
+    var loadedItems: list<BI.BinderItem>
+    try
+      data = json_decode(join(readfile(path), "\n"))
+      if type(data) != v:t_dict || type(get(data, 'items', null)) != v:t_list
+          || indexof(data.items, (_, i) => type(i) != v:t_dict) >= 0
+        return this.LoadFailed(printf(IN.T("%s holds no list of binder items. The scrive did not open, and nothing was changed."), path))
+      endif
+      loadedItems = data.items->mapnew((_, i) => BI.BinderItem.FromDict(i))
+    catch
+      return this.LoadFailed(printf(IN.T("%s cannot be read: %s. The scrive did not open, and nothing was changed."), path, v:exception))
+    endtry
     this.name = get(data, 'name', fnamemodify(this.scriveDir, ':t:r'))
     this.projectType = get(data, 'projectType', CO.TYPE_NOVEL)
-    var rawItems: list<dict<any>> = get(data, 'items', [])
-    this.items = rawItems->mapnew((_, i) => BI.BinderItem.FromDict(i))
+    this.items = loadedItems
     this.EnsureTrash()
+    this.saveAllowed = true
     return true
   enddef
 
+  # METHOD: Record why Load failed, with the backup of project.json when
+  # there is one, report it, and return false, for Load to return.
+  def LoadFailed(reason: string): bool
+    var backup: string = this.ProjectFilePath() .. PE.BACKUP_SUFFIX
+    this.loadError = reason .. (filereadable(backup)
+      ? ' ' .. printf(IN.T("The version before the last save is in %s."), backup) : '')
+    log.Error(this.loadError)
+    return false
+  enddef
+
+  # METHOD: Write project.json, and keep the version before as a backup.
+  # Refuses, with an error, when this project was neither loaded nor made
+  # new, see saveAllowed.
   def Save(): void
+    if !this.saveAllowed
+      log.Error(printf(IN.T("%s was not saved, because it did not load."), this.ProjectFilePath()))
+      return
+    endif
     this.EnsureTrash()
     PE.WriteJson(this.ProjectFilePath(), {
       name: this.name,
       projectType: this.projectType,
       items: this.items->mapnew((_, i) => i.ToDict()),
-    })
+    }, true)
   enddef
 
   # METHOD: Return the Trash, the top level folder with ROLE_TRASH, or

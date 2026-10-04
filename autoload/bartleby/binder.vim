@@ -447,7 +447,7 @@ def ReportFailed(failed: list<string>): void
 enddef
 
 # FUNCTION: Show the Binder again, from any window, when it is open.
-def RenderIfOpen(project: PO.Project): void
+export def RenderIfOpen(project: PO.Project): void
   var winid: number = bufwinid(CO.BINDER_BUF)
   if winid == -1
     return

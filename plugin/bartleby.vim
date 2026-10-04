@@ -39,6 +39,8 @@ import autoload 'bartleby/lexiconpopup.vim' as LP
 import autoload 'bartleby/autosave.vim' as A
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/tty.vim' as TY
+import autoload 'bartleby/dialog_popup.vim' as DP
+import autoload 'bartleby/recover.vim' as RC
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -268,6 +270,47 @@ def EmptyTrash(): void
 enddef
 
 command! -bar BartlebyEmptyTrash EmptyTrash()
+
+# FUNCTION: Recover the documents that are on disk but not in the Binder.
+# With no name, into the open scrive. With the name of a scrive whose
+# project.json does not load, rebuild its Binder after a confirmation, see
+# recover.vim, and open it.
+def Recover(name: string): void
+  if name ==# ''
+    var project: PO.Project = ST.Get()
+    if project is null_object
+      log.Warn(IN.T("no scrive open - run :BartlebyRecover <name> for a scrive that does not open"))
+      return
+    endif
+    var count: number = RC.Recover(project)
+    if count == 0
+      log.Info(IN.T("every document on disk is in the Binder"))
+      return
+    endif
+    project.Save()
+    B.RenderIfOpen(project)
+    log.Info(printf(IN.N("recovered %d document into the folder Recovered",
+      "recovered %d documents into the folder Recovered", count), count))
+    return
+  endif
+  var dir: string = S.ScrivePath(S.ResolveName(name))
+  if !isdirectory(dir)
+    log.Error(printf(IN.T("no scrive named \"%s\" under %s"), name, S.BinderRoot()))
+    return
+  endif
+  if PO.Project.new(dir).Load()
+    log.Info(printf(IN.T("\"%s\" opens. Open it, then run :BartlebyRecover to recover its documents."), name))
+    return
+  endif
+  DP.Confirm(printf(IN.T("Rebuild the Binder of \"%s\"? The damaged project.json is kept as project.json.damaged, its backup is used if it loads, and every document on disk is recovered."), name), () => {
+    if RC.Rebuild(dir) isnot null_object
+      OpenScrive(fnamemodify(dir, ':t:r'))
+    endif
+  })
+enddef
+
+command! -bar -nargs=? -complete=customlist,bartleby#scrive#CompleteNames
+  \ BartlebyRecover Recover(<q-args>)
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
 command! -bar -nargs=? BartlebyDefine LP.LookupCommand(CO.KIND_DICTIONARY, <q-args>)

@@ -509,3 +509,15 @@ Each scrive is a folder under `~/Documents/Bartleby/`. In it:
 You can find, copy, or back up your writing with any file browser. To
 keep your scrives in another place, set `g:bartleby_binder_root` in
 your vimrc.
+
+The Binder itself, with its titles and order, is in `project.json`.
+Each save keeps the version before it as `project.json.bak`. If
+`project.json` is damaged, the scrive does not open, and Bartleby does
+not save over it.
+
+To bring a scrive back, run `:BartlebyRecover` with its name, and press
+`y`. Bartleby keeps the damaged file as `project.json.damaged`, builds
+the Binder again from the backup when it can, and puts every other
+document in a folder named Recovered. Then the scrive opens. On a
+scrive that is open, `:BartlebyRecover` without a name finds documents
+that are on disk but not in the Binder, and puts them in Recovered.

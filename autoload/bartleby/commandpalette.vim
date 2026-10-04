@@ -42,6 +42,7 @@ const COMMANDS: dict<string> = {
   'Take Snapshot': 'BartlebySnapshot',
   'View Snapshots': 'BartlebySnapshots',
   'Empty Trash': 'BartlebyEmptyTrash',
+  'Recover Files': 'BartlebyRecover',
 }
 
 # Display name to Ex command, for commands that need an argument, asked
@@ -90,6 +91,7 @@ def CommandNames(): dict<string>
     'Take Snapshot': IN.T("Take Snapshot"),
     'View Snapshots': IN.T("View Snapshots"),
     'Empty Trash': IN.T("Empty Trash"),
+    'Recover Files': IN.T("Recover Files"),
     'Open Scrive': IN.T("Open Scrive"),
     'New Scrive': IN.T("New Scrive"),
     'Pick Spotlight Mode': IN.T("Pick Spotlight Mode"),
