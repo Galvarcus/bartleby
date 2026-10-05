@@ -1,0 +1,102 @@
+name: GhostCode
+
+on:
+  push:
+  branches:
+    - main
+    - Development
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ghostcode:
+    name: GhostCode
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Vim
+        run: |
+          url=$(curl -s https://api.github.com/repos/vim/vim-appimage/releases/latest \
+            | jq -r '.assets[] | select(.name | test("^Vim-v.*-x86_64\\.AppImage$")) | .browser_download_url')
+          curl -sL -o /tmp/vim.appimage "$url"
+          chmod +x /tmp/vim.appimage
+          cd /tmp && ./vim.appimage --appimage-extract
+          ln -s /tmp/squashfs-root/AppRun /tmp/squashfs-root/vim
+          echo "/tmp/squashfs-root" >> "$GITHUB_PATH"
+
+      - name: Vim version
+        run: vim --version
+
+      - name: Install GhostCode
+        run: |
+          mkdir -p "$RUNNER_TEMP/vim/pack/ghostcode/start"
+
+          git clone --depth 1 \
+            https://github.com/Galvarcus/Logger.git \
+            "$RUNNER_TEMP/vim/pack/ghostcode/start/Logger"
+
+          git clone --depth 1 \
+            https://github.com/Galvarcus/GhostCode.git \
+            "$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode"
+
+      - name: Run GhostCode
+        run: |
+          set +e
+
+          vim \
+            -u NONE \
+            -N \
+            -es \
+            --cmd "set rtp+=$RUNNER_TEMP/vim/pack/ghostcode/start/Logger,$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode" \
+            -c 'runtime plugin/ghostcode.vim' \
+            -c 'GhostCode .' \
+            -c 'vim9cmd call writefile(getqflist()->mapnew((_, item) => printf("%s:%d:%d:%s", bufname(item.bufnr), item.lnum, item.col, item.text)), "ghostcode_results.txt")' \
+            -c 'vim9cmd call writefile([string(getqflist()->count((_, item) => item.text =~# "^\[ghost\]"))], "ghostcode_count.txt")' \
+            -c 'qa!'
+
+          vim_exit=$?
+
+          if [ "$vim_exit" -ne 0 ]; then
+            echo "::error::GhostCode failed to run (Vim exit status $vim_exit)"
+            exit "$vim_exit"
+          fi
+
+          if [ ! -f ghostcode_results.txt ]; then
+            echo "::error::GhostCode did not produce a results file"
+            exit 1
+          fi
+
+          ghost_count=$(cat ghostcode_count.txt)
+
+          echo "GhostCode results:"
+          cat ghostcode_results.txt || true
+
+          echo
+          echo "Ghost code findings: $ghost_count"
+
+          if [ "$ghost_count" -eq 0 ]; then
+            echo "No ghost code found."
+            exit 0
+          fi
+
+          echo
+          echo "::error::GhostCode found $ghost_count ghost code issue(s)"
+
+          while IFS= read -r result; do
+            [ -z "$result" ] && continue
+
+            file=$(printf '%s\n' "$result" | cut -d: -f1)
+            line=$(printf '%s\n' "$result" | cut -d: -f2)
+            column=$(printf '%s\n' "$result" | cut -d: -f3)
+            message=$(printf '%s\n' "$result" | cut -d: -f4-)
+
+            echo "::error file=$file,line=$line,col=$column::$message"
+          done < <(grep ':\[ghost\]' ghostcode_results.txt)
+
+          exit 1
