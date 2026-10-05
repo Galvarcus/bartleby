@@ -54,8 +54,8 @@ jobs:
             -c 'let logger_log_file=1' \
             -c 'let logger_log_dir="./"' \
             -c 'GhostCode .' \
-            -c 'vim9cmd call writefile(getqflist()->mapnew((_, item) => printf("%s:%d:%d:%s", bufname(item.bufnr), item.lnum, item.col, item.text)), "ghostcode_results.txt")' \
-            -c 'vim9cmd call writefile([string(getqflist()->count((_, item) => item.text =~# "^\[ghost\]"))], "ghostcode_count.txt")' \
+            -c 'vim9cmd call writefile(getqflist()->mapnew((_, item) => printf("%s:%d:%d:%s", bufname(item.bufnr), item.lnum, item.col, item.text)), "ghostcode_results.log")' \
+            -c 'vim9cmd call writefile([string(getqflist()->count((_, item) => item.text =~# "^\[ghost\]"))], "ghostcode_count.log")' \
             -c 'qa!'
           echo "GHOSTCODE LOG:"
           cat ghostcode*.log
@@ -100,3 +100,9 @@ jobs:
           done < <(grep ':\[ghost\]' ghostcode_results.txt)
 
           exit 1
+          
+      - name: Archive GhostCode results
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage-report
+          path: ghostcode*.log
