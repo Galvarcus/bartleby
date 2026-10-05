@@ -1,5 +1,4 @@
 name: GhostCode
-
 on:
   push:
   branches:
@@ -7,19 +6,16 @@ on:
     - Development
   pull_request:
   workflow_dispatch:
-
 permissions:
   contents: read
-
 jobs:
   ghostcode:
     name: GhostCode
     runs-on: ubuntu-latest
-
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
-
+      
       - name: Install Vim
         run: |
           url=$(curl -s https://api.github.com/repos/vim/vim-appimage/releases/latest \
