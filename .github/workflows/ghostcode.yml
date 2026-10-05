@@ -57,6 +57,7 @@ jobs:
             -c 'vim9cmd call writefile(getqflist()->mapnew((_, item) => printf("%s:%d:%d:%s", bufname(item.bufnr), item.lnum, item.col, item.text)), "ghostcode_results.txt")' \
             -c 'vim9cmd call writefile([string(getqflist()->count((_, item) => item.text =~# "^\[ghost\]"))], "ghostcode_count.txt")' \
             -c 'qa!'
+          ls -la
           cat ghostcode*.log
           vim_exit=$?
 
