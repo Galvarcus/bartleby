@@ -51,7 +51,7 @@ jobs:
             -es \
             --cmd "set rtp+=$RUNNER_TEMP/vim/pack/ghostcode/start/Logger,$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode" \
             -c 'runtime plugin/ghostcode.vim' \
-            -c 'let logger_log_file=1'
+            -c 'let logger_log_file=1' \
             -c 'let logger_log_dir="./"' \
             -c 'GhostCode .' \
             -c 'vim9cmd call writefile(getqflist()->mapnew((_, item) => printf("%s:%d:%d:%s", bufname(item.bufnr), item.lnum, item.col, item.text)), "ghostcode_results.txt")' \
