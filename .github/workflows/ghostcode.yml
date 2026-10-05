@@ -67,15 +67,15 @@ jobs:
             exit "$vim_exit"
           fi
 
-          if [ ! -f ghostcode_results.txt ]; then
+          if [ ! -f ghostcode_results.log ]; then
             echo "::error::GhostCode did not produce a results file"
             exit 1
           fi
 
-          ghost_count=$(cat ghostcode_count.txt)
+          ghost_count=$(cat ghostcode_count.log)
 
           echo "GhostCode results:"
-          cat ghostcode_results.txt || true
+          cat ghostcode_results.log || true
 
           echo
           echo "Ghost code findings: $ghost_count"
@@ -97,7 +97,7 @@ jobs:
             message=$(printf '%s\n' "$result" | cut -d: -f4-)
 
             echo "::error file=$file,line=$line,col=$column::$message"
-          done < <(grep ':\[ghost\]' ghostcode_results.txt)
+          done < <(grep ':\[ghost\]' ghostcode_results.log)
 
           exit 1
           
