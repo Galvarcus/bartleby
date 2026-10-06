@@ -34,6 +34,7 @@ enddef
 # extend, not an assignment to result.ids: in Vim 9.2.1108, a lambda that
 # assigns to a member of a captured function argument crashes Vim with a
 # segmentation fault when it runs after that function has returned.
+# REFERENCE: https://github.com/vim/vim/issues/21460
 def OpenPane(project: any, result: dict<any>): void
   C.SelectContents(project, [], (ids: list<string>) => {
     extend(result, {ids: ids})
