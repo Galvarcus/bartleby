@@ -54,8 +54,8 @@ jobs:
             -c 'let logger_log_file=1' \
             -c 'let logger_log_dir="./"' \
             -c 'GhostCode .' \
-            -c 'vim9cmd call writefile(getqflist()->mapnew((_, item) => printf("%s:%d:%d:%s", bufname(item.bufnr), item.lnum, item.col, item.text)), "ghostcode_results.log")' \
-            -c 'vim9cmd call writefile([string(getqflist()->count((_, item) => item.text =~# "^\[ghost\]"))], "ghostcode_count.log")' \
+            -c 'vim9cmd call writefile(getqflist()->mapnew((_, item) => printf("%s:%d:%d:%s", bufname(item.bufnr), item.lnum, item.col, item.text)), "ghostcode_results.txt")' \
+            -c 'vim9cmd call writefile([string(getqflist()->count((_, item) => item.text =~# "^\[ghost\]"))], "ghostcode_count.txt")' \
             -c 'qa!'
           echo "GHOSTCODE LOG:"
           cat ghostcode*.log
@@ -67,15 +67,15 @@ jobs:
             exit "$vim_exit"
           fi
 
-          if [ ! -f ghostcode_results.log ]; then
+          if [ ! -f ghostcode_results.txt ]; then
             echo "::error::GhostCode did not produce a results file"
             exit 1
           fi
 
-          ghost_count=$(cat ghostcode_count.log)
+          ghost_count=$(cat ghostcode_count.txt)
 
           echo "GhostCode results:"
-          cat ghostcode_results.log || true
+          cat ghostcode_results.txt || true
 
           echo
           echo "Ghost code findings: $ghost_count"
@@ -97,12 +97,12 @@ jobs:
             message=$(printf '%s\n' "$result" | cut -d: -f4-)
 
             echo "::error file=$file,line=$line,col=$column::$message"
-          done < <(grep ':\[ghost\]' ghostcode_results.log)
+          done < <(grep ':\[ghost\]' ghostcode_results.txt)
 
           exit 1
           
       - name: Archive GhostCode results
         uses: actions/upload-artifact@v4
         with:
-          name: ghostcode-report
+          name: ghostcode-log
           path: ghostcode*.log
