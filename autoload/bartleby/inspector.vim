@@ -214,17 +214,15 @@ export def Toggle(): void
     return
   endif
 
-  var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
   execute 'vertical botright :40split ' .. CO.INSPECTOR_BUF
   setlocal buftype=nofile bufhidden=hide noswapfile nobuflisted
   setlocal nonumber norelativenumber nofoldenable
   setlocal filetype=bartleby-inspector
   setlocal winfixwidth
-  setline(1, RenderContent(item, meta))
-  setlocal nomodifiable
-  setlocal nomodified
-  b:bartleby_inspector_project = project
-  b:bartleby_inspector_item = item
+  # The buffer stays while the Inspector is closed, with modifiable off and
+  # the lines of the last document, so it is written as when it follows
+  # the editor. See issue 1.
+  RefreshFor(project, item)
   SetupKeymaps()
 
   augroup bartleby_inspector_follow
