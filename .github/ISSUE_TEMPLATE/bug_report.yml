@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for taking the time to fill out this bug report! 
+        Thanks for taking the time to fill out this bug report!
         Please ensure you have updated the plugin to the latest commit before submitting.
   - type: input
     id: version
