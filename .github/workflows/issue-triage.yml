@@ -1,0 +1,59 @@
+name: Issue Triage
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Auto-triage and validate issue form submission
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const body = issue.body || '';
+            const labelsToAdd = [];
+
+            // 1. Check if this is a Bug Report and validate minimal vimrc
+            if (issue.labels.some(l => l.name === 'bug')) {
+              // Extract the Minimal vimrc section from the form payload
+              const vimrcMatch = body.match(/### Minimal vimrc\s*\n\n([\s\S]*?)(?=\n\n###|$)/);
+              const vimrcContent = vimrcMatch ? vimrcMatch[1].trim() : '';
+
+              // If minimal vimrc is empty, missing, or left as default placeholder
+              const isDefaultPlaceholder = vimrcContent.includes('Add only the minimal config required') || vimrcContent.length < 15;
+
+              if (isDefaultPlaceholder) {
+                labelsToAdd.push('needs-repro');
+
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: issue.number,
+                  body: "👋 Thanks for reporting! To help us debug this issue effectively, please provide a minimal `vimrc` configuration that reproduces the bug with only this plugin loaded (e.g., using `vim -u minimal.vimrc`)."
+                });
+              }
+            }
+
+            // 2. Auto-label documentation issues based on form dropdown selections
+            if (issue.labels.some(l => l.name === 'documentation')) {
+              if (body.includes('Typo or grammatical error')) {
+                labelsToAdd.push('good first issue');
+              }
+            }
+
+            // 3. Apply gathered labels if any exist
+            if (labelsToAdd.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                labels: labelsToAdd
+              });
+            }
