@@ -132,6 +132,21 @@ export def PromptMultiline(title: string, default: string, OnSubmit: func(string
   form.Open()
 enddef
 
+# FUNCTION: Add text to row, the line that Render builds: its text, and
+# its length in characters.
+def AppendTo(row: dict<any>, text: string): void
+  row.text ..= text
+  row.chars += strchars(text)
+enddef
+
+# What a key handler of InputPopup did: the key was not one of its keys,
+# it was handled, it changed the text of the field, or it closed the
+# popup, which must then not be drawn again.
+const KEY_UNHANDLED: string = ''
+const KEY_HANDLED: string = 'handled'
+const KEY_CHANGED: string = 'changed'
+const KEY_CLOSED: string = 'closed'
+
 export class InputPopup
   var fieldRows: list<list<dict<any>>>
   var defaults: dict<any>
@@ -483,138 +498,180 @@ export class InputPopup
     return true
   enddef
 
+  # METHOD: The popup filter. It sends key to the handler of the control
+  # that has focus, after the keys that every control shares, and redraws
+  # unless the key closed the popup.
   def Filter(winid: number, key: string): bool
     var isButton: bool = this.IsButtonIdx(this.currentIdx)
-    var isMultiline: bool = !isButton && this.fields[this.currentIdx].type ==# 'multiline'
-
-    if isMultiline
-      if key == "\<C-s>"
-        popup_close(winid, 1)
-        return true
-      elseif key == "\<Esc>" || key == "\<C-c>"
-        popup_close(winid, 0)
-        return true
-      else
-        this.HandleMultilineKey(key)
+    var type: string = isButton ? 'button' : this.fields[this.currentIdx].type
+    if type ==# 'multiline'
+      if this.MultilineKey(winid, key) !=# KEY_CLOSED
+        this.Render()
       endif
-      this.Render()
       return true
     endif
+    var result: string = this.CommonKey(winid, key)
+    if result ==# KEY_UNHANDLED
+      if type ==# 'button'
+        result = this.ButtonKey(winid, key)
+      elseif type ==# 'filter'
+        result = this.FilterFieldKey(winid, key)
+      elseif type ==# 'choice'
+        result = this.ChoiceKey(winid, key)
+      else
+        result = this.TextKey(winid, key)
+      endif
+    endif
+    if result !=# KEY_CLOSED
+      this.Render()
+    endif
+    return true
+  enddef
 
-    var isChoice: bool = !isButton && this.fields[this.currentIdx].type ==# 'choice'
-    var isFilter: bool = !isButton && this.fields[this.currentIdx].type ==# 'filter'
-    var valueChanged: bool = false
+  # METHOD: Keys of a multiline field. Ctrl-S submits and Esc cancels, and
+  # every other key edits the text.
+  def MultilineKey(winid: number, key: string): string
+    if key == "\<C-s>"
+      popup_close(winid, 1)
+      return KEY_CLOSED
+    elseif key == "\<Esc>" || key == "\<C-c>"
+      popup_close(winid, 0)
+      return KEY_CLOSED
+    endif
+    this.HandleMultilineKey(key)
+    return KEY_HANDLED
+  enddef
 
+  # METHOD: Keys that every control shares: move to the next or previous
+  # control, submit, cancel, and click.
+  def CommonKey(winid: number, key: string): string
     if key == "\<Tab>" || key == "\<C-n>"
       this.Focus((this.currentIdx + 1) % this.TotalControls())
     elseif key == "\<S-Tab>" || key == "\<C-p>"
       this.Focus((this.currentIdx - 1 + this.TotalControls()) % this.TotalControls())
     elseif key == "\<C-s>"
       popup_close(winid, 1)
-      return true
+      return KEY_CLOSED
     elseif key == "\<Esc>" || key == "\<C-c>"
       popup_close(winid, 0)
-      return true
+      return KEY_CLOSED
     elseif key == "\<LeftMouse>"
       this.HandleMouseClick()
-    elseif isButton && (key == "\<CR>" || key == ' ')
+    else
+      return KEY_UNHANDLED
+    endif
+    return KEY_HANDLED
+  enddef
+
+  # METHOD: Keys of a button. A button holds no text, so other keys do
+  # nothing.
+  def ButtonKey(winid: number, key: string): string
+    if key == "\<CR>" || key == ' '
       this.ActivateButton(this.currentIdx)
-      return true
-    elseif isButton && key == "\<Left>"
+      return KEY_CLOSED
+    elseif key == "\<Left>"
       this.Focus(max([len(this.fields), this.currentIdx - 1]))
-    elseif isButton && key == "\<Right>"
+    elseif key == "\<Right>"
       this.Focus(min([this.TotalControls() - 1, this.currentIdx + 1]))
-    elseif isButton
-      # A button holds no text, so ignore other keys while one has focus.
-    elseif isFilter && (key == "\<Down>" || key == "\<C-j>" || key == "\<ScrollWheelDown>")
-      this.MoveFilterSelection(this.fields[this.currentIdx], 1)
-    elseif isFilter && (key == "\<Up>" || key == "\<C-k>" || key == "\<ScrollWheelUp>")
-      this.MoveFilterSelection(this.fields[this.currentIdx], -1)
-    elseif isFilter && key == "\<PageDown>"
-      this.MoveFilterSelection(this.fields[this.currentIdx], this.fields[this.currentIdx].maxVisible)
-    elseif isFilter && key == "\<PageUp>"
-      this.MoveFilterSelection(this.fields[this.currentIdx], -this.fields[this.currentIdx].maxVisible)
-    elseif isFilter && key == "\<CR>"
-      if !empty(this.fields[this.currentIdx].filtered)
+    endif
+    return KEY_HANDLED
+  enddef
+
+  # METHOD: Keys of a filter field: move in the list, or pick with Enter.
+  # Other keys edit the text, and a changed text filters the list again.
+  def FilterFieldKey(winid: number, key: string): string
+    var f: dict<any> = this.fields[this.currentIdx]
+    if key == "\<Down>" || key == "\<C-j>" || key == "\<ScrollWheelDown>"
+      this.MoveFilterSelection(f, 1)
+    elseif key == "\<Up>" || key == "\<C-k>" || key == "\<ScrollWheelUp>"
+      this.MoveFilterSelection(f, -1)
+    elseif key == "\<PageDown>"
+      this.MoveFilterSelection(f, f.maxVisible)
+    elseif key == "\<PageUp>"
+      this.MoveFilterSelection(f, -f.maxVisible)
+    elseif key == "\<CR>"
+      if !empty(f.filtered)
         popup_close(winid, 1)
       endif
-      return true
-    elseif isChoice && key == "\<Left>"
-      var f: dict<any> = this.fields[this.currentIdx]
+      return KEY_CLOSED
+    else
+      var result: string = this.TextKey(winid, key)
+      if result ==# KEY_CHANGED
+        f.filtered = f.value ==# '' ? copy(f.options) : matchfuzzy(f.options, f.value)
+        f.selectedIdx = 0
+        f.scrollTop = 0
+      endif
+      return result
+    endif
+    return KEY_HANDLED
+  enddef
+
+  # METHOD: Keys of a choice field. It holds no text, so other keys do
+  # nothing.
+  def ChoiceKey(winid: number, key: string): string
+    var f: dict<any> = this.fields[this.currentIdx]
+    if key == "\<Left>"
       f.selectedIdx = max([0, f.selectedIdx - 1])
-    elseif isChoice && key == "\<Right>"
-      var f: dict<any> = this.fields[this.currentIdx]
+    elseif key == "\<Right>"
       f.selectedIdx = min([len(f.options) - 1, f.selectedIdx + 1])
-    elseif isChoice && key == "\<CR>"
-      if len(this.fields) == 1
-        popup_close(winid, 1)
-        return true
-      endif
-      this.Focus(this.currentIdx < len(this.fields) - 1 ? this.currentIdx + 1 : len(this.fields))
-    elseif isChoice
-      # A choice field holds no text, so ignore other keys.
     elseif key == "\<CR>"
       if len(this.fields) == 1
         popup_close(winid, 1)
-        return true
+        return KEY_CLOSED
       endif
-      if this.currentIdx < len(this.fields) - 1
-        this.Focus(this.currentIdx + 1)
-      else
-        # Move to the Submit button.
-        this.Focus(len(this.fields))
+      this.Focus(this.currentIdx < len(this.fields) - 1 ? this.currentIdx + 1 : len(this.fields))
+    endif
+    return KEY_HANDLED
+  enddef
+
+  # METHOD: Keys of a text field. Enter submits a popup of one field, or
+  # else moves on, to the Submit button after the last field. Returns
+  # KEY_CHANGED when the text changed.
+  def TextKey(winid: number, key: string): string
+    var f: dict<any> = this.fields[this.currentIdx]
+    if key == "\<CR>"
+      if len(this.fields) == 1
+        popup_close(winid, 1)
+        return KEY_CLOSED
       endif
+      this.Focus(this.currentIdx < len(this.fields) - 1 ? this.currentIdx + 1 : len(this.fields))
     elseif key == "\<BS>" || key == "\<C-h>"
-      var f: dict<any> = this.fields[this.currentIdx]
-      if f.cursor > 0
-        var chars: list<string> = split(f.value, '\zs')
-        remove(chars, f.cursor - 1)
-        f.value = join(chars, '')
-        f.cursor -= 1
-        valueChanged = true
+      if f.cursor == 0
+        return KEY_HANDLED
       endif
+      var chars: list<string> = split(f.value, '\zs')
+      remove(chars, f.cursor - 1)
+      f.value = join(chars, '')
+      f.cursor -= 1
+      return KEY_CHANGED
     elseif key == "\<Del>"
-      var f: dict<any> = this.fields[this.currentIdx]
-      if f.cursor < strchars(f.value)
-        var chars: list<string> = split(f.value, '\zs')
-        remove(chars, f.cursor)
-        f.value = join(chars, '')
-        valueChanged = true
+      if f.cursor >= strchars(f.value)
+        return KEY_HANDLED
       endif
+      var chars: list<string> = split(f.value, '\zs')
+      remove(chars, f.cursor)
+      f.value = join(chars, '')
+      return KEY_CHANGED
     elseif key == "\<C-u>"
-      this.fields[this.currentIdx].value = ''
-      this.fields[this.currentIdx].cursor = 0
-      valueChanged = true
+      f.value = ''
+      f.cursor = 0
+      return KEY_CHANGED
     elseif key == "\<Left>"
-      var f: dict<any> = this.fields[this.currentIdx]
       f.cursor = max([0, f.cursor - 1])
     elseif key == "\<Right>"
-      var f: dict<any> = this.fields[this.currentIdx]
       f.cursor = min([strchars(f.value), f.cursor + 1])
     elseif key == "\<Home>" || key == "\<C-a>"
-      this.fields[this.currentIdx].cursor = 0
+      f.cursor = 0
     elseif key == "\<End>" || key == "\<C-e>"
-      var f: dict<any> = this.fields[this.currentIdx]
       f.cursor = strchars(f.value)
-    elseif strchars(key) == 1 && char2nr(key) >= 32
-        && !this.AtMaxLength(this.fields[this.currentIdx])
-      var f: dict<any> = this.fields[this.currentIdx]
+    elseif strchars(key) == 1 && char2nr(key) >= 32 && !this.AtMaxLength(f)
       var chars: list<string> = split(f.value, '\zs')
       insert(chars, key, f.cursor)
       f.value = join(chars, '')
       f.cursor += 1
-      valueChanged = true
+      return KEY_CHANGED
     endif
-
-    if valueChanged && isFilter
-      var f: dict<any> = this.fields[this.currentIdx]
-      f.filtered = f.value ==# '' ? copy(f.options) : matchfuzzy(f.options, f.value)
-      f.selectedIdx = 0
-      f.scrollTop = 0
-    endif
-
-    this.Render()
-    return true
+    return KEY_HANDLED
   enddef
 
   def HandleMouseClick(): void
@@ -848,6 +905,9 @@ export class InputPopup
     endif
   enddef
 
+  # METHOD: Draw the popup: the fields, row by row, then the buttons, with
+  # their highlights. A popup of one filter or multiline field has a
+  # drawing of its own.
   def Render(): void
     if this.bufnr == -1
       return
@@ -860,109 +920,118 @@ export class InputPopup
       this.RenderMultiline()
       return
     endif
+    var layout: dict<any> = this.LayoutFields()
+    var lines: list<string> = layout.lines
+    var btnLnum: number = -1
+    var btnMeta: list<dict<any>> = []
+    if !empty(this.buttons)
+      var buttons: dict<any> = this.LayoutButtons()
+      lines->add(buttons.line)
+      btnLnum = len(lines)
+      btnMeta = buttons.meta
+    endif
+    this.WriteLines(lines)
+    this.ApplyHighlights(lines, layout.meta, btnLnum, btnMeta)
+  enddef
 
+  # METHOD: Lay out the fields: the fields of a row on one line, and a
+  # choice field on a line of its own. Returns the lines, and for each
+  # field where its parts are, for ApplyHighlights.
+  def LayoutFields(): dict<any>
     var lines: list<string> = []
     var meta: list<dict<any>> = []
-    var curRow: number = -1
-    var line: string = ''
-    var lineChars: number = 0
-
+    # The line being built: its row, its text, and its length in characters.
+    var row: dict<any> = {num: -1, text: '', chars: 0}
     for idx in range(len(this.fields))
       var f: dict<any> = this.fields[idx]
-
-      if f.row != curRow
-        if curRow != -1
-          add(lines, line)
+      if f.row != row.num
+        if row.num != -1
+          add(lines, row.text)
         endif
-        curRow = f.row
-        line = ''
-        lineChars = 0
+        row = {num: f.row, text: '', chars: 0}
       endif
-
       var label: string = f.label .. ': '
-      var labelStartChar: number = lineChars
-      line ..= label
-      lineChars += strchars(label)
-
+      var labelStartChar: number = row.chars
+      AppendTo(row, label)
       if f.type ==# 'choice'
-        var optChars: list<dict<any>> = []
-        for i in range(len(f.options))
-          var text: string = '[ ' .. f.options[i] .. ' ]'
-          var startChar: number = lineChars
-          line ..= text
-          lineChars += strchars(text)
-          add(optChars, {optionIdx: i, startChar: startChar, endChar: lineChars})
-          if i < len(f.options) - 1
-            line ..= '  '
-            lineChars += 2
-          endif
-        endfor
-        add(meta, {
-          idx: idx, field: f, lnum: curRow + 1, isChoice: true,
-          labelStartChar: labelStartChar, labelChars: strchars(label),
-          optChars: optChars,
-        })
-        add(lines, line)
-        curRow = -1
-        line = ''
-        lineChars = 0
-        continue
-      endif
-
-      if idx == this.currentIdx
-        if f.cursor < f.offset
-          f.offset = f.cursor
-        elseif f.cursor > f.offset + f.width - 1
-          f.offset = f.cursor - f.width + 1
-        endif
+        add(meta, this.LayoutChoice(idx, f, row, labelStartChar, strchars(label)))
+        add(lines, row.text)
+        row = {num: -1, text: '', chars: 0}
       else
-        f.offset = 0
+        add(meta, this.LayoutText(idx, f, row, labelStartChar, strchars(label)))
       endif
-
-      var visible: string = strcharpart(f.value, f.offset, f.width)
-      var pad: number = f.width - strchars(visible)
-      var display: string = visible .. repeat(' ', max([pad, 0]))
-      var valueStartChar: number = lineChars
-      line ..= display .. '  '
-      lineChars += strchars(display) + 2
-
-      add(meta, {
-        idx: idx, field: f, lnum: curRow + 1, isChoice: false,
-        labelStartChar: labelStartChar, labelChars: strchars(label),
-        valueStartChar: valueStartChar, valueChars: f.width,
-      })
     endfor
-    if curRow != -1
-      add(lines, line)
+    if row.num != -1
+      add(lines, row.text)
     endif
+    return {lines: lines, meta: meta}
+  enddef
 
-    var btnLnum: number = -1
-    if !empty(this.buttons)
-      btnLnum = len(lines) + 1
-      var btnLine: string = ''
-      var btnCharMeta: list<dict<any>> = []
-      for i in range(len(this.buttons))
-        var text: string = '[ ' .. this.buttons[i].label .. ' ]'
-        var startChar: number = strchars(btnLine)
-        btnLine ..= text
-        add(btnCharMeta, {idx: i, startChar: startChar, endChar: strchars(btnLine)})
-        if i < len(this.buttons) - 1
-          btnLine ..= '  '
-        endif
-      endfor
-      add(lines, btnLine)
-
-      setbufline(this.bufnr, 1, lines)
-      if len(getbufline(this.bufnr, len(lines) + 1, '$')) > 0
-        deletebufline(this.bufnr, len(lines) + 1, '$')
+  # METHOD: Add the options of the choice field f to row. Returns where its
+  # label and options are.
+  def LayoutChoice(idx: number, f: dict<any>, row: dict<any>, labelStartChar: number,
+      labelChars: number): dict<any>
+    var optChars: list<dict<any>> = []
+    for i in range(len(f.options))
+      var startChar: number = row.chars
+      AppendTo(row, '[ ' .. f.options[i] .. ' ]')
+      add(optChars, {optionIdx: i, startChar: startChar, endChar: row.chars})
+      if i < len(f.options) - 1
+        AppendTo(row, '  ')
       endif
-      this.ApplyHighlights(lines, meta, btnLnum, btnCharMeta)
+    endfor
+    return {
+      idx: idx, field: f, lnum: row.num + 1, isChoice: true,
+      labelStartChar: labelStartChar, labelChars: labelChars,
+      optChars: optChars,
+    }
+  enddef
+
+  # METHOD: Add the visible part of the text field f to row, scrolled so
+  # that the cursor of the focused field shows. Returns where its label and
+  # value are.
+  def LayoutText(idx: number, f: dict<any>, row: dict<any>, labelStartChar: number,
+      labelChars: number): dict<any>
+    if idx == this.currentIdx
+      if f.cursor < f.offset
+        f.offset = f.cursor
+      elseif f.cursor > f.offset + f.width - 1
+        f.offset = f.cursor - f.width + 1
+      endif
     else
-      setbufline(this.bufnr, 1, lines)
-      if len(getbufline(this.bufnr, len(lines) + 1, '$')) > 0
-        deletebufline(this.bufnr, len(lines) + 1, '$')
+      f.offset = 0
+    endif
+    var visible: string = strcharpart(f.value, f.offset, f.width)
+    var valueStartChar: number = row.chars
+    AppendTo(row, visible .. repeat(' ', max([f.width - strchars(visible), 0])) .. '  ')
+    return {
+      idx: idx, field: f, lnum: row.num + 1, isChoice: false,
+      labelStartChar: labelStartChar, labelChars: labelChars,
+      valueStartChar: valueStartChar, valueChars: f.width,
+    }
+  enddef
+
+  # METHOD: Lay out the buttons on one line. Returns the line, and where
+  # each button is.
+  def LayoutButtons(): dict<any>
+    var line: string = ''
+    var meta: list<dict<any>> = []
+    for i in range(len(this.buttons))
+      var startChar: number = strchars(line)
+      line ..= '[ ' .. this.buttons[i].label .. ' ]'
+      add(meta, {idx: i, startChar: startChar, endChar: strchars(line)})
+      if i < len(this.buttons) - 1
+        line ..= '  '
       endif
-      this.ApplyHighlights(lines, meta, -1, [])
+    endfor
+    return {line: line, meta: meta}
+  enddef
+
+  # METHOD: Put lines in the popup buffer, and remove the lines after them.
+  def WriteLines(lines: list<string>): void
+    setbufline(this.bufnr, 1, lines)
+    if len(getbufline(this.bufnr, len(lines) + 1, '$')) > 0
+      deletebufline(this.bufnr, len(lines) + 1, '$')
     endif
   enddef
 

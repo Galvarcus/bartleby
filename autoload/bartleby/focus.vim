@@ -198,6 +198,35 @@ def Enter(dimExpr: string): void
   endif
 
   var origTabNr: number = tabpagenr()
+  var saved: dict<any> = SavedOptions()
+
+  tab split
+  var pluginState: dict<bool> = DisableThirdPartyStatuslines()
+  var mappedKeys: list<string> = MapsNop() + MapsResize()
+  var session: FocusSession = FocusSession.new(origTabNr, winbufnr(0), dim, dimExpr, saved,
+    mappedKeys, pluginState)
+  t:bartleby_focus_session = session
+
+  session.HideLinenr()
+  ApplyFocusOptions()
+  session.OpenPads()
+  StartFocusHooks()
+
+  session.HideStatusline()
+  if has('gui_running')
+    ApplyGuiSettings(saved)
+  endif
+
+  # Let other settings join Focus: autocmd User BartlebyFocusEnter, and
+  # BartlebyFocusLeave to reverse them. From Goyo's GoyoEnter.
+  if exists('#User#BartlebyFocusEnter')
+    doautocmd User BartlebyFocusEnter
+  endif
+enddef
+
+# FUNCTION: Return the options that Focus changes, as they are, for Exit to
+# put back.
+def SavedOptions(): dict<any>
   var saved: dict<any> = {
     laststatus: &laststatus,
     showtabline: &showtabline,
@@ -213,15 +242,12 @@ def Enter(dimExpr: string): void
   if has('gui_running')
     saved.guioptions = &guioptions
   endif
+  return saved
+enddef
 
-  tab split
-  var pluginState: dict<bool> = DisableThirdPartyStatuslines()
-  var mappedKeys: list<string> = MapsNop() + MapsResize()
-  var session: FocusSession = FocusSession.new(origTabNr, winbufnr(0), dim, dimExpr, saved,
-    mappedKeys, pluginState)
-  t:bartleby_focus_session = session
-
-  session.HideLinenr()
+# FUNCTION: Set the options of the Focus layout: no status or tab line, no
+# window borders, and windows that can be as small as one line.
+def ApplyFocusOptions(): void
   &winheight = max([&winminheight, 1])
   set winminheight=1
   set winheight=1
@@ -240,16 +266,10 @@ def Enter(dimExpr: string): void
     set guioptions-=l
     set guioptions-=L
   endif
+enddef
 
-  var lBuf: number = session.InitPad('vertical topleft new')
-  var rBuf: number = session.InitPad('vertical botright new')
-  var tBuf: number = session.InitPad('topleft new')
-  var bBuf: number = session.InitPad('botright new')
-  session.SetPadBufs(lBuf, rBuf, tBuf, bBuf)
-
-  session.ResizePads()
-  session.Tranquilize()
-
+# FUNCTION: Start the hooks that keep Focus in shape while it is active.
+def StartFocusHooks(): void
   augroup bartleby_focus
     autocmd!
     autocmd TabLeave * ++nested FocusAutoExit()
@@ -258,17 +278,6 @@ def Enter(dimExpr: string): void
     autocmd BufWinEnter * FocusAutoHideChrome()
     autocmd WinEnter,WinLeave * FocusAutoHideStatusline()
   augroup END
-
-  session.HideStatusline()
-  if has('gui_running')
-    ApplyGuiSettings(saved)
-  endif
-
-  # Let other settings join Focus: autocmd User BartlebyFocusEnter, and
-  # BartlebyFocusLeave to reverse them. From Goyo's GoyoEnter.
-  if exists('#User#BartlebyFocusEnter')
-    doautocmd User BartlebyFocusEnter
-  endif
 enddef
 
 def Exit(): void
@@ -667,11 +676,28 @@ export class FocusSession
     this.ResizePads()
   enddef
 
+  # METHOD: Open the four empty windows around the text, and size them.
+  def OpenPads(): void
+    var lBuf: number = this.InitPad('vertical topleft new')
+    var rBuf: number = this.InitPad('vertical botright new')
+    var tBuf: number = this.InitPad('topleft new')
+    var bBuf: number = this.InitPad('botright new')
+    this.SetPadBufs(lBuf, rBuf, tBuf, bBuf)
+    this.ResizePads()
+    this.Tranquilize()
+  enddef
+
+  # METHOD: Set the size to expr, and keep expr as the size that Ctrl-W =
+  # goes back to, so that it is the size asked for last. An invalid expr
+  # changes nothing, with the error that Enter gives.
   def ResetDimensions(expr: string): void
     var parsed: Dimensions = Dimensions.Parse(expr)
-    if parsed isnot null_object
-      this.dim = parsed
+    if parsed is null_object
+      log.Error(printf(IN.T("invalid dimension expression: %s"), expr))
+      return
     endif
+    this.dim = parsed
+    this.dimExpr = expr
     this.ResizePads()
   enddef
 endclass
