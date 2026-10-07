@@ -149,6 +149,125 @@ def Test_text_field_stops_at_its_maximum_length(): void
   popup.Close()
 enddef
 
+# FUNCTION: Return an open popup with two text fields, and the text abcd
+# in the first.
+def NewTextPopup(): IP.InputPopup
+  var popup = IP.InputPopup.new([[{name: 'first', type: 'text'}], [{name: 'second', type: 'text'}]],
+    {first: 'abcd'}, {})
+  popup.Open()
+  return popup
+enddef
+
+# FUNCTION: Send each key of keys to popup, in order.
+def Keys(popup: IP.InputPopup, keys: list<string>): void
+  for key in keys
+    popup.Filter(popup.winid, key)
+  endfor
+enddef
+
+def Test_text_keys_edit_at_the_cursor(): void
+  var popup = NewTextPopup()
+  Keys(popup, ["\<Home>", 'X'])
+  assert_equal('Xabcd', popup.Values().first)
+  Keys(popup, ["\<End>", "\<BS>"])
+  assert_equal('Xabc', popup.Values().first)
+  Keys(popup, ["\<Left>", "\<Left>", "\<Del>"])
+  assert_equal('Xac', popup.Values().first)
+  Keys(popup, ["\<Right>", 'Z', "\<C-a>", 'Y', "\<C-e>", 'W'])
+  assert_equal('YXacZW', popup.Values().first)
+  Keys(popup, ["\<C-h>"])
+  assert_equal('YXacZ', popup.Values().first)
+  Keys(popup, ["\<C-u>"])
+  assert_equal('', popup.Values().first)
+  popup.Close()
+enddef
+
+def Test_tab_and_shift_tab_move_between_controls(): void
+  var popup = NewTextPopup()
+  assert_equal(0, popup.currentIdx)
+  Keys(popup, ["\<Tab>"])
+  assert_equal(1, popup.currentIdx)
+  Keys(popup, ["\<C-n>", "\<C-n>", "\<C-n>"])
+  assert_equal(0, popup.currentIdx)
+  Keys(popup, ["\<S-Tab>"])
+  assert_equal(popup.TotalControls() - 1, popup.currentIdx)
+  Keys(popup, ["\<C-p>"])
+  assert_equal(popup.TotalControls() - 2, popup.currentIdx)
+  popup.Close()
+enddef
+
+def Test_enter_moves_on_to_the_next_field_then_the_submit_button(): void
+  var popup = NewTextPopup()
+  Keys(popup, ["\<CR>"])
+  assert_equal(1, popup.currentIdx)
+  Keys(popup, ["\<CR>"])
+  assert_equal(2, popup.currentIdx)
+  popup.Close()
+enddef
+
+def Test_arrows_on_buttons_stay_among_the_buttons(): void
+  var popup = NewTextPopup()
+  Keys(popup, ["\<Tab>", "\<Tab>"])
+  assert_equal(2, popup.currentIdx)
+  Keys(popup, ["\<Left>"])
+  assert_equal(2, popup.currentIdx)
+  Keys(popup, ["\<Right>", "\<Right>", "\<Right>"])
+  assert_equal(popup.TotalControls() - 1, popup.currentIdx)
+  # Typing on a button changes no field.
+  Keys(popup, ['x'])
+  assert_equal(['abcd', ''], [popup.Values().first, popup.Values().second])
+  popup.Close()
+enddef
+
+def Test_arrows_choose_an_option_and_stop_at_the_ends(): void
+  var popup = IP.InputPopup.new([[{name: 'kind', type: 'choice', options: ['A', 'B', 'C']}],
+    [{name: 'other', type: 'text'}]], {}, {})
+  popup.Open()
+  Keys(popup, ["\<Right>", "\<Right>", "\<Right>"])
+  assert_equal('C', popup.Values().kind)
+  Keys(popup, ["\<Left>"])
+  assert_equal('B', popup.Values().kind)
+  Keys(popup, ['x', "\<Left>", "\<Left>"])
+  assert_equal('A', popup.Values().kind)
+  Keys(popup, ["\<CR>"])
+  assert_equal(1, popup.currentIdx)
+  popup.Close()
+enddef
+
+def Test_esc_and_ctrl_s_close_the_popup(): void
+  for key in ["\<Esc>", "\<C-c>", "\<C-s>"]
+    var popup = NewTextPopup()
+    var id: number = popup.winid
+    Keys(popup, [key])
+    assert_equal({}, popup_getpos(id), strtrans(key))
+  endfor
+enddef
+
+def Test_enter_submits_a_popup_of_one_field(): void
+  var popup = IP.InputPopup.new([[{name: 'only', type: 'text'}]], {}, {})
+  popup.Open()
+  var id: number = popup.winid
+  Keys(popup, ['a', "\<CR>"])
+  assert_equal({}, popup_getpos(id))
+enddef
+
+# FUNCTION: The layout of a form: two fields share a row, a choice takes
+# a line of its own, and the buttons come last. The lines and highlights
+# are those that the drawing gave before it was split into parts.
+def Test_a_form_lays_out_its_rows_choices_and_buttons(): void
+  var popup = IP.InputPopup.new([[{name: 'a', type: 'text'}, {name: 'b', type: 'text'}],
+    [{name: 'kind', type: 'choice', options: ['One', 'Two', 'Three']}], [{name: 'c', type: 'text'}]],
+    {a: 'alpha', b: 'beta', c: 'gamma'}, {})
+  popup.Open()
+  var buf: number = winbufnr(popup.winid)
+  assert_equal(['a: alpha                 b: beta                  ',
+    'kind: [ One ]  [ Two ]  [ Three ]', 'c: gamma                 ', '[ Submit ]  [ Cancel ]'],
+    getbufline(buf, 1, '$'))
+  assert_equal([[1, 1, 3, 'InputPopupLabel'], [1, 9, 1, 'InputPopupCursor'], [1, 26, 3, 'InputPopupLabel']],
+    prop_list(1, {bufnr: buf})->mapnew((_, p) => [1, p.col, p.length, p.type]))
+  popup.Close()
+enddef
+
 export def RunAll(): void
   Test_enter_inserts_a_newline_rather_than_submitting()
   Test_typed_text_is_inserted_at_the_cursor()
@@ -159,4 +278,12 @@ export def RunAll(): void
   Test_filter_scrollbar_only_when_the_list_scrolls()
   Test_popup_is_wide_enough_for_its_title()
   Test_text_field_stops_at_its_maximum_length()
+  Test_text_keys_edit_at_the_cursor()
+  Test_tab_and_shift_tab_move_between_controls()
+  Test_enter_moves_on_to_the_next_field_then_the_submit_button()
+  Test_arrows_on_buttons_stay_among_the_buttons()
+  Test_arrows_choose_an_option_and_stop_at_the_ends()
+  Test_esc_and_ctrl_s_close_the_popup()
+  Test_enter_submits_a_popup_of_one_field()
+  Test_a_form_lays_out_its_rows_choices_and_buttons()
 enddef

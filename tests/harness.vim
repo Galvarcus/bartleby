@@ -55,6 +55,10 @@ import './test_recover.vim' as TRC
 import './test_wordcount.vim' as TWC
 import './test_session.vim' as TSE
 import './test_inspector.vim' as TIS
+import './test_templates.vim' as TTE
+import './test_restore.vim' as TRE
+import './test_corkboard.vim' as TCB
+import './test_focus.vim' as TFO
 import './test_inputpopup.vim' as TI
 import './test_dialog_popup.vim' as TDP
 import './test_outliner.vim' as TO
@@ -84,6 +88,10 @@ var suites: list<func(): void> = [
   TWC.RunAll,
   TSE.RunAll,
   TIS.RunAll,
+  TTE.RunAll,
+  TRE.RunAll,
+  TCB.RunAll,
+  TFO.RunAll,
   TI.RunAll,
   TDP.RunAll,
   TO.RunAll,

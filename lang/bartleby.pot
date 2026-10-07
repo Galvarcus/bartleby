@@ -618,15 +618,15 @@ msgstr ""
 msgid "Done"
 msgstr ""
 
-#: autoload/bartleby/focus.vim:196
+#: autoload/bartleby/focus.vim:196 autoload/bartleby/focus.vim:696
 msgid "invalid dimension expression: %s"
 msgstr ""
 
-#: autoload/bartleby/focus.vim:355
+#: autoload/bartleby/focus.vim:364
 msgid "could not set g:bartleby_focus_guifont \"%s\": %s"
 msgstr ""
 
-#: autoload/bartleby/focus.vim:368
+#: autoload/bartleby/focus.vim:377
 msgid "this GUI has no fullscreen mode - g:bartleby_focus_fullscreen has no effect"
 msgstr ""
 
@@ -642,15 +642,15 @@ msgstr ""
 msgid " %s (C-s to save) "
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:229
+#: autoload/bartleby/inputpopup.vim:244
 msgid "Submit"
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:338
+#: autoload/bartleby/inputpopup.vim:353
 msgid "InputPopup: fieldRows produced no fields"
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:741
+#: autoload/bartleby/inputpopup.vim:798
 msgid "(no matches)"
 msgstr ""
 
@@ -1220,7 +1220,7 @@ msgstr ""
 msgid "Restore"
 msgstr ""
 
-#: plugin/bartleby.vim:246 autoload/bartleby/binder.vim:199 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:230
+#: plugin/bartleby.vim:246 autoload/bartleby/binder.vim:199 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:245
 msgid "Cancel"
 msgstr ""
 
