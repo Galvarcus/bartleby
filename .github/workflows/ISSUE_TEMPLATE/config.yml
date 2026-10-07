@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Vim Community Forum
+    url: https://www.reddit.com/r/vim/
+    about: For general Vim scripting, keymapping, and workflow questions.
