@@ -654,7 +654,7 @@ msgstr ""
 msgid "InputPopup: fieldRows produced no fields"
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:798
+#: autoload/bartleby/inputpopup.vim:801
 msgid "(no matches)"
 msgstr ""
 

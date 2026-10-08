@@ -781,7 +781,10 @@ export class InputPopup
 
   def RenderFilter(): void
     var f: dict<any> = this.fields[0]
-    var lines: list<string> = ['> ' .. f.value]
+    # The trailing space is for the cursor at the end of the text, as in
+    # RenderMultiline.
+    # REFERENCE: https://github.com/Galvarcus/bartleby/issues/3
+    var lines: list<string> = ['> ' .. f.value .. ' ']
     for i in range(f.maxVisible)
       var idx: number = f.scrollTop + i
       add(lines, idx < len(f.filtered) ? '  ' .. f.filtered[idx] : '')
@@ -881,6 +884,13 @@ export class InputPopup
       var lineIdx: number = f.scrollOffset + i
       add(lines, lineIdx < len(f.lines) ? f.lines[lineIdx] : '')
     endfor
+    # The cursor is a highlighted character, so at the end of its line it
+    # needs a space to show on, as text fields have their padding. Only the
+    # drawing gets the space, not the text. See issue 3.
+    var cursorIdx: number = f.cursorLine - f.scrollOffset
+    if cursorIdx >= 0 && cursorIdx < len(lines) && f.cursorCol >= strchars(lines[cursorIdx])
+      lines[cursorIdx] ..= ' '
+    endif
 
     setbufline(this.bufnr, 1, lines)
     if len(getbufline(this.bufnr, len(lines) + 1, '$')) > 0

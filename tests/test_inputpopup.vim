@@ -268,6 +268,53 @@ def Test_a_form_lays_out_its_rows_choices_and_buttons(): void
   popup.Close()
 enddef
 
+# FUNCTION: Return where the cursor highlight of the open popup is, as
+# line and column, and whether it is on a character of its line. The
+# cursor is drawn as a highlighted character, so off the end of a line it
+# does not show. Empty when there is none.
+def CursorShown(): list<any>
+  var id: number = popup_list()[0]
+  var buf: number = winbufnr(id)
+  var lines: list<string> = getbufline(buf, 1, '$')
+  for lnum in range(1, len(lines))
+    for p in prop_list(lnum, {bufnr: buf, types: ['InputPopupCursor']})
+      return [lnum, p.col, p.col <= strlen(lines[lnum - 1])]
+    endfor
+  endfor
+  return []
+enddef
+
+# FUNCTION: The cursor shows at the end of the text, where it opens and
+# where typing puts it, in an empty text, and in each kind of popup. In a
+# multiline or filter popup it did not.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/3
+def Test_the_cursor_shows_at_the_end_of_the_text(): void
+  var saved: list<string> = []
+  IP.PromptMultiline('Synopsis', "Hello\nworld", (text) => {
+    saved->add(text)
+  })
+  assert_equal([1, 6, true], CursorShown(), 'multiline, on open')
+  feedkeys("\<C-s>", 'xt')
+  # The space is only drawn: the text has none.
+  assert_equal(["Hello\nworld"], saved)
+  IP.PromptMultiline('Synopsis', '', (text) => {
+  })
+  assert_equal([1, 1, true], CursorShown(), 'multiline, empty')
+  feedkeys('ab', 'xt')
+  assert_equal([1, 3, true], CursorShown(), 'multiline, after typing')
+  popup_clear(true)
+  IP.PromptFilter('Pick', ['one', 'two'], (choice) => {
+  })
+  assert_equal([1, 3, true], CursorShown(), 'filter, empty')
+  feedkeys('o', 'xt')
+  assert_equal([1, 4, true], CursorShown(), 'filter, after typing')
+  popup_clear(true)
+  IP.PromptText('Title', 'Scene', (text) => {
+  })
+  assert_equal(true, get(CursorShown(), 2, false), 'text field')
+  popup_clear(true)
+enddef
+
 export def RunAll(): void
   Test_enter_inserts_a_newline_rather_than_submitting()
   Test_typed_text_is_inserted_at_the_cursor()
@@ -286,4 +333,5 @@ export def RunAll(): void
   Test_esc_and_ctrl_s_close_the_popup()
   Test_enter_submits_a_popup_of_one_field()
   Test_a_form_lays_out_its_rows_choices_and_buttons()
+  Test_the_cursor_shows_at_the_end_of_the_text()
 enddef
