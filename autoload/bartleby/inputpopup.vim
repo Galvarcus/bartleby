@@ -116,16 +116,17 @@ export def PromptFilter(title: string, options: list<string>, OnSubmit: func(str
 enddef
 
 # FUNCTION: Show a multiline text field, titled title and filled with
-# default, a string with line breaks. Enter adds a line, unlike every
-# other one-field prompt, so C-s or the Submit button submits. Call
-# OnSubmit with the text joined by line breaks. Nothing is called on
-# cancel.
+# default, a string with line breaks, with Save and Cancel buttons. Enter
+# adds a line, unlike every other one-field prompt, so C-s or the Save
+# button submits, and Tab moves to the buttons. Call OnSubmit with the
+# text joined by line breaks. Nothing is called on cancel.
 export def PromptMultiline(title: string, default: string, OnSubmit: func(string),
     rows: number = 5, width: number = 50): void
   var fields: list<list<dict<any>>> = [[{name: 'text', type: 'multiline',
     rows: rows}]]
   var form: InputPopup = InputPopup.new(fields, {text: default},
-    {title: printf(IN.T(" %s (C-s to save) "), title), widths: {text: width}, buttons: []})
+    {title: printf(IN.T(" %s (C-s to save) "), title), widths: {text: width},
+      submit_label: IN.T("Save")})
   form.OnSubmit((values: dict<any>) => {
     OnSubmit(values.text)
   })
@@ -307,7 +308,7 @@ export class InputPopup
     endif
     if len(this.fields) == 1 && this.fields[0].type ==# 'multiline'
       var f: dict<any> = this.fields[0]
-      return [max([f.width, 10]), f.rows + (empty(this.buttons) ? 0 : 1)]
+      return [max([f.width, strchars(this.ButtonLineText()), 10]), f.rows + (empty(this.buttons) ? 0 : 1)]
     endif
 
     var rowWidths: dict<number> = {}
@@ -410,9 +411,12 @@ export class InputPopup
     return this.buttons[idx - len(this.fields)]
   enddef
 
+  # METHOD: Give the control at idx focus. A text or filter field gets its
+  # cursor at the end of its text. A multiline field keeps its cursor, so
+  # that focus comes back from the buttons to where the writing was.
   def Focus(idx: number): void
     this.currentIdx = idx
-    if idx < len(this.fields) && this.fields[idx].type !=# 'choice'
+    if idx < len(this.fields) && index(['choice', 'multiline'], this.fields[idx].type) < 0
       this.fields[idx].cursor = strchars(this.fields[idx].value)
     endif
   enddef
@@ -528,10 +532,17 @@ export class InputPopup
     return true
   enddef
 
-  # METHOD: Keys of a multiline field. Ctrl-S submits and Esc cancels, and
-  # every other key edits the text.
+  # METHOD: Keys of a multiline field. Ctrl-S submits, Esc cancels, Tab and
+  # Shift-Tab move to the buttons, and every other key edits the text. The
+  # buttons are the way to save where the terminal takes Ctrl-S for flow
+  # control, as the Linux console does.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/2
   def MultilineKey(winid: number, key: string): string
-    if key == "\<C-s>"
+    if (key == "\<Tab>" || key == "\<S-Tab>") && !empty(this.buttons)
+      var step: number = key == "\<Tab>" ? 1 : this.TotalControls() - 1
+      this.Focus((this.currentIdx + step) % this.TotalControls())
+      return KEY_HANDLED
+    elseif key == "\<C-s>"
       popup_close(winid, 1)
       return KEY_CLOSED
     elseif key == "\<Esc>" || key == "\<C-c>"
@@ -886,22 +897,32 @@ export class InputPopup
     endfor
     # The cursor is a highlighted character, so at the end of its line it
     # needs a space to show on, as text fields have their padding. Only the
-    # drawing gets the space, not the text. See issue 3.
+    # drawing gets the space, not the text.
+    # REFERENCE: https://github.com/Galvarcus/bartleby/issues/3
     var cursorIdx: number = f.cursorLine - f.scrollOffset
     if cursorIdx >= 0 && cursorIdx < len(lines) && f.cursorCol >= strchars(lines[cursorIdx])
       lines[cursorIdx] ..= ' '
     endif
-
-    setbufline(this.bufnr, 1, lines)
-    if len(getbufline(this.bufnr, len(lines) + 1, '$')) > 0
-      deletebufline(this.bufnr, len(lines) + 1, '$')
+    var btnLnum: number = -1
+    var btnMeta: list<dict<any>> = []
+    if !empty(this.buttons)
+      var buttons: dict<any> = this.LayoutButtons()
+      lines->add(buttons.line)
+      btnLnum = len(lines)
+      btnMeta = buttons.meta
     endif
 
+    this.WriteLines(lines)
+    this.ApplyButtonHighlights(lines, btnLnum, btnMeta)
     this.ApplyMultilineHighlights(lines, f)
   enddef
 
+  # METHOD: Draw the cursor of the multiline field f, while it has focus.
   def ApplyMultilineHighlights(lines: list<string>, f: dict<any>): void
     prop_remove({type: 'InputPopupCursor', bufnr: this.bufnr}, 1, len(lines))
+    if this.currentIdx != 0
+      return
+    endif
 
     var cursorScreenLine: number = f.cursorLine - f.scrollOffset + 1
     if cursorScreenLine >= 1 && cursorScreenLine <= len(lines)
@@ -1100,6 +1121,14 @@ export class InputPopup
       })
     endif
 
+    this.ApplyButtonHighlights(lines, btnLnum, btnCharMeta)
+  enddef
+
+  # METHOD: Highlight the buttons on line btnLnum, the one with focus as
+  # active, and record where each is for mouse clicks. No line is -1.
+  def ApplyButtonHighlights(lines: list<string>, btnLnum: number, btnCharMeta: list<dict<any>>): void
+    prop_remove({type: 'InputPopupButton', bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: 'InputPopupButtonActive', bufnr: this.bufnr}, 1, len(lines))
     this._buttonHit = []
     if btnLnum == -1
       return

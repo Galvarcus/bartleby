@@ -221,7 +221,8 @@ export def Toggle(): void
   setlocal winfixwidth
   # The buffer stays while the Inspector is closed, with modifiable off and
   # the lines of the last document, so it is written as when it follows
-  # the editor. See issue 1.
+  # the editor.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/1
   RefreshFor(project, item)
   SetupKeymaps()
 

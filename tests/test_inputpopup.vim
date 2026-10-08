@@ -315,6 +315,53 @@ def Test_the_cursor_shows_at_the_end_of_the_text(): void
   popup_clear(true)
 enddef
 
+# FUNCTION: Return the label of the button that has focus in the open
+# popup, or an empty string when the text has it.
+def ActiveButton(): string
+  var id: number = popup_list()[0]
+  var buf: number = winbufnr(id)
+  var lines: list<string> = getbufline(buf, 1, '$')
+  for lnum in range(1, len(lines))
+    for p in prop_list(lnum, {bufnr: buf, types: ['InputPopupButtonActive']})
+      return trim(lines[lnum - 1][p.col - 1 : p.col + p.length - 2], '[] ')
+    endfor
+  endfor
+  return ''
+enddef
+
+# FUNCTION: A synopsis saves with its Save button too, so that it saves
+# where the terminal takes Ctrl-S for flow control.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/2
+def Test_the_synopsis_saves_with_its_button(): void
+  var saved: list<string> = []
+  IP.PromptMultiline('Synopsis', 'Hello', (text) => {
+    saved->add(text)
+  })
+  var buf: number = winbufnr(popup_list()[0])
+  assert_equal('[ Save ]  [ Cancel ]', getbufline(buf, '$')[0])
+  feedkeys("\<Left>\<Tab>", 'xt')
+  assert_equal('Save', ActiveButton())
+  assert_equal([], CursorShown(), 'the text cursor shows while a button has focus')
+  # Back to the text, which takes keys again, at the cursor it had.
+  feedkeys("\<S-Tab>!", 'xt')
+  assert_equal('', ActiveButton())
+  feedkeys("\<Tab>\<CR>", 'xt')
+  assert_equal(['Hell!o'], saved)
+  assert_equal([], popup_list())
+enddef
+
+def Test_the_cancel_button_of_a_synopsis_saves_nothing(): void
+  var saved: list<string> = []
+  IP.PromptMultiline('Synopsis', 'Hello', (text) => {
+    saved->add(text)
+  })
+  feedkeys("\<Tab>\<Right>", 'xt')
+  assert_equal('Cancel', ActiveButton())
+  feedkeys("\<CR>", 'xt')
+  assert_equal([], saved)
+  assert_equal([], popup_list())
+enddef
+
 export def RunAll(): void
   Test_enter_inserts_a_newline_rather_than_submitting()
   Test_typed_text_is_inserted_at_the_cursor()
@@ -334,4 +381,6 @@ export def RunAll(): void
   Test_enter_submits_a_popup_of_one_field()
   Test_a_form_lays_out_its_rows_choices_and_buttons()
   Test_the_cursor_shows_at_the_end_of_the_text()
+  Test_the_synopsis_saves_with_its_button()
+  Test_the_cancel_button_of_a_synopsis_saves_nothing()
 enddef

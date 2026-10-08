@@ -646,15 +646,19 @@ msgstr ""
 msgid " %s (C-s to save) "
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:244
+#: autoload/bartleby/inputpopup.vim:129
+msgid "Save"
+msgstr ""
+
+#: autoload/bartleby/inputpopup.vim:245
 msgid "Submit"
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:353
+#: autoload/bartleby/inputpopup.vim:354
 msgid "InputPopup: fieldRows produced no fields"
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:801
+#: autoload/bartleby/inputpopup.vim:812
 msgid "(no matches)"
 msgstr ""
 
@@ -1224,7 +1228,7 @@ msgstr ""
 msgid "Restore"
 msgstr ""
 
-#: plugin/bartleby.vim:247 autoload/bartleby/binder.vim:199 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:245
+#: plugin/bartleby.vim:247 autoload/bartleby/binder.vim:199 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:246
 msgid "Cancel"
 msgstr ""
 

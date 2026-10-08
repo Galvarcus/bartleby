@@ -6,7 +6,7 @@ vim9script
 # on every buffer change while it is open. Closed in any way, not only
 # with Toggle, it stops: the hook removes itself. It opens again as often
 # as it is closed, and shows only the document that it opens for: its
-# buffer stays hidden while closed, and must take new text, see issue 1.
+# buffer stays hidden while closed, and must take new text.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -40,8 +40,9 @@ def InspectorText(): string
   return join(getbufline(CO.INSPECTOR_BUF, 1, '$'), "\n")
 enddef
 
-# FUNCTION: Open, close, and open the Inspector again with Toggle, as in
-# issue 1, where the second opening failed with E21.
+# FUNCTION: Open, close, and open the Inspector again with Toggle. The
+# second opening once failed with E21.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/1
 def Test_the_inspector_opens_again_after_it_closes(): void
   var project = FI.BuildProject()
   var scene = project.ChildAt(1).ChildAt(0).ChildAt(0)
