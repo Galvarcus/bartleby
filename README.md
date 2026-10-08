@@ -165,6 +165,14 @@ targets and their output.
 **Binder item** - a folder or a document. A document also has a
 metadata file, `<name>.meta.json`.
 
+**Files on disk** - a document lives in the folders of its place in the
+Binder, as in `binder/manuscript/part-1/chapter-2/arrival.md` for the
+scene Arrival in Chapter 2 of Part 1. New scrives and new documents
+follow this layout. After you move documents in the Binder,
+`:BartlebyTidyFiles` moves their files to match, after a confirmation
+that says how many move. It stops when a document has unsaved changes,
+never writes over another file, and leaves the Trash as it is.
+
 **Structural folders** - Front Matter, Manuscript, Back Matter,
 Characters, and Research. Every scrive has them, and compile uses
 them. You cannot rename, delete, or move them. `dd` on one moves its
@@ -497,6 +505,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyProjectInfo` | Edit the profile for this scrive only |
 | `:BartlebyCompile` | Compile the scrive |
 | `:BartlebyEmptyTrash` | Delete everything in the Trash for good, after a confirmation |
+| `:BartlebyTidyFiles` | Move the files of the scrive, so that the folders on disk follow the Binder |
 | `:BartlebyRecover [name]` | Add documents on disk that the Binder does not list to Recovered. With a name, rebuild the Binder of a scrive that does not open |
 | `:BartlebyCommands` | Open the command palette |
 | `:BartlebyMenu` | Open the command menu |

@@ -17,7 +17,6 @@ var is_loaded: bool = true
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
-import autoload 'bartleby/slug.vim' as SU
 import autoload 'bartleby/templates.vim' as TE
 import 'bartleby/variables/constants.vim' as CO
 
@@ -78,8 +77,9 @@ enddef
 export def AddChapter(container: BI.BinderItem, row: T.Row, title: string): BI.BinderItem
   var chapterTitle: string = title ==# '' ? NextRoleNumber(container.children, CO.ROLE_CHAPTER) : title
   var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterTitle, CO.ROLE_CHAPTER)
-  var relPath: string = $'chapter-{SU.Slugify(chapterTitle)}/scene-01.md'
-  chapter.AddChild(BI.BinderItem.NewDocument(TE.FirstSceneTitle(), relPath))
+  # The caller gives the scene its path with layout.Place, once the chapter
+  # has its place in the tree.
+  chapter.AddChild(BI.BinderItem.NewDocument(TE.FirstSceneTitle(), ''))
   AddIntoContainer(container, row, chapter)
   return chapter
 enddef

@@ -506,6 +506,13 @@ Each scrive is a folder under `~/Documents/Bartleby/`. In it:
   document holds its label, status, synopsis, and other details.
 - `compile/` holds your compiled files.
 
+The folders in `binder/` follow the Binder. The scene Arrival in
+Chapter 2 of Part 1 is `binder/manuscript/part-1/chapter-2/arrival.md`.
+When you move scenes and chapters in the Binder, their files stay where
+they are. To move the files to match, run `:BartlebyTidyFiles`, and
+press `y`. Save your changes first: a document with unsaved changes
+stops it. A scrive made before this layout can be tidied the same way.
+
 You can find, copy, or back up your writing with any file browser. To
 keep your scrives in another place, set `g:bartleby_binder_root` in
 your vimrc.

@@ -41,6 +41,7 @@ import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/tty.vim' as TY
 import autoload 'bartleby/dialog_popup.vim' as DP
 import autoload 'bartleby/recover.vim' as RC
+import autoload 'bartleby/layout.vim' as LY
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -313,6 +314,35 @@ enddef
 
 command! -bar -nargs=? -complete=customlist,bartleby#scrive#CompleteNames
   \ BartlebyRecover Recover(<q-args>)
+
+# FUNCTION: Move the files of the open scrive, so that the folders on disk
+# follow the Binder, after a confirmation that says how many move. See
+# layout.vim.
+def TidyFiles(): void
+  var project: PO.Project = ST.Get()
+  if project is null_object
+    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    return
+  endif
+  var moves: list<dict<any>> = LY.Plan(project)
+  if empty(moves)
+    log.Info(IN.T("the files already follow the Binder"))
+    return
+  endif
+  DP.Confirm(printf(IN.N("Move %d file, so that the folders on disk follow the Binder?",
+      "Move %d files, so that the folders on disk follow the Binder?", len(moves)), len(moves)), () => {
+    var failed: list<string> = LY.Tidy(project, moves)
+    B.RenderIfOpen(project)
+    if empty(failed)
+      log.Info(printf(IN.N("moved %d file", "moved %d files", len(moves)), len(moves)))
+    else
+      log.Warn(printf(IN.T("these files did not move, so save any changes and run it again: %s"),
+        join(failed, ', ')))
+    endif
+  })
+enddef
+
+command! -bar BartlebyTidyFiles TidyFiles()
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
 command! -bar -nargs=? BartlebyDefine LP.LookupCommand(CO.KIND_DICTIONARY, <q-args>)

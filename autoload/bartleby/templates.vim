@@ -21,7 +21,7 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/slug.vim' as SU
+import autoload 'bartleby/layout.vim' as LY
 import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return the title of the first scene of a chapter, in the
@@ -30,25 +30,20 @@ export def FirstSceneTitle(): string
   return IN.T("Scene 1")
 enddef
 
-# FUNCTION: Return a chapter folder with one starter scene. relPath is in
-# the chapter's own slug folder, so the scene files of different
-# chapters do not collide on disk. docExt is always .md here, because
-# screenplays do not use chapters.
+# FUNCTION: Return a chapter folder with one starter scene. DefaultTree
+# gives the scene its path, see layout.vim.
 def ChapterWithScene(chapterNumber: string): BI.BinderItem
   var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterNumber, CO.ROLE_CHAPTER)
-  var relPath: string = 'chapter-' .. chapterNumber .. '/scene-01.md'
-  chapter.SetChildren([BI.BinderItem.NewDocument(FirstSceneTitle(), relPath)])
+  chapter.SetChildren([BI.BinderItem.NewDocument(FirstSceneTitle(), '')])
   return chapter
 enddef
 
 # FUNCTION: Return a folder with one starter document, for types that are
 # a single flat file, such as the draft of a Short Story or the scenes of
 # a Screenplay.
-def FolderWithDoc(folderTitle: string, docTitle: string, docExt: string,
-    role: string = CO.ROLE_NONE): BI.BinderItem
+def FolderWithDoc(folderTitle: string, docTitle: string, role: string = CO.ROLE_NONE): BI.BinderItem
   var folder: BI.BinderItem = BI.BinderItem.NewFolder(folderTitle, role)
-  var relPath: string = SU.Slugify(folderTitle) .. '/' .. SU.Slugify(docTitle) .. docExt
-  folder.SetChildren([BI.BinderItem.NewDocument(docTitle, relPath)])
+  folder.SetChildren([BI.BinderItem.NewDocument(docTitle, '')])
   return folder
 enddef
 
@@ -65,10 +60,11 @@ def BackMatterFolder(): BI.BinderItem
 enddef
 
 export def DefaultTree(projectType: string, docExt: string): list<BI.BinderItem>
+  var tree: list<BI.BinderItem> = []
   if projectType ==# CO.TYPE_NOVEL
     var manuscript: BI.BinderItem = BI.BinderItem.NewFolder(IN.T("Manuscript"), CO.ROLE_MANUSCRIPT)
     manuscript.SetChildren([ChapterWithScene('1')])
-    return [
+    tree = [
       FrontMatterFolder(),
       manuscript,
       BackMatterFolder(),
@@ -81,7 +77,7 @@ export def DefaultTree(projectType: string, docExt: string): list<BI.BinderItem>
     var part2: BI.BinderItem = BI.BinderItem.NewFolder('2', CO.ROLE_PART)
     var manuscript: BI.BinderItem = BI.BinderItem.NewFolder(IN.T("Manuscript"), CO.ROLE_MANUSCRIPT)
     manuscript.SetChildren([part1, part2])
-    return [
+    tree = [
       FrontMatterFolder(),
       manuscript,
       BackMatterFolder(),
@@ -89,21 +85,24 @@ export def DefaultTree(projectType: string, docExt: string): list<BI.BinderItem>
       BI.BinderItem.NewFolder(IN.T("Research"), CO.ROLE_RESEARCH),
     ]
   elseif projectType ==# CO.TYPE_SHORT_STORY
-    return [
+    tree = [
       FrontMatterFolder(),
-      FolderWithDoc(IN.T("Manuscript"), IN.T("Draft"), docExt, CO.ROLE_MANUSCRIPT),
+      FolderWithDoc(IN.T("Manuscript"), IN.T("Draft"), CO.ROLE_MANUSCRIPT),
       BI.BinderItem.NewFolder(IN.T("Research"), CO.ROLE_RESEARCH),
     ]
   elseif projectType ==# CO.TYPE_SCREENPLAY
-    return [
+    tree = [
       FrontMatterFolder(),
-      FolderWithDoc(IN.T("Screenplay"), FirstSceneTitle(), docExt, CO.ROLE_MANUSCRIPT),
+      FolderWithDoc(IN.T("Screenplay"), FirstSceneTitle(), CO.ROLE_MANUSCRIPT),
       BI.BinderItem.NewFolder(IN.T("Characters"), CO.ROLE_CHARACTERS),
       BI.BinderItem.NewFolder(IN.T("Research"), CO.ROLE_RESEARCH),
     ]
   else
-    return []
+    return tree
   endif
+  # The paths of the starter documents follow the layout, see layout.vim.
+  LY.AssignPaths(tree, docExt)
+  return tree
 enddef
 
 # FUNCTION: Create an empty file for every document in items, and its

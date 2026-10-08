@@ -22,6 +22,7 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
+import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/snapshot.vim' as SN
 import autoload 'bartleby/tree.vim' as T
@@ -133,7 +134,7 @@ export def DeleteForever(project: PO.Project, row: T.Row): list<string>
       if delete(path) != 0
         failed->add(path)
       else
-        RemoveEmptyDirectories(fnamemodify(path, ':h'), root)
+        PE.RemoveEmptyDirectories(fnamemodify(path, ':h'), root)
       endif
     endfor
     var snapshots: string = SN.SnapshotDir(project, doc)
@@ -196,15 +197,4 @@ def Descendants(folder: BI.BinderItem): list<BI.BinderItem>
     endif
   endfor
   return found
-enddef
-
-# FUNCTION: Remove dir, and each folder above it, while it is empty, up to
-# root, which stays.
-def RemoveEmptyDirectories(dir: string, root: string): void
-  var current: string = dir
-  while current !=# root && stridx(current, root .. '/') == 0
-      && isdirectory(current) && empty(readdir(current))
-    delete(current, 'd')
-    current = fnamemodify(current, ':h')
-  endwhile
 enddef

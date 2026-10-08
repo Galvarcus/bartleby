@@ -27,7 +27,7 @@ import autoload 'bartleby/corkboard.vim' as CR
 import autoload 'bartleby/outliner.vim' as O
 import autoload 'bartleby/search.vim' as SE
 import autoload 'bartleby/windows.vim' as W
-import autoload 'bartleby/slug.vim' as SU
+import autoload 'bartleby/layout.vim' as LY
 import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/helppopup.vim' as H
 import autoload 'bartleby/session.vim' as SS
@@ -216,20 +216,6 @@ def RunSearch(): void
   SE.Run(ctx.project)
 enddef
 
-# FUNCTION: Add -2, -3, and so on to a relPath that is already taken on
-# disk. dirSlug is empty for a document at the top level, outside any
-# folder.
-def UniqueRelPath(binderRoot: string, dirSlug: string, titleSlug: string, ext: string): string
-  var base: string = dirSlug ==# '' ? titleSlug : dirSlug .. '/' .. titleSlug
-  var relPath: string = base .. ext
-  var n: number = 2
-  while filereadable(binderRoot .. '/' .. relPath)
-    relPath = $'{base}-{n}{ext}'
-    n += 1
-  endwhile
-  return relPath
-enddef
-
 def AddDocument(): void
   var ctx: dict<any> = CursorContext()
   if RefusedInTrash(ctx)
@@ -247,17 +233,10 @@ def FinishAddDocument(ctx: dict<any>, title: string): void
   if title ==# ''
     return
   endif
-  var dirSlug: string = ''
-  if ctx.row isnot null_object
-    if ctx.row.item.IsFolder()
-      dirSlug = SU.Slugify(ctx.row.item.title)
-    elseif ctx.row.ownerItem isnot null_object
-      dirSlug = SU.Slugify(ctx.row.ownerItem.title)
-    endif
-  endif
-  var relPath: string = UniqueRelPath(ctx.project.BinderRoot(), dirSlug, SU.Slugify(title), ctx.project.DocExt())
-  var newItem: BI.BinderItem = BI.BinderItem.NewDocument(title, relPath)
+  var newItem: BI.BinderItem = BI.BinderItem.NewDocument(title, '')
   MU.AddNear(ctx.project, ctx.row, newItem)
+  # Its path follows its place in the tree, see layout.vim.
+  LY.Place(ctx.project, newItem)
   TE.Materialize([newItem], ctx.project.BinderRoot())
   ctx.project.Save()
   Render(ctx.project)
@@ -324,6 +303,7 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
       return
     endif
     var chapter: BI.BinderItem = MU.AddChapter(container, ctx.row, title)
+    LY.Place(ctx.project, chapter)
     TE.Materialize([chapter], ctx.project.BinderRoot())
   else
     var manuscript: BI.BinderItem = MU.FindManuscript(ctx.project)

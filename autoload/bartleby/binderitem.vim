@@ -101,6 +101,12 @@ export class BinderItem implements ItemContainer
     this.trashIndex = index
   enddef
 
+  # METHOD: Set the path of the file of a document, for layout.vim, which
+  # places new documents and moves files to follow the Binder.
+  def SetRelPath(newRelPath: string): void
+    this.relPath = newRelPath
+  enddef
+
   # METHOD: Forget where the item came from, once it leaves the Trash.
   def ClearTrashOrigin(): void
     this.trashOrigin = ''

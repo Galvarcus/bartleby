@@ -58,6 +58,7 @@ def BuildMenu(): M.Menu
   binder.AddItem(IN.T("Search"), RunEx('BartlebySearch'))
   binder.AddItem(IN.T("Empty Trash"), RunEx('BartlebyEmptyTrash'))
   binder.AddItem(IN.T("Recover Files"), RunEx('BartlebyRecover'))
+  binder.AddItem(IN.T("Tidy Files"), RunEx('BartlebyTidyFiles'))
 
   var view: M.MenuItem = m.AddItem(IN.T("View"))
   view.AddItem(IN.T("Toggle Inspector"), RunEx('BartlebyToggleInspector'))

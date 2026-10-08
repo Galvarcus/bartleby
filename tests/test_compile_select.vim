@@ -35,6 +35,7 @@ enddef
 # assigns to a member of a captured function argument crashes Vim with a
 # segmentation fault when it runs after that function has returned.
 # REFERENCE: https://github.com/vim/vim/issues/21460
+# FIXED: Vim patch 9.2.1172
 def OpenPane(project: any, result: dict<any>): void
   C.SelectContents(project, [], (ids: list<string>) => {
     extend(result, {ids: ids})

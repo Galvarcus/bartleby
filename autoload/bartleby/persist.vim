@@ -77,3 +77,14 @@ def WriteFailed(path: string, detail: string): bool
   endif
   return false
 enddef
+
+# FUNCTION: Remove dir, and each folder above it, while it is empty, up to
+# root, which stays.
+export def RemoveEmptyDirectories(dir: string, root: string): void
+  var current: string = dir
+  while current !=# root && stridx(current, root .. '/') == 0
+      && isdirectory(current) && empty(readdir(current))
+    delete(current, 'd')
+    current = fnamemodify(current, ':h')
+  endwhile
+enddef
