@@ -44,6 +44,7 @@ const COMMANDS: dict<string> = {
   'Empty Trash': 'BartlebyEmptyTrash',
   'Recover Files': 'BartlebyRecover',
   'Tidy Files': 'BartlebyTidyFiles',
+  'Open Scrivening': 'BartlebyScrivenings',
 }
 
 # Display name to Ex command, for commands that need an argument, asked
@@ -94,6 +95,7 @@ def CommandNames(): dict<string>
     'Empty Trash': IN.T("Empty Trash"),
     'Recover Files': IN.T("Recover Files"),
     'Tidy Files': IN.T("Tidy Files"),
+    'Open Scrivening': IN.T("Open Scrivening"),
     'Open Scrive': IN.T("Open Scrive"),
     'New Scrive': IN.T("New Scrive"),
     'Pick Spotlight Mode': IN.T("Pick Spotlight Mode"),

@@ -25,6 +25,7 @@ import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/scrivenings.vim' as SV
 
 var log = L.New(expand('<sfile>:t'))
 var snapshotretention: number = g:bartleby_snapshot_retention
@@ -123,9 +124,12 @@ enddef
 # undone. Reloads the buffer when the document is open, so the editor
 # shows the restored text at once.
 export def Restore(project: PO.Project, doc: BI.BinderItem, snapshot: Snapshot): void
+  # The snapshot before the restore holds the text of an open Scrivening.
+  SV.SaveIfModified()
   Take(project, doc, IN.T("before restore"))
   var path: string = doc.AbsPath(project.BinderRoot())
   writefile(snapshot.lines, path)
+  SV.SyncWithTree(project, true)
   var winId: number = bufwinid(bufnr(path))
   if winId != -1
     win_execute(winId, 'edit!')

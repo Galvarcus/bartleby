@@ -22,6 +22,7 @@ Bartleby without losing anything.
 - [Document details](#document-details)
 - [Corkboard](#corkboard)
 - [Outliner](#outliner)
+- [Scrivenings](#scrivenings)
 - [Screenplays](#screenplays)
 - [Palette and menu](#palette-and-menu)
 - [Session](#session)
@@ -335,6 +336,23 @@ Binder to open it.
 
 Sorting changes only the view. It does not change the order in your
 book. To change the order, use the Binder or the Corkboard.
+
+## Scrivenings
+
+A Scrivening shows a whole folder as one text: every scene of a
+chapter, or the whole Manuscript, one after the other. Press `v` on a
+folder in the Binder to open it, or `v` on a scene to open its folder
+at that scene.
+
+Each scene starts with a title line, such as `── Chapter: 2 / Arrival ──`.
+You cannot change the title lines: Bartleby undoes the change. To
+rename or move a scene, use the Binder, and the Scrivening follows.
+
+Write as in any document. `:w` and auto-save store each scene in its
+own file. The Inspector shows the scene that the cursor is in.
+
+Scrivenings are for the folders of the Manuscript. One is open at a
+time.
 
 ## Screenplays
 

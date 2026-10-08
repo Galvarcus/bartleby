@@ -28,6 +28,7 @@ Development:
 - [Binder](#binder)
 - [Corkboard](#corkboard)
 - [Outliner](#outliner)
+- [Scrivenings](#scrivenings)
 - [Inspector](#inspector)
 - [Scrive list](#scrive-list)
 - [Focus, Spotlight, and Quill](#focus-spotlight-and-quill)
@@ -214,6 +215,7 @@ label color after its title. Long titles wrap.
 | `gS` | View or restore snapshots |
 | `gc` | Open the Corkboard for the folder |
 | `go` | Open the Outliner for the folder |
+| `v` | Open a Scrivening of the folder, or of the folder of the document |
 | `/` | Search the scrive |
 | `?` | Show this key list |
 | `q` | Close the Binder |
@@ -249,6 +251,30 @@ Status, Words, Target, and Keywords. Rows are indented like the tree.
 | `gs` | Sort by a column. This changes the view only, not the tree |
 | `?` | Show this key list |
 | `q` | Close the Outliner |
+
+## Scrivenings
+
+`v` on a folder in the Manuscript shows its documents, and those of the
+folders inside it, in Binder order, in one buffer: a Scrivening. You
+read and edit them as one text. `v` on a document opens the Scrivening
+of its folder at that document. `:BartlebyScrivenings` does the same
+from a document.
+
+A title line starts each document, as in `── Chapter: 2 / Scene 1 ──`.
+The title lines are protected. Bartleby undoes a change to one, and
+`<BS>` and `<Del>` do not join text to one. `:w` and auto-save write
+only the documents that changed. If a title line is damaged anyway,
+saving writes nothing, so that no text goes to another document.
+
+A document opens in one place only. Opening a Scrivening saves and
+closes the documents of the folder that are open on their own. While
+it is open, a document of the folder that opens in any other way shows
+in the Scrivening, at the same line.
+
+The Inspector, Quill, Spotlight, Focus, snapshots, and the session
+follow the document under the cursor. A change in the Binder, such as
+a new or moved document, shows in the Scrivening at once. One
+Scrivening is open at a time.
 
 ## Inspector
 
@@ -506,6 +532,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyProjectInfo` | Edit the profile for this scrive only |
 | `:BartlebyCompile` | Compile the scrive |
 | `:BartlebyEmptyTrash` | Delete everything in the Trash for good, after a confirmation |
+| `:BartlebyScrivenings` | Open a Scrivening of the folder of the current document |
 | `:BartlebyTidyFiles` | Move the files of the scrive, so that the folders on disk follow the Binder |
 | `:BartlebyRecover [name]` | Add documents on disk that the Binder does not list to Recovered. With a name, rebuild the Binder of a scrive that does not open |
 | `:BartlebyCommands` | Open the command palette |

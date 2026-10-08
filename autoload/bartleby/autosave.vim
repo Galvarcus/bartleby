@@ -32,12 +32,16 @@ import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/scrivenings.vim' as SV
 
 var log = L.New(expand('<sfile>:t'))
 
 # FUNCTION: Return true when the current buffer is a document of the open
 # scrive.
 export def IsScriveDocument(): bool
+  if SV.IsScrivening(bufnr())
+    return true
+  endif
   if &buftype !=# '' || expand('%:p') ==# ''
     return false
   endif

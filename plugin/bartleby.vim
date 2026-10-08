@@ -29,6 +29,7 @@ import autoload 'bartleby/session.vim' as SS
 import autoload 'bartleby/restore.vim' as R
 import autoload 'bartleby/snapshot.vim' as SN
 import autoload 'bartleby/binderitem.vim' as BI
+import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/commandpalette.vim' as CP
@@ -42,6 +43,7 @@ import autoload 'bartleby/tty.vim' as TY
 import autoload 'bartleby/dialog_popup.vim' as DP
 import autoload 'bartleby/recover.vim' as RC
 import autoload 'bartleby/layout.vim' as LY
+import autoload 'bartleby/scrivenings.vim' as SV
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -208,7 +210,7 @@ def CurrentDoc(): BI.BinderItem
     log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
     return null_object
   endif
-  var doc: BI.BinderItem = project.FindItemByPath(expand('%:p'))
+  var doc: BI.BinderItem = SV.DocumentHere(project)
   if doc is null_object
     log.Warn(IN.T("current buffer is not a document of the open scrive"))
   endif
@@ -343,6 +345,30 @@ def TidyFiles(): void
 enddef
 
 command! -bar BartlebyTidyFiles TidyFiles()
+
+# FUNCTION: Open a Scrivening: from the Binder, of the folder under its
+# cursor, and from a document, of the folder that holds it, at the line of
+# the cursor. See scrivenings.vim.
+def OpenScrivening(): void
+  if bufname() ==# CO.BINDER_BUF
+    B.OpenScrivening()
+    return
+  endif
+  var doc: BI.BinderItem = CurrentDoc()
+  if doc is null_object
+    return
+  endif
+  var project: PO.Project = ST.Get()
+  var row: T.Row = T.FindRowById(T.Flatten(project), doc.id)
+  if row is null_object || row.ownerItem is null_object
+    log.Info(IN.T("a Scrivening opens only for a folder in the Manuscript"))
+    return
+  endif
+  var offset: number = SV.IsScrivening(bufnr()) ? SV.LineInDocument() - 1 : line('.') - 1
+  SV.Open(project, row.ownerItem, doc.id, offset)
+enddef
+
+command! -bar BartlebyScrivenings OpenScrivening()
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
 command! -bar -nargs=? BartlebyDefine LP.LookupCommand(CO.KIND_DICTIONARY, <q-args>)

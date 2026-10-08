@@ -40,6 +40,10 @@ export const BINDER_BUF: string = $'{PLUGIN_NAME}-Binder'
 export const INSPECTOR_BUF: string = $'{PLUGIN_NAME}-Inspector'
 export const COMPILE_SELECT_BUF: string = $'{PLUGIN_NAME}-Compile-Select'
 
+# The buffer of a Scrivening. It is an editor buffer, not a pane, so that
+# documents and other buffers can replace it in its window.
+export const SCRIVENINGS_BUF: string = $'{PLUGIN_NAME}-Scrivenings'
+
 ##############################################################################
 # SECTION: Binder items and scrive types.
 ##############################################################################

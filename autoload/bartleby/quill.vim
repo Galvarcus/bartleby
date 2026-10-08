@@ -28,6 +28,7 @@ import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/scrivenings.vim' as SV
 
 var log = L.New(expand('<sfile>:t'))
 var quillwrapmodedefault: string = g:bartleby_quill_wrap_mode_default
@@ -465,7 +466,7 @@ export def AutoApply(): void
   if project is null_object
     return
   endif
-  if project.FindItemByPath(expand('%:p')) is null_object
+  if SV.DocumentHere(project) is null_object
     return
   endif
   Init('detect')

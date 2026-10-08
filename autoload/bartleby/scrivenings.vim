@@ -1,0 +1,506 @@
+vim9script
+
+if exists('s:is_loaded') || v:version < 902 || &cp
+  finish
+endif
+var is_loaded: bool = true
+
+##############################################################################
+# Plugin_Name: Bartleby
+# scrivenings.vim: a Scrivening shows the documents of a Manuscript folder,
+# and of the folders inside it, in Binder order, in one buffer, so that
+# they read and edit as one text. A title line starts each document, as in
+# the line ── Chapter: 2 / Scene 1 ──, and a text property marks it, with
+# the number of the document as its id, so that the line moves with edits
+# and names the file of the lines below it.
+#
+# The title lines are protected: a change to one in Normal mode is undone,
+# Backspace and Delete do not join text to one in Insert mode, and the
+# cursor does not stay on one in Insert mode. Saving writes only the
+# documents whose text changed, and writes nothing when a title line is
+# damaged, so that no text goes to another document.
+#
+# A document opens in one place only. Opening a Scrivening saves and
+# closes the documents of the folder that are open on their own, and while
+# it is open, a document of the folder opened any other way shows in the
+# Scrivening instead, at the same line.
+#
+# One Scrivening is open at a time.
+# License: GNU GPL 3.0
+##############################################################################
+
+import autoload 'bartleby/binderitem.vim' as BI
+import autoload 'bartleby/i18n.vim' as IN
+import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/project.vim' as PO
+import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/windows.vim' as W
+import 'bartleby/variables/constants.vim' as CO
+
+var log = L.New(expand('<sfile>:t'))
+
+# The text property of a title line. Its id is the number of its document.
+const PROP_TITLE: string = 'BartlebyScriveningTitle'
+const TITLE_LEAD: string = '── '
+const TITLE_TAIL: string = ' ──'
+# The User event when the cursor enters another document of a Scrivening,
+# for the Inspector to follow it.
+export const SECTION_EVENT: string = 'BartlebyScriveningSection'
+
+# The open Scrivening: its buffer, its folder, and for each document its
+# id, file, title line, and text as last read or written. Empty when no
+# Scrivening is open.
+var current: dict<any> = {}
+
+# FUNCTION: Return true when bufNr is the buffer of the open Scrivening.
+export def IsScrivening(bufNr: number): bool
+  return !empty(current) && current.bufnr == bufNr && bufexists(bufNr)
+enddef
+
+# FUNCTION: Return true when a Scrivening is open with unsaved changes.
+export def IsModified(): bool
+  return !empty(current) && bufexists(current.bufnr) && getbufvar(current.bufnr, '&modified')
+enddef
+
+# FUNCTION: Return the label of folder in a title line: its title, after
+# Chapter or Part for those roles.
+def FolderLabel(folder: BI.BinderItem): string
+  if folder.structureRole ==# CO.ROLE_CHAPTER
+    return IN.T("Chapter") .. ': ' .. folder.title
+  elseif folder.structureRole ==# CO.ROLE_PART
+    return IN.T("Part") .. ': ' .. folder.title
+  endif
+  return folder.title
+enddef
+
+# FUNCTION: Return the documents of folder and of the folders inside it, in
+# Binder order, each with its label: the folders below folder, then its
+# title, as in Chapter: 2 / Scene 1.
+def DocumentsOf(folder: BI.BinderItem): list<list<any>>
+  var found: list<list<any>> = []
+  def Walk(items: list<BI.BinderItem>, labels: list<string>): void
+    for item in items
+      if item.IsDocument()
+        found->add([item, join(labels + [item.title], ' / ')])
+      else
+        Walk(item.children, labels + [FolderLabel(item)])
+      endif
+    endfor
+  enddef
+  Walk(folder.children, [])
+  return found
+enddef
+
+# FUNCTION: Return true when folder is the Manuscript or a folder inside
+# it, where a Scrivening can open.
+export def CanOpen(project: PO.Project, folder: BI.BinderItem): bool
+  var row: T.Row = T.FindRowById(T.Flatten(project), folder.id)
+  return row isnot null_object && folder.IsFolder() && row.topItem isnot null_object
+    && row.topItem.structureRole ==# CO.ROLE_MANUSCRIPT
+enddef
+
+# FUNCTION: Open a Scrivening of folder, with the cursor offset lines into
+# the document with docId, or into the document of the current buffer
+# when it is one of the folder. Returns false, with a message, when it
+# does not open.
+export def Open(project: PO.Project, folder: BI.BinderItem, docId: string = '', offset: number = 0): bool
+  if !CanOpen(project, folder)
+    log.Info(IN.T("a Scrivening opens only for a folder in the Manuscript"))
+    return false
+  endif
+  var docs: list<list<any>> = DocumentsOf(folder)
+  if empty(docs)
+    log.Info(IN.T("this folder has no documents"))
+    return false
+  endif
+  if !empty(current) && !Close()
+    return false
+  endif
+  var root: string = project.BinderRoot()
+  var paths: dict<string> = {}
+  for [doc, _] in docs
+    paths[doc.AbsPath(root)] = doc.id
+  endfor
+  # The document of the current buffer gives the place of the cursor.
+  var cursorId: string = docId
+  var cursorOffset: number = offset
+  var here: string = expand('%:p')
+  if cursorId ==# '' && has_key(paths, here)
+    cursorId = paths[here]
+    cursorOffset = line('.') - 1
+  endif
+  var members: list<number> = SaveMemberBuffers(paths)
+  if !has_key(paths, here)
+    W.GoToEditorWindow()
+  endif
+  hide enew
+  setlocal buftype=acwrite bufhidden=hide noswapfile
+  execute 'silent file ' .. fnameescape(CO.SCRIVENINGS_BUF)
+  &l:filetype = project.DocExt() ==# '.fountain' ? 'fountain' : 'markdown'
+  current = {bufnr: bufnr(), folderId: folder.id, section: -1}
+  Build(project, docs)
+  SetupBuffer()
+  for bufNr in members
+    if bufexists(bufNr)
+      execute 'silent! bwipe ' .. bufNr
+    endif
+  endfor
+  GoToDocument(cursorId, cursorOffset)
+  StartRedirect()
+  # The buffer was entered before it was a Scrivening, so the features that
+  # apply to documents on entry, such as Quill, did not see it as one.
+  doautocmd <nomodeline> BufEnter
+  return true
+enddef
+
+# FUNCTION: Save the changes of the documents in paths that are open in
+# buffers, so that the Scrivening shows them. Returns their buffers.
+def SaveMemberBuffers(paths: dict<string>): list<number>
+  var found: list<number> = []
+  for info in getbufinfo({bufloaded: 1})
+    var path: string = fnamemodify(info.name, ':p')
+    if info.name ==# '' || !has_key(paths, path)
+      continue
+    endif
+    if info.changed
+      writefile(getbufline(info.bufnr, 1, '$'), path)
+      setbufvar(info.bufnr, '&modified', 0)
+    endif
+    found->add(info.bufnr)
+  endfor
+  return found
+enddef
+
+# FUNCTION: Fill the Scrivening buffer with docs, a title line before each,
+# and remember their files and texts. The filling cannot be undone. An
+# empty document shows as one empty line, to type in.
+def Build(project: PO.Project, docs: list<list<any>>): void
+  var bufNr: number = current.bufnr
+  var root: string = project.BinderRoot()
+  var lines: list<string> = []
+  var titleLines: list<number> = []
+  current.ids = []
+  current.paths = []
+  current.titles = []
+  current.saved = []
+  for [doc, label] in docs
+    var title: string = TITLE_LEAD .. label .. TITLE_TAIL
+    var path: string = doc.AbsPath(root)
+    var text: list<string> = filereadable(path) ? readfile(path) : []
+    titleLines->add(len(lines) + 1)
+    lines->add(title)
+    lines += empty(text) ? [''] : text
+    current.ids->add(doc.id)
+    current.paths->add(path)
+    current.titles->add(title)
+    current.saved->add(text)
+  endfor
+  if empty(prop_type_get(PROP_TITLE))
+    prop_type_add(PROP_TITLE, {highlight: 'Title'})
+  endif
+  var undolevels: number = getbufvar(bufNr, '&undolevels')
+  setbufvar(bufNr, '&undolevels', -1)
+  deletebufline(bufNr, 1, '$')
+  setbufline(bufNr, 1, lines)
+  for i in range(len(titleLines))
+    prop_add(titleLines[i], 1, {type: PROP_TITLE, id: i + 1, length: strlen(current.titles[i]), bufnr: bufNr})
+  endfor
+  setbufvar(bufNr, '&undolevels', undolevels)
+  setbufvar(bufNr, '&modified', 0)
+enddef
+
+# FUNCTION: Set the commands and keys of the Scrivening buffer: saving,
+# the protection of the title lines, and the section events.
+def SetupBuffer(): void
+  # Paragraph formatting never joins lines with different comment leaders,
+  # so with the title mark as one, formatting, as in the auto mode of
+  # Quill, leaves the title lines alone.
+  &l:comments = 'b:' .. trim(TITLE_LEAD)
+  augroup bartleby_scrivening
+    autocmd! * <buffer>
+    autocmd BufWriteCmd <buffer> Write()
+    autocmd TextChanged <buffer> Protect()
+    autocmd InsertEnter,CursorMovedI <buffer> LeaveTitleLine()
+    autocmd CursorMoved,CursorMovedI <buffer> NotifySection()
+    autocmd BufWipeout <buffer> Forget()
+  augroup END
+  for key in ['<BS>', '<C-h>', '<C-w>', '<C-u>']
+    execute $'inoremap <buffer> <expr> {key} <SID>AtSectionStart() ? "" : "\{key}"'
+  endfor
+  inoremap <buffer> <expr> <Del> <SID>AtSectionEnd() ? "" : "\<Del>"
+enddef
+
+# FUNCTION: Return the lines of each document, in order, or an empty list
+# when a title line is missing, out of order, or changed. A document of
+# one empty line is empty.
+def Sections(): list<list<string>>
+  var bufNr: number = current.bufnr
+  var props: list<dict<any>> = prop_list(1, {bufnr: bufNr, end_lnum: -1, types: [PROP_TITLE]})
+  var count: number = len(current.titles)
+  if len(props) != count
+    return []
+  endif
+  var lineCount: number = getbufinfo(bufNr)[0].linecount
+  var sections: list<list<string>> = []
+  for i in range(count)
+    var title: dict<any> = props[i]
+    if title.id != i + 1 || getbufline(bufNr, title.lnum)[0] !=# current.titles[i]
+      return []
+    endif
+    var last: number = i + 1 < count ? props[i + 1].lnum - 1 : lineCount
+    var lines: list<string> = title.lnum < last ? getbufline(bufNr, title.lnum + 1, last) : []
+    sections->add(lines == [''] ? [] : lines)
+  endfor
+  return sections
+enddef
+
+# FUNCTION: Write each document whose text changed, for :w and auto-save.
+# A damaged title line writes nothing, with an error.
+def Write(): void
+  var sections: list<list<string>> = Sections()
+  if empty(sections)
+    log.Error(IN.T("the Scrivening was not saved, because a title line was changed or removed. Press u to undo it"))
+    return
+  endif
+  for i in range(len(sections))
+    if sections[i] != current.saved[i]
+      if writefile(sections[i], current.paths[i]) != 0
+        log.Error(printf(IN.T("%s could not be written"), current.paths[i]))
+        return
+      endif
+      current.saved[i] = sections[i]
+    endif
+  endfor
+  setbufvar(current.bufnr, '&modified', 0)
+enddef
+
+# FUNCTION: Undo a change in Normal mode that damaged a title line.
+def Protect(): void
+  if !empty(Sections())
+    return
+  endif
+  silent! undo
+  log.Warn(IN.T("the title lines of a Scrivening cannot be changed"))
+enddef
+
+# FUNCTION: Return true when the text property of a title line is on lnum.
+def IsTitleLine(lnum: number): bool
+  return lnum >= 1 && !empty(prop_list(lnum, {types: [PROP_TITLE]}))
+enddef
+
+# FUNCTION: Return true when the cursor is at the start of the first line
+# of a document, where Backspace would join it to the title line.
+def AtSectionStart(): bool
+  return col('.') == 1 && IsTitleLine(line('.') - 1)
+enddef
+
+# FUNCTION: Return true when the cursor is at the end of the last line of a
+# document, where Delete would join the next title line to it.
+def AtSectionEnd(): bool
+  return col('.') > strlen(getline('.')) && IsTitleLine(line('.') + 1)
+enddef
+
+# FUNCTION: Move the cursor in Insert mode from a title line to the start
+# of the document below it.
+def LeaveTitleLine(): void
+  if IsTitleLine(line('.'))
+    cursor(line('.') + 1, 1)
+  endif
+enddef
+
+# FUNCTION: Return the number of the document at lnum, from 0, by the
+# title line at or above it.
+def SectionAt(lnum: number): number
+  var title: dict<any> = prop_find({type: PROP_TITLE, lnum: lnum, col: 1, bufnr: current.bufnr}, 'b')
+  if empty(title) || title.lnum > lnum
+    title = prop_find({type: PROP_TITLE, lnum: lnum, col: col([lnum, '$']), bufnr: current.bufnr}, 'b')
+  endif
+  return empty(title) ? 0 : title.id - 1
+enddef
+
+# FUNCTION: Fire SECTION_EVENT when the cursor enters another document.
+def NotifySection(): void
+  var section: number = SectionAt(line('.'))
+  if section != current.section
+    current.section = section
+    if exists('#User#' .. SECTION_EVENT)
+      execute 'doautocmd <nomodeline> User ' .. SECTION_EVENT
+    endif
+  endif
+enddef
+
+# FUNCTION: Return the item of the document under the cursor in the
+# Scrivening, or null_object outside it.
+export def DocumentAtCursor(project: PO.Project): BI.BinderItem
+  if !IsScrivening(bufnr())
+    return null_object
+  endif
+  var row: T.Row = T.FindRowById(T.Flatten(project), current.ids[SectionAt(line('.'))])
+  return row is null_object ? null_object : row.item
+enddef
+
+# FUNCTION: Return the item of the document the cursor is in: in a
+# Scrivening the document under the cursor, or else the document of the
+# current buffer. null_object when there is none.
+export def DocumentHere(project: PO.Project): BI.BinderItem
+  return IsScrivening(bufnr()) ? DocumentAtCursor(project) : project.FindItemByPath(expand('%:p'))
+enddef
+
+# FUNCTION: Return the line of the cursor inside its document, from 1, as
+# if the document were alone in a buffer.
+export def LineInDocument(): number
+  var title: dict<any> = prop_find({type: PROP_TITLE, lnum: line('.'), col: col([line('.'), '$']),
+    bufnr: current.bufnr}, 'b')
+  return empty(title) ? line('.') : max([line('.') - title.lnum, 1])
+enddef
+
+# FUNCTION: Return the document at lnum of the Scrivening, as its id and
+# the line inside it, from 0.
+def PlaceAt(lnum: number): list<any>
+  var section: number = SectionAt(lnum)
+  var title: dict<any> = prop_find({type: PROP_TITLE, id: section + 1, both: true, lnum: 1, col: 1,
+    bufnr: current.bufnr}, 'f')
+  return [current.ids[section], empty(title) ? 0 : max([lnum - title.lnum - 1, 0])]
+enddef
+
+# FUNCTION: Return the line of the Scrivening that is offset lines into the
+# document with id, or into the first document when id is not in it.
+def LineOf(id: string, offset: number): number
+  var i: number = max([index(current.ids, id), 0])
+  var title: dict<any> = prop_find({type: PROP_TITLE, id: i + 1, both: true, lnum: 1,
+    col: 1, bufnr: current.bufnr}, 'f')
+  var start: number = empty(title) ? 1 : title.lnum + 1
+  return min([start + offset, getbufinfo(current.bufnr)[0].linecount])
+enddef
+
+# FUNCTION: Put the cursor offset lines into the document with id.
+def GoToDocument(id: string, offset: number): void
+  cursor(LineOf(id, offset), 1)
+  current.section = -1
+  NotifySection()
+enddef
+
+# FUNCTION: Show the document with id in the Scrivening, offset lines into
+# it, when the Scrivening holds it. Returns false when it does not.
+export def ShowDocument(id: string, offset: number = 0): bool
+  if empty(current) || index(current.ids, id) < 0
+    return false
+  endif
+  var winId: number = bufwinid(current.bufnr)
+  if winId != -1
+    win_gotoid(winId)
+  else
+    W.GoToEditorWindow()
+    execute 'hide buffer ' .. current.bufnr
+  endif
+  GoToDocument(id, offset)
+  return true
+enddef
+
+# FUNCTION: While a Scrivening is open, show a document of it that opens in
+# a buffer of its own, by any command, in the Scrivening instead.
+def StartRedirect(): void
+  augroup bartleby_scrivening_redirect
+    autocmd!
+    autocmd BufEnter * Redirect()
+  augroup END
+enddef
+
+def Redirect(): void
+  if empty(current)
+    return
+  endif
+  var i: number = index(current.paths, expand('%:p'))
+  if i < 0
+    return
+  endif
+  var bufNr: number = bufnr()
+  var offset: number = line('.') - 1
+  # A buffer cannot be wiped while Vim enters it.
+  timer_start(0, (_) => RedirectNow(bufNr, current.ids[i], offset))
+enddef
+
+def RedirectNow(bufNr: number, id: string, offset: number): void
+  if empty(current) || !bufexists(bufNr) || getbufvar(bufNr, '&modified')
+    return
+  endif
+  var winId: number = bufwinid(bufNr)
+  if winId != -1
+    win_gotoid(winId)
+    execute 'hide buffer ' .. current.bufnr
+  endif
+  execute 'silent! bwipe ' .. bufNr
+  ShowDocument(id, offset)
+enddef
+
+# FUNCTION: Save and close the Scrivening. Returns false, and keeps it
+# open, when it cannot be saved.
+export def Close(): bool
+  if empty(current)
+    return true
+  endif
+  if IsModified()
+    Write()
+    if IsModified()
+      return false
+    endif
+  endif
+  execute 'silent! bwipe! ' .. current.bufnr
+  Forget()
+  return true
+enddef
+
+# FUNCTION: Forget the Scrivening, when its buffer goes.
+def Forget(): void
+  current = {}
+  augroup bartleby_scrivening_redirect
+    autocmd!
+  augroup END
+enddef
+
+# FUNCTION: Write the open Scrivening when it has changes, so that its
+# documents on disk hold its text. Returns false when it cannot.
+export def SaveIfModified(): bool
+  if !IsModified()
+    return true
+  endif
+  Write()
+  return !IsModified()
+enddef
+
+# FUNCTION: Build the Scrivening again when the Binder changed its folder:
+# documents added, moved, removed, or renamed, or with force, after files
+# changed on disk. Unsaved text is written first. A folder that left the
+# Manuscript closes it.
+export def SyncWithTree(project: PO.Project, force: bool = false): void
+  if empty(current)
+    return
+  endif
+  var row: T.Row = T.FindRowById(T.Flatten(project), current.folderId)
+  if row is null_object || !CanOpen(project, row.item)
+    Close()
+    return
+  endif
+  var docs: list<list<any>> = DocumentsOf(row.item)
+  var root: string = project.BinderRoot()
+  var ids: list<string> = docs->mapnew((_, d) => d[0].id)
+  var paths: list<string> = docs->mapnew((_, d) => d[0].AbsPath(root))
+  var titles: list<string> = docs->mapnew((_, d) => TITLE_LEAD .. d[1] .. TITLE_TAIL)
+  if !force && ids == current.ids && paths == current.paths && titles == current.titles
+    return
+  endif
+  if !SaveIfModified()
+    return
+  endif
+  if empty(docs)
+    Close()
+    return
+  endif
+  # The cursor stays in its document, at the same line of it.
+  var winId: number = bufwinid(current.bufnr)
+  var place: list<any> = winId == -1 ? ['', 0] : PlaceAt(getcurpos(winId)[1])
+  Build(project, docs)
+  if winId != -1
+    win_execute(winId, $'cursor({LineOf(place[0], place[1])}, 1)')
+  endif
+enddef

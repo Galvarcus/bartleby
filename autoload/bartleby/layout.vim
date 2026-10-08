@@ -29,6 +29,7 @@ import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/slug.vim' as SU
 import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/scrivenings.vim' as SV
 import 'bartleby/variables/constants.vim' as CO
 
 # The name of a title that a slug leaves empty.
@@ -251,6 +252,10 @@ enddef
 # Returns the paths that could not move, or why nothing moved.
 export def Tidy(project: PO.Project, moves: list<dict<any>>): list<string>
   var root: string = project.BinderRoot()
+  # The Scrivening names its files, so its text is saved before they move.
+  if !SV.SaveIfModified()
+    return [CO.SCRIVENINGS_BUF]
+  endif
   var buffers: dict<number> = BuffersOf(root, moves)
   var unsaved: list<string> = buffers->keys()->filter((_, p) => getbufvar(buffers[p], '&modified'))
   if !empty(unsaved)

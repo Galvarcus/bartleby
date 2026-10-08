@@ -26,9 +26,11 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/persist.vim' as PE
+import autoload 'bartleby/scrivenings.vim' as SV
 
 export class SessionState
   var activeDocRelPath: string = ''
@@ -131,12 +133,22 @@ export def CaptureCurrentDoc(): void
     return
   endif
   var path: string = expand('%:p')
+  var lnum: number = line('.')
+  # In a Scrivening, the document under the cursor, as if it were alone.
+  if SV.IsScrivening(bufnr())
+    var doc: BI.BinderItem = SV.DocumentAtCursor(project)
+    if doc is null_object
+      return
+    endif
+    path = doc.AbsPath(project.BinderRoot())
+    lnum = SV.LineInDocument()
+  endif
   if !IsProjectDoc(project, path)
     return
   endif
   var v: dict<any> = Current(project)
   v.activeDocRelPath = path[len(project.BinderRoot()) + 1 : ]
-  v.cursorLine = line('.')
+  v.cursorLine = lnum
   v.cursorCol = col('.')
   Save(project, SessionState.FromDict(v))
 enddef

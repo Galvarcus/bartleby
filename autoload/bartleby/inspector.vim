@@ -35,6 +35,7 @@ import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/scrivenings.vim' as SV
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -179,7 +180,7 @@ def FollowEditor(): void
   if project is null_object
     return
   endif
-  var item: BI.BinderItem = project.FindItemByPath(expand('%:p'))
+  var item: BI.BinderItem = SV.DocumentHere(project)
   if item is null_object
     return
   endif
@@ -207,8 +208,7 @@ export def Toggle(): void
     log.Warn(IN.T("no scrive open"))
     return
   endif
-  var path: string = expand('%:p')
-  var item: BI.BinderItem = project.FindItemByPath(path)
+  var item: BI.BinderItem = SV.DocumentHere(project)
   if item is null_object
     log.Info(IN.T("current buffer is not a document in the open scrive"))
     return
@@ -226,8 +226,10 @@ export def Toggle(): void
   RefreshFor(project, item)
   SetupKeymaps()
 
+  # In a Scrivening, the document changes without a change of buffer.
   augroup bartleby_inspector_follow
     autocmd!
     autocmd BufEnter * FollowEditor()
+    execute 'autocmd User ' .. SV.SECTION_EVENT .. ' FollowEditor()'
   augroup END
 enddef

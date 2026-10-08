@@ -34,6 +34,7 @@ import autoload 'bartleby/session.vim' as SS
 import autoload 'bartleby/snapshot.vim' as SN
 import autoload 'bartleby/dialog_popup.vim' as DP
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/scrivenings.vim' as SV
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -106,6 +107,8 @@ def Render(project: PO.Project): void
   if newIdx >= 0
     cursor(newIdx + 1 + HEADER_LINES, 1)
   endif
+  # The open Scrivening follows the changes of its folder.
+  SV.SyncWithTree(project)
 enddef
 
 # FUNCTION: Return what every cursor command needs: the buffer's project,
@@ -129,6 +132,10 @@ def OpenUnderCursor(): void
     ToggleCollapse()
     return
   endif
+  # A document of the open Scrivening shows there, not in a second buffer.
+  if SV.ShowDocument(ctx.row.item.id)
+    return
+  endif
   var path: string = ctx.row.item.AbsPath(ctx.project.BinderRoot())
   if !filereadable(path)
     log.Error(printf(IN.T("missing file on disk: %s"), path))
@@ -136,6 +143,22 @@ def OpenUnderCursor(): void
   endif
   W.GoToEditorWindow()
   execute 'edit ' .. fnameescape(path)
+enddef
+
+# FUNCTION: Open a Scrivening of the folder under the cursor, or of the
+# folder that holds the document under it, at that document.
+export def OpenScrivening(): void
+  var ctx: dict<any> = CursorContext()
+  if ctx.project is null_object || ctx.row is null_object
+    return
+  endif
+  if ctx.row.item.IsFolder()
+    SV.Open(ctx.project, ctx.row.item)
+  elseif ctx.row.ownerItem isnot null_object
+    SV.Open(ctx.project, ctx.row.ownerItem, ctx.row.item.id)
+  else
+    log.Info(IN.T("a Scrivening opens only for a folder in the Manuscript"))
+  endif
 enddef
 
 def OpenCorkboard(): void
@@ -664,6 +687,7 @@ def ShowHelp(): void
     ['gS', IN.T("View/restore snapshots")],
     ['gc', IN.T("Open Corkboard")],
     ['go', IN.T("Open Outliner")],
+    ['v', IN.T("Open Scrivening")],
     ['/', IN.T("Search project")],
     ['q', IN.T("Close Binder")],
     ['?', IN.T("This help")],
@@ -708,6 +732,7 @@ def SetupKeymaps(): void
   nnoremap <buffer> <silent> gS <ScriptCmd>ViewSnapshots()<CR>
   nnoremap <buffer> <silent> gc <ScriptCmd>OpenCorkboard()<CR>
   nnoremap <buffer> <silent> go <ScriptCmd>OpenOutliner()<CR>
+  nnoremap <buffer> <silent> v <ScriptCmd>OpenScrivening()<CR>
   nnoremap <buffer> <silent> / <ScriptCmd>RunSearch()<CR>
   nnoremap <buffer> <silent> ? <ScriptCmd>ShowHelp()<CR>
 enddef
