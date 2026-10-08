@@ -28,6 +28,7 @@ Commands ................................................... |bartleby-commands|
 Mappings ................................................... |bartleby-mappings|
 Configuration ......................................... |bartleby-configuration|
 Logging ..................................................... |bartleby-logging|
+Known Issues ........................................... |bartleby-known-issues|
 License ..................................................... |bartleby-license|
 
 
@@ -255,10 +256,15 @@ Inspector                                                   *bartleby-inspector*
 current document's Title, Label, Status, Target, Keywords, and Synopsis. It
 follows the document in the editor window.
 
-    Key                         Action ~
-    `e` on Label or Status      Pick a value
-    `e` on Target or Keywords   Type a value
-    `e` on Synopsis             Edit the synopsis. `<CR>` adds a line. `<C-s>` saves
+    Key                                Action ~
+
+    `e` on Label or Status             Pick a value
+
+    `e` on Target or Keywords          Type a value
+
+    `e` on Synopsis                    Edit the synopsis. `<CR>` adds a
+                                       line. `<C-s>` saves, or `<Tab>` to
+                                       the Save button
 
 ==============================================================================
 Scrive list                                               *bartleby-scrive-list*
@@ -932,6 +938,30 @@ file, one file per Vim session in `~/.Logger/`:
 `:LoggerMessages` shows the recent messages of all plugins. See the Logger
 README for the other options, such as the message level and the number of log
 files to keep.
+
+==============================================================================
+Known Issues                                             *bartleby-known-issues*
+
+`Ctrl-S` on the Linux console - the Linux console, and terminals such as
+`vt100` and `vt220`, use `Ctrl-S` and `Ctrl-Q` for flow control. Vim leaves
+flow control on for them, so `Ctrl-S` stops the screen instead of reaching
+Bartleby. To save in a popup, press `<Tab>` to its Save or Submit button and
+press `<CR>`. If the screen stops after `Ctrl-S`, press `Ctrl-Q` to start it
+again.
+
+To use `Ctrl-S` on the console, turn flow control off before you start Vim. In
+bash, add this line to `~/.bashrc`:
+
+>sh
+    [[ $- == *i* ]] && stty -ixon
+<
+In zsh, add this line to `~/.zshrc`:
+
+>sh
+    unsetopt flow_control
+<
+A command such as `:!stty -ixon` in Vim has no effect, because Vim sets the
+terminal again after the command.
 
 ==============================================================================
 License                                                       *bartleby-license*
