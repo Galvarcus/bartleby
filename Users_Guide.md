@@ -23,6 +23,7 @@ Bartleby without losing anything.
 - [Corkboard](#corkboard)
 - [Outliner](#outliner)
 - [Scrivenings](#scrivenings)
+- [Goals and progress](#goals-and-progress)
 - [Screenplays](#screenplays)
 - [Palette and menu](#palette-and-menu)
 - [Session](#session)
@@ -357,6 +358,28 @@ scene that the cursor was in, on its own.
 
 Scrivenings are for the folders of the Manuscript. One is open at a
 time.
+
+The word count of Vim, `g CTRL-G`, and the word count of vim-airline
+count the title lines too. The counts of Bartleby do not.
+
+## Goals and progress
+
+Run `:BartlebyGoals` to set your goals: words for this session, words
+for each day, or a tracker for a target over a number of days, as for
+NaNoWriMo. Leave a goal empty to turn it off.
+
+Bartleby counts the words of the Manuscript as you write, and the
+status line shows them against your goals, as in `Today 1,180/1,667`.
+Deleting text lowers the count. Research and notes do not count.
+
+Run `:BartlebyProgress` to see your progress: with a tracker, how far
+you are, how many words you need each day, and when you will finish at
+your pace, then the words of each day. Press `e` there to change your
+goals.
+
+If you write after midnight, set `g:bartleby_day_starts_at` in your
+vimrc. With `let g:bartleby_day_starts_at = 4`, words before 4:00 count
+for the day before.
 
 ## Screenplays
 

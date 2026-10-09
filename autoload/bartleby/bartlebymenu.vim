@@ -65,6 +65,8 @@ def BuildMenu(): M.Menu
   var view: M.MenuItem = m.AddItem(IN.T("View"))
   view.AddItem(IN.T("Toggle Inspector"), RunEx('BartlebyToggleInspector'))
   view.AddItem(IN.T("Toggle Focus"), RunEx('BartlebyFocus'))
+  view.AddItem(IN.T("Writing Progress"), RunEx('BartlebyProgress'))
+  view.AddItem(IN.T("Writing Goals"), RunEx('BartlebyGoals'))
   view.AddItem(IN.T("Toggle Spotlight"), RunEx('BartlebySpotlight'))
   view.AddItem(IN.T("Pick Spotlight Mode"), (_: M.MenuItem) => SP.PickMode())
   view.AddItem(IN.T("Toggle Quill"), RunEx('BartlebyQuill'))

@@ -20,7 +20,7 @@ msgstr ""
 msgid "Open..."
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:53 autoload/bartleby/commandpalette.vim:101
+#: autoload/bartleby/bartlebymenu.vim:53 autoload/bartleby/commandpalette.vim:105
 msgid "Open Scrive"
 msgstr ""
 
@@ -28,7 +28,7 @@ msgstr ""
 msgid "New..."
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:54 autoload/bartleby/commandpalette.vim:102
+#: autoload/bartleby/bartlebymenu.vim:54 autoload/bartleby/commandpalette.vim:106
 msgid "New Scrive"
 msgstr ""
 
@@ -44,23 +44,23 @@ msgstr ""
 msgid "Search"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:59 autoload/bartleby/commandpalette.vim:96
+#: autoload/bartleby/bartlebymenu.vim:59 autoload/bartleby/commandpalette.vim:100
 msgid "Empty Trash"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:60 autoload/bartleby/commandpalette.vim:97
+#: autoload/bartleby/bartlebymenu.vim:60 autoload/bartleby/commandpalette.vim:101
 msgid "Recover Files"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:61 autoload/bartleby/commandpalette.vim:98
+#: autoload/bartleby/bartlebymenu.vim:61 autoload/bartleby/commandpalette.vim:102
 msgid "Tidy Files"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:62 autoload/bartleby/binder.vim:690 autoload/bartleby/commandpalette.vim:99
+#: autoload/bartleby/bartlebymenu.vim:62 autoload/bartleby/binder.vim:690 autoload/bartleby/commandpalette.vim:103
 msgid "Open Scrivening"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:63 autoload/bartleby/commandpalette.vim:100
+#: autoload/bartleby/bartlebymenu.vim:63 autoload/bartleby/commandpalette.vim:104
 msgid "Close Scrivening"
 msgstr ""
 
@@ -68,59 +68,67 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:66 autoload/bartleby/commandpalette.vim:87
+#: autoload/bartleby/bartlebymenu.vim:66 autoload/bartleby/commandpalette.vim:89
 msgid "Toggle Inspector"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:67 autoload/bartleby/commandpalette.vim:88
+#: autoload/bartleby/bartlebymenu.vim:67 autoload/bartleby/commandpalette.vim:90
 msgid "Toggle Focus"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:68 autoload/bartleby/commandpalette.vim:89
+#: autoload/bartleby/bartlebymenu.vim:68 autoload/bartleby/commandpalette.vim:91
+msgid "Writing Progress"
+msgstr ""
+
+#: autoload/bartleby/bartlebymenu.vim:69 autoload/bartleby/commandpalette.vim:92
+msgid "Writing Goals"
+msgstr ""
+
+#: autoload/bartleby/bartlebymenu.vim:70 autoload/bartleby/commandpalette.vim:93
 msgid "Toggle Spotlight"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:69 autoload/bartleby/commandpalette.vim:103
+#: autoload/bartleby/bartlebymenu.vim:71 autoload/bartleby/commandpalette.vim:107
 msgid "Pick Spotlight Mode"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:70 autoload/bartleby/commandpalette.vim:90
+#: autoload/bartleby/bartlebymenu.vim:72 autoload/bartleby/commandpalette.vim:94
 msgid "Toggle Quill"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:72
+#: autoload/bartleby/bartlebymenu.vim:74
 msgid "Document"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:73 autoload/bartleby/commandpalette.vim:94
+#: autoload/bartleby/bartlebymenu.vim:75 autoload/bartleby/commandpalette.vim:98
 msgid "Take Snapshot"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:74 autoload/bartleby/commandpalette.vim:95
+#: autoload/bartleby/bartlebymenu.vim:76 autoload/bartleby/commandpalette.vim:99
 msgid "View Snapshots"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:76 autoload/bartleby/commandpalette.vim:104
+#: autoload/bartleby/bartlebymenu.vim:78 autoload/bartleby/commandpalette.vim:108
 msgid "Define Word"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:79 autoload/bartleby/commandpalette.vim:105
+#: autoload/bartleby/bartlebymenu.vim:81 autoload/bartleby/commandpalette.vim:109
 msgid "Thesaurus"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:82
+#: autoload/bartleby/bartlebymenu.vim:84
 msgid "Project"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:83 autoload/bartleby/commandpalette.vim:91
+#: autoload/bartleby/bartlebymenu.vim:85 autoload/bartleby/commandpalette.vim:95
 msgid "Edit Profile"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:84
+#: autoload/bartleby/bartlebymenu.vim:86
 msgid "Edit Info"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:85 autoload/bartleby/commandpalette.vim:93 autoload/bartleby/compile.vim:232 autoload/bartleby/compile.vim:945
+#: autoload/bartleby/bartlebymenu.vim:87 autoload/bartleby/commandpalette.vim:97 autoload/bartleby/compile.vim:232 autoload/bartleby/compile.vim:945
 msgid "Compile"
 msgstr ""
 
@@ -262,11 +270,11 @@ msgstr ""
 msgid "already at the top level, or not a valid destination for this item"
 msgstr ""
 
-#: autoload/bartleby/binder.vim:637 autoload/bartleby/inspector.vim:121 autoload/bartleby/outliner.vim:74 autoload/bartleby/outliner.vim:291
+#: autoload/bartleby/binder.vim:637 autoload/bartleby/inspector.vim:156 autoload/bartleby/outliner.vim:74 autoload/bartleby/outliner.vim:291
 msgid "Label"
 msgstr ""
 
-#: autoload/bartleby/binder.vim:653 autoload/bartleby/inspector.vim:129 autoload/bartleby/outliner.vim:75 autoload/bartleby/outliner.vim:307
+#: autoload/bartleby/binder.vim:653 autoload/bartleby/inspector.vim:164 autoload/bartleby/outliner.vim:75 autoload/bartleby/outliner.vim:307
 msgid "Status"
 msgstr ""
 
@@ -366,23 +374,23 @@ msgstr ""
 msgid "PopupButtonMenu: opts.callback is required"
 msgstr ""
 
-#: autoload/bartleby/commandpalette.vim:75
+#: autoload/bartleby/commandpalette.vim:77
 msgid "Command Palette"
 msgstr ""
 
-#: autoload/bartleby/commandpalette.vim:84
+#: autoload/bartleby/commandpalette.vim:86
 msgid "List Scrives"
 msgstr ""
 
-#: autoload/bartleby/commandpalette.vim:85
+#: autoload/bartleby/commandpalette.vim:87
 msgid "Toggle Binder"
 msgstr ""
 
-#: autoload/bartleby/commandpalette.vim:86
+#: autoload/bartleby/commandpalette.vim:88
 msgid "Search Scrive"
 msgstr ""
 
-#: autoload/bartleby/commandpalette.vim:92
+#: autoload/bartleby/commandpalette.vim:96
 msgid "Edit Project Info"
 msgstr ""
 
@@ -570,7 +578,7 @@ msgstr ""
 msgid "\"%s\" has no documents to show on the corkboard"
 msgstr ""
 
-#: autoload/bartleby/corkboard.vim:82 autoload/bartleby/inspector.vim:154
+#: autoload/bartleby/corkboard.vim:82 autoload/bartleby/inspector.vim:192
 msgid "Synopsis"
 msgstr ""
 
@@ -654,7 +662,7 @@ msgstr ""
 msgid " %s (C-s to save) "
 msgstr ""
 
-#: autoload/bartleby/inputpopup.vim:129
+#: autoload/bartleby/inputpopup.vim:129 autoload/bartleby/progressview.vim:62
 msgid "Save"
 msgstr ""
 
@@ -670,48 +678,80 @@ msgstr ""
 msgid "(no matches)"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:138
+#: autoload/bartleby/inspector.vim:102
+msgid "Today:"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:108 autoload/bartleby/progressview.vim:113
+msgid "%s over"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:108 autoload/bartleby/progressview.vim:113
+msgid "%s under"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:109 autoload/bartleby/inspector.vim:110
+msgid "Tracker:"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:109
+msgid "starts %s"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:110
+msgid "day %d of %d"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:117
+msgid "Goals"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:173
 msgid "Target word count"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:146 autoload/bartleby/outliner.vim:78
+#: autoload/bartleby/inspector.vim:181 autoload/bartleby/outliner.vim:78
 msgid "Keywords"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:208
+#: autoload/bartleby/inspector.vim:246
 msgid "no scrive open"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:213
+#: autoload/bartleby/inspector.vim:251
 msgid "current buffer is not a document in the open scrive"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:57
+#: autoload/bartleby/inspector.vim:59
 msgid "Title:"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:58
+#: autoload/bartleby/inspector.vim:60
 msgid "Label:"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:59
+#: autoload/bartleby/inspector.vim:61
 msgid "Status:"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:60
+#: autoload/bartleby/inspector.vim:62
 msgid "Target:"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:61
+#: autoload/bartleby/inspector.vim:63
 msgid "Keywords:"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:62
+#: autoload/bartleby/inspector.vim:64
 msgid "Synopsis:"
 msgstr ""
 
-#: autoload/bartleby/inspector.vim:69
+#: autoload/bartleby/inspector.vim:71
 msgid "Inspector"
+msgstr ""
+
+#: autoload/bartleby/inspector.vim:99
+msgid "Session:"
 msgstr ""
 
 #: autoload/bartleby/lang.vim:56
@@ -890,11 +930,11 @@ msgstr ""
 msgid "Title"
 msgstr ""
 
-#: autoload/bartleby/outliner.vim:76
+#: autoload/bartleby/outliner.vim:76 autoload/bartleby/progressview.vim:134 autoload/bartleby/progressview.vim:145
 msgid "Words"
 msgstr ""
 
-#: autoload/bartleby/outliner.vim:77
+#: autoload/bartleby/outliner.vim:77 autoload/bartleby/progressview.vim:115
 msgid "Target"
 msgstr ""
 
@@ -968,6 +1008,126 @@ msgstr ""
 
 #: autoload/bartleby/profile.vim:196
 msgid " %s Info "
+msgstr ""
+
+#: autoload/bartleby/progress.vim:198
+msgid "goals cannot be below 0"
+msgstr ""
+
+#: autoload/bartleby/progress.vim:201
+msgid "%s is not a date such as 2021-11-01"
+msgstr ""
+
+#: autoload/bartleby/progress.vim:204
+msgid "a tracker needs at least 1 day"
+msgstr ""
+
+#: autoload/bartleby/progress.vim:298 autoload/bartleby/progressview.vim:107
+msgid "Today"
+msgstr ""
+
+#: autoload/bartleby/progress.vim:301 autoload/bartleby/progressview.vim:104
+msgid "Session"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:115 autoload/bartleby/progressview.vim:134
+msgid "Day"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:115
+msgid "%d of %d"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:116
+msgid "Written"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:117
+msgid "Start"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:117
+msgid "Days to go"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:118
+msgid "Should have"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:119
+msgid "End"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:119
+msgid "On track"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:119
+msgid "Per day"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:120
+msgid "Pace"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:120
+msgid "%s a day"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:120
+msgid "Finish"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:122
+msgid "You did it! Winner!"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:122
+msgid "You can do this!"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:134 autoload/bartleby/progressview.vim:145
+msgid "Date"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:134
+msgid "Total"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:172
+msgid "Writing progress"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:172
+msgid "goals"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:172
+msgid "close"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:53
+msgid " Writing goals. 0 or empty is off "
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:55
+msgid "Session goal"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:56
+msgid "Daily goal"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:57
+msgid "Tracker target"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:58
+msgid "Start date"
+msgstr ""
+
+#: autoload/bartleby/progressview.vim:59
+msgid "Days"
 msgstr ""
 
 #: autoload/bartleby/project.vim:133
@@ -1060,15 +1220,15 @@ msgstr ""
 msgid "this folder has no documents"
 msgstr ""
 
-#: autoload/bartleby/scrivenings.vim:274
+#: autoload/bartleby/scrivenings.vim:289
 msgid "the Scrivening was not saved, because a title line was changed or removed. Press u to undo it"
 msgstr ""
 
-#: autoload/bartleby/scrivenings.vim:280
+#: autoload/bartleby/scrivenings.vim:295
 msgid "%s could not be written"
 msgstr ""
 
-#: autoload/bartleby/scrivenings.vim:295
+#: autoload/bartleby/scrivenings.vim:310
 msgid "the title lines of a Scrivening cannot be changed"
 msgstr ""
 
@@ -1216,100 +1376,100 @@ msgstr ""
 msgid "Draft"
 msgstr ""
 
-#: plugin/bartleby.vim:133
+#: plugin/bartleby.vim:141
 msgid "no scrive name given, and no previously-opened scrive to fall back to - showing the scrive list"
 msgstr ""
 
-#: plugin/bartleby.vim:155
+#: plugin/bartleby.vim:163
 msgid "Scrive Type"
 msgstr ""
 
-#: plugin/bartleby.vim:173 plugin/bartleby.vim:181 plugin/bartleby.vim:198 plugin/bartleby.vim:210 plugin/bartleby.vim:261 plugin/bartleby.vim:271 plugin/bartleby.vim:326
+#: plugin/bartleby.vim:181 plugin/bartleby.vim:189 plugin/bartleby.vim:206 plugin/bartleby.vim:218 plugin/bartleby.vim:269 plugin/bartleby.vim:279 plugin/bartleby.vim:334 autoload/bartleby/progress.vim:195 autoload/bartleby/progressview.vim:33 autoload/bartleby/progressview.vim:157
 msgid "no scrive open - run :BartlebyOpen <name> first"
 msgstr ""
 
-#: plugin/bartleby.vim:215
+#: plugin/bartleby.vim:223
 msgid "current buffer is not a document of the open scrive"
 msgstr ""
 
-#: plugin/bartleby.vim:226 autoload/bartleby/binder.vim:188
+#: plugin/bartleby.vim:234 autoload/bartleby/binder.vim:188
 msgid "Snapshot label (optional)"
 msgstr ""
 
-#: plugin/bartleby.vim:239 autoload/bartleby/binder.vim:210
+#: plugin/bartleby.vim:247 autoload/bartleby/binder.vim:210
 msgid "no snapshots for \"%s\""
 msgstr ""
 
-#: plugin/bartleby.vim:243 autoload/bartleby/binder.vim:214
+#: plugin/bartleby.vim:251 autoload/bartleby/binder.vim:214
 msgid "Snapshots"
 msgstr ""
 
-#: plugin/bartleby.vim:245 autoload/bartleby/binder.vim:216
+#: plugin/bartleby.vim:253 autoload/bartleby/binder.vim:216
 msgid " %s "
 msgstr ""
 
-#: plugin/bartleby.vim:249 autoload/bartleby/binder.vim:222
+#: plugin/bartleby.vim:257 autoload/bartleby/binder.vim:222
 msgid "Restore"
 msgstr ""
 
-#: plugin/bartleby.vim:249 autoload/bartleby/binder.vim:222 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:246
+#: plugin/bartleby.vim:257 autoload/bartleby/binder.vim:222 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:246
 msgid "Cancel"
 msgstr ""
 
-#: plugin/bartleby.vim:287
+#: plugin/bartleby.vim:295
 msgid "no scrive open - run :BartlebyRecover <name> for a scrive that does not open"
 msgstr ""
 
-#: plugin/bartleby.vim:292
+#: plugin/bartleby.vim:300
 msgid "every document on disk is in the Binder"
 msgstr ""
 
-#: plugin/bartleby.vim:297
+#: plugin/bartleby.vim:305
 msgid "recovered %d document into the folder Recovered"
 msgid_plural "recovered %d documents into the folder Recovered"
 msgstr[0] ""
 msgstr[1] ""
 
-#: plugin/bartleby.vim:303 autoload/bartleby/scrive.vim:93
+#: plugin/bartleby.vim:311 autoload/bartleby/scrive.vim:93
 msgid "no scrive named \"%s\" under %s"
 msgstr ""
 
-#: plugin/bartleby.vim:307
+#: plugin/bartleby.vim:315
 msgid "\"%s\" opens. Open it, then run :BartlebyRecover to recover its documents."
 msgstr ""
 
-#: plugin/bartleby.vim:310
+#: plugin/bartleby.vim:318
 msgid "Rebuild the Binder of \"%s\"? The damaged project.json is kept as project.json.damaged, its backup is used if it loads, and every document on disk is recovered."
 msgstr ""
 
-#: plugin/bartleby.vim:331
+#: plugin/bartleby.vim:339
 msgid "the files already follow the Binder"
 msgstr ""
 
-#: plugin/bartleby.vim:334
+#: plugin/bartleby.vim:342
 msgid "Move %d file, so that the folders on disk follow the Binder?"
 msgid_plural "Move %d files, so that the folders on disk follow the Binder?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: plugin/bartleby.vim:339
+#: plugin/bartleby.vim:347
 msgid "moved %d file"
 msgid_plural "moved %d files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: plugin/bartleby.vim:341
+#: plugin/bartleby.vim:349
 msgid "these files did not move, so save any changes and run it again: %s"
 msgstr ""
 
-#: plugin/bartleby.vim:356
+#: plugin/bartleby.vim:364
 msgid "no Scrivening is open"
 msgstr ""
 
-#: plugin/bartleby.vim:358
+#: plugin/bartleby.vim:366
 msgid "the Scrivening stays open, because it could not be saved"
 msgstr ""
 
-#: plugin/bartleby.vim:373 autoload/bartleby/binder.vim:160 autoload/bartleby/scrivenings.vim:108
+#: plugin/bartleby.vim:381 autoload/bartleby/binder.vim:160 autoload/bartleby/scrivenings.vim:108
 msgid "a Scrivening opens only for a folder in the Manuscript"
 msgstr ""

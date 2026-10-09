@@ -36,6 +36,8 @@ import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/scrivenings.vim' as SV
+import autoload 'bartleby/progress.vim' as PG
+import autoload 'bartleby/progressview.vim' as PV
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -79,7 +81,40 @@ def RenderContent(item: BI.BinderItem, meta: D.DocMeta): list<string>
   if meta.synopsis !=# ''
     lines += split(meta.synopsis, "\n")
   endif
+  var goals: list<string> = GoalLines()
+  if !empty(goals)
+    lines += [''] + goals
+  endif
   return lines
+enddef
+
+# FUNCTION: Return the lines of the writing goals that are set, under the
+# header of GoalsHeader, or nothing when none is. See progress.vim.
+def GoalLines(): list<string>
+  var goals: dict<number> = PG.Goals()
+  var written: dict<number> = PG.Written()
+  var T = PG.Thousands
+  var lines: list<string> = []
+  if goals.session > 0
+    lines->add($'{IN.T("Session:")} {T(max([written.session, 0]))} / {T(goals.session)}')
+  endif
+  if goals.daily > 0
+    lines->add($'{IN.T("Today:")} {T(max([written.today, 0]))} / {T(goals.daily)}')
+  endif
+  var tracker: dict<any> = PG.Tracker()
+  var f: dict<any> = PG.TrackerFigures(PG.DayOf(localtime()))
+  if !empty(f)
+    var gap: string = f.difference >= 0
+      ? printf(IN.T("%s over"), T(f.difference)) : printf(IN.T("%s under"), T(-f.difference))
+    lines->add(f.dayNumber == 0 ? $'{IN.T("Tracker:")} {printf(IN.T("starts %s"), tracker.start)}'
+      : $'{IN.T("Tracker:")} {printf(IN.T("day %d of %d"), min([f.dayNumber, tracker.days]), tracker.days)}, {gap}')
+  endif
+  return empty(lines) ? [] : [GoalsHeader()] + lines
+enddef
+
+# FUNCTION: Return the header of the goal lines.
+def GoalsHeader(): string
+  return $'::{IN.T("Goals")}::'
 enddef
 
 # FUNCTION: Write the Inspector buffer for item without moving the focus
@@ -149,6 +184,9 @@ def EditUnderCursor(): void
       m.Save(item.MetaPath(project.BinderRoot()))
       RefreshFor(project, item)
     })
+  elseif index(getline(1, '$'), GoalsHeader()) >= 0 && lnum > index(getline(1, '$'), GoalsHeader())
+    # The goal lines, after the synopsis.
+    PV.EditGoals()
   elseif lnum >= LINE_SYNOPSIS_HEADER
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     IP.PromptMultiline(IN.T("Synopsis"), meta.synopsis, (text: string) => {
@@ -231,5 +269,6 @@ export def Toggle(): void
     autocmd!
     autocmd BufEnter * FollowEditor()
     execute 'autocmd User ' .. SV.SECTION_EVENT .. ' FollowEditor()'
+    execute 'autocmd User ' .. PG.CHANGED_EVENT .. ' FollowEditor()'
   augroup END
 enddef

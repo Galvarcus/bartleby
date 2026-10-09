@@ -29,6 +29,7 @@ Development:
 - [Corkboard](#corkboard)
 - [Outliner](#outliner)
 - [Scrivenings](#scrivenings)
+- [Goals and progress](#goals-and-progress)
 - [Inspector](#inspector)
 - [Scrive list](#scrive-list)
 - [Focus, Spotlight, and Quill](#focus-spotlight-and-quill)
@@ -281,17 +282,53 @@ follow the document under the cursor. A change in the Binder, such as
 a new or moved document, shows in the Scrivening at once. One
 Scrivening is open at a time.
 
+The word counts of Bartleby leave the title lines out. The word count of
+Vim, `g CTRL-G`, and that of vim-airline count the whole buffer, so in a
+Scrivening they count the title lines too.
+
+## Goals and progress
+
+`:BartlebyGoals` sets the writing goals of the scrive. All are optional,
+and 0 turns one off:
+
+- **Session goal** - the words to write since the scrive opened.
+- **Daily goal** - the words to write each day.
+- **Tracker** - a target over a number of days from a start date, as
+  for NaNoWriMo.
+
+The words written are the net change of the words of the Manuscript.
+Deleting text lowers them. Unsaved text counts, and Research, notes, the
+Trash, and the title lines of a Scrivening do not. A day starts at
+midnight, or at the hour of `g:bartleby_day_starts_at`.
+
+The status line shows the goals that are set, as in `Today 1,180/1,667 ·
+Session 230/500`. With a tracker and no daily goal, today's goal is its
+share of what is left. vim-airline shows it in section `y`, or in the
+section of `g:bartleby_airline_section`. Without airline, Bartleby adds
+it to the status line of Vim when the `statusline` option is empty. To
+place it in a status line of your own, add
+`%{bartleby#progress#Status()}`.
+
+`:BartlebyProgress` shows the progress in a popup. With a tracker, it
+shows its figures, such as the words to have by now and the projected
+finish date, and the words of each day. Without one, it shows the words
+of the last 30 days. `e` edits the goals, and `q` closes it.
+
+`progress.json` in the scrive keeps the goals and the words of each day.
+
 ## Inspector
 
 `<leader>bi` or `:BartlebyToggleInspector` opens a read-only pane with
 the current document's Title, Label, Status, Target, Keywords, and
-Synopsis. It follows the document in the editor window.
+Synopsis. It follows the document in the editor window. When writing
+goals are set, it shows them after the synopsis.
 
 | Key | Action |
 | --- | --- |
 | `e` on Label or Status | Pick a value |
 | `e` on Target or Keywords | Type a value |
 | `e` on Synopsis | Edit the synopsis. `<CR>` adds a line. `<C-s>` saves, or `<Tab>` to the Save button |
+| `e` on a goal | Edit the writing goals |
 
 ## Scrive list
 
@@ -540,6 +577,8 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyScrivenings[!]` | Open a Scrivening of the folder of the current document. With `!`, save and close the open Scrivening |
 | `:BartlebyTidyFiles` | Move the files of the scrive, so that the folders on disk follow the Binder |
 | `:BartlebyRecover [name]` | Add documents on disk that the Binder does not list to Recovered. With a name, rebuild the Binder of a scrive that does not open |
+| `:BartlebyGoals` | Set the session goal, the daily goal, and the tracker |
+| `:BartlebyProgress` | Show the writing progress and the words of each day |
 | `:BartlebyCommands` | Open the command palette |
 | `:BartlebyMenu` | Open the command menu |
 | `:BartlebyDefine [word]` | Define the word under the cursor or `word` |
@@ -580,6 +619,9 @@ default, so set only the ones you want to change.
 | `g:bartleby_snapshot_retention` | `5` | Snapshots kept per document. The oldest is deleted first |
 | `g:bartleby_autosave` | `1` | Save changed scrive documents automatically |
 | `g:bartleby_autosave_interval` | `30` | Minimum seconds between automatic saves of a document |
+| `g:bartleby_day_starts_at` | `0` | The hour, 0 to 23, at which a writing day starts |
+| `g:bartleby_statusline` | `true` | Add the writing progress to the status line when the `statusline` option is empty |
+| `g:bartleby_airline_section` | `'y'` | The section of vim-airline that shows the writing progress |
 
 **Focus**
 
@@ -678,6 +720,11 @@ README for the other options, such as the message level and the number
 of log files to keep.
 
 ## Known Issues
+
+**Word counts in a Scrivening** - the word count of Vim, `g CTRL-G`,
+and that of vim-airline count the whole buffer, so in a Scrivening they
+count its title lines too. The counts of Bartleby, in the status line,
+the Inspector, the Outliner, and the goals, leave them out.
 
 **`Ctrl-S` on the Linux console** - the Linux console, and terminals
 such as `vt100` and `vt220`, use `Ctrl-S` and `Ctrl-Q` for flow

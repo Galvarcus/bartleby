@@ -61,6 +61,7 @@ import './test_corkboard.vim' as TCB
 import './test_focus.vim' as TFO
 import './test_layout.vim' as TLY
 import './test_scrivenings.vim' as TSV
+import './test_progress.vim' as TPG
 import './test_inputpopup.vim' as TI
 import './test_dialog_popup.vim' as TDP
 import './test_outliner.vim' as TO
@@ -96,6 +97,7 @@ var suites: list<func(): void> = [
   TFO.RunAll,
   TLY.RunAll,
   TSV.RunAll,
+  TPG.RunAll,
   TI.RunAll,
   TDP.RunAll,
   TO.RunAll,

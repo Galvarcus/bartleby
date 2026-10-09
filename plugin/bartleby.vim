@@ -44,6 +44,8 @@ import autoload 'bartleby/dialog_popup.vim' as DP
 import autoload 'bartleby/recover.vim' as RC
 import autoload 'bartleby/layout.vim' as LY
 import autoload 'bartleby/scrivenings.vim' as SV
+import autoload 'bartleby/progress.vim' as PG
+import autoload 'bartleby/progressview.vim' as PV
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -56,6 +58,12 @@ g:bartleby_language = get(g:, 'bartleby_language', '')
 g:bartleby_session_auto_restore = get(g:, 'bartleby_session_auto_restore', false)
 g:bartleby_autosave = get(g:, 'bartleby_autosave', true)
 g:bartleby_autosave_interval = get(g:, 'bartleby_autosave_interval', 30)
+# The hour, 0 to 23, at which a writing day starts, for the daily goal.
+g:bartleby_day_starts_at = get(g:, 'bartleby_day_starts_at', 0)
+# Add the writing progress to the status line when it has no setting of
+# its own. vim-airline shows it in the section g:bartleby_airline_section.
+g:bartleby_statusline = get(g:, 'bartleby_statusline', true)
+g:bartleby_airline_section = get(g:, 'bartleby_airline_section', 'y')
 g:bartleby_snapshot_retention = get(g:, 'bartleby_snapshot_retention', 5)
 g:bartleby_binder_show_role_labels = get(g:, 'bartleby_binder_show_role_labels', true)
 g:bartleby_focus_width = get(g:, 'bartleby_focus_width', 80)
@@ -378,6 +386,8 @@ def OpenScrivening(close: bool): void
 enddef
 
 command! -bar -bang BartlebyScrivenings OpenScrivening('<bang>' ==# '!')
+command! -bar BartlebyGoals PV.EditGoals()
+command! -bar BartlebyProgress PV.Show()
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
 command! -bar -nargs=? BartlebyDefine LP.LookupCommand(CO.KIND_DICTIONARY, <q-args>)
@@ -423,7 +433,28 @@ def StartScriveHooks(): void
     autocmd!
     autocmd BufEnter * Q.AutoApply()
   augroup END
+  # Count the words for the goals on pauses and saves, never on each key.
+  augroup bartleby_progress
+    autocmd!
+    autocmd CursorHold,CursorHoldI,InsertLeave,BufWritePost,BufEnter * PG.Refresh()
+  augroup END
+  PG.Refresh()
 enddef
+
+# FUNCTION: Add the writing progress to the status line, when the status
+# line has no setting of its own and vim-airline does not draw it, as the
+# default status line of Vim, with the ruler. See progress.vim.
+def SetupStatusline(): void
+  if !g:bartleby_statusline || exists('g:loaded_airline') || &g:statusline !=# ''
+    return
+  endif
+  &g:statusline = '%<%f %h%m%r%=%( %{bartleby#progress#Status()}  %)%-14.(%l,%c%V%) %P'
+enddef
+
+augroup bartleby_statusline
+  autocmd!
+  autocmd VimEnter * SetupStatusline()
+augroup END
 
 def AutoRestoreSession(): void
   if g:bartleby_session_auto_restore && SS.LastScrive() !=# ''

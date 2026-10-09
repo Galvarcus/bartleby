@@ -266,6 +266,21 @@ def Sections(): list<list<string>>
   return sections
 enddef
 
+# FUNCTION: Return the text of each document of the open Scrivening, by its
+# file, as the buffer holds it, unsaved changes included and title lines
+# left out. Empty when none is open, or when a title line is damaged.
+export def SectionTexts(): dict<list<string>>
+  if !IsOpen()
+    return {}
+  endif
+  var sections: list<list<string>> = Sections()
+  var texts: dict<list<string>> = {}
+  for i in range(len(sections))
+    texts[current.paths[i]] = sections[i]
+  endfor
+  return texts
+enddef
+
 # FUNCTION: Write each document whose text changed, for :w and auto-save.
 # A damaged title line writes nothing, with an error.
 def Write(): void
