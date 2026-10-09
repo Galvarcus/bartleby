@@ -351,6 +351,10 @@ rename or move a scene, use the Binder, and the Scrivening follows.
 Write as in any document. `:w` and auto-save store each scene in its
 own file. The Inspector shows the scene that the cursor is in.
 
+When you are done, run `:BartlebyScrivenings!`, or pick Close
+Scrivening in the palette. Bartleby saves the Scrivening and shows the
+scene that the cursor was in, on its own.
+
 Scrivenings are for the folders of the Manuscript. One is open at a
 time.
 

@@ -14,6 +14,7 @@ vim9script
 
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/autosave.vim' as A
+import autoload 'bartleby/quill.vim' as Q
 import autoload 'bartleby/focus.vim' as F
 import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/binderitem.vim' as BI
@@ -199,6 +200,26 @@ def Test_auto_save_writes_the_scrivening(): void
   Close(fx)
 enddef
 
+# FUNCTION: Auto-save runs from autocommands, such as CursorHold, and Vim
+# fires no BufWriteCmd inside another autocommand. The save must still
+# happen, as it does when Vim calls it.
+def Test_auto_save_from_an_autocommand_writes_the_scrivening(): void
+  var fx = NewProject()
+  SV.Open(fx.project, fx.manuscript)
+  setline(2, 'Saved from an autocommand.')
+  augroup bartleby_test_autosave
+    autocmd!
+    autocmd User BartlebyTestAutoSave A.Save(true)
+  augroup END
+  doautocmd User BartlebyTestAutoSave
+  augroup bartleby_test_autosave
+    autocmd!
+  augroup END
+  assert_equal(['Saved from an autocommand.', 'It was late.'], LinesOf(fx.arrivalPath))
+  assert_false(&modified)
+  Close(fx)
+enddef
+
 def Test_the_session_records_the_document_under_the_cursor(): void
   var fx = NewProject()
   SS.ForgetKnownStates()
@@ -301,6 +322,116 @@ def Test_focus_works_on_the_scrivening(): void
   Close(fx)
 enddef
 
+# FUNCTION: The bang closes the Scrivening: it saves, and the window shows
+# the document the cursor was in, at the same line, on its own.
+def Test_the_bang_saves_and_closes_at_the_document_under_the_cursor(): void
+  var fx = NewProject()
+  SV.Open(fx.project, fx.manuscript)
+  var window: number = win_getid()
+  setline(3, 'It was very late.')
+  cursor(3, 1)
+  BartlebyScrivenings!
+  assert_false(SV.IsOpen())
+  assert_equal(-1, bufnr(CO.SCRIVENINGS_BUF))
+  assert_equal(['The train came in.', 'It was very late.'], LinesOf(fx.arrivalPath))
+  assert_equal(window, win_getid())
+  assert_equal([fnamemodify(fx.arrivalPath, ':p'), 2], [expand('%:p'), line('.')])
+  # No Scrivening takes the document back.
+  doautocmd BufEnter
+  sleep 50m
+  assert_equal(fnamemodify(fx.arrivalPath, ':p'), expand('%:p'))
+  Close(fx)
+enddef
+
+# FUNCTION: :bd closes the Scrivening for good, so that its documents open
+# on their own again, not in an empty buffer. With unsaved changes it is
+# refused, as for any buffer.
+def Test_bdelete_closes_the_scrivening(): void
+  var fx = NewProject()
+  SV.Open(fx.project, fx.manuscript)
+  setline(5, 'Not saved yet.')
+  silent! bdelete
+  assert_true(SV.IsOpen(), ':bd closed a Scrivening with unsaved changes')
+  write
+  bdelete
+  sleep 50m
+  assert_false(SV.IsOpen())
+  assert_equal(-1, bufnr(CO.SCRIVENINGS_BUF))
+  execute 'silent edit ' .. fnameescape(fx.departurePath)
+  doautocmd BufEnter
+  sleep 50m
+  assert_equal([fnamemodify(fx.departurePath, ':p'), ['Not saved yet.']], [expand('%:p'), getline(1, '$')])
+  Close(fx)
+enddef
+
+# FUNCTION: In Insert mode the arrow keys pass the title lines both ways,
+# in the column they keep: Up from the first line of a document goes to
+# the last line of the document before it, and Down from the last line
+# goes to the first line of the next.
+def Test_arrows_in_insert_mode_cross_the_title_lines(): void
+  var fx = NewProject()
+  SV.Open(fx.project, fx.manuscript)
+  feedkeys("5GA\<Up>!\<Esc>", 'xt')
+  assert_equal('It was late.!', getline(3), 'Up into the document before')
+  feedkeys("3GI\<Down>?\<Esc>", 'xt')
+  assert_equal('?The train left.', getline(5), 'Down into the next document')
+  # Nothing is above the first title line.
+  feedkeys("2GI\<Up>#\<Esc>", 'xt')
+  assert_equal('#The train came in.', getline(2), 'Up at the first document')
+  assert_equal(['── Chapter: 1 / Arrival ──', '── Chapter: 2 / Departure ──'], [getline(1), getline(4)])
+  set nomodified
+  Close(fx)
+enddef
+
+# FUNCTION: Return the text of the document that holds the title line
+# that starts with title, to the next title line.
+def DocumentText(title: string): string
+  var start: number = search('^── ' .. title, 'nw')
+  var lines: list<string> = getline(start + 1, '$')
+  var ends: number = indexof(lines, (_, l) => l =~# '^──')
+  return join(ends < 0 ? lines : lines[: ends - 1])
+enddef
+
+# FUNCTION: Quill maps the arrow keys to move by screen lines. In a
+# Scrivening they still pass the title lines, in each mode of Quill, and
+# after Quill turns off. In hard mode Quill joins lines as it reflows
+# paragraphs, so the checks find the documents by their title lines.
+def Test_arrows_cross_the_title_lines_with_quill(): void
+  var fx = NewProject()
+  for mode in ['soft', 'hard', 'off']
+    FI.WriteDocContent(fx.project, fx.arrival, ['The train came in.', 'It was late.'])
+    FI.WriteDocContent(fx.project, fx.departure, ['The train left.'])
+    SV.Open(fx.project, fx.manuscript)
+    Q.Init(mode)
+    feedkeys("5GI\<Up>!\<Esc>", 'xt')
+    assert_match('!', DocumentText('Chapter: 1'), $'Up with Quill {mode}')
+    var last: number = search('^── Chapter: 2', 'nw') - 1
+    feedkeys(last .. "GI\<Down>?\<Esc>", 'xt')
+    assert_match('?', DocumentText('Chapter: 2'), $'Down with Quill {mode}')
+    assert_equal(2, len(getline(1, '$')->filter((_, l) => l =~# '^── Chapter')), $'titles with Quill {mode}')
+    set nomodified
+    SV.Close()
+  endfor
+  Close(fx)
+enddef
+
+# FUNCTION: At the end of the last document, nothing is below. Down and
+# Delete there do what they do at the end of any buffer, without an error.
+def Test_down_and_delete_at_the_end_of_the_scrivening(): void
+  var fx = NewProject()
+  SV.Open(fx.project, fx.manuscript)
+  for keys in ["GA\<Down>!\<Esc>", "GA\<Del>?\<Esc>"]
+    try
+      feedkeys(keys, 'xt')
+    catch
+      assert_report(strtrans(keys) .. ': ' .. v:exception)
+    endtry
+  endfor
+  assert_equal('The train left.!?', getline('$'))
+  set nomodified
+  Close(fx)
+enddef
+
 export def RunAll(): void
   Test_a_scrivening_shows_the_folder_tree_in_binder_order()
   Test_only_a_folder_in_the_manuscript_opens()
@@ -320,4 +451,10 @@ export def RunAll(): void
   Test_spotlight_dims_in_the_scrivening()
   Test_focus_works_on_the_scrivening()
   Test_paragraph_formatting_leaves_the_title_lines()
+  Test_auto_save_from_an_autocommand_writes_the_scrivening()
+  Test_the_bang_saves_and_closes_at_the_document_under_the_cursor()
+  Test_bdelete_closes_the_scrivening()
+  Test_arrows_in_insert_mode_cross_the_title_lines()
+  Test_arrows_cross_the_title_lines_with_quill()
+  Test_down_and_delete_at_the_end_of_the_scrivening()
 enddef

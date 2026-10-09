@@ -220,14 +220,26 @@ def SetupBuffer(): void
     autocmd! * <buffer>
     autocmd BufWriteCmd <buffer> Write()
     autocmd TextChanged <buffer> Protect()
-    autocmd InsertEnter,CursorMovedI <buffer> LeaveTitleLine()
+    autocmd InsertEnter <buffer> EnterInsert()
+    autocmd CursorMovedI <buffer> LeaveTitleLine()
     autocmd CursorMoved,CursorMovedI <buffer> NotifySection()
-    autocmd BufWipeout <buffer> Forget()
+    autocmd BufUnload <buffer> Discard()
   augroup END
   for key in ['<BS>', '<C-h>', '<C-w>', '<C-u>']
     execute $'inoremap <buffer> <expr> {key} <SID>AtSectionStart() ? "" : "\{key}"'
   endfor
   inoremap <buffer> <expr> <Del> <SID>AtSectionEnd() ? "" : "\<Del>"
+  MapArrows()
+enddef
+
+# FUNCTION: Map Up and Down in Insert mode in the Scrivening buffer. A move
+# onto a title line goes past it. Any other move uses up and down, so
+# that Quill, which moves by screen lines, calls this instead of mapping
+# the arrow keys itself, and the title lines stay passable.
+export def MapArrows(up: string = "\<Up>", down: string = "\<Down>"): void
+  b:bartleby_scrivening_arrows = [up, down]
+  inoremap <buffer> <expr> <Up> <SID>KeyUp()
+  inoremap <buffer> <expr> <Down> <SID>KeyDown()
 enddef
 
 # FUNCTION: Return the lines of each document, in order, or an empty list
@@ -284,8 +296,9 @@ def Protect(): void
 enddef
 
 # FUNCTION: Return true when the text property of a title line is on lnum.
+# A line outside the buffer, as below the last line, is not one.
 def IsTitleLine(lnum: number): bool
-  return lnum >= 1 && !empty(prop_list(lnum, {types: [PROP_TITLE]}))
+  return lnum >= 1 && lnum <= line('$') && !empty(prop_list(lnum, {types: [PROP_TITLE]}))
 enddef
 
 # FUNCTION: Return true when the cursor is at the start of the first line
@@ -300,12 +313,53 @@ def AtSectionEnd(): bool
   return col('.') > strlen(getline('.')) && IsTitleLine(line('.') + 1)
 enddef
 
-# FUNCTION: Move the cursor in Insert mode from a title line to the start
-# of the document below it.
-def LeaveTitleLine(): void
-  if IsTitleLine(line('.'))
-    cursor(line('.') + 1, 1)
+# FUNCTION: Return true when the cursor is on the screen row of column col
+# of its line, as for a line that wraps onto more rows.
+def OnScreenRowOf(col: number): bool
+  var winId: number = win_getid()
+  var last: number = max([col([line('.'), '$']) - 1, 1])
+  return screenpos(winId, line('.'), min([col, last])).row
+    == screenpos(winId, line('.'), min([col('.'), last])).row
+enddef
+
+# FUNCTION: Return the keys for Up in Insert mode. From the first screen row
+# of a line below a title line, Up goes past the title line, to the end of
+# the document before. Nothing is above the first title line, so there Up
+# does not move. Any other Up is the up of MapArrows.
+def KeyUp(): string
+  if !IsTitleLine(line('.') - 1) || !OnScreenRowOf(1)
+    return b:bartleby_scrivening_arrows[0]
   endif
+  return line('.') - 1 > 1 ? "\<Up>\<Up>" : ''
+enddef
+
+# FUNCTION: Return the keys for Down in Insert mode. From the last screen
+# row of a line above a title line, Down goes past the title line, to the
+# start of the next document. Any other Down is the down of MapArrows.
+def KeyDown(): string
+  if !IsTitleLine(line('.') + 1) || !OnScreenRowOf(col([line('.'), '$']))
+    return b:bartleby_scrivening_arrows[1]
+  endif
+  return "\<Down>\<Down>"
+enddef
+
+# FUNCTION: Start Insert mode off the title lines, toward the document
+# below, as no move came before.
+def EnterInsert(): void
+  current.lastLine = 0
+  LeaveTitleLine()
+enddef
+
+# FUNCTION: Move the cursor in Insert mode off a title line that another
+# move put it on, such as a click, in the way it went: from below, to the
+# end of the document before, or else to the start of the document below.
+def LeaveTitleLine(): void
+  var lnum: number = line('.')
+  if IsTitleLine(lnum)
+    var up: bool = get(current, 'lastLine', 0) > lnum && lnum > 1
+    cursor(up ? lnum - 1 : lnum + 1, up ? col([lnum - 1, '$']) : 1)
+  endif
+  current.lastLine = line('.')
 enddef
 
 # FUNCTION: Return the number of the document at lnum, from 0, by the
@@ -433,8 +487,14 @@ def RedirectNow(bufNr: number, id: string, offset: number): void
   ShowDocument(id, offset)
 enddef
 
-# FUNCTION: Save and close the Scrivening. Returns false, and keeps it
-# open, when it cannot be saved.
+# FUNCTION: Return true when a Scrivening is open.
+export def IsOpen(): bool
+  return !empty(current) && bufexists(current.bufnr)
+enddef
+
+# FUNCTION: Save and close the Scrivening. Each window that shows it then
+# shows the document the cursor was in, at the same line. Returns false,
+# and keeps it open, when it cannot be saved.
 export def Close(): bool
   if empty(current)
     return true
@@ -445,12 +505,39 @@ export def Close(): bool
       return false
     endif
   endif
-  execute 'silent! bwipe! ' .. current.bufnr
+  var bufNr: number = current.bufnr
+  var places: list<list<any>> = win_findbuf(bufNr)->mapnew((_, winId) => {
+    var place: list<any> = PlaceAt(getcurpos(winId)[1])
+    return [winId, current.paths[index(current.ids, place[0])], place[1]]
+  })
+  # Forgotten first, so that the documents do not open in it again.
   Forget()
+  for [winId, path, offset] in places
+    win_execute(winId, 'silent edit ' .. fnameescape(path))
+    win_execute(winId, $'cursor({offset + 1}, 1)')
+  endfor
+  execute 'silent! bwipe! ' .. bufNr
   return true
 enddef
 
-# FUNCTION: Forget the Scrivening, when its buffer goes.
+# FUNCTION: Forget the Scrivening when its buffer unloads, as with :bd or
+# :bunload, and wipe the buffer, so that its documents open on their own
+# again and the empty buffer cannot be written.
+def Discard(): void
+  if empty(current)
+    return
+  endif
+  var bufNr: number = current.bufnr
+  Forget()
+  # A buffer cannot be wiped while Vim unloads it.
+  timer_start(0, (_) => {
+    if bufexists(bufNr)
+      execute 'silent! bwipe! ' .. bufNr
+    endif
+  })
+enddef
+
+# FUNCTION: Forget the Scrivening.
 def Forget(): void
   current = {}
   augroup bartleby_scrivening_redirect

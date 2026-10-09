@@ -69,7 +69,13 @@ export def Save(force: bool): void
     return
   endif
   try
-    lockmarks silent update
+    if SV.IsScrivening(bufnr())
+      # Auto-save runs from autocommands, and Vim fires no BufWriteCmd, the
+      # write of a Scrivening, inside another autocommand.
+      SV.SaveIfModified()
+    else
+      lockmarks silent update
+    endif
     b:bartleby_autosave_time = now
   catch
     log.Warn(printf(IN.T("auto-save failed for %s: %s"), expand("%:t"), v:exception))

@@ -260,6 +260,11 @@ read and edit them as one text. `v` on a document opens the Scrivening
 of its folder at that document. `:BartlebyScrivenings` does the same
 from a document.
 
+`:BartlebyScrivenings!` saves and closes the Scrivening. Its window then
+shows the document that the cursor was in, at the same line. `:bd`
+closes it too. To leave it open, open another document: the Scrivening
+stays, and auto-save keeps it saved.
+
 A title line starts each document, as in `── Chapter: 2 / Scene 1 ──`.
 The title lines are protected. Bartleby undoes a change to one, and
 `<BS>` and `<Del>` do not join text to one. `:w` and auto-save write
@@ -532,7 +537,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyProjectInfo` | Edit the profile for this scrive only |
 | `:BartlebyCompile` | Compile the scrive |
 | `:BartlebyEmptyTrash` | Delete everything in the Trash for good, after a confirmation |
-| `:BartlebyScrivenings` | Open a Scrivening of the folder of the current document |
+| `:BartlebyScrivenings[!]` | Open a Scrivening of the folder of the current document. With `!`, save and close the open Scrivening |
 | `:BartlebyTidyFiles` | Move the files of the scrive, so that the folders on disk follow the Binder |
 | `:BartlebyRecover [name]` | Add documents on disk that the Binder does not list to Recovered. With a name, rebuild the Binder of a scrive that does not open |
 | `:BartlebyCommands` | Open the command palette |

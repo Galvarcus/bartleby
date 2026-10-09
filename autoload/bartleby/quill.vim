@@ -324,8 +324,14 @@ def SetupNavigationMaps(wrapMode: number): void
     nnoremap <buffer> <silent> gk k
     xnoremap <buffer> <silent> gj j
     xnoremap <buffer> <silent> gk k
-    inoremap <buffer> <silent> <Up> <C-o>g<Up>
-    inoremap <buffer> <silent> <Down> <C-o>g<Down>
+    # A Scrivening maps the arrow keys itself, so that they pass its title
+    # lines, and moves by screen lines otherwise.
+    if SV.IsScrivening(bufnr())
+      SV.MapArrows("\<C-o>g\<Up>", "\<C-o>g\<Down>")
+    else
+      inoremap <buffer> <silent> <Up> <C-o>g<Up>
+      inoremap <buffer> <silent> <Down> <C-o>g<Down>
+    endif
   else
     silent! nunmap <buffer> j
     silent! nunmap <buffer> k
@@ -333,8 +339,12 @@ def SetupNavigationMaps(wrapMode: number): void
     silent! xunmap <buffer> k
     silent! unmap <buffer> <Up>
     silent! unmap <buffer> <Down>
-    silent! iunmap <buffer> <Up>
-    silent! iunmap <buffer> <Down>
+    if SV.IsScrivening(bufnr())
+      SV.MapArrows()
+    else
+      silent! iunmap <buffer> <Up>
+      silent! iunmap <buffer> <Down>
+    endif
   endif
 enddef
 

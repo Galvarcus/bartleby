@@ -348,8 +348,17 @@ command! -bar BartlebyTidyFiles TidyFiles()
 
 # FUNCTION: Open a Scrivening: from the Binder, of the folder under its
 # cursor, and from a document, of the folder that holds it, at the line of
-# the cursor. See scrivenings.vim.
-def OpenScrivening(): void
+# the cursor. With close, save and close the open one instead. See
+# scrivenings.vim.
+def OpenScrivening(close: bool): void
+  if close
+    if !SV.IsOpen()
+      log.Info(IN.T("no Scrivening is open"))
+    elseif !SV.Close()
+      log.Warn(IN.T("the Scrivening stays open, because it could not be saved"))
+    endif
+    return
+  endif
   if bufname() ==# CO.BINDER_BUF
     B.OpenScrivening()
     return
@@ -368,7 +377,7 @@ def OpenScrivening(): void
   SV.Open(project, row.ownerItem, doc.id, offset)
 enddef
 
-command! -bar BartlebyScrivenings OpenScrivening()
+command! -bar -bang BartlebyScrivenings OpenScrivening('<bang>' ==# '!')
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
 command! -bar -nargs=? BartlebyDefine LP.LookupCommand(CO.KIND_DICTIONARY, <q-args>)
