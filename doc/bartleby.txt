@@ -261,6 +261,11 @@ folders inside it, in Binder order, in one buffer: a Scrivening. You read and
 edit them as one text. `v` on a document opens the Scrivening of its folder at
 that document. `:BartlebyScrivenings` does the same from a document.
 
+`:BartlebyScrivenings!` saves and closes the Scrivening. Its window then shows
+the document that the cursor was in, at the same line. `:bd` closes it too. To
+leave it open, open another document: the Scrivening stays, and auto-save
+keeps it saved.
+
 A title line starts each document, as in `── Chapter: 2 / Scene 1 ──`. The
 title lines are protected. Bartleby undoes a change to one, and `<BS>` and
 `<Del>` do not join text to one. `:w` and auto-save write only the documents
@@ -629,8 +634,9 @@ Commands                                                     *bartleby-commands*
     `:BartlebyEmptyTrash`                                   Delete everything in the Trash for
                                                             good, after a confirmation
 
-    `:BartlebyScrivenings`                                  Open a Scrivening of the folder of
-                                                            the current document
+    `:BartlebyScrivenings[!]`                               Open a Scrivening of the folder of
+                                                            the current document. With `!`,
+                                                            save and close the open Scrivening
 
     `:BartlebyTidyFiles`                                    Move the files of the scrive, so
                                                             that the folders on disk follow
