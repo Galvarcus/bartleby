@@ -375,20 +375,26 @@ class SheetTest(unittest.TestCase):
     def source(self):
         return (ROOT / B.DEFAULT_SOURCE).read_text(encoding="utf-8")
 
+    def plugin_text(self):
+        """Return the plugin with each continuation line joined to its line,
+        so that a command defined over more than one line is seen."""
+        text = (ROOT / "plugin" / "bartleby.vim").read_text(encoding="utf-8")
+        return re.sub(r"\n\s*\\", " ", text)
+
     def test_the_sheet_is_valid(self):
         document = B.parse_markdown(self.source(), B.DEFAULT_SOURCE)
         self.assertGreaterEqual(len(document.flows), 2)
 
     def test_every_command_of_the_plugin_is_on_the_sheet(self):
-        plugin = (ROOT / "plugin" / "bartleby.vim").read_text(encoding="utf-8")
-        commands = set(re.findall(r"^command!.*?\b(Bartleby\w+)", plugin, re.M))
+        commands = set(re.findall(r"^command!.*?\b(Bartleby\w+)", self.plugin_text(), re.M))
         self.assertGreater(len(commands), 20)
+        # Defined over two lines in the plugin.
+        self.assertIn("BartlebyOpen", commands)
         missing = sorted(c for c in commands if f":{c}" not in self.source())
         self.assertEqual([], missing, "add these commands to doc/cheatsheet.md")
 
     def test_every_leader_mapping_of_the_plugin_is_on_the_sheet(self):
-        plugin = (ROOT / "plugin" / "bartleby.vim").read_text(encoding="utf-8")
-        mappings = set(re.findall(r"[nx]noremap <silent> (<leader>b\S+)", plugin))
+        mappings = set(re.findall(r"[nx]noremap <silent> (<leader>b\S+)", self.plugin_text()))
         self.assertGreater(len(mappings), 5)
         missing = sorted(m for m in mappings if f"`{m}`" not in self.source())
         self.assertEqual([], missing, "add these mappings to doc/cheatsheet.md")
