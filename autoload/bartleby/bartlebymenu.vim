@@ -52,6 +52,7 @@ def BuildMenu(): M.Menu
   scrive.AddItem(IN.T("List..."), RunEx('BartlebyList'))
   scrive.AddItem(IN.T("Open..."), PromptThenEx(IN.T("Open Scrive"), 'BartlebyOpen'))
   scrive.AddItem(IN.T("New..."), PromptThenEx(IN.T("New Scrive"), 'BartlebyNewScrive'))
+  scrive.AddItem(IN.T("Close"), RunEx('BartlebyClose'))
 
   var binder: M.MenuItem = m.AddItem(IN.T("Binder"))
   binder.AddItem(IN.T("Toggle"), RunEx('BartlebyToggleBinder'))

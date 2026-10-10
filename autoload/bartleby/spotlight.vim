@@ -47,6 +47,7 @@ import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/pos.vim' as P
 import autoload 'bartleby/tagger.vim' as TA
 import autoload 'bartleby/tty.vim' as TY
+import autoload 'bartleby/windows.vim' as W
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -569,6 +570,14 @@ enddef
 
 def RefreshCurrentWindow(): void
   var wm: WindowMatches = get(w:, 'bartleby_spotlight_matches', null_object)
+  # A pane of Bartleby is never dimmed, because Spotlight works only in the
+  # edit window.
+  if W.IsChromeBuffer(bufnr())
+    if wm isnot null_object
+      wm.ClearHl()
+    endif
+    return
+  endif
   if wm is null_object
     wm = WindowMatches.new()
     w:bartleby_spotlight_matches = wm
@@ -600,6 +609,9 @@ export def IsOn(): bool
 enddef
 
 def On(mode: string, coeffArg: float): void
+  if W.RefusedInPane(IN.T("Spotlight"))
+    return
+  endif
   var actualMode: string = mode ==# '' ? current_mode : mode
   if !has_key(mode_handlers, actualMode)
     log.Error(printf(IN.T("unknown Spotlight mode: %s"), actualMode))

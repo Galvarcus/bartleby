@@ -374,6 +374,9 @@ def SetupPunctuationMaps(session: QuillSession): void
 enddef
 
 export def Init(wrapArg: string = 'detect'): void
+  if W.RefusedInPane(IN.T("Quill"))
+    return
+  endif
   var session: QuillSession = CurrentSession()
   session.SetSuspendAf(false)
 

@@ -48,6 +48,7 @@ const COMMANDS: dict<string> = {
   'Tidy Files': 'BartlebyTidyFiles',
   'Open Scrivening': 'BartlebyScrivenings',
   'Close Scrivening': 'BartlebyScrivenings!',
+  'Close Scrive': 'BartlebyClose',
 }
 
 # Display name to Ex command, for commands that need an argument, asked
@@ -102,6 +103,7 @@ def CommandNames(): dict<string>
     'Tidy Files': IN.T("Tidy Files"),
     'Open Scrivening': IN.T("Open Scrivening"),
     'Close Scrivening': IN.T("Close Scrivening"),
+    'Close Scrive': IN.T("Close Scrive"),
     'Open Scrive': IN.T("Open Scrive"),
     'New Scrive': IN.T("New Scrive"),
     'Pick Spotlight Mode': IN.T("Pick Spotlight Mode"),

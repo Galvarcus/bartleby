@@ -226,6 +226,11 @@ label color after its title. Long titles wrap.
 A confirmation question takes `y` for yes, and `n` or `<Esc>` for no.
 `<Enter>` gives the default answer, which is No for every deletion.
 
+The Binder and the Inspector are panes beside the edit window. When you
+close the edit window with `:q` and a pane is open, an empty edit window
+stays in its place, and the panes keep their widths. `:q` in the empty
+edit window closes it.
+
 ## Corkboard
 
 `gc` on a folder shows its documents as index cards with each
@@ -354,6 +359,10 @@ Three independent writing aids:
 | Focus | `:BartlebyFocus` | `<leader>bz` | A centered writing column. The rest of the screen is dimmed |
 | Spotlight | `:BartlebySpotlight` | `<leader>bl` | Dims all text except the current paragraph, or except what the selected mode keeps bright. `<leader>bL` picks the mode |
 | Quill | `:BartlebyQuill` | `<leader>bp` | Word-processor wrapping, soft or hard, detected from the document |
+
+All three work only in the edit window. In the Binder or the Inspector
+they say so and change nothing, so that a pane keeps its keys and its
+text. Spotlight can still be turned off there.
 
 ## Spotlight modes
 
@@ -564,6 +573,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyOpen [name]` | Open a scrive by name. `<Tab>` completes the name. Without a name, open the last scrive |
 | `:BartlebyNewScrive {name}` | Create a scrive. Asks for its type |
 | `:BartlebyList` | List all scrives and open the selected one |
+| `:BartlebyClose[!]` | Close the scrive and all that is open of Bartleby: Focus, Spotlight, a Scrivening, the Binder, the Inspector, and the documents. It saves first and leaves an empty buffer. With `!`, throw away changes that are not saved |
 | `:BartlebyToggleBinder` | Show or hide the Binder |
 | `:BartlebyToggleInspector` | Show or hide the Inspector |
 | `:BartlebySearch` | Search the scrive into the quickfix list |

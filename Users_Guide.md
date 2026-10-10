@@ -121,6 +121,11 @@ delete them. `dd` on one of them moves everything inside it to the
 Trash, after a confirmation, and keeps the empty folder. You can add,
 move, and delete everything that you create inside them.
 
+The Binder and the Inspector are panes beside the edit window. If you
+close the edit window with `:q` while a pane is open, an empty edit
+window stays in its place, and the panes keep their widths. `:q` in the
+empty edit window closes it.
+
 ## Writing
 
 Press `<Enter>` on a document in the Binder to open it. Press `i` to
@@ -148,6 +153,9 @@ When you leave Focus, the window and the font return to how they were.
 **Spotlight** dims every paragraph except the one with the cursor.
 `<leader>bl` turns it on or off. `<leader>bL` picks a different mode.
 See [Spotlight modes](#spotlight-modes).
+
+All three tools work only in the edit window. In the Binder or the
+Inspector they tell you so and change nothing.
 
 ## Spotlight modes
 
@@ -408,8 +416,16 @@ Bartleby remembers, for each scrive, the open document, the cursor
 position, and which Binder folders are open. It also remembers the
 last scrive.
 
-`:BartlebyOpen` with no name restores all of this. To restore it each
-time Vim starts, add this line to your vimrc:
+`:BartlebyOpen` with no name restores all of this.
+
+`:BartlebyClose` closes the scrive and everything of Bartleby that is
+open: Focus, Spotlight, a Scrivening, the Binder, the Inspector, and the
+documents. It saves your changes first and leaves one empty buffer. If a
+change cannot be saved, the windows stay open and you are told which
+file. `:BartlebyClose!` throws away the changes that are not saved. Windows
+of files that are not in the scrive stay.
+
+To restore the session each time Vim starts, add this line to your vimrc:
 
 ```vim
 let g:bartleby_session_auto_restore = 1

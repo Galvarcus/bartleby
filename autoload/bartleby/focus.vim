@@ -31,6 +31,7 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/windows.vim' as W
 
 var log = L.New(expand('<sfile>:t'))
 var focuswidth: any = g:bartleby_focus_width
@@ -187,7 +188,7 @@ enddef
 # save and restore the global options around it.
 
 def Enter(dimExpr: string): void
-  if exists('t:bartleby_focus_session')
+  if exists('t:bartleby_focus_session') || W.RefusedInPane(IN.T("Focus"))
     return
   endif
 

@@ -44,6 +44,8 @@ import autoload 'bartleby/dialog_popup.vim' as DP
 import autoload 'bartleby/recover.vim' as RC
 import autoload 'bartleby/layout.vim' as LY
 import autoload 'bartleby/scrivenings.vim' as SV
+import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/closeall.vim' as CL
 import autoload 'bartleby/progress.vim' as PG
 import autoload 'bartleby/progressview.vim' as PV
 import 'bartleby/variables/constants.vim' as CO
@@ -386,6 +388,7 @@ def OpenScrivening(close: bool): void
 enddef
 
 command! -bar -bang BartlebyScrivenings OpenScrivening('<bang>' ==# '!')
+command! -bar -bang BartlebyClose CL.All('<bang>' ==# '!')
 command! -bar BartlebyGoals PV.EditGoals()
 command! -bar BartlebyProgress PV.Show()
 command! -bar BartlebyCommands CP.Open()
@@ -433,6 +436,8 @@ def StartScriveHooks(): void
     autocmd!
     autocmd BufEnter * Q.AutoApply()
   augroup END
+  # An empty edit window stays when the last one closes beside a pane.
+  W.WatchEditWindow()
   # Count the words for the goals on pauses and saves, never on each key.
   augroup bartleby_progress
     autocmd!
