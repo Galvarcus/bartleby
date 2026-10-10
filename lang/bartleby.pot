@@ -1010,23 +1010,23 @@ msgstr ""
 msgid " %s Info "
 msgstr ""
 
-#: autoload/bartleby/progress.vim:198
+#: autoload/bartleby/progress.vim:201
 msgid "goals cannot be below 0"
 msgstr ""
 
-#: autoload/bartleby/progress.vim:201
+#: autoload/bartleby/progress.vim:204
 msgid "%s is not a date such as 2021-11-01"
 msgstr ""
 
-#: autoload/bartleby/progress.vim:204
+#: autoload/bartleby/progress.vim:207
 msgid "a tracker needs at least 1 day"
 msgstr ""
 
-#: autoload/bartleby/progress.vim:298 autoload/bartleby/progressview.vim:107
+#: autoload/bartleby/progress.vim:301 autoload/bartleby/progressview.vim:107
 msgid "Today"
 msgstr ""
 
-#: autoload/bartleby/progress.vim:301 autoload/bartleby/progressview.vim:104
+#: autoload/bartleby/progress.vim:304 autoload/bartleby/progressview.vim:104
 msgid "Session"
 msgstr ""
 
@@ -1384,7 +1384,7 @@ msgstr ""
 msgid "Scrive Type"
 msgstr ""
 
-#: plugin/bartleby.vim:181 plugin/bartleby.vim:189 plugin/bartleby.vim:206 plugin/bartleby.vim:218 plugin/bartleby.vim:269 plugin/bartleby.vim:279 plugin/bartleby.vim:334 autoload/bartleby/progress.vim:195 autoload/bartleby/progressview.vim:33 autoload/bartleby/progressview.vim:157
+#: plugin/bartleby.vim:181 plugin/bartleby.vim:189 plugin/bartleby.vim:206 plugin/bartleby.vim:218 plugin/bartleby.vim:269 plugin/bartleby.vim:279 plugin/bartleby.vim:334 autoload/bartleby/progress.vim:198 autoload/bartleby/progressview.vim:33 autoload/bartleby/progressview.vim:157
 msgid "no scrive open - run :BartlebyOpen <name> first"
 msgstr ""
 

@@ -18,6 +18,7 @@ import autoload 'bartleby/inspector.vim' as I
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/wordcount.vim' as WC
+import 'Logger/messages.vim' as LM
 import './fixtures.vim' as FI
 import 'bartleby/variables/constants.vim' as CO
 
@@ -149,6 +150,19 @@ def Test_goals_and_history_survive_a_restart(): void
   Close(fx)
 enddef
 
+# FUNCTION: A scrive has no progress.json until it has goals or a history,
+# as a new scrive and one from before the goals. That is not a problem, so
+# nothing is logged.
+def Test_a_scrive_without_progress_data_logs_no_warning(): void
+  var fx = NewProject()
+  assert_false(filereadable(fx.project.scriveDir .. '/progress.json'))
+  LM.Clear()
+  P.Refresh()
+  var logged: list<string> = LM.History()->mapnew((_, m) => join(m.lines, ' '))
+  assert_equal([], logged, 'something was logged')
+  Close(fx)
+enddef
+
 def Test_goals_are_checked(): void
   var fx = NewProject()
   P.Refresh()
@@ -255,6 +269,7 @@ export def RunAll(): void
   Test_today_is_the_net_change()
   Test_a_new_day_starts_from_the_last_count()
   Test_goals_and_history_survive_a_restart()
+  Test_a_scrive_without_progress_data_logs_no_warning()
   Test_goals_are_checked()
   Test_the_tracker_matches_the_sheet()
   Test_the_status_shows_only_the_goals_that_are_set()

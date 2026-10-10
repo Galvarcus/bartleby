@@ -104,9 +104,12 @@ export def ManuscriptWords(project: PO.Project): number
     : WC.Totals([manuscript], project.BinderRoot())[manuscript.id]
 enddef
 
-# FUNCTION: Return the data of FILE_NAME of project, with every key.
+# FUNCTION: Return the data of FILE_NAME of project, with every key. The
+# file is made when goals are set or words are counted, so a new scrive and
+# one from before the goals have none, and that is not worth a warning.
 def Load(project: PO.Project): dict<any>
-  var data: dict<any> = PE.ReadJson(project.scriveDir .. '/' .. FILE_NAME)
+  var path: string = project.scriveDir .. '/' .. FILE_NAME
+  var data: dict<any> = filereadable(path) ? PE.ReadJson(path) : {}
   return {
     goals: extend({session: 0, daily: 0}, get(data, 'goals', {})),
     tracker: get(data, 'tracker', {}),
