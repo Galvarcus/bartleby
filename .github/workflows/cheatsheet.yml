@@ -4,7 +4,10 @@ on:
     branches:
       - main
       - Development
-  pull_request:
+    paths:
+      - doc/cheatsheet.md
+      - tools/cheatsheet/build_cheatsheet.py
+      - tool/cheatsheet/test_build_cheatsheet.py
   workflow_dispatch:
 permissions:
   contents: write
