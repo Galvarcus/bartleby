@@ -12,7 +12,7 @@ var is_loaded: bool = true
 #
 # Design: one item tree, shown in two ways that can be used together.
 #
-#   1. Popup mode, the default, and the mode that the hotkey toggles.
+#   1. Popup mode, the default.
 #      Drawn with popup_create.
 #      In the GUI, the root is a bordered popup with a title, placed by
 #      pos: at the cursor, centered, or at a line and column.
@@ -21,7 +21,7 @@ var is_loaded: bool = true
 #      item on the bar opens a bordered dropdown one row below it,
 #      aligned under the item's label.
 #      In both, each deeper level is a bordered popup without a title,
-#      to the right of its parent. SetupToggle maps a key to this mode.
+#      to the right of its parent.
 #
 #   2. Native mode, optional, through RegisterAsVimMenu. Builds :amenu
 #      entries from the same tree, so the menu also appears in the gVim
@@ -32,22 +32,21 @@ var is_loaded: bool = true
 # highlighted span on a line, which popupbuttons.vim showed earlier.
 ##############################################################################
 
-# Menu name to Menu, for the hotkey dispatch.
-var menus: dict<any> = {}
 # Item id to MenuItem, for the native :amenu dispatch.
 var itemRegistry: dict<any> = {}
 var idSeed: number = 0
 
-# FUNCTION: Toggle the menu with the given name. The target of the ScriptCmd
-# mappings that SetupToggle creates.
-export def MenuToggle(name: string)
-  if menus->has_key(name)
-    menus[name].Toggle()
-  endif
-enddef
+# The autoload name of this script, such as bartleby#menu#. Vim runs a native
+# menu entry in no script, so the entry can call a function of this script
+# only by that name. A short name, or ScriptCmd, fails there with E117. The
+# script must be in an autoload directory.
+const AUTOLOAD_PREFIX: string = expand('<sfile>:p')
+  ->substitute('^.*[/\\]autoload[/\\]', '', '')
+  ->substitute('\.vim$', '', '')
+  ->substitute('[/\\]', '#', 'g') .. '#'
 
-# FUNCTION: Run the item with the given id. The target of the ScriptCmd
-# entries that RegisterAsVimMenu creates.
+# FUNCTION: Run the item with the given id. The target of the native menu
+# entries that RegisterAsVimMenu creates, which call it by its autoload name.
 export def MenuInvoke(id: string)
   if itemRegistry->has_key(id)
     var it = itemRegistry[id]
@@ -81,12 +80,6 @@ export class MenuItem
     var item = MenuItem.new(label, Action, data)
     this.items->add(item)
     return item
-  enddef
-
-  def AddSeparator()
-    var sep = MenuItem.new('-')
-    sep.separator = true
-    this.items->add(sep)
   enddef
 endclass
 
@@ -130,7 +123,6 @@ export class Menu
 
   def new(this.name, title: string = '')
     this.title = title == '' ? this.name : title
-    menus[this.name] = this
   enddef
 
   ############################################################################
@@ -143,20 +135,9 @@ export class Menu
     return item
   enddef
 
-  def AddSeparator()
-    var sep = MenuItem.new('-')
-    sep.separator = true
-    this.items->add(sep)
-  enddef
-
   ############################################################################
-  # SECTION: Hotkey.
+  # SECTION: Open and close.
   ############################################################################
-
-  # METHOD: Map lhs in mode to toggle this menu.
-  def SetupToggle(lhs: string, mode: string = 'n')
-    execute $'{mode}noremap <silent> {lhs} <ScriptCmd>call MenuToggle("{this.name}")<CR>'
-  enddef
 
   def IsOpen(): bool
     return len(this._stack) > 0 && !empty(popup_getpos(this._stack[0]))
@@ -487,7 +468,7 @@ export class Menu
         idSeed += 1
         var id = $'{this.name}#{idSeed}'
         itemRegistry[id] = item
-        execute $'amenu {priority} {mpath} <ScriptCmd>call MenuInvoke("{id}")<CR>'
+        execute $'amenu {priority} {mpath} <Cmd>call {AUTOLOAD_PREFIX}MenuInvoke("{id}")<CR>'
         if !item.enabled
           execute $'amenu disable {mpath}'
         endif

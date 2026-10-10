@@ -1408,100 +1408,100 @@ msgstr ""
 msgid "%s works only in the edit window"
 msgstr ""
 
-#: plugin/bartleby.vim:143
+#: plugin/bartleby.vim:141
 msgid "no scrive name given, and no previously-opened scrive to fall back to - showing the scrive list"
 msgstr ""
 
-#: plugin/bartleby.vim:165
+#: plugin/bartleby.vim:163
 msgid "Scrive Type"
 msgstr ""
 
-#: plugin/bartleby.vim:183 plugin/bartleby.vim:191 plugin/bartleby.vim:208 plugin/bartleby.vim:220 plugin/bartleby.vim:271 plugin/bartleby.vim:281 plugin/bartleby.vim:336 autoload/bartleby/progress.vim:198 autoload/bartleby/progressview.vim:33 autoload/bartleby/progressview.vim:157
+#: plugin/bartleby.vim:181 plugin/bartleby.vim:189 plugin/bartleby.vim:206 plugin/bartleby.vim:218 plugin/bartleby.vim:269 plugin/bartleby.vim:279 plugin/bartleby.vim:334 autoload/bartleby/progress.vim:198 autoload/bartleby/progressview.vim:33 autoload/bartleby/progressview.vim:157
 msgid "no scrive open - run :BartlebyOpen <name> first"
 msgstr ""
 
-#: plugin/bartleby.vim:225
+#: plugin/bartleby.vim:223
 msgid "current buffer is not a document of the open scrive"
 msgstr ""
 
-#: plugin/bartleby.vim:236 autoload/bartleby/binder.vim:188
+#: plugin/bartleby.vim:234 autoload/bartleby/binder.vim:188
 msgid "Snapshot label (optional)"
 msgstr ""
 
-#: plugin/bartleby.vim:249 autoload/bartleby/binder.vim:210
+#: plugin/bartleby.vim:247 autoload/bartleby/binder.vim:210
 msgid "no snapshots for \"%s\""
 msgstr ""
 
-#: plugin/bartleby.vim:253 autoload/bartleby/binder.vim:214
+#: plugin/bartleby.vim:251 autoload/bartleby/binder.vim:214
 msgid "Snapshots"
 msgstr ""
 
-#: plugin/bartleby.vim:255 autoload/bartleby/binder.vim:216
+#: plugin/bartleby.vim:253 autoload/bartleby/binder.vim:216
 msgid " %s "
 msgstr ""
 
-#: plugin/bartleby.vim:259 autoload/bartleby/binder.vim:222
+#: plugin/bartleby.vim:257 autoload/bartleby/binder.vim:222
 msgid "Restore"
 msgstr ""
 
-#: plugin/bartleby.vim:259 autoload/bartleby/binder.vim:222 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:246
+#: plugin/bartleby.vim:257 autoload/bartleby/binder.vim:222 autoload/bartleby/compile.vim:304 autoload/bartleby/inputpopup.vim:246
 msgid "Cancel"
 msgstr ""
 
-#: plugin/bartleby.vim:297
+#: plugin/bartleby.vim:295
 msgid "no scrive open - run :BartlebyRecover <name> for a scrive that does not open"
 msgstr ""
 
-#: plugin/bartleby.vim:302
+#: plugin/bartleby.vim:300
 msgid "every document on disk is in the Binder"
 msgstr ""
 
-#: plugin/bartleby.vim:307
+#: plugin/bartleby.vim:305
 msgid "recovered %d document into the folder Recovered"
 msgid_plural "recovered %d documents into the folder Recovered"
 msgstr[0] ""
 msgstr[1] ""
 
-#: plugin/bartleby.vim:313 autoload/bartleby/scrive.vim:93
+#: plugin/bartleby.vim:311 autoload/bartleby/scrive.vim:93
 msgid "no scrive named \"%s\" under %s"
 msgstr ""
 
-#: plugin/bartleby.vim:317
+#: plugin/bartleby.vim:315
 msgid "\"%s\" opens. Open it, then run :BartlebyRecover to recover its documents."
 msgstr ""
 
-#: plugin/bartleby.vim:320
+#: plugin/bartleby.vim:318
 msgid "Rebuild the Binder of \"%s\"? The damaged project.json is kept as project.json.damaged, its backup is used if it loads, and every document on disk is recovered."
 msgstr ""
 
-#: plugin/bartleby.vim:341
+#: plugin/bartleby.vim:339
 msgid "the files already follow the Binder"
 msgstr ""
 
-#: plugin/bartleby.vim:344
+#: plugin/bartleby.vim:342
 msgid "Move %d file, so that the folders on disk follow the Binder?"
 msgid_plural "Move %d files, so that the folders on disk follow the Binder?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: plugin/bartleby.vim:349
+#: plugin/bartleby.vim:347
 msgid "moved %d file"
 msgid_plural "moved %d files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: plugin/bartleby.vim:351
+#: plugin/bartleby.vim:349
 msgid "these files did not move, so save any changes and run it again: %s"
 msgstr ""
 
-#: plugin/bartleby.vim:366
+#: plugin/bartleby.vim:364
 msgid "no Scrivening is open"
 msgstr ""
 
-#: plugin/bartleby.vim:368
+#: plugin/bartleby.vim:366
 msgid "the Scrivening stays open, because it could not be saved"
 msgstr ""
 
-#: plugin/bartleby.vim:383 autoload/bartleby/binder.vim:160 autoload/bartleby/scrivenings.vim:108
+#: plugin/bartleby.vim:381 autoload/bartleby/binder.vim:160 autoload/bartleby/scrivenings.vim:108
 msgid "a Scrivening opens only for a folder in the Manuscript"
 msgstr ""
