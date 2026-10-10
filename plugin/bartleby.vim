@@ -110,8 +110,6 @@ g:bartleby_quill_conceallevel = get(g:, 'bartleby_quill_conceallevel', 3)
 g:bartleby_quill_concealcursor = get(g:, 'bartleby_quill_concealcursor', 'c')
 g:bartleby_quill_soft_detect_sample = get(g:, 'bartleby_quill_soft_detect_sample', 20)
 g:bartleby_quill_soft_detect_threshold = get(g:, 'bartleby_quill_soft_detect_threshold', 130)
-g:bartleby_quill_mode_indicators = get(g:, 'bartleby_quill_mode_indicators',
-  {hard: 'H', auto: 'A', soft: 'S', off: ''})
 g:bartleby_quill_auto = get(g:, 'bartleby_quill_auto', true)
 g:bartleby_compile_pandoc_bin = get(g:, 'bartleby_compile_pandoc_bin', 'pandoc')
 g:bartleby_compile_screenplain_bin = get(g:, 'bartleby_compile_screenplain_bin', 'screenplain')

@@ -681,7 +681,6 @@ default, so set only the ones you want to change.
 | `g:bartleby_quill_concealcursor` | `'c'` | `concealcursor` in soft-wrap mode |
 | `g:bartleby_quill_soft_detect_sample` | `20` | Lines read to detect the wrap style |
 | `g:bartleby_quill_soft_detect_threshold` | `130` | Sensitivity of the detection |
-| `g:bartleby_quill_mode_indicators` | Statusline text | Text shown for each wrap mode |
 | `g:bartleby_quill_auto` | `1` | Start Quill for scrive documents automatically |
 
 **Compile**

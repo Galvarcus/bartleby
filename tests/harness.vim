@@ -81,6 +81,7 @@ import './test_scrivenings.vim' as TSV
 import './test_progress.vim' as TPG
 import './test_panes.vim' as TPN
 import './test_closeall.vim' as TCL
+import './test_menu.vim' as TME
 import './test_inputpopup.vim' as TI
 import './test_dialog_popup.vim' as TDP
 import './test_outliner.vim' as TO
@@ -119,6 +120,7 @@ var suites: list<func(): void> = [
   TPG.RunAll,
   TPN.RunAll,
   TCL.RunAll,
+  TME.RunAll,
   TI.RunAll,
   TDP.RunAll,
   TO.RunAll,

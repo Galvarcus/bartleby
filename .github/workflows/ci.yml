@@ -313,12 +313,15 @@ jobs:
         run: |
           set +e
 
+          # The exports of Bartleby only serve its own files, so an export that
+          # nothing uses is reported too. An older Ghostcode ignores the setting.
           vim \
             -u NONE \
             -N \
             -es \
             --cmd "set rtp+=$RUNNER_TEMP/vim/pack/ghostcode/start/Logger,$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode" \
             -c 'runtime plugin/ghostcode.vim' \
+            -c 'let g:ghostcode_exports_are_api = 0' \
             -c 'let logger_log_file=1' \
             -c 'let logger_log_dir="./"' \
             -c 'GhostCode .' \

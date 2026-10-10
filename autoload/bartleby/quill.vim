@@ -444,22 +444,8 @@ export def Init(wrapArg: string = 'detect'): void
 enddef
 
 ##############################################################################
-# SECTION: Statusline helper and public entry points.
+# SECTION: Public entry points.
 ##############################################################################
-
-export def StatusIndicator(): string
-  var session: QuillSession = get(b:, 'bartleby_quill', null_object)
-  if session is null_object
-    return ''
-  endif
-  var indicators: dict<string> = g:bartleby_quill_mode_indicators
-  if session.wrapMode ==# MODE_SOFT
-    return get(indicators, 'soft', 'S')
-  elseif session.wrapMode ==# MODE_HARD
-    return &formatoptions =~# 'a' ? get(indicators, 'auto', 'A') : get(indicators, 'hard', 'H')
-  endif
-  return get(indicators, 'off', '')
-enddef
 
 export def Toggle(): void
   Init('toggle')
