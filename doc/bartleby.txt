@@ -225,6 +225,11 @@ Long titles wrap.
 A confirmation question takes `y` for yes, and `n` or `<Esc>` for no.
 `<Enter>` gives the default answer, which is No for every deletion.
 
+The Binder and the Inspector are panes beside the edit window. When you close
+the edit window with `:q` and a pane is open, an empty edit window stays in
+its place, and the panes keep their widths. `:q` in the empty edit window
+closes it.
+
 ==============================================================================
 Corkboard                                                   *bartleby-corkboard*
 
@@ -377,6 +382,10 @@ Three independent writing aids:
                                                            or hard,
                                                            detected from
                                                            the document
+
+All three work only in the edit window. In the Binder or the Inspector they
+say so and change nothing, so that a pane keeps its keys and its text.
+Spotlight can still be turned off there.
 
 ==============================================================================
 Spotlight modes                                       *bartleby-spotlight-modes*
@@ -643,6 +652,15 @@ Commands                                                     *bartleby-commands*
 
     `:BartlebyList`                                         List all scrives and open the
                                                             selected one
+
+    `:BartlebyClose[!]`                                     Close the scrive and all that is
+                                                            open of Bartleby: Focus,
+                                                            Spotlight, a Scrivening, the
+                                                            Binder, the Inspector, and the
+                                                            documents. It saves first and
+                                                            leaves an empty buffer. With `!`,
+                                                            throw away changes that are not
+                                                            saved
 
     `:BartlebyToggleBinder`                                 Show or hide the Binder
 
