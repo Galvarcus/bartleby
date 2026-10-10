@@ -3,6 +3,7 @@
 A structured writing environment for Vim. It provides a binder, a
 corkboard, an outliner, and a compile pipeline for long-form prose and
 screenplays.
+_"When you prefer not to be wrong, but write."_
 
 <!-- vimdoc-ignore-start -->
 
