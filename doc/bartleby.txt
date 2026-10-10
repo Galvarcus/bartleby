@@ -35,7 +35,8 @@ License ..................................................... |bartleby-license|
 
 
 A structured writing environment for Vim. It provides a binder, a corkboard,
-an outliner, and a compile pipeline for long-form prose and screenplays.
+an outliner, and a compile pipeline for long-form prose and screenplays. "When
+you prefer not to be wrong, but write."
 
 ==============================================================================
 Introduction                                             *bartleby-introduction*
@@ -943,9 +944,6 @@ Quill
 
     `g:bartleby_quill_soft_detect_threshold`   `130`                 Sensitivity of the
                                                                      detection
-
-    `g:bartleby_quill_mode_indicators`         Statusline text       Text shown for each
-                                                                     wrap mode
 
     `g:bartleby_quill_auto`                    `1`                   Start Quill for
                                                                      scrive documents
