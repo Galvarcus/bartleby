@@ -1,6 +1,6 @@
 <!--
   The source of cheatsheet.pdf at the top level of the repository, which
-  the workflow Build Cheat Sheet makes from this file. See
+  the cheatsheet job of .github/workflows/ci.yml makes from this file. See
   tools/cheatsheet/build_cheatsheet.py for the rules.
 
   Each ### heading and the table under it is one table of the card. The

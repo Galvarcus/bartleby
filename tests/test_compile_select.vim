@@ -31,14 +31,11 @@ enddef
 # FUNCTION: Open the pane. result receives the ids that OnDone gets, under
 # the key ids, when CR confirms the selection.
 #
-# extend, not an assignment to result.ids: in Vim 9.2.1108, a lambda that
-# assigns to a member of a captured function argument crashes Vim with a
-# segmentation fault when it runs after that function has returned.
-# REFERENCE: https://github.com/vim/vim/issues/21460
-# FIXED: Vim patch 9.2.1172
+# The lambda assigns to a member of a captured function argument, which
+# crashed Vim before 9.2.1172. The harness refuses an older Vim.
 def OpenPane(project: any, result: dict<any>): void
   C.SelectContents(project, [], (ids: list<string>) => {
-    extend(result, {ids: ids})
+    result.ids = ids
   })
 enddef
 

@@ -10,13 +10,10 @@ screenplays.
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 main: 
-[![Generate Vimdoc](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml/badge.svg?branch=main)](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml) 
-[![Tests](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml)
-[![Publish Wiki](https://github.com/Galvarcus/bartleby/actions/workflows/wiki.yml/badge.svg?branch=main)](https://github.com/Galvarcus/bartleby/actions/workflows/wiki.yml)
+[![CI](https://github.com/Galvarcus/bartleby/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/Galvarcus/bartleby/actions/workflows/ci.yml)
 
 Development:
-[![Generate Vimdoc](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml/badge.svg?branch=Development)](https://github.com/Galvarcus/bartleby/actions/workflows/vimdoc.yml) 
-[![Tests](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml/badge.svg?branch=Development)](https://github.com/Galvarcus/bartleby/actions/workflows/tests.yml)
+[![CI](https://github.com/Galvarcus/bartleby/actions/workflows/ci.yml/badge.svg?branch=Development)](https://github.com/Galvarcus/bartleby/actions/workflows/ci.yml)
 
 **Contents**
 

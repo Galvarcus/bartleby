@@ -7,7 +7,7 @@ vim9script
 # which is left to manual checks, see testing_feasibility_report.md. When
 # a program is not installed, the test is skipped with exit code 0
 # instead of failing for an unrelated reason. The compile-smoke job of
-# tests.yml installs the programs.
+# ci.yml installs the programs.
 #
 # job_start is asynchronous, so the test polls for the output file
 # instead of waiting for a return value. On success RunJob asks whether

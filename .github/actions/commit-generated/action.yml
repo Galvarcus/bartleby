@@ -1,0 +1,35 @@
+name: Commit generated files
+description: >-
+  Commit the generated files that changed, if any, to the branch of the run.
+  The branch may have moved since the checkout, because of a person or an
+  earlier job, so the commit is put on top of it before the push.
+inputs:
+  paths:
+    description: The files to add, separated by spaces.
+    required: true
+  message:
+    description: The commit message.
+    required: true
+runs:
+  using: composite
+  steps:
+    - name: Commit and push
+      shell: bash
+      env:
+        PATHS: ${{ inputs.paths }}
+        MESSAGE: ${{ inputs.message }}
+        BRANCH: ${{ github.ref_name }}
+      run: |
+        set -euo pipefail
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        # PATHS is a list of file names, so it must split into words here.
+        # shellcheck disable=SC2086
+        git add -- $PATHS
+        if git diff --cached --quiet; then
+          echo "$PATHS is current."
+          exit 0
+        fi
+        git commit -m "$MESSAGE"
+        git pull --rebase origin "$BRANCH"
+        git push origin "HEAD:$BRANCH"

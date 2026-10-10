@@ -1,0 +1,32 @@
+name: Install Vim
+description: >-
+  Install the latest Vim from the vim-appimage releases, unpacked, so that
+  Vim is on the PATH. The Vim of the runner is too old for the Vim9 features
+  that Bartleby uses. tests/harness.vim checks the patch level.
+runs:
+  using: composite
+  steps:
+    - name: Download and unpack the AppImage
+      shell: bash
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        # With the token, the call has the limit of the repository. Without
+        # one it shares a low limit with every other runner.
+        url=$(curl -fsS --retry 3 -H "Authorization: Bearer $GITHUB_TOKEN" \
+          https://api.github.com/repos/vim/vim-appimage/releases/latest \
+          | jq -r '.assets[] | select(.name | test("^Vim-v.*-x86_64\\.AppImage$")) | .browser_download_url')
+        if [ -z "$url" ]; then
+          echo "::error::The latest vim-appimage release has no Vim AppImage."
+          exit 1
+        fi
+        curl -fsSL --retry 3 -o /tmp/vim.appimage "$url"
+        chmod +x /tmp/vim.appimage
+        cd /tmp && ./vim.appimage --appimage-extract > /dev/null
+        ln -s /tmp/squashfs-root/AppRun /tmp/squashfs-root/vim
+        echo "/tmp/squashfs-root" >> "$GITHUB_PATH"
+
+    - name: Vim version
+      shell: bash
+      run: vim --version

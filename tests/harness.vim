@@ -29,6 +29,23 @@ vim9script
 # buffer loads, so results do not depend on the environment.
 set encoding=utf-8
 
+# The tests need Vim 9.2.1172 or later. Before it, a lambda that assigns to
+# a member of a captured function argument, as test_compile_select.vim
+# does, crashes Vim with a segmentation fault once the function has
+# returned, and the run ends without a result. So fail first, with the
+# reason. Only the tests rely on the fix. The plugin does not, so that it
+# still runs on an older Vim.
+# REFERENCE: https://github.com/vim/vim/issues/21460
+# REFERENCE: https://github.com/vim/vim/commit/b2b47bdf9
+if !has('patch-9.2.1172')
+  var running: string = printf('%d.%d.%d', v:versionlong / 1000000,
+    v:versionlong / 10000 % 100, v:versionlong % 10000)
+  writefile([$'The tests need Vim 9.2.1172 or later, and this is Vim {running}. '
+    .. 'Use the latest vim-appimage, as .github/actions/install-vim does.'],
+    'tests/results.txt')
+  cquit 1
+endif
+
 # Source plugin/bartleby.vim before any autoload file that reads a
 # g:bartleby setting when it loads, as compile.vim does for the paths of
 # Pandoc and screenplain. In a Vim session, plugin files load at startup

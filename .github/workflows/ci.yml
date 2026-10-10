@@ -1,0 +1,515 @@
+name: CI
+
+# The stages, in order:
+#
+#   changes -> the test jobs -> tests -> ghostcode, vimdoc, wiki -> cheatsheet
+#
+# tests is a gate. When any test job fails, nothing after it runs. The three
+# jobs after it run side by side, and none of them blocks another. The cheat
+# sheet job runs after them, whatever their results, and checks out the
+# branch as they left it, so that its commit does not conflict with theirs.
+#
+# Vim is installed first in each job that needs it. Every other package is
+# installed in the job that needs it, just before the step that does.
+on:
+  push:
+    branches:
+      - main
+      - Development
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+# A new push waits for the run before it, because the jobs that commit must
+# not be cut off. A new commit to a pull request replaces the run before it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+jobs:
+  # Which parts of the repository changed. A manual run does everything.
+  changes:
+    name: Changed files
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      code: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.code }}
+      wiki: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.wiki }}
+      vimdoc: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.vimdoc }}
+      cheatsheet: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.cheatsheet }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Find the changed parts
+        id: filter
+        if: github.event_name != 'workflow_dispatch'
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            code:
+              - autoload/**
+              - plugin/**
+              - syntax/**
+              - ftdetect/**
+              - colors/**
+              - import/**
+              - lang/**
+              - tests/**
+              - tools/i18n/**
+              - .github/workflows/ci.yml
+              - .github/actions/**
+            wiki:
+              - README.md
+              - Users_Guide.md
+              - Localization_README.md
+              - tools/wiki/**
+              - .github/workflows/ci.yml
+              - .github/actions/**
+            vimdoc:
+              - README.md
+              - doc/pandoc.yaml
+              - doc/vimdoc-filter.lua
+              - .github/workflows/ci.yml
+              - .github/actions/**
+            cheatsheet:
+              - doc/cheatsheet.md
+              - tools/cheatsheet/**
+              - .github/workflows/ci.yml
+              - .github/actions/**
+
+  ##########################################################################
+  # The tests. Each installs only what it needs.
+  ##########################################################################
+
+  unit:
+    name: Unit and buffer tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # A prebuilt AppImage of the latest Vim. Ubuntu's Vim lags too far
+      # behind Vim9's class system, for example a class field typed as a list
+      # of its own class, and the tests need patch 9.2.1172 or later.
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      # Bartleby's autoload files import 'Logger/logger.vim', a shared
+      # dependency (github.com/Galvarcus/Logger) that is not in this repo.
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v4
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      # Every IN.T and IN.N call must have literal text, and the template
+      # must list all of them. See Localization_README.md.
+      - name: Check the translation template
+        run: python3 tools/i18n/extract.py --check
+
+      # msgfmt checks the translations, and tests/test_i18n.vim compiles a
+      # small German translation with it and switches Vim's message
+      # language to German. Without them that test skips its check.
+      - name: Install gettext and a German locale
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext locales
+          sudo locale-gen de_DE.UTF-8
+
+      - name: Check the translations
+        run: |
+          for po in lang/*.po; do
+            if [ -e "$po" ]; then
+              msgfmt --check -o /dev/null "$po"
+            fi
+          done
+
+      - name: Run tests
+        run: |
+          vim -es -u NONE -N -V20/tmp/vim.log \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/harness.vim' -c 'quit' || true
+          if [ ! -f tests/results.txt ]; then
+            echo "::error::tests/results.txt was never created - Vim likely failed before finishing. Verbose log follows:"
+            cat /tmp/vim.log
+            exit 1
+          fi
+          cat tests/results.txt
+          grep -qx 'All tests passed' tests/results.txt
+
+  compile-smoke:
+    name: Compile pipeline smoke test
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v4
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      - name: Install Pandoc and LaTeX
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc texlive-latex-extra texlive-fonts-recommended texlive-plain-generic
+
+      - name: Run compile smoke test
+        run: |
+          vim -es -u NONE -N -V20/tmp/vim.log \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/test_compile_smoke.vim' -c 'quit' || true
+          if [ ! -f tests/smoke_results.txt ]; then
+            echo "::error::tests/smoke_results.txt was never created - Vim likely failed before finishing. Verbose log follows:"
+            cat /tmp/vim.log
+            exit 1
+          fi
+          cat tests/smoke_results.txt
+          grep -qx 'All smoke tests passed' tests/smoke_results.txt
+
+  tagger-smoke:
+    name: Part-of-speech tagger smoke test
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v4
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      # Its own Python, first on PATH, so the tagger's python3 finds spaCy.
+      # Ubuntu's system Python refuses pip installs (PEP 668).
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install spaCy and its English model
+        run: |
+          python3 -m pip install spacy
+          python3 -m spacy download en_core_web_sm
+
+      - name: Run tagger smoke test
+        run: |
+          vim -es -u NONE -N -V20/tmp/vim.log \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/test_tagger_smoke.vim' -c 'quit' || true
+          if [ ! -f tests/tagger_results.txt ]; then
+            echo "::error::tests/tagger_results.txt was never created - Vim likely failed before finishing. Verbose log follows:"
+            cat /tmp/vim.log
+            exit 1
+          fi
+          cat tests/tagger_results.txt
+          grep -qx 'All tagger tests passed' tests/tagger_results.txt
+
+  # Python only, so nothing to install.
+  wiki-tool:
+    name: Wiki converter tests
+    needs: changes
+    if: needs.changes.outputs.wiki == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Test the converter
+        run: python3 -m unittest discover -s tools/wiki -p 'test_*.py'
+
+  # The tests also check that every command of the plugin is on the sheet,
+  # so a change to the plugin runs them.
+  cheatsheet-tool:
+    name: Cheat sheet converter tests
+    needs: changes
+    if: needs.changes.outputs.cheatsheet == 'true' || needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # fonts-texgyre has the text font, and fonts-dejavu-mono the code
+      # font. The tests read the PDF with poppler-utils and look for the
+      # fonts with fontconfig.
+      - name: Install LaTeX, fonts, and PDF tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-xetex texlive-latex-recommended fonts-texgyre fonts-dejavu-mono poppler-utils fontconfig
+
+      - name: Test the converter
+        env:
+          CHEATSHEET_REQUIRE_ENGINE: "1"
+        run: python3 -m unittest discover -s tools/cheatsheet -p 'test_*.py' -v
+
+  # The gate. It is the one check that says whether the tests passed, and a
+  # job that was skipped because nothing changed counts as passed.
+  tests:
+    name: Tests
+    needs:
+      - changes
+      - unit
+      - compile-smoke
+      - tagger-smoke
+      - wiki-tool
+      - cheatsheet-tool
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail when a test failed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "Results: $RESULTS"
+          case " $RESULTS " in
+            *" failure "* | *" cancelled "*) exit 1 ;;
+          esac
+
+  ##########################################################################
+  # After the tests. These three run side by side. A failure in one does not
+  # stop the others, and none of them stops the cheat sheet.
+  ##########################################################################
+
+  ghostcode:
+    name: GhostCode
+    needs: [changes, tests]
+    if: needs.changes.outputs.code == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      - name: Install GhostCode
+        run: |
+          mkdir -p "$RUNNER_TEMP/vim/pack/ghostcode/start"
+
+          git clone --depth 1 \
+            https://github.com/Galvarcus/Logger.git \
+            "$RUNNER_TEMP/vim/pack/ghostcode/start/Logger"
+
+          git clone --depth 1 \
+            https://github.com/Galvarcus/GhostCode.git \
+            "$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode"
+
+      - name: Run GhostCode
+        run: |
+          set +e
+
+          vim \
+            -u NONE \
+            -N \
+            -es \
+            --cmd "set rtp+=$RUNNER_TEMP/vim/pack/ghostcode/start/Logger,$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode" \
+            -c 'runtime plugin/ghostcode.vim' \
+            -c 'let logger_log_file=1' \
+            -c 'let logger_log_dir="./"' \
+            -c 'GhostCode .' \
+            -c 'vim9cmd call writefile(getqflist()->mapnew((_, item) => printf("%s:%d:%d:%s", bufname(item.bufnr), item.lnum, item.col, item.text)), "ghostcode_results.txt")' \
+            -c 'vim9cmd call writefile([string(getqflist()->count((_, item) => item.text =~# "^\[ghost\]"))], "ghostcode_count.txt")' \
+            -c 'qa!'
+          vim_exit=$?
+          echo "GHOSTCODE LOG:"
+          cat ghostcode*.log
+          echo
+
+          if [ "$vim_exit" -ne 0 ]; then
+            echo "::error::GhostCode failed to run (Vim exit status $vim_exit)"
+            exit "$vim_exit"
+          fi
+
+          if [ ! -f ghostcode_results.txt ]; then
+            echo "::error::GhostCode did not produce a results file"
+            exit 1
+          fi
+
+          ghost_count=$(cat ghostcode_count.txt)
+
+          echo "GhostCode results:"
+          cat ghostcode_results.txt || true
+
+          echo
+          echo "Ghost code findings: $ghost_count"
+
+          if [ "$ghost_count" -eq 0 ]; then
+            echo "No ghost code found."
+            exit 0
+          fi
+
+          echo
+          echo "::error::GhostCode found $ghost_count ghost code issue(s)"
+
+          while IFS= read -r result; do
+            [ -z "$result" ] && continue
+
+            file=$(printf '%s\n' "$result" | cut -d: -f1)
+            line=$(printf '%s\n' "$result" | cut -d: -f2)
+            column=$(printf '%s\n' "$result" | cut -d: -f3)
+            message=$(printf '%s\n' "$result" | cut -d: -f4-)
+
+            echo "::error file=$file,line=$line,col=$column::$message"
+          done < <(grep ':\[ghost\]' ghostcode_results.txt)
+
+          exit 1
+
+      # Also when GhostCode found something, which is when the log matters.
+      - name: Archive GhostCode results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ghostcode-log
+          path: ghostcode*.log
+
+  vimdoc:
+    name: Generate Vimdoc
+    needs: [changes, tests]
+    if: >-
+      needs.changes.outputs.vimdoc == 'true'
+      && github.event_name != 'pull_request'
+      && (github.ref_name == 'main' || github.ref_name == 'Development')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      # --shift-heading-level-by=-1 makes the README's single H1 the
+      # document title instead of a section. The H1 repeats the title line
+      # of the help file, and as a section its tag would be the doubled
+      # bartleby-bartleby. Keep exactly one H1 in README.md, at the top.
+      - name: Generate Vimdoc
+        uses: docker://pandoc/core:3.8
+        with:
+          args: >-
+            README.md
+            --from=markdown
+            --to=vimdoc
+            --standalone
+            --columns=78
+            --toc=true
+            --shift-heading-level-by=-1
+            --metadata-file=doc/pandoc.yaml
+            --lua-filter=doc/vimdoc-filter.lua
+            --output=doc/bartleby.txt
+
+      - name: Commit generated Vimdoc
+        uses: ./.github/actions/commit-generated
+        with:
+          paths: doc/bartleby.txt
+          message: "docs: regenerate Vimdoc"
+
+  wiki:
+    name: Publish Wiki
+    needs: [changes, tests]
+    if: >-
+      needs.changes.outputs.wiki == 'true'
+      && github.event_name != 'pull_request'
+      && github.ref_name == 'main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    # One run at a time, so two pushes cannot race to push the wiki.
+    concurrency:
+      group: publish-wiki
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The wiki is its own repository, <owner>/<name>.wiki. With
+      # contents: write, the workflow's own token can push to it. Only if
+      # GitHub refuses that, add a fine-grained personal access token for
+      # this repository, with Contents: Read and write, as the secret
+      # WIKI_TOKEN. Nothing else needs to change.
+      - name: Checkout wiki
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+          token: ${{ secrets.WIKI_TOKEN || github.token }}
+
+      # Images and relative links load from main, so a changed image shows
+      # in the wiki without a new run.
+      - name: Build the wiki pages
+        run: python3 tools/wiki/build_wiki.py --wiki wiki --repo "${{ github.repository }}" --branch main
+
+      - name: Commit and push the wiki
+        working-directory: wiki
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "The wiki is current."
+            exit 0
+          fi
+          git commit -m "docs: rebuild the wiki from ${GITHUB_SHA::7}"
+          git push
+
+  ##########################################################################
+  # Last. Both this job and the Vimdoc job commit to the branch, so this one
+  # waits for the others and checks out the branch as they left it.
+  ##########################################################################
+
+  cheatsheet:
+    name: Build cheat sheet
+    needs: [changes, tests, ghostcode, vimdoc, wiki]
+    # !cancelled() and not success(), so that a failure in a job above does
+    # not stop this one, when the tests passed.
+    if: >-
+      !cancelled()
+      && needs.tests.result == 'success'
+      && needs.changes.outputs.cheatsheet == 'true'
+      && github.event_name != 'pull_request'
+      && (github.ref_name == 'main' || github.ref_name == 'Development')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          # The history gives the PDF the time of the last commit of its
+          # source, so that the same source gives the same file.
+          fetch-depth: 0
+
+      # The build needs the engine and the two fonts. The tests, which ran
+      # before, needed more.
+      - name: Install LaTeX and fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y texlive-xetex texlive-latex-recommended fonts-texgyre fonts-dejavu-mono
+
+      # The script knows the names of the source and of the PDF.
+      - name: Build the PDF
+        id: build
+        run: |
+          python3 tools/cheatsheet/build_cheatsheet.py
+          echo "pdf=$(python3 tools/cheatsheet/build_cheatsheet.py --print-output)" >> "$GITHUB_OUTPUT"
+
+      - name: Commit the PDF
+        uses: ./.github/actions/commit-generated
+        with:
+          paths: ${{ steps.build.outputs.pdf }}
+          message: "docs: regenerate cheat sheet"
