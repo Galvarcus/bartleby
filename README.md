@@ -16,7 +16,6 @@ Development:
 [![CI](https://github.com/Galvarcus/bartleby/actions/workflows/ci.yml/badge.svg?branch=Development)](https://github.com/Galvarcus/bartleby/actions/workflows/ci.yml)
 
 ![Bartleby Screenshot](images/bartleby-screenshot.png)
-*Screenshot of Bartleby editing Bartleby. (Content from [Project Gutenberg](https://www.gutenberg.org/)*
 
 **Contents**
 
