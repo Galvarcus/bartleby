@@ -50,7 +50,9 @@ Development:
 
 For a walkthrough written for authors, see
 [Users_Guide.md](Users_Guide.md). To add support for another language,
-see [Localization_README.md](Localization_README.md).
+see [Localization_README.md](Localization_README.md). For the commands,
+mappings, and keys on a few pages, see the
+[cheat sheet](cheatsheet.pdf).
 
 <!-- vimdoc-ignore-end -->
 
