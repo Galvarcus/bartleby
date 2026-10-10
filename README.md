@@ -15,11 +15,8 @@ main:
 Development:
 [![CI](https://github.com/Galvarcus/bartleby/actions/workflows/ci.yml/badge.svg?branch=Development)](https://github.com/Galvarcus/bartleby/actions/workflows/ci.yml)
 
-<figure>
-    <img src="images/bartleby-screenshot.png"
-         alt="Bartleby Screenshot">
-    <figcaption>Screenshot of Bartleby editing Bartleby. Text from <a href="https://www.gutenberg.org">Project Gutenberg</a></figcaption>
-</figure>
+![Bartleby Screenshot](images/bartleby-screenshot.png)
+*Screenshot of Bartleby editing Bartleby. (Content from [Project Gutenberg](https://www.gutenberg.org/)*
 
 **Contents**
 
