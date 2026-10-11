@@ -1,0 +1,56 @@
+name: Translation Issue
+description: Add a language, or report a wrong or missing translation
+title: "[Translation]: "
+labels: ["translation", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping Bartleby speak more languages! `Localization_README.md` explains how translations work, and how to add a language.
+  - type: dropdown
+    id: translation-type
+    attributes:
+      label: Type of translation issue
+      options:
+        - New language
+        - Wrong or unclear translation
+        - Text that is not translated
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      placeholder: e.g., German (de)
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where does the text show?
+      description: The pane, popup, menu, or message that shows the text.
+      placeholder: e.g., the key help of the Binder
+    validations:
+      required: false
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What is wrong, or what should be added?
+    validations:
+      required: true
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Suggested text
+      description: If you know the right translation, please provide it.
+    validations:
+      required: false
+  - type: checkboxes
+    id: help
+    attributes:
+      label: Helping
+      options:
+        - label: I can help to translate or to check translations.
+          required: false

@@ -38,6 +38,7 @@ jobs:
       wiki: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.wiki }}
       vimdoc: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.vimdoc }}
       cheatsheet: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.cheatsheet }}
+      triage: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.triage }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -78,6 +79,11 @@ jobs:
               - tools/cheatsheet/**
               - .github/workflows/ci.yml
               - .github/actions/**
+            triage:
+              - .github/scripts/**
+              - .github/ISSUE_TEMPLATE/**
+              - .github/workflows/issue-triage.yml
+              - .github/workflows/ci.yml
 
   ##########################################################################
   # The tests. Each installs only what it needs.
@@ -233,6 +239,20 @@ jobs:
       - name: Test the converter
         run: python3 -m unittest discover -s tools/wiki -p 'test_*.py'
 
+  # Node is on the runner, so nothing to install. The tests also check that the
+  # script and the issue templates agree.
+  triage-tool:
+    name: Issue triage script tests
+    needs: changes
+    if: needs.changes.outputs.triage == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Test the triage script
+        run: node --test .github/scripts/triage.test.js
+
   # The tests also check that every command of the plugin is on the sheet,
   # so a change to the plugin runs them.
   cheatsheet-tool:
@@ -268,6 +288,7 @@ jobs:
       - tagger-smoke
       - wiki-tool
       - cheatsheet-tool
+      - triage-tool
     if: always()
     runs-on: ubuntu-latest
     steps:

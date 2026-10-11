@@ -1,12 +1,14 @@
 name: Documentation Issue
 description: Report missing, unclear, or incorrect documentation
 title: "[Docs]: "
-labels: ["documentation"]
+labels: ["documentation", "needs-triage"]
 body:
   - type: markdown
     attributes:
       value: |
-        Help us keep the plugin's README and `:help` documentation accurate and up-to-date.
+        Help us keep the documentation accurate and up to date.
+
+        The Vim help file and the wiki are generated from `README.md`, so a fix to the README fixes them too.
   - type: dropdown
     id: doc-type
     attributes:
@@ -19,12 +21,26 @@ body:
         - Other
     validations:
       required: true
+  - type: dropdown
+    id: document
+    attributes:
+      label: Which document?
+      options:
+        - README.md
+        - Users_Guide.md
+        - Cheat sheet (doc/cheatsheet.md)
+        - Vim help (:help bartleby)
+        - Wiki
+        - Localization_README.md
+        - Other
+    validations:
+      required: true
   - type: input
     id: file
     attributes:
-      label: File or Help Tag
-      description: Which file or `:help` tag does this issue relate to?
-      placeholder: e.g., README.md, doc/plugin.txt, or `:h plugin-options`
+      label: Section or heading
+      description: Which section, heading, or table does this issue relate to?
+      placeholder: e.g., the table of Binder keys in README.md
     validations:
       required: true
   - type: textarea

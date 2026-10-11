@@ -1,5 +1,14 @@
 blank_issues_enabled: false
 contact_links:
-  - name: Vim Community Forum
+  - name: Ask a question or share an idea
+    url: https://github.com/Galvarcus/bartleby/discussions
+    about: For questions about using Bartleby, and for ideas that are not ready to be a feature request.
+  - name: Read the Users Guide
+    url: https://github.com/Galvarcus/bartleby/blob/HEAD/Users_Guide.md
+    about: Most questions about how to use Bartleby are answered here, and in the wiki.
+  - name: Problems with Logger messages or log files
+    url: https://github.com/Galvarcus/Logger/issues
+    about: Bartleby shows its messages through the Logger plugin. Report problems with Logger itself there.
+  - name: Vim community on Reddit
     url: https://www.reddit.com/r/vim/
-    about: For general Vim scripting, keymapping, and workflow questions.
+    about: For general Vim scripting, keymapping, and workflow questions that are not about Bartleby.
