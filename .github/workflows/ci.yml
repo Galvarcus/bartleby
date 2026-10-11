@@ -401,7 +401,7 @@ jobs:
       # of the help file, and as a section its tag would be the doubled
       # bartleby-bartleby. Keep exactly one H1 in README.md, at the top.
       - name: Generate Vimdoc
-        uses: docker://pandoc/core:3.8
+        uses: docker://pandoc/core:latest
         with:
           args: >-
             README.md
