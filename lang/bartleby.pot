@@ -32,7 +32,7 @@ msgstr ""
 msgid "New Scrive"
 msgstr ""
 
-#: autoload/bartleby/bartlebymenu.vim:55 autoload/bartleby/corkboard.vim:136 autoload/bartleby/lexiconpopup.vim:410 autoload/bartleby/scrivelist.vim:256
+#: autoload/bartleby/bartlebymenu.vim:55 autoload/bartleby/corkboard.vim:136 autoload/bartleby/lexiconpopup.vim:441 autoload/bartleby/scrivelist.vim:256
 msgid "Close"
 msgstr ""
 
@@ -358,7 +358,7 @@ msgstr ""
 msgid "Close Binder"
 msgstr ""
 
-#: autoload/bartleby/binder.vim:693 autoload/bartleby/compile.vim:305 autoload/bartleby/corkboard.vim:137 autoload/bartleby/lexiconpopup.vim:410 autoload/bartleby/outliner.vim:331 autoload/bartleby/scrivelist.vim:257
+#: autoload/bartleby/binder.vim:693 autoload/bartleby/compile.vim:305 autoload/bartleby/corkboard.vim:137 autoload/bartleby/lexiconpopup.vim:441 autoload/bartleby/outliner.vim:331 autoload/bartleby/scrivelist.vim:257
 msgid "This help"
 msgstr ""
 
@@ -858,55 +858,55 @@ msgstr ""
 msgid "(no antonyms)"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:352
+#: autoload/bartleby/lexiconpopup.vim:360
 msgid "\"%s\" copied to the unnamed register"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:362
+#: autoload/bartleby/lexiconpopup.vim:387
 msgid "\"%s\" changed since the lookup - not replaced"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:366
+#: autoload/bartleby/lexiconpopup.vim:391
 msgid "this buffer cannot be changed"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:398
+#: autoload/bartleby/lexiconpopup.vim:423
 msgid "Next word"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:398
+#: autoload/bartleby/lexiconpopup.vim:423
 msgid "Scroll down"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:399
+#: autoload/bartleby/lexiconpopup.vim:424
 msgid "Previous word"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:399
+#: autoload/bartleby/lexiconpopup.vim:424
 msgid "Scroll up"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:403
+#: autoload/bartleby/lexiconpopup.vim:426
 msgid "Copy the word"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:403
+#: autoload/bartleby/lexiconpopup.vim:426
 msgid "Replace the word in the text"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:404
-msgid "Toggle antonyms"
-msgstr ""
-
-#: autoload/bartleby/lexiconpopup.vim:405
-msgid "Define the selected word"
-msgstr ""
-
-#: autoload/bartleby/lexiconpopup.vim:408
+#: autoload/bartleby/lexiconpopup.vim:428
 msgid "Look up the selected suggestion"
 msgstr ""
 
-#: autoload/bartleby/lexiconpopup.vim:411
+#: autoload/bartleby/lexiconpopup.vim:435
+msgid "Toggle antonyms"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:438
+msgid "Define the selected word"
+msgstr ""
+
+#: autoload/bartleby/lexiconpopup.vim:442
 msgid "Lookup"
 msgstr ""
 

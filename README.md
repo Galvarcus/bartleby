@@ -509,6 +509,7 @@ selected text on one line. `:BartlebyDefine {word}` and
 | `j` / `k` | Move the selection |
 | `<CR>` in the thesaurus | Replace the word in the text, with the same capitalization. For a typed word, copy the synonym to the unnamed register |
 | `<CR>` on a suggestion | Look up the suggestion |
+| `r` on a suggestion | Replace the misspelled word in the text, with the same capitalization. For a typed word, copy the suggestion to the unnamed register |
 | `a` | Show antonyms or synonyms |
 | `d` | Show the definition of the selected word |
 | `?` | Show this key list |

@@ -149,7 +149,7 @@ def VisualSelection(): dict<any>
   return {text: text, bufnr: bufnr('%'), lnum: first[1], start: start, end: end}
 enddef
 
-class LexiconPopup
+export class LexiconPopup
   var kind: string
   var word: string
   var target: dict<any>
@@ -347,12 +347,37 @@ class LexiconPopup
     this.Close()
     if row.action ==# 'lookup'
       OpenLookup(this.kind, LE.CleanWord(row.value), this.target)
-    elseif empty(this.target)
-      setreg('"', row.value)
-      log.Info(printf(IN.T("\"%s\" copied to the unnamed register"), row.value))
     else
-      this.ReplaceTarget(row.value)
+      this.Use(row.value)
     endif
+  enddef
+
+  # METHOD: Put value in the text where the lookup began, or in the unnamed
+  # register when the lookup began with no text.
+  def Use(value: string): void
+    if empty(this.target)
+      setreg('"', value)
+      log.Info(printf(IN.T("\"%s\" copied to the unnamed register"), value))
+    else
+      this.ReplaceTarget(value)
+    endif
+  enddef
+
+  # METHOD: Return the action of the selected row, or an empty string when
+  # no row is selected.
+  def SelectedAction(): string
+    return this.selected < 0 ? '' : get(this.rows[this.selected], 'action', '')
+  enddef
+
+  # METHOD: Use the selected suggestion of a misspelled word instead of
+  # looking it up, as the thesaurus does with a synonym.
+  def ReplaceWithSuggestion(): void
+    if this.SelectedAction() !=# 'lookup'
+      return
+    endif
+    var suggestion: string = this.rows[this.selected].value
+    this.Close()
+    this.Use(suggestion)
   enddef
 
   def ReplaceTarget(replacement: string): void
@@ -398,14 +423,20 @@ class LexiconPopup
       ['j / <Down>', this.selected >= 0 ? IN.T("Next word") : IN.T("Scroll down")],
       ['k / <Up>', this.selected >= 0 ? IN.T("Previous word") : IN.T("Scroll up")],
     ]
-    if this.kind ==# CO.KIND_THESAURUS
-      entries += [
-        ['<CR>', empty(this.target) ? IN.T("Copy the word") : IN.T("Replace the word in the text")],
-        ['a', IN.T("Toggle antonyms")],
-        ['d', IN.T("Define the selected word")],
-      ]
-    else
+    var use: string = empty(this.target) ? IN.T("Copy the word") : IN.T("Replace the word in the text")
+    if this.SelectedAction() ==# 'lookup'
       entries->add(['<CR>', IN.T("Look up the selected suggestion")])
+      entries->add(['r', use])
+    elseif this.kind ==# CO.KIND_THESAURUS && this.selected >= 0
+      entries->add(['<CR>', use])
+    endif
+    if this.kind ==# CO.KIND_THESAURUS
+      if get(this.result, 'status', '') ==# 'ok'
+        entries->add(['a', IN.T("Toggle antonyms")])
+      endif
+      if this.selected >= 0
+        entries->add(['d', IN.T("Define the selected word")])
+      endif
     endif
     entries += [['q / <Esc>', IN.T("Close")], ['?', IN.T("This help")]]
     H.Show(IN.T("Lookup"), entries)
@@ -418,6 +449,8 @@ class LexiconPopup
       this.Move(-1)
     elseif key ==# "\<CR>"
       this.Accept()
+    elseif key ==# 'r'
+      this.ReplaceWithSuggestion()
     elseif key ==# 'a'
       this.ToggleAntonyms()
     elseif key ==# 'd'

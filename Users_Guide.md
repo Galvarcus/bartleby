@@ -286,7 +286,8 @@ In the synonym list:
 
 Bartleby keeps the capitalization of the original word, and `u` undoes
 the change. If you misspell a word, Bartleby shows Merriam-Webster's
-suggestions. Press `<Enter>` on one to look it up.
+suggestions. Press `<Enter>` on one to look it up, or `r` to replace the
+misspelled word with it.
 
 Bartleby remembers each lookup. A second lookup of the same word is
 instant and does not use your daily allowance of requests.

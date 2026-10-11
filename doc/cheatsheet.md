@@ -215,6 +215,7 @@ Commands, mappings, and keys of Bartleby, a writing environment for Vim.
 | `j` / `k` | Move the selection |
 | `<CR>` in the thesaurus | Replace the word in the text |
 | `<CR>` on a suggestion | Look up the suggestion |
+| `r` on a suggestion | Replace the misspelled word in the text |
 | `a` | Show antonyms or synonyms |
 | `d` | Show the definition of the selected word |
 | `?` | Show the key list |
