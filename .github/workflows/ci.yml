@@ -40,12 +40,12 @@ jobs:
       cheatsheet: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.cheatsheet }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Find the changed parts
         id: filter
         if: github.event_name != 'workflow_dispatch'
-        uses: dorny/paths-filter@v3
+        uses: dorny/paths-filter@v4.0.3
         with:
           filters: |
             code:
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       # A prebuilt AppImage of the latest Vim. Ubuntu's Vim lags too far
       # behind Vim9's class system, for example a class field typed as a list
@@ -101,7 +101,7 @@ jobs:
       # Bartleby's autoload files import 'Logger/logger.vim', a shared
       # dependency (github.com/Galvarcus/Logger) that is not in this repo.
       - name: Checkout Logger dependency
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           repository: Galvarcus/Logger
           path: deps/Logger
@@ -148,13 +148,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Install Vim
         uses: ./.github/actions/install-vim
 
       - name: Checkout Logger dependency
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           repository: Galvarcus/Logger
           path: deps/Logger
@@ -184,13 +184,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Install Vim
         uses: ./.github/actions/install-vim
 
       - name: Checkout Logger dependency
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           repository: Galvarcus/Logger
           path: deps/Logger
@@ -198,7 +198,7 @@ jobs:
       # Its own Python, first on PATH, so the tagger's python3 finds spaCy.
       # Ubuntu's system Python refuses pip installs (PEP 668).
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
 
@@ -228,7 +228,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Test the converter
         run: python3 -m unittest discover -s tools/wiki -p 'test_*.py'
@@ -242,7 +242,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       # fonts-texgyre has the text font, and fonts-dejavu-mono the code
       # font. The tests read the PDF with poppler-utils and look for the
@@ -292,7 +292,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       - name: Install Vim
         uses: ./.github/actions/install-vim
@@ -375,7 +375,7 @@ jobs:
       # Also when GhostCode found something, which is when the log matters.
       - name: Archive GhostCode results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: ghostcode-log
           path: ghostcode*.log
@@ -392,7 +392,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.ref_name }}
 
@@ -437,7 +437,7 @@ jobs:
       cancel-in-progress: false
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
 
       # The wiki is its own repository, <owner>/<name>.wiki. With
       # contents: write, the workflow's own token can push to it. Only if
@@ -445,7 +445,7 @@ jobs:
       # this repository, with Contents: Read and write, as the secret
       # WIKI_TOKEN. Nothing else needs to change.
       - name: Checkout wiki
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           repository: ${{ github.repository }}.wiki
           path: wiki
@@ -490,7 +490,7 @@ jobs:
       contents: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7.0.1
         with:
           ref: ${{ github.ref_name }}
           # The history gives the PDF the time of the last commit of its
