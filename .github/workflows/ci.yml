@@ -303,7 +303,12 @@ jobs:
 
   ##########################################################################
   # After the tests. These three run side by side. A failure in one does not
-  # stop the others, and none of them stops the cheat sheet.
+  # stop the others, and none of them stops the cheat sheet. Each condition
+  # starts with !cancelled(): without a status function GitHub adds
+  # success(), which is false when any job before Tests was skipped by its
+  # path filter.
+  # REFERENCE: https://github.com/actions/runner/issues/491
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/19
   ##########################################################################
 
   ghostcode:
