@@ -309,7 +309,10 @@ jobs:
   ghostcode:
     name: GhostCode
     needs: [changes, tests]
-    if: needs.changes.outputs.code == 'true'
+    if: >-
+      !cancelled()
+      && needs.tests.result == 'success'
+      && needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -405,7 +408,9 @@ jobs:
     name: Generate Vimdoc
     needs: [changes, tests]
     if: >-
-      needs.changes.outputs.vimdoc == 'true'
+      !cancelled()
+      && needs.tests.result == 'success'
+      && needs.changes.outputs.vimdoc == 'true'
       && github.event_name != 'pull_request'
       && (github.ref_name == 'main' || github.ref_name == 'Development')
     runs-on: ubuntu-latest
@@ -446,7 +451,9 @@ jobs:
     name: Publish Wiki
     needs: [changes, tests]
     if: >-
-      needs.changes.outputs.wiki == 'true'
+      !cancelled()
+      && needs.tests.result == 'success'
+      && needs.changes.outputs.wiki == 'true'
       && github.event_name != 'pull_request'
       && github.ref_name == 'main'
     runs-on: ubuntu-latest
