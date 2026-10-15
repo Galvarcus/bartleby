@@ -71,6 +71,8 @@ def Test_new_scrives_use_the_full_binder_path(): void
   assert_equal(['manuscript/chapter-1/scene-1.md'], novel)
   var parts = Documents(TE.DefaultTree(CO.TYPE_NOVEL_PARTS, '.md'))->mapnew((_, d) => d.relPath)
   assert_equal(['manuscript/part-1/chapter-1/scene-1.md'], parts)
+  var story = Documents(TE.DefaultTree(CO.TYPE_SHORT_STORY, '.md'))->mapnew((_, d) => d.relPath)
+  assert_equal(['manuscript/draft.md'], story)
   var play = Documents(TE.DefaultTree(CO.TYPE_SCREENPLAY, '.fountain'))->mapnew((_, d) => d.relPath)
   assert_equal(['screenplay/scene-1.fountain'], play)
 enddef

@@ -68,8 +68,10 @@ Bartleby asks for the type:
 | Screenplay | A script in the Fountain format. See [Screenplays](#screenplays) |
 
 Bartleby then opens the Binder with a starter tree: Front Matter,
-Manuscript with a first chapter and scene, Back Matter, Characters,
-and Research.
+Manuscript, Back Matter, Characters, and Research. In a novel,
+Manuscript holds a first chapter and scene. A short story has one
+document, Draft, in Manuscript. A screenplay has no Back Matter, and
+its Manuscript folder is named Screenplay.
 
 To open a scrive later:
 
@@ -115,9 +117,10 @@ Bartleby asks you to confirm first. Press `y` to delete, or `n` or
 text, its label, status, and synopsis, and its snapshots, and cannot be
 undone.
 
-Five folders are permanent: **Front Matter**, **Manuscript**, **Back
-Matter**, **Characters**, and **Research**. You cannot rename, move, or
-delete them. `dd` on one of them moves everything inside it to the
+Four folders are permanent in every scrive: **Front Matter**,
+**Manuscript**, **Characters**, and **Research**. A novel or a short
+story also has **Back Matter**. You cannot rename, move, or delete them.
+`dd` on one of them moves everything inside it to the
 Trash, after a confirmation, and keeps the empty folder. You can add,
 move, and delete everything that you create inside them.
 

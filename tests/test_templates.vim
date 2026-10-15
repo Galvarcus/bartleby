@@ -31,10 +31,23 @@ def Test_each_type_gets_its_folders_in_order(): void
   var parts = TE.DefaultTree(CO.TYPE_NOVEL_PARTS, '.md')
   assert_equal(Roles(TE.DefaultTree(CO.TYPE_NOVEL, '.md')), Roles(parts))
   assert_equal([CO.ROLE_PART, CO.ROLE_PART], Roles(parts[1].children))
-  assert_equal([CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_RESEARCH],
-    Roles(TE.DefaultTree(CO.TYPE_SHORT_STORY, '.md')))
+  assert_equal([CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_BACK_MATTER, CO.ROLE_CHARACTERS,
+    CO.ROLE_RESEARCH], Roles(TE.DefaultTree(CO.TYPE_SHORT_STORY, '.md')))
   assert_equal([CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_CHARACTERS, CO.ROLE_RESEARCH],
     Roles(TE.DefaultTree(CO.TYPE_SCREENPLAY, '.fountain')))
+enddef
+
+# FUNCTION: A short story has one document, Draft, directly in Manuscript, and
+# every other folder starts empty.
+def Test_a_short_story_starts_with_one_draft_and_empty_folders(): void
+  var tree = TE.DefaultTree(CO.TYPE_SHORT_STORY, '.md')
+  assert_equal(1, len(tree[1].children))
+  if len(tree[1].children) == 1
+    assert_true(tree[1].children[0].IsDocument())
+  endif
+  for index in [0, 2, 3, 4]
+    assert_equal([], tree[index].children, tree[index].structureRole)
+  endfor
 enddef
 
 def Test_documents_use_the_extension_and_unique_paths(): void
@@ -68,6 +81,7 @@ enddef
 
 export def RunAll(): void
   Test_each_type_gets_its_folders_in_order()
+  Test_a_short_story_starts_with_one_draft_and_empty_folders()
   Test_documents_use_the_extension_and_unique_paths()
   Test_an_unknown_type_gets_nothing()
   Test_materialize_makes_missing_files_and_keeps_written_ones()

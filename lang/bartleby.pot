@@ -414,7 +414,7 @@ msgstr ""
 msgid "Edit Project Info"
 msgstr ""
 
-#: autoload/bartleby/compile.vim:294 autoload/bartleby/templates.vim:65 autoload/bartleby/templates.vim:78 autoload/bartleby/templates.vim:90
+#: autoload/bartleby/compile.vim:294 autoload/bartleby/templates.vim:83 autoload/bartleby/templates.vim:90 autoload/bartleby/templates.vim:94
 msgid "Manuscript"
 msgstr ""
 
@@ -422,7 +422,7 @@ msgstr ""
 msgid "Book"
 msgstr ""
 
-#: autoload/bartleby/compile.vim:296 autoload/bartleby/project.vim:33 autoload/bartleby/templates.vim:96
+#: autoload/bartleby/compile.vim:296 autoload/bartleby/project.vim:33 autoload/bartleby/templates.vim:100
 msgid "Screenplay"
 msgstr ""
 
@@ -1392,15 +1392,15 @@ msgstr ""
 msgid "Back Matter"
 msgstr ""
 
-#: autoload/bartleby/templates.vim:71 autoload/bartleby/templates.vim:84 autoload/bartleby/templates.vim:97
+#: autoload/bartleby/templates.vim:65
 msgid "Characters"
 msgstr ""
 
-#: autoload/bartleby/templates.vim:72 autoload/bartleby/templates.vim:85 autoload/bartleby/templates.vim:91 autoload/bartleby/templates.vim:98
+#: autoload/bartleby/templates.vim:71
 msgid "Research"
 msgstr ""
 
-#: autoload/bartleby/templates.vim:90
+#: autoload/bartleby/templates.vim:94
 msgid "Draft"
 msgstr ""
 
