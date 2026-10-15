@@ -110,8 +110,11 @@ Quick start                                               *bartleby-quick-start*
 <
 Bartleby asks for the scrive type: novel, novel with parts, short story, or
 screenplay. It creates the scrive under `g:bartleby_binder_root` and opens the
-Binder with a starter tree: Front Matter, Manuscript with a first chapter and
-scene, Back Matter, Characters, and Research.
+Binder with a starter tree: Front Matter, Manuscript, Back Matter, Characters,
+and Research. In a novel, Manuscript holds a first chapter and scene, inside a
+first part for a novel with parts. In a short story, it holds one document,
+Draft. A screenplay has no Back Matter, and its Manuscript folder is named
+Screenplay and holds a first scene.
 
 In the Binder:
 
@@ -144,11 +147,11 @@ match, after a confirmation that says how many move. It stops when a document
 has unsaved changes, never writes over another file, and leaves the Trash as
 it is.
 
-Structural folders - Front Matter, Manuscript, Back Matter, Characters, and
-Research. Every scrive has them, and compile uses them. You cannot rename,
-delete, or move them. `dd` on one moves its contents to the Trash, after a
-confirmation. Chapter and Part folders inside Manuscript are also structural,
-but you can add, move, and delete them.
+Structural folders - Front Matter, Manuscript, Characters, and Research in
+every scrive, and Back Matter in a novel or a short story. Compile uses them.
+You cannot rename, delete, or move them. `dd` on one moves its contents to the
+Trash, after a confirmation. Chapter and Part folders inside Manuscript are
+also structural, but you can add, move, and delete them.
 
 Trash - the last folder of every Binder. `dd` moves an item into it, and its
 files stay on disk. In the Trash, `u` puts an item back where it was, and `m`
