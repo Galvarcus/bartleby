@@ -29,7 +29,7 @@ export const MENU_NAME: string = tolower(PLUGIN_NAME)
 export const TEXT_DOMAIN: string = tolower(PLUGIN_NAME)
 export const SCRIVE_EXT: string = '.bartleby'
 export const SCRIVE_FOLDER: string = 'Bartleby'
-export const PROJECT_FILE: string = 'project.json'
+export const PROJ_FILE: string = 'project.json'
 
 ##############################################################################
 # SECTION: Pane buffers. windows.vim protects these panes from being
@@ -49,7 +49,7 @@ export const SCRIVENINGS_BUF: string = $'{PLUGIN_NAME}-Scrivenings'
 ##############################################################################
 
 export const KIND_FOLDER: string = 'folder'
-export const KIND_DOCUMENT: string = 'document'
+export const KIND_DOC: string = 'document'
 
 # What a folder is in the structure, independent of its title. ROLE_PART
 # and ROLE_CHAPTER exist only under ROLE_MANUSCRIPT, and ROLE_CUSTOM only
@@ -59,7 +59,7 @@ export const ROLE_FRONT_MATTER: string = 'front-matter'
 export const ROLE_MANUSCRIPT: string = 'manuscript'
 export const ROLE_PART: string = 'part'
 export const ROLE_CHAPTER: string = 'chapter'
-export const ROLE_CHARACTERS: string = 'characters'
+export const ROLE_CHARS: string = 'characters'
 export const ROLE_RESEARCH: string = 'research'
 # The Trash, always the last folder at the top level, see trash.vim.
 export const ROLE_TRASH: string = 'trash'
@@ -86,13 +86,13 @@ export const STATUSES: list<string> = ['To Do', 'First Draft', 'Revised', 'Done'
 # see lexicon.vim, and a language file chooses its default references.
 ##############################################################################
 
-export const KIND_DICTIONARY: string = 'dictionary'
+export const KIND_DICT: string = 'dictionary'
 export const KIND_THESAURUS: string = 'thesaurus'
-export const REFERENCES: dict<dict<string>> = {
+export const REFS: dict<dict<string>> = {
   collegiate: {
     provider: 'merriam-webster',
     apiName: 'collegiate',
-    kind: KIND_DICTIONARY,
+    kind: KIND_DICT,
     title: 'Merriam-Webster Dictionary',
   },
   thesaurus: {
@@ -120,10 +120,89 @@ export const MODE_LISTS: dict<string> = {
   Contractions: 's_contraction_words',
 }
 
-export const FOUNTAIN_CHARACTER_PATTERN: string = '^\L*$'
+export const FOUNTAIN_CHAR_PAT: string = '^\L*$'
 # A scene heading starts with a standard prefix, or with a period that
 # forces a heading. syntax/fountain.vim uses the two parts in two rules.
-export const FOUNTAIN_SCENE_PREFIX_PATTERN: string = '^\c\(int\|ext\|est\|i\/e\)\([.\/]\| \)'
-export const FOUNTAIN_FORCED_SCENE_PATTERN: string = '^\.\a'
-export const FOUNTAIN_SCENE_HEADING_PATTERN: string =
-  $'{FOUNTAIN_SCENE_PREFIX_PATTERN}\|{FOUNTAIN_FORCED_SCENE_PATTERN}'
+export const FOUNTAIN_SCENE_PREFIX_PAT: string = '^\c\(int\|ext\|est\|i\/e\)\([.\/]\| \)'
+export const FOUNTAIN_FORCED_SCENE_PAT: string = '^\.\a'
+export const FOUNTAIN_SCENE_HEADING_PAT: string =
+  $'{FOUNTAIN_SCENE_PREFIX_PAT}\|{FOUNTAIN_FORCED_SCENE_PAT}'
+
+##############################################################################
+# SECTION: Files and paths that more than one script uses.
+##############################################################################
+
+export const EXT_FOUNTAIN: string = '.fountain'
+export const PATH_BINDER: string = '/binder'
+
+##############################################################################
+# SECTION: Keys that more than one script uses.
+##############################################################################
+
+export const KEY_CR: string = "\<CR>"
+export const KEY_C_C: string = "\<C-c>"
+export const KEY_DOWN: string = "\<Down>"
+export const KEY_ESC: string = "\<Esc>"
+export const KEY_LEFT: string = "\<Left>"
+export const KEY_LEFT_MOUSE: string = "\<LeftMouse>"
+export const KEY_RIGHT: string = "\<Right>"
+export const KEY_SCROLL_WHEEL_DOWN: string = "\<ScrollWheelDown>"
+export const KEY_SCROLL_WHEEL_UP: string = "\<ScrollWheelUp>"
+export const KEY_S_TAB: string = "\<S-Tab>"
+export const KEY_TAB: string = "\<Tab>"
+export const KEY_UP: string = "\<Up>"
+
+##############################################################################
+# SECTION: Names and values that more than one script uses.
+##############################################################################
+
+export const ACTION_RESTORE: string = 'Restore'
+export const CMD_CLOSE: string = 'BartlebyClose'
+export const CMD_COMPILE: string = 'BartlebyCompile'
+export const CMD_EMPTY_TRASH: string = 'BartlebyEmptyTrash'
+export const CMD_FOCUS: string = 'BartlebyFocus'
+export const CMD_GOALS: string = 'BartlebyGoals'
+export const CMD_LIST: string = 'BartlebyList'
+export const CMD_NEW_SCRIVE: string = 'BartlebyNewScrive'
+export const CMD_OPEN: string = 'BartlebyOpen'
+export const CMD_PROFILE: string = 'BartlebyProfile'
+export const CMD_PROGRESS: string = 'BartlebyProgress'
+export const CMD_PROJ_INFO: string = 'BartlebyProjectInfo'
+export const CMD_QUILL: string = 'BartlebyQuill'
+export const CMD_RECOVER: string = 'BartlebyRecover'
+export const CMD_SCRIVENINGS: string = 'BartlebyScrivenings'
+export const CMD_SEARCH: string = 'BartlebySearch'
+export const CMD_SNAP: string = 'BartlebySnapshot'
+export const CMD_SNAPS: string = 'BartlebySnapshots'
+export const CMD_SPOTLIGHT: string = 'BartlebySpotlight'
+export const CMD_TIDY_FILES: string = 'BartlebyTidyFiles'
+export const CMD_TOGGLE_BINDER: string = 'BartlebyToggleBinder'
+export const CMD_TOGGLE_INSPECTOR: string = 'BartlebyToggleInspector'
+export const FILETYPE_FOUNTAIN: string = 'fountain'
+export const HL_PMENU: string = 'Pmenu'
+export const HL_PMENU_SEL: string = 'PmenuSel'
+export const MODE_ADVERBS: string = 'Adverbs'
+export const MODE_CONTRACTIONS: string = 'Contractions'
+export const CANCEL: string = 'Cancel'
+export const STATUS_ERR: string = 'error'
+export const STATUS_NOTFOUND: string = 'notfound'
+export const STATUS_OK: string = 'ok'
+export const TYPE_TEXT: string = 'text'
+
+##############################################################################
+# SECTION: Patterns and formats that more than one script uses.
+##############################################################################
+
+export const BELOW_CURSOR: string = 'cursor+1'
+export const PAT_INSERT: string = '^[iR]'
+export const PAT_NONBLANK: string = '\S'
+export const PAT_NOMAGIC_BOL: string = '^\V'
+
+##############################################################################
+# SECTION: Text and marks that more than one script uses.
+##############################################################################
+
+export const CMD_SCRIVENINGS_BANG: string = 'BartlebyScrivenings!'
+export const TITLE_FMT: string = ' %s '
+export const ID_FMT: string = '%s-%03d'
+export const ID_TIME_FMT: string = '%Y%m%d%H%M%S'

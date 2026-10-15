@@ -108,7 +108,7 @@ the Passive mode.
 
 ## The dictionary and thesaurus
 
-Each lookup uses a reference from `REFERENCES` in
+Each lookup uses a reference from `REFS` in
 `import/bartleby/variables/constants.vim`. Each reference names its
 provider. The Merriam-Webster provider supports English only.
 
@@ -122,7 +122,7 @@ To add a provider:
 2. Register it in the `Provider` function of
    `autoload/bartleby/lexicon.vim`. Set `needsKey` to `false` for a
    service without a key.
-3. Add its references to `REFERENCES`, with the provider name.
+3. Add its references to `REFS`, with the provider name.
 4. Name the references in the language file.
 
 Examples of services for other languages: OpenThesaurus for German
@@ -148,14 +148,40 @@ A text without a translation shows in English.
 
 ### Rules for code
 
-- Pass every text that the user sees to `IN.T`, or to `IN.N` when it has
-  plural forms. The text must be a double-quoted literal in the call:
+- Write every text that the user sees as a function in a locale file, in
+  `autoload/bartleby/locale/`, and call the function. The
+  function calls `IN.T`, or `IN.N` when the text has plural forms. The
+  text must be a double-quoted literal in that call:
 
   ```vim
-  log.Info(IN.T("compiled"))
-  log.Warn(printf(IN.T("skipping missing file: %s"), path))
-  echo printf(IN.N("%d document", "%d documents", count), count)
+  # in locale/common.vim
+  export def Close(): string
+    return IN.T("Close")
+  enddef
+
+  # in locale/data.vim, with a value
+  export def NoSuchFile(path: any): string
+    return printf(IN.T("no such file: %s"), path)
+  enddef
+
+  # in locale/binder.vim, with plural forms
+  export def DeleteItemTrash(count: number): string
+    return printf(IN.N("Delete the %d item in the Trash and its files for good? This cannot be undone.", "Delete the %d items in the Trash and their files for good? This cannot be undone.", count), count)
+  enddef
+
+  # in a script
+  log.Warn(MD.NoSuchFile(path))
   ```
+
+- Put a message in the file of the component that shows it, and in
+  `common.vim` when more than one component shows it. Import the file with
+  `import autoload` and its alias: `MC` for `common.vim`, `MB` for
+  `binder.vim`, `MP` for `panes.vim`, `MV` for `views.vim`, `MW` for
+  `writing.vim`, `MG` for `progress.vim`, `MD` for `data.vim`, `MK` for
+  `compile.vim`, and `MI` for `ui.vim`.
+- Call the function when the text is shown. Never keep the translated text
+  in a `const` or a `var`, because it would keep the language that Vim had
+  when the file was first imported.
 
 - Use `printf` with `%s` for values. Never build a text from pieces or
   with an interpolated string: a translation needs the whole sentence.
@@ -175,10 +201,11 @@ A text without a translation shows in English.
   uses `LabelNames` and `RolePrefixes`, and the Inspector syntax uses
   `FieldLabels`.
 
-`tools/i18n/extract.py` reads the calls from the source and writes the
-template, `lang/bartleby.pot`. It stops with an error at a call whose
-text is not a literal. Run it after every change to a translated text.
-CI fails when the template is not up to date.
+`tools/i18n/extract.py` reads the `IN.T` and `IN.N` calls from the source,
+which are in the locale files, and writes the template,
+`lang/bartleby.pot`. It stops with an error at a call whose text is not a
+literal. Run it after every change to a translated text. CI fails when
+the template is not up to date.
 
 ### Add a translation
 

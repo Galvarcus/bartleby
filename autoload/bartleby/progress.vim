@@ -29,13 +29,18 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/wordcount.vim' as WC
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/progress.vim' as MG
 import 'bartleby/variables/constants.vim' as CO
+
+const DATE_FMT: string = '%04d-%02d-%02d'
+const DAY_FMT: string = '%Y-%m-%d'
+const NEEDED_TODAY: string = 'neededToday'
 
 # The file of the goals and the history, in the scrive.
 const FILE_NAME: string = 'progress.json'
@@ -53,7 +58,7 @@ var current: dict<any> = {}
 ##############################################################################
 
 # FUNCTION: Return the day number of date, a string as 2021-11-01.
-export def DayNumber(date: string): number
+export def DayNum(date: string): number
   var [y, m, d] = split(date, '-')->mapnew((_, v) => str2nr(v))
   y -= m <= 2 ? 1 : 0
   var era: number = y / 400
@@ -73,18 +78,18 @@ export def DateOf(n: number): string
   var mp: number = (5 * doy + 2) / 153
   var d: number = doy - (153 * mp + 2) / 5 + 1
   var m: number = mp + (mp < 10 ? 3 : -9)
-  return printf('%04d-%02d-%02d', yoe + era * 400 + (m <= 2 ? 1 : 0), m, d)
+  return printf(DATE_FMT, yoe + era * 400 + (m <= 2 ? 1 : 0), m, d)
 enddef
 
 # FUNCTION: Return true when date is a real date, as 2021-11-01.
 export def IsDate(date: string): bool
-  return date =~# '^\d\{4}-\d\d-\d\d$' && DateOf(DayNumber(date)) ==# date
+  return date =~# '^\d\{4}-\d\d-\d\d$' && DateOf(DayNum(date)) ==# date
 enddef
 
 # FUNCTION: Return the writing day at the time seconds, as 2021-11-01. A day
 # starts at the hour of g:bartleby_day_starts_at.
 export def DayOf(seconds: number): string
-  return strftime('%Y-%m-%d', seconds - g:bartleby_day_starts_at * 3600)
+  return strftime(DAY_FMT, seconds - g:bartleby_day_starts_at * 3600)
 enddef
 
 ##############################################################################
@@ -195,16 +200,16 @@ enddef
 export def SetGoals(session: number, daily: number, target: number, start: string,
     days: number): string
   if empty(current)
-    return IN.T("no scrive open - run :BartlebyOpen <name> first")
+    return MC.NoScriveOpen()
   endif
   if session < 0 || daily < 0 || target < 0
-    return IN.T("goals cannot be below 0")
+    return MG.GoalsCannotBelow()
   endif
   if target > 0 && !IsDate(start)
-    return printf(IN.T("%s is not a date such as 2021-11-01"), start)
+    return MG.NotDateSuch(start)
   endif
   if target > 0 && days < 1
-    return IN.T("a tracker needs at least 1 day")
+    return MG.TrackerNeedsLeast()
   endif
   current.data.goals = {session: session, daily: daily}
   current.data.tracker = target > 0 ? {target: target, start: start, days: days} : {}
@@ -237,13 +242,13 @@ export def TrackerFigures(today: string): dict<any>
   if empty(t)
     return {}
   endif
-  var start: number = DayNumber(t.start)
-  var now: number = DayNumber(today)
+  var start: number = DayNum(t.start)
+  var now: number = DayNum(today)
   var dayNumber: number = now < start ? 0 : now - start + 1
   var written: number = 0
   var before: number = 0
   for [day, words] in History()
-    var n: number = DayNumber(day)
+    var n: number = DayNum(day)
     if n >= start && n < start + t.days
       written += words
       before += n < now ? words : 0
@@ -295,13 +300,13 @@ def StatusText(): string
   var parts: list<string> = []
   var daily: number = goals.daily
   if daily == 0
-    daily = get(TrackerFigures(current.day), 'neededToday', 0)
+    daily = get(TrackerFigures(current.day), NEEDED_TODAY, 0)
   endif
   if daily > 0
-    parts->add($'{IN.T("Today")} {Thousands(max([written.today, 0]))}/{Thousands(daily)}')
+    parts->add($'{MG.Today()} {Thousands(max([written.today, 0]))}/{Thousands(daily)}')
   endif
   if goals.session > 0
-    parts->add($'{IN.T("Session")} {Thousands(max([written.session, 0]))}/{Thousands(goals.session)}')
+    parts->add($'{MG.Session()} {Thousands(max([written.session, 0]))}/{Thousands(goals.session)}')
   endif
   return join(parts, ' · ')
 enddef
@@ -311,7 +316,7 @@ enddef
 # scrive and in the panes of Bartleby, such as the Binder. It only reads
 # the text that Refresh made.
 export def Status(bufNr: number = bufnr()): string
-  if empty(current) || ST.Get() is null_object || W.IsChromeBuffer(bufNr)
+  if empty(current) || ST.Get() is null_object || W.IsChromeBuf(bufNr)
     return ''
   endif
   return get(current, 'text', '')

@@ -24,7 +24,7 @@ import 'bartleby/variables/constants.vim' as CO
 def Documents(items: list<any>): list<any>
   var found: list<any> = []
   for item in items
-    found += item.IsDocument() ? [item] : Documents(item.children)
+    found += item.IsDoc() ? [item] : Documents(item.children)
   endfor
   return found
 enddef

@@ -10,7 +10,7 @@ var is_loaded: bool = true
 # inputpopup.vim: a modal popup form with one Tab order and Submit and
 # Cancel buttons. Field types: text, choice, filter, and multiline.
 # picker.vim's PickOne uses one choice field. buttonspopup.vim's
-# PopupButtonMenu is separate, for the Corkboard card grid, which is not
+# PopupBtnMenu is separate, for the Corkboard card grid, which is not
 # a form.
 #
 # fields is a list of rows, and each row is a list of field specs:
@@ -64,8 +64,40 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/ui.vim' as MI
+import 'bartleby/variables/constants.vim' as CO
+
+const TYPE_CHOICE: string = 'choice'
+const TYPE_FILTER: string = 'filter'
+const TYPE_MULTILINE: string = 'multiline'
+const ACTION_SUBMIT: string = 'submit'
+const ACTION_CANCEL: string = 'cancel'
+const KEY_BS: string = "\<BS>"
+const KEY_C_H: string = "\<C-h>"
+const KEY_DEL: string = "\<Del>"
+const KEY_HOME: string = "\<Home>"
+const KEY_C_A: string = "\<C-a>"
+const KEY_END: string = "\<End>"
+const KEY_C_E: string = "\<C-e>"
+const TYPE_BTN: string = 'button'
+const KEY_C_S: string = "\<C-s>"
+const KEY_C_N: string = "\<C-n>"
+const KEY_C_P: string = "\<C-p>"
+const KEY_C_J: string = "\<C-j>"
+const KEY_C_K: string = "\<C-k>"
+const KEY_PAGE_DOWN: string = "\<PageDown>"
+const KEY_PAGE_UP: string = "\<PageUp>"
+const KEY_C_U: string = "\<C-u>"
+const TYPE_INPUT_POPUP_LABEL: string = 'InputPopupLabel'
+const TYPE_INPUT_POPUP_CURSOR: string = 'InputPopupCursor'
+const TYPE_INPUT_POPUP_OPTION: string = 'InputPopupOption'
+const TYPE_INPUT_POPUP_OPTION_SEL: string = 'InputPopupOptionSelected'
+const TYPE_INPUT_POPUP_SCROLLBAR: string = 'InputPopupScrollbar'
+const TYPE_INPUT_POPUP_THUMB: string = 'InputPopupThumb'
+const TYPE_INPUT_POPUP_BTN: string = 'InputPopupButton'
+const TYPE_INPUT_POPUP_BTN_ACTIVE: string = 'InputPopupButtonActive'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -76,7 +108,7 @@ def Noop(): void
 enddef
 
 export def TextFields(rows: list<list<string>>): list<list<dict<any>>>
-  return rows->mapnew((_, row) => row->mapnew((_, name) => ({name: name, type: 'text'})))
+  return rows->mapnew((_, row) => row->mapnew((_, name) => ({name: name, type: CO.TYPE_TEXT})))
 enddef
 
 # FUNCTION: Show one text field, titled title and filled with default.
@@ -86,8 +118,8 @@ export def PromptText(title: string, default: string, OnSubmit: func(string),
     OnCancel: func() = Noop): void
   var fields: list<list<dict<any>>> = [[{name: 'value', type: 'text'}]]
   var form: InputPopup = InputPopup.new(fields, {value: default}, {title: $' {title} '})
-  form.OnSubmit((values: dict<any>) => {
-    OnSubmit(values.value)
+  form.OnSubmit((vals: dict<any>) => {
+    OnSubmit(vals.value)
   })
   form.OnCancel(OnCancel)
   form.Open()
@@ -107,9 +139,9 @@ export def PromptFilter(title: string, options: list<string>, OnSubmit: func(str
     options: shown, maxVisible: maxVisible}]]
   var form: InputPopup = InputPopup.new(fields, {},
     {title: $' {title} ', buttons: [], min_width: minWidth})
-  form.OnSubmit((values: dict<any>) => {
-    if values.choice !=# ''
-      OnSubmit(options[index(shown, values.choice)])
+  form.OnSubmit((vals: dict<any>) => {
+    if vals.choice !=# ''
+      OnSubmit(options[index(shown, vals.choice)])
     endif
   })
   form.Open()
@@ -125,10 +157,10 @@ export def PromptMultiline(title: string, default: string, OnSubmit: func(string
   var fields: list<list<dict<any>>> = [[{name: 'text', type: 'multiline',
     rows: rows}]]
   var form: InputPopup = InputPopup.new(fields, {text: default},
-    {title: printf(IN.T(" %s (C-s to save) "), title), widths: {text: width},
-      submit_label: IN.T("Save")})
-  form.OnSubmit((values: dict<any>) => {
-    OnSubmit(values.text)
+    {title: MI.Save(title), widths: {text: width},
+      submit_label: MC.Save()})
+  form.OnSubmit((vals: dict<any>) => {
+    OnSubmit(vals.text)
   })
   form.Open()
 enddef
@@ -170,7 +202,7 @@ export class InputPopup
     this.defaults = defaults
     this.opts = opts
     this.BuildFields()
-    this.BuildButtons()
+    this.BuildBtns()
   enddef
 
   ############################################################################
@@ -192,13 +224,13 @@ export class InputPopup
           type: fieldType,
           row: rowIdx,
         }
-        if fieldType ==# 'choice'
+        if fieldType ==# TYPE_CHOICE
           var options: list<string> = get(spec, 'options', [])
-          var startValue: string = get(this.defaults, name, '')
-          var selectedIdx: number = max([0, index(options, startValue)])
+          var startVal: string = get(this.defaults, name, '')
+          var selectedIdx: number = max([0, index(options, startVal)])
           field.options = options
           field.selectedIdx = selectedIdx
-        elseif fieldType ==# 'filter'
+        elseif fieldType ==# TYPE_FILTER
           field.value = ''
           field.cursor = 0
           field.offset = 0
@@ -207,7 +239,7 @@ export class InputPopup
           field.filtered = copy(field.options)
           field.selectedIdx = 0
           field.scrollTop = 0
-        elseif fieldType ==# 'multiline'
+        elseif fieldType ==# TYPE_MULTILINE
           var startText: string = get(this.defaults, name, '')
           field.lines = split(startText, "\n", true)
           if empty(field.lines)
@@ -236,14 +268,14 @@ export class InputPopup
     endfor
   enddef
 
-  def BuildButtons(): void
+  def BuildBtns(): void
     if has_key(this.opts, 'buttons')
       this.buttons = get(this.opts, 'buttons', [])
       return
     endif
     this.buttons = [
-      {label: get(this.opts, 'submit_label', IN.T("Submit")), action: 'submit'},
-      {label: get(this.opts, 'cancel_label', IN.T("Cancel")), action: 'cancel'},
+      {label: get(this.opts, 'submit_label', MI.Submit()), action: ACTION_SUBMIT},
+      {label: get(this.opts, 'cancel_label', MC.Cancel()), action: ACTION_CANCEL},
     ]
   enddef
 
@@ -255,13 +287,13 @@ export class InputPopup
       prop_type_add('InputPopupCursor', {highlight: 'IncSearch'})
     endif
     if empty(prop_type_get('InputPopupButton'))
-      prop_type_add('InputPopupButton', {highlight: 'Pmenu'})
+      prop_type_add('InputPopupButton', {highlight: CO.HL_PMENU})
     endif
     if empty(prop_type_get('InputPopupButtonActive'))
-      prop_type_add('InputPopupButtonActive', {highlight: 'PmenuSel'})
+      prop_type_add('InputPopupButtonActive', {highlight: CO.HL_PMENU_SEL})
     endif
     if empty(prop_type_get('InputPopupOption'))
-      prop_type_add('InputPopupOption', {highlight: 'Pmenu'})
+      prop_type_add('InputPopupOption', {highlight: CO.HL_PMENU})
     endif
     if empty(prop_type_get('InputPopupScrollbar'))
       prop_type_add('InputPopupScrollbar', {highlight: 'PmenuSbar'})
@@ -270,11 +302,11 @@ export class InputPopup
       prop_type_add('InputPopupThumb', {highlight: 'PmenuThumb'})
     endif
     if empty(prop_type_get('InputPopupOptionSelected'))
-      prop_type_add('InputPopupOptionSelected', {highlight: 'PmenuSel'})
+      prop_type_add('InputPopupOptionSelected', {highlight: CO.HL_PMENU_SEL})
     endif
   enddef
 
-  def ButtonLineText(): string
+  def BtnLineText(): string
     var parts: list<string> = []
     for b in this.buttons
       add(parts, '[ ' .. b.label .. ' ]')
@@ -284,7 +316,7 @@ export class InputPopup
 
   def FieldLineText(f: dict<any>): string
     var label: string = f.label .. ': '
-    if f.type ==# 'choice'
+    if f.type ==# TYPE_CHOICE
       var parts: list<string> = []
       for opt in f.options
         add(parts, '[ ' .. opt .. ' ]')
@@ -295,7 +327,7 @@ export class InputPopup
   enddef
 
   def ComputeSize(): list<number>
-    if len(this.fields) == 1 && this.fields[0].type ==# 'filter'
+    if len(this.fields) == 1 && this.fields[0].type ==# TYPE_FILTER
       var f: dict<any> = this.fields[0]
       var w: number = 20
       for opt in f.options
@@ -306,22 +338,22 @@ export class InputPopup
       var scrollbar: number = len(f.options) > f.maxVisible ? 2 : 0
       return [this.FitTitle(max([w + scrollbar, 10])), 1 + visibleRows]
     endif
-    if len(this.fields) == 1 && this.fields[0].type ==# 'multiline'
+    if len(this.fields) == 1 && this.fields[0].type ==# TYPE_MULTILINE
       var f: dict<any> = this.fields[0]
-      return [max([f.width, strchars(this.ButtonLineText()), 10]), f.rows + (empty(this.buttons) ? 0 : 1)]
+      return [max([f.width, strchars(this.BtnLineText()), 10]), f.rows + (empty(this.buttons) ? 0 : 1)]
     endif
 
     var rowWidths: dict<number> = {}
     var rowCount: number = 0
     for f in this.fields
       var w: number = strchars(this.FieldLineText(f))
-      if f.type !=# 'choice'
+      if f.type !=# TYPE_CHOICE
         w = get(rowWidths, string(f.row), 0) + strchars(f.label) + 2 + f.width + 2
       endif
       rowWidths[string(f.row)] = w
       rowCount = max([rowCount, f.row + 1])
     endfor
-    var maxWidth: number = strchars(this.ButtonLineText())
+    var maxWidth: number = strchars(this.BtnLineText())
     for w in values(rowWidths)
       maxWidth = max([maxWidth, w])
     endfor
@@ -351,7 +383,7 @@ export class InputPopup
 
   def Open(): void
     if empty(this.fields)
-      log.Error(IN.T("InputPopup: fieldRows produced no fields"))
+      log.Error(MI.InputPopupFieldRowsProduced())
       return
     endif
 
@@ -374,7 +406,7 @@ export class InputPopup
       maxheight: height,
       border: [1, 1, 1, 1],
       padding: [0, 1, 0, 1],
-      title: get(this.opts, 'title', ' Input '),
+      title: get(this.opts, 'title', printf(CO.TITLE_FMT, MI.Input())),
       zindex: get(this.opts, 'zindex', 300),
       mapping: false,
       mousemoveevent: false,
@@ -403,11 +435,11 @@ export class InputPopup
     return len(this.fields) + len(this.buttons)
   enddef
 
-  def IsButtonIdx(idx: number): bool
+  def IsBtnIdx(idx: number): bool
     return idx >= len(this.fields)
   enddef
 
-  def ButtonAt(idx: number): dict<any>
+  def BtnAt(idx: number): dict<any>
     return this.buttons[idx - len(this.fields)]
   enddef
 
@@ -416,14 +448,14 @@ export class InputPopup
   # that focus comes back from the buttons to where the writing was.
   def Focus(idx: number): void
     this.currentIdx = idx
-    if idx < len(this.fields) && index(['choice', 'multiline'], this.fields[idx].type) < 0
+    if idx < len(this.fields) && index(['choice', TYPE_MULTILINE], this.fields[idx].type) < 0
       this.fields[idx].cursor = strchars(this.fields[idx].value)
     endif
   enddef
 
-  def ActivateButton(idx: number): void
-    var btn: dict<any> = this.ButtonAt(idx)
-    popup_close(this.winid, btn.action == 'submit' ? 1 : 0)
+  def ActivateBtn(idx: number): void
+    var btn: dict<any> = this.BtnAt(idx)
+    popup_close(this.winid, btn.action == ACTION_SUBMIT ? 1 : 0)
   enddef
 
   ############################################################################
@@ -432,7 +464,7 @@ export class InputPopup
 
   def HandleMultilineKey(key: string): bool
     var f: dict<any> = this.fields[this.currentIdx]
-    if key ==# "\<CR>"
+    if key ==# CO.KEY_CR
       var line: string = f.lines[f.cursorLine]
       var before: string = strcharpart(line, 0, f.cursorCol)
       var after: string = strcharpart(line, f.cursorCol)
@@ -440,31 +472,31 @@ export class InputPopup
       insert(f.lines, after, f.cursorLine + 1)
       f.cursorLine += 1
       f.cursorCol = 0
-    elseif key ==# "\<Up>"
+    elseif key ==# CO.KEY_UP
       if f.cursorLine > 0
         f.cursorLine -= 1
         f.cursorCol = min([f.cursorCol, strchars(f.lines[f.cursorLine])])
       endif
-    elseif key ==# "\<Down>"
+    elseif key ==# CO.KEY_DOWN
       if f.cursorLine < len(f.lines) - 1
         f.cursorLine += 1
         f.cursorCol = min([f.cursorCol, strchars(f.lines[f.cursorLine])])
       endif
-    elseif key ==# "\<Left>"
+    elseif key ==# CO.KEY_LEFT
       if f.cursorCol > 0
         f.cursorCol -= 1
       elseif f.cursorLine > 0
         f.cursorLine -= 1
         f.cursorCol = strchars(f.lines[f.cursorLine])
       endif
-    elseif key ==# "\<Right>"
+    elseif key ==# CO.KEY_RIGHT
       if f.cursorCol < strchars(f.lines[f.cursorLine])
         f.cursorCol += 1
       elseif f.cursorLine < len(f.lines) - 1
         f.cursorLine += 1
         f.cursorCol = 0
       endif
-    elseif key ==# "\<BS>" || key ==# "\<C-h>"
+    elseif key ==# KEY_BS || key ==# KEY_C_H
       if f.cursorCol > 0
         var chars: list<string> = split(f.lines[f.cursorLine], '\zs')
         remove(chars, f.cursorCol - 1)
@@ -477,7 +509,7 @@ export class InputPopup
         f.cursorLine -= 1
         f.cursorCol = prevLen
       endif
-    elseif key ==# "\<Del>"
+    elseif key ==# KEY_DEL
       var line: string = f.lines[f.cursorLine]
       if f.cursorCol < strchars(line)
         var chars: list<string> = split(line, '\zs')
@@ -487,9 +519,9 @@ export class InputPopup
         f.lines[f.cursorLine] ..= f.lines[f.cursorLine + 1]
         remove(f.lines, f.cursorLine + 1)
       endif
-    elseif key ==# "\<Home>" || key ==# "\<C-a>"
+    elseif key ==# KEY_HOME || key ==# KEY_C_A
       f.cursorCol = 0
-    elseif key ==# "\<End>" || key ==# "\<C-e>"
+    elseif key ==# KEY_END || key ==# KEY_C_E
       f.cursorCol = strchars(f.lines[f.cursorLine])
     elseif strchars(key) == 1 && char2nr(key) >= 32
       var chars: list<string> = split(f.lines[f.cursorLine], '\zs')
@@ -506,9 +538,9 @@ export class InputPopup
   # that has focus, after the keys that every control shares, and redraws
   # unless the key closed the popup.
   def Filter(winid: number, key: string): bool
-    var isButton: bool = this.IsButtonIdx(this.currentIdx)
-    var type: string = isButton ? 'button' : this.fields[this.currentIdx].type
-    if type ==# 'multiline'
+    var isBtn: bool = this.IsBtnIdx(this.currentIdx)
+    var type: string = isBtn ? 'button' : this.fields[this.currentIdx].type
+    if type ==# TYPE_MULTILINE
       if this.MultilineKey(winid, key) !=# KEY_CLOSED
         this.Render()
       endif
@@ -516,11 +548,11 @@ export class InputPopup
     endif
     var result: string = this.CommonKey(winid, key)
     if result ==# KEY_UNHANDLED
-      if type ==# 'button'
-        result = this.ButtonKey(winid, key)
-      elseif type ==# 'filter'
+      if type ==# TYPE_BTN
+        result = this.BtnKey(winid, key)
+      elseif type ==# TYPE_FILTER
         result = this.FilterFieldKey(winid, key)
-      elseif type ==# 'choice'
+      elseif type ==# TYPE_CHOICE
         result = this.ChoiceKey(winid, key)
       else
         result = this.TextKey(winid, key)
@@ -538,14 +570,14 @@ export class InputPopup
   # control, as the Linux console does.
   # REFERENCE: https://github.com/Galvarcus/bartleby/issues/2
   def MultilineKey(winid: number, key: string): string
-    if (key == "\<Tab>" || key == "\<S-Tab>") && !empty(this.buttons)
+    if (key == CO.KEY_TAB || key == CO.KEY_S_TAB) && !empty(this.buttons)
       var step: number = key == "\<Tab>" ? 1 : this.TotalControls() - 1
       this.Focus((this.currentIdx + step) % this.TotalControls())
       return KEY_HANDLED
-    elseif key == "\<C-s>"
+    elseif key == KEY_C_S
       popup_close(winid, 1)
       return KEY_CLOSED
-    elseif key == "\<Esc>" || key == "\<C-c>"
+    elseif key == CO.KEY_ESC || key == CO.KEY_C_C
       popup_close(winid, 0)
       return KEY_CLOSED
     endif
@@ -556,17 +588,17 @@ export class InputPopup
   # METHOD: Keys that every control shares: move to the next or previous
   # control, submit, cancel, and click.
   def CommonKey(winid: number, key: string): string
-    if key == "\<Tab>" || key == "\<C-n>"
+    if key == CO.KEY_TAB || key == KEY_C_N
       this.Focus((this.currentIdx + 1) % this.TotalControls())
-    elseif key == "\<S-Tab>" || key == "\<C-p>"
+    elseif key == CO.KEY_S_TAB || key == KEY_C_P
       this.Focus((this.currentIdx - 1 + this.TotalControls()) % this.TotalControls())
-    elseif key == "\<C-s>"
+    elseif key == KEY_C_S
       popup_close(winid, 1)
       return KEY_CLOSED
-    elseif key == "\<Esc>" || key == "\<C-c>"
+    elseif key == CO.KEY_ESC || key == CO.KEY_C_C
       popup_close(winid, 0)
       return KEY_CLOSED
-    elseif key == "\<LeftMouse>"
+    elseif key == CO.KEY_LEFT_MOUSE
       this.HandleMouseClick()
     else
       return KEY_UNHANDLED
@@ -576,13 +608,13 @@ export class InputPopup
 
   # METHOD: Keys of a button. A button holds no text, so other keys do
   # nothing.
-  def ButtonKey(winid: number, key: string): string
-    if key == "\<CR>" || key == ' '
-      this.ActivateButton(this.currentIdx)
+  def BtnKey(winid: number, key: string): string
+    if key == CO.KEY_CR || key == ' '
+      this.ActivateBtn(this.currentIdx)
       return KEY_CLOSED
-    elseif key == "\<Left>"
+    elseif key == CO.KEY_LEFT
       this.Focus(max([len(this.fields), this.currentIdx - 1]))
-    elseif key == "\<Right>"
+    elseif key == CO.KEY_RIGHT
       this.Focus(min([this.TotalControls() - 1, this.currentIdx + 1]))
     endif
     return KEY_HANDLED
@@ -592,15 +624,15 @@ export class InputPopup
   # Other keys edit the text, and a changed text filters the list again.
   def FilterFieldKey(winid: number, key: string): string
     var f: dict<any> = this.fields[this.currentIdx]
-    if key == "\<Down>" || key == "\<C-j>" || key == "\<ScrollWheelDown>"
-      this.MoveFilterSelection(f, 1)
-    elseif key == "\<Up>" || key == "\<C-k>" || key == "\<ScrollWheelUp>"
-      this.MoveFilterSelection(f, -1)
-    elseif key == "\<PageDown>"
-      this.MoveFilterSelection(f, f.maxVisible)
-    elseif key == "\<PageUp>"
-      this.MoveFilterSelection(f, -f.maxVisible)
-    elseif key == "\<CR>"
+    if key == CO.KEY_DOWN || key == KEY_C_J || key == CO.KEY_SCROLL_WHEEL_DOWN
+      this.MoveFilterSel(f, 1)
+    elseif key == CO.KEY_UP || key == KEY_C_K || key == CO.KEY_SCROLL_WHEEL_UP
+      this.MoveFilterSel(f, -1)
+    elseif key == KEY_PAGE_DOWN
+      this.MoveFilterSel(f, f.maxVisible)
+    elseif key == KEY_PAGE_UP
+      this.MoveFilterSel(f, -f.maxVisible)
+    elseif key == CO.KEY_CR
       if !empty(f.filtered)
         popup_close(winid, 1)
       endif
@@ -621,11 +653,11 @@ export class InputPopup
   # nothing.
   def ChoiceKey(winid: number, key: string): string
     var f: dict<any> = this.fields[this.currentIdx]
-    if key == "\<Left>"
+    if key == CO.KEY_LEFT
       f.selectedIdx = max([0, f.selectedIdx - 1])
-    elseif key == "\<Right>"
+    elseif key == CO.KEY_RIGHT
       f.selectedIdx = min([len(f.options) - 1, f.selectedIdx + 1])
-    elseif key == "\<CR>"
+    elseif key == CO.KEY_CR
       if len(this.fields) == 1
         popup_close(winid, 1)
         return KEY_CLOSED
@@ -640,13 +672,13 @@ export class InputPopup
   # KEY_CHANGED when the text changed.
   def TextKey(winid: number, key: string): string
     var f: dict<any> = this.fields[this.currentIdx]
-    if key == "\<CR>"
+    if key == CO.KEY_CR
       if len(this.fields) == 1
         popup_close(winid, 1)
         return KEY_CLOSED
       endif
       this.Focus(this.currentIdx < len(this.fields) - 1 ? this.currentIdx + 1 : len(this.fields))
-    elseif key == "\<BS>" || key == "\<C-h>"
+    elseif key == KEY_BS || key == KEY_C_H
       if f.cursor == 0
         return KEY_HANDLED
       endif
@@ -655,7 +687,7 @@ export class InputPopup
       f.value = join(chars, '')
       f.cursor -= 1
       return KEY_CHANGED
-    elseif key == "\<Del>"
+    elseif key == KEY_DEL
       if f.cursor >= strchars(f.value)
         return KEY_HANDLED
       endif
@@ -663,19 +695,19 @@ export class InputPopup
       remove(chars, f.cursor)
       f.value = join(chars, '')
       return KEY_CHANGED
-    elseif key == "\<C-u>"
+    elseif key == KEY_C_U
       f.value = ''
       f.cursor = 0
       return KEY_CHANGED
-    elseif key == "\<Left>"
+    elseif key == CO.KEY_LEFT
       f.cursor = max([0, f.cursor - 1])
-    elseif key == "\<Right>"
+    elseif key == CO.KEY_RIGHT
       f.cursor = min([strchars(f.value), f.cursor + 1])
-    elseif key == "\<Home>" || key == "\<C-a>"
+    elseif key == KEY_HOME || key == KEY_C_A
       f.cursor = 0
-    elseif key == "\<End>" || key == "\<C-e>"
+    elseif key == KEY_END || key == KEY_C_E
       f.cursor = strchars(f.value)
-    elseif strchars(key) == 1 && char2nr(key) >= 32 && !this.AtMaxLength(f)
+    elseif strchars(key) == 1 && char2nr(key) >= 32 && !this.AtMaxLen(f)
       var chars: list<string> = split(f.value, '\zs')
       insert(chars, key, f.cursor)
       f.value = join(chars, '')
@@ -694,7 +726,7 @@ export class InputPopup
     for hit in this._buttonHit
       if pos.line == hit.lnum && pos.column >= hit.startCol && pos.column <= hit.endCol
         this.Focus(len(this.fields) + hit.idx)
-        this.ActivateButton(this.currentIdx)
+        this.ActivateBtn(this.currentIdx)
         return
       endif
     endfor
@@ -723,7 +755,7 @@ export class InputPopup
   def OnClose(winid: number, result: number): void
     if result == 1
       if type(this._onSubmit) == v:t_func
-        call(this._onSubmit, [this.Values()])
+        call(this._onSubmit, [this.Vals()])
       endif
     else
       if type(this._onCancel) == v:t_func
@@ -742,18 +774,18 @@ export class InputPopup
   # label. A text field whose default was not a string, such as a list or
   # a number, is converted back with eval. Text that no longer parses stays
   # a string. A choice field returns its selected option.
-  def Values(): dict<any>
+  def Vals(): dict<any>
     var result: dict<any> = {}
     for f in this.fields
-      if f.type ==# 'choice'
+      if f.type ==# TYPE_CHOICE
         result[f.name] = empty(f.options) ? '' : f.options[f.selectedIdx]
         continue
       endif
-      if f.type ==# 'filter'
+      if f.type ==# TYPE_FILTER
         result[f.name] = empty(f.filtered) ? '' : f.filtered[f.selectedIdx]
         continue
       endif
-      if f.type ==# 'multiline'
+      if f.type ==# TYPE_MULTILINE
         result[f.name] = join(f.lines, "\n")
         continue
       endif
@@ -775,13 +807,13 @@ export class InputPopup
   ############################################################################
 
   # METHOD: Return true when a text field with a maximum length is full.
-  def AtMaxLength(f: dict<any>): bool
+  def AtMaxLen(f: dict<any>): bool
     return get(f, 'maxLength', 0) > 0 && strchars(f.value) >= f.maxLength
   enddef
 
   # METHOD: Move the selection of a filter list by step rows, and scroll so
   # that the selection stays visible.
-  def MoveFilterSelection(f: dict<any>, step: number): void
+  def MoveFilterSel(f: dict<any>, step: number): void
     f.selectedIdx = max([0, min([len(f.filtered) - 1, f.selectedIdx + step])])
     if f.selectedIdx < f.scrollTop
       f.scrollTop = f.selectedIdx
@@ -809,7 +841,7 @@ export class InputPopup
       endfor
     endif
     if empty(f.filtered)
-      lines[1] = '  ' .. IN.T("(no matches)")
+      lines[1] = '  ' .. MI.NoMatches()
     endif
 
     setbufline(this.bufnr, 1, lines)
@@ -817,14 +849,14 @@ export class InputPopup
       deletebufline(this.bufnr, len(lines) + 1, '$')
     endif
 
-    this.ApplyFilterHighlights(lines, f)
+    this.ApplyFilterHls(lines, f)
   enddef
 
-  def ApplyFilterHighlights(lines: list<string>, f: dict<any>): void
-    prop_remove({type: 'InputPopupLabel', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'InputPopupCursor', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'InputPopupOption', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'InputPopupOptionSelected', bufnr: this.bufnr}, 1, len(lines))
+  def ApplyFilterHls(lines: list<string>, f: dict<any>): void
+    prop_remove({type: TYPE_INPUT_POPUP_LABEL, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_CURSOR, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_OPTION, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_OPTION_SEL, bufnr: this.bufnr}, 1, len(lines))
 
     var inputText: string = lines[0]
     # Skip the prompt mark and space before the typed text: 2 characters.
@@ -833,7 +865,7 @@ export class InputPopup
     var nextByteCol: number = byteidx(inputText, cursorCharIdx + 1)
     var cursorLen: number = (nextByteCol == -1 ? strlen(inputText) : nextByteCol) - (cursorByteCol - 1)
     prop_add(1, cursorByteCol, {
-      type: 'InputPopupCursor', bufnr: this.bufnr, length: max([cursorLen, 1]),
+      type: TYPE_INPUT_POPUP_CURSOR, bufnr: this.bufnr, length: max([cursorLen, 1]),
     })
 
     this._fieldHit = []
@@ -864,8 +896,8 @@ export class InputPopup
   # of the thumb show which part of the list is visible. RenderFilter has
   # already padded the rows, so the last column is free.
   def DrawFilterScrollbar(f: dict<any>): void
-    prop_remove({type: 'InputPopupScrollbar', bufnr: this.bufnr, all: true})
-    prop_remove({type: 'InputPopupThumb', bufnr: this.bufnr, all: true})
+    prop_remove({type: TYPE_INPUT_POPUP_SCROLLBAR, bufnr: this.bufnr, all: true})
+    prop_remove({type: TYPE_INPUT_POPUP_THUMB, bufnr: this.bufnr, all: true})
     if !this.FilterScrolls(f)
       return
     endif
@@ -876,7 +908,7 @@ export class InputPopup
     for i in range(rows)
       var lnum: number = i + 2
       prop_add(lnum, strlen(getbufline(this.bufnr, lnum)[0]), {
-        type: i >= thumbTop && i < thumbTop + thumbSize ? 'InputPopupThumb' : 'InputPopupScrollbar',
+        type: i >= thumbTop && i < thumbTop + thumbSize ? TYPE_INPUT_POPUP_THUMB : TYPE_INPUT_POPUP_SCROLLBAR,
         bufnr: this.bufnr, length: 1,
       })
     endfor
@@ -906,20 +938,20 @@ export class InputPopup
     var btnLnum: number = -1
     var btnMeta: list<dict<any>> = []
     if !empty(this.buttons)
-      var buttons: dict<any> = this.LayoutButtons()
+      var buttons: dict<any> = this.LayoutBtns()
       lines->add(buttons.line)
       btnLnum = len(lines)
       btnMeta = buttons.meta
     endif
 
     this.WriteLines(lines)
-    this.ApplyButtonHighlights(lines, btnLnum, btnMeta)
-    this.ApplyMultilineHighlights(lines, f)
+    this.ApplyBtnHls(lines, btnLnum, btnMeta)
+    this.ApplyMultilineHls(lines, f)
   enddef
 
   # METHOD: Draw the cursor of the multiline field f, while it has focus.
-  def ApplyMultilineHighlights(lines: list<string>, f: dict<any>): void
-    prop_remove({type: 'InputPopupCursor', bufnr: this.bufnr}, 1, len(lines))
+  def ApplyMultilineHls(lines: list<string>, f: dict<any>): void
+    prop_remove({type: TYPE_INPUT_POPUP_CURSOR, bufnr: this.bufnr}, 1, len(lines))
     if this.currentIdx != 0
       return
     endif
@@ -931,7 +963,7 @@ export class InputPopup
       var nextByteCol: number = byteidx(text, f.cursorCol + 1)
       var cursorLen: number = (nextByteCol == -1 ? strlen(text) : nextByteCol) - (cursorByteCol - 1)
       prop_add(cursorScreenLine, cursorByteCol, {
-        type: 'InputPopupCursor', bufnr: this.bufnr, length: max([cursorLen, 1]),
+        type: TYPE_INPUT_POPUP_CURSOR, bufnr: this.bufnr, length: max([cursorLen, 1]),
       })
     endif
   enddef
@@ -943,11 +975,11 @@ export class InputPopup
     if this.bufnr == -1
       return
     endif
-    if len(this.fields) == 1 && this.fields[0].type ==# 'filter'
+    if len(this.fields) == 1 && this.fields[0].type ==# TYPE_FILTER
       this.RenderFilter()
       return
     endif
-    if len(this.fields) == 1 && this.fields[0].type ==# 'multiline'
+    if len(this.fields) == 1 && this.fields[0].type ==# TYPE_MULTILINE
       this.RenderMultiline()
       return
     endif
@@ -956,18 +988,18 @@ export class InputPopup
     var btnLnum: number = -1
     var btnMeta: list<dict<any>> = []
     if !empty(this.buttons)
-      var buttons: dict<any> = this.LayoutButtons()
+      var buttons: dict<any> = this.LayoutBtns()
       lines->add(buttons.line)
       btnLnum = len(lines)
       btnMeta = buttons.meta
     endif
     this.WriteLines(lines)
-    this.ApplyHighlights(lines, layout.meta, btnLnum, btnMeta)
+    this.ApplyHls(lines, layout.meta, btnLnum, btnMeta)
   enddef
 
   # METHOD: Lay out the fields: the fields of a row on one line, and a
   # choice field on a line of its own. Returns the lines, and for each
-  # field where its parts are, for ApplyHighlights.
+  # field where its parts are, for ApplyHls.
   def LayoutFields(): dict<any>
     var lines: list<string> = []
     var meta: list<dict<any>> = []
@@ -984,7 +1016,7 @@ export class InputPopup
       var label: string = f.label .. ': '
       var labelStartChar: number = row.chars
       AppendTo(row, label)
-      if f.type ==# 'choice'
+      if f.type ==# TYPE_CHOICE
         add(meta, this.LayoutChoice(idx, f, row, labelStartChar, strchars(label)))
         add(lines, row.text)
         row = {num: -1, text: '', chars: 0}
@@ -1044,7 +1076,7 @@ export class InputPopup
 
   # METHOD: Lay out the buttons on one line. Returns the line, and where
   # each button is.
-  def LayoutButtons(): dict<any>
+  def LayoutBtns(): dict<any>
     var line: string = ''
     var meta: list<dict<any>> = []
     for i in range(len(this.buttons))
@@ -1066,14 +1098,14 @@ export class InputPopup
     endif
   enddef
 
-  def ApplyHighlights(lines: list<string>, meta: list<dict<any>>,
+  def ApplyHls(lines: list<string>, meta: list<dict<any>>,
       btnLnum: number, btnCharMeta: list<dict<any>>): void
-    prop_remove({type: 'InputPopupLabel', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'InputPopupCursor', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'InputPopupButton', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'InputPopupButtonActive', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'InputPopupOption', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'InputPopupOptionSelected', bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_LABEL, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_CURSOR, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_BTN, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_BTN_ACTIVE, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_OPTION, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_OPTION_SEL, bufnr: this.bufnr}, 1, len(lines))
 
     this._fieldHit = []
     this._optionHit = []
@@ -1083,7 +1115,7 @@ export class InputPopup
       var labelEndByte: number = byteidx(text, m.labelStartChar + m.labelChars)
       var labelLen: number = (labelEndByte == -1 ? strlen(text) : labelEndByte) - (labelStartCol - 1)
       prop_add(m.lnum, labelStartCol, {
-        type: 'InputPopupLabel', bufnr: this.bufnr, length: max([labelLen, 1]),
+        type: TYPE_INPUT_POPUP_LABEL, bufnr: this.bufnr, length: max([labelLen, 1]),
       })
 
       if m.isChoice
@@ -1092,7 +1124,7 @@ export class InputPopup
           var optEndByte: number = byteidx(text, oc.endChar)
           var optEndCol: number = (optEndByte == -1 ? strlen(text) : optEndByte)
           var propType: string = oc.optionIdx == m.field.selectedIdx
-            ? 'InputPopupOptionSelected' : 'InputPopupOption'
+            ? TYPE_INPUT_POPUP_OPTION_SEL : TYPE_INPUT_POPUP_OPTION
           prop_add(m.lnum, optStartCol, {
             type: propType, bufnr: this.bufnr, length: max([optEndCol - (optStartCol - 1), 1]),
           })
@@ -1102,13 +1134,13 @@ export class InputPopup
         continue
       endif
 
-      var valueStartCol: number = byteidx(text, m.valueStartChar) + 1
-      var valueEndByte: number = byteidx(text, m.valueStartChar + m.valueChars)
-      var valueEndCol: number = (valueEndByte == -1 ? strlen(text) : valueEndByte)
-      add(this._fieldHit, {idx: m.idx, lnum: m.lnum, startCol: valueStartCol, endCol: valueEndCol})
+      var valStartCol: number = byteidx(text, m.valueStartChar) + 1
+      var valEndByte: number = byteidx(text, m.valueStartChar + m.valueChars)
+      var valEndCol: number = (valEndByte == -1 ? strlen(text) : valEndByte)
+      add(this._fieldHit, {idx: m.idx, lnum: m.lnum, startCol: valStartCol, endCol: valEndCol})
     endfor
 
-    if this.currentIdx < len(this.fields) && this.fields[this.currentIdx].type !=# 'choice'
+    if this.currentIdx < len(this.fields) && this.fields[this.currentIdx].type !=# TYPE_CHOICE
       var activeMeta: dict<any> = meta[this.currentIdx]
       var f: dict<any> = activeMeta.field
       var cursorCharIdx: number = activeMeta.valueStartChar + (f.cursor - f.offset)
@@ -1117,18 +1149,18 @@ export class InputPopup
       var nextByteCol: number = byteidx(text, cursorCharIdx + 1)
       var cursorLen: number = (nextByteCol == -1 ? strlen(text) : nextByteCol) - (cursorByteCol - 1)
       prop_add(activeMeta.lnum, cursorByteCol, {
-        type: 'InputPopupCursor', bufnr: this.bufnr, length: max([cursorLen, 1]),
+        type: TYPE_INPUT_POPUP_CURSOR, bufnr: this.bufnr, length: max([cursorLen, 1]),
       })
     endif
 
-    this.ApplyButtonHighlights(lines, btnLnum, btnCharMeta)
+    this.ApplyBtnHls(lines, btnLnum, btnCharMeta)
   enddef
 
   # METHOD: Highlight the buttons on line btnLnum, the one with focus as
   # active, and record where each is for mouse clicks. No line is -1.
-  def ApplyButtonHighlights(lines: list<string>, btnLnum: number, btnCharMeta: list<dict<any>>): void
-    prop_remove({type: 'InputPopupButton', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'InputPopupButtonActive', bufnr: this.bufnr}, 1, len(lines))
+  def ApplyBtnHls(lines: list<string>, btnLnum: number, btnCharMeta: list<dict<any>>): void
+    prop_remove({type: TYPE_INPUT_POPUP_BTN, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_INPUT_POPUP_BTN_ACTIVE, bufnr: this.bufnr}, 1, len(lines))
     this._buttonHit = []
     if btnLnum == -1
       return

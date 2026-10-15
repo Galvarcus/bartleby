@@ -33,7 +33,6 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as PO
@@ -43,7 +42,16 @@ import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/helppopup.vim' as H
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/views.vim' as MV
 import 'bartleby/variables/constants.vim' as CO
+
+const HL_TITLE: string = 'Title'
+const KEY_LABEL: string = 'Label'
+const KEY_STATUS: string = 'Status'
+const KEY_WORDS: string = 'Words'
+const TYPE_OUTLINER_HEADER: string = 'OutlinerHeader'
+const TYPE_OUTLINER_SEL: string = 'OutlinerSelected'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -53,7 +61,7 @@ const SORT_KEYS: list<string> = [TREE_ORDER, 'Title', 'Label', 'Status', 'Words'
 const MAX_VISIBLE_ROWS: number = 20
 const OUTLINER_ZINDEX: number = 250
 
-# CLASS: The column values of one row, already strings. FormatRow only
+# CLASS: The column values of one row, already strings. FmtRow only
 # pads them.
 export class Row
   var item: BI.BinderItem
@@ -67,15 +75,15 @@ endclass
 
 # FUNCTION: Return each column and sort key, as used in code, to its name
 # in the message language, for the header and the sort picker.
-def ColumnNames(): dict<string>
+def ColNames(): dict<string>
   return {
-    [TREE_ORDER]: IN.T("Tree Order"),
-    Title: IN.T("Title"),
-    Label: IN.T("Label"),
-    Status: IN.T("Status"),
-    Words: IN.T("Words"),
-    Target: IN.T("Target"),
-    Keywords: IN.T("Keywords"),
+    [TREE_ORDER]: MV.TreeOrder(),
+    Title: MV.Title(),
+    Label: MC.Label(),
+    Status: MC.Status(),
+    Words: MC.Words(),
+    Target: MC.Target(),
+    Keywords: MC.Keywords(),
   }
 enddef
 
@@ -99,7 +107,7 @@ def BuildRow(treeRow: T.Row, binderRoot: string, showIndent: bool, totals: dict<
     : treeRow.item.title
   var words: string = string(get(totals, treeRow.item.id, 0))
 
-  if !treeRow.item.IsDocument()
+  if !treeRow.item.IsDoc()
     return Row.new(treeRow.item, titleText, '-', '-', words, '-', '')
   endif
 
@@ -111,13 +119,13 @@ enddef
 
 def SortRows(rows: list<Row>, key: string): list<Row>
   var sorted: list<Row> = copy(rows)
-  if key ==# 'Title'
+  if key ==# HL_TITLE
     sorted->sort((a, b) => a.title ==# b.title ? 0 : (a.title ># b.title ? 1 : -1))
-  elseif key ==# 'Label'
+  elseif key ==# KEY_LABEL
     sorted->sort((a, b) => a.label ==# b.label ? 0 : (a.label ># b.label ? 1 : -1))
-  elseif key ==# 'Status'
+  elseif key ==# KEY_STATUS
     sorted->sort((a, b) => a.status ==# b.status ? 0 : (a.status ># b.status ? 1 : -1))
-  elseif key ==# 'Words'
+  elseif key ==# KEY_WORDS
     sorted->sort((a, b) => str2nr(a.words) - str2nr(b.words))
   endif
   return sorted
@@ -127,8 +135,8 @@ def Pad(text: string, width: number): string
   return text .. repeat(' ', max([0, width - strdisplaywidth(text)]))
 enddef
 
-def ColumnWidths(rows: list<Row>): list<number>
-  var names: dict<string> = ColumnNames()
+def ColWidths(rows: list<Row>): list<number>
+  var names: dict<string> = ColNames()
   var widths: list<number> = HEADERS->mapnew((_, h) => strdisplaywidth(names[h]))
   for row in rows
     widths[0] = max([widths[0], strdisplaywidth(row.title)])
@@ -140,7 +148,7 @@ def ColumnWidths(rows: list<Row>): list<number>
   return widths
 enddef
 
-def FormatRow(widths: list<number>, title: string, label: string, status: string,
+def FmtRow(widths: list<number>, title: string, label: string, status: string,
     words: string, target: string, keywords: string): string
   return Pad(title, widths[0]) .. '  ' .. Pad(label, widths[1]) .. '  '
     .. Pad(status, widths[2]) .. '  ' .. Pad(words, widths[3]) .. '  '
@@ -170,13 +178,13 @@ class OutlinerPopup
     var built: list<Row> = treeRows->mapnew(
       (_, tr) => BuildRow(tr, this.project.BinderRoot(), showIndent, totals))
     this.rows = showIndent ? built : SortRows(built, this.sortKey)
-    this.widths = ColumnWidths(this.rows)
+    this.widths = ColWidths(this.rows)
     this.selectedIdx = min([this.selectedIdx, max([0, len(this.rows) - 1])])
   enddef
 
   def EnsurePropTypes(): void
     if empty(prop_type_get('OutlinerHeader'))
-      prop_type_add('OutlinerHeader', {highlight: 'Title'})
+      prop_type_add('OutlinerHeader', {highlight: HL_TITLE})
     endif
     if empty(prop_type_get('OutlinerSelected'))
       prop_type_add('OutlinerSelected', {highlight: 'PmenuSel'})
@@ -196,7 +204,7 @@ class OutlinerPopup
     var height: number = min([max([len(this.rows), 1]), MAX_VISIBLE_ROWS]) + 2
 
     this.winid = popup_create(this.bufnr, {
-      title: printf(IN.T(" Outliner: %s "), this.folder.title),
+      title: MV.Outliner(this.folder.title),
       border: [1, 1, 1, 1],
       padding: [0, 1, 0, 1],
       minwidth: width,
@@ -231,19 +239,19 @@ class OutlinerPopup
     if this.bufnr == -1
       return
     endif
-    var shown: list<string> = HEADERS->mapnew((_, h) => ColumnNames()[h])
-    var header: string = FormatRow(this.widths, shown[0], shown[1], shown[2],
+    var shown: list<string> = HEADERS->mapnew((_, h) => ColNames()[h])
+    var header: string = FmtRow(this.widths, shown[0], shown[1], shown[2],
       shown[3], shown[4], shown[5])
     var lines: list<string> = [header, repeat('-', strdisplaywidth(header))]
 
     var [first: number, last: number] = this.VisibleSlice()
     for i in range(first, last - 1)
       var row: Row = this.rows[i]
-      lines->add(FormatRow(this.widths, row.title, row.label, row.status, row.words,
+      lines->add(FmtRow(this.widths, row.title, row.label, row.status, row.words,
         row.target, row.keywords))
     endfor
     if empty(this.rows)
-      lines->add('(empty)')
+      lines->add(MV.Empty())
     endif
 
     setbufline(this.bufnr, 1, lines)
@@ -251,84 +259,84 @@ class OutlinerPopup
       deletebufline(this.bufnr, len(lines) + 1, '$')
     endif
 
-    prop_remove({type: 'OutlinerHeader', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'OutlinerSelected', bufnr: this.bufnr}, 1, len(lines))
-    prop_add(1, 1, {type: 'OutlinerHeader', bufnr: this.bufnr, length: strlen(header)})
+    prop_remove({type: TYPE_OUTLINER_HEADER, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_OUTLINER_SEL, bufnr: this.bufnr}, 1, len(lines))
+    prop_add(1, 1, {type: TYPE_OUTLINER_HEADER, bufnr: this.bufnr, length: strlen(header)})
     if !empty(this.rows)
       var selLnum: number = 3 + (this.selectedIdx - first)
       prop_add(selLnum, 1, {
-        type: 'OutlinerSelected', bufnr: this.bufnr, length: strlen(lines[selLnum - 1]),
+        type: TYPE_OUTLINER_SEL, bufnr: this.bufnr, length: strlen(lines[selLnum - 1]),
       })
     endif
   enddef
 
-  def SelectedRow(): Row
+  def SelRow(): Row
     return empty(this.rows) ? null_object : this.rows[this.selectedIdx]
   enddef
 
-  def OpenSelectedDoc(): void
-    var row: Row = this.SelectedRow()
-    if row is null_object || !row.item.IsDocument()
+  def OpenSelDoc(): void
+    var row: Row = this.SelRow()
+    if row is null_object || !row.item.IsDoc()
       return
     endif
     var path: string = row.item.AbsPath(this.project.BinderRoot())
     if !filereadable(path)
-      log.Error(printf(IN.T("missing file on disk: %s"), path))
+      log.Error(MC.MissingFileDisk(path))
       return
     endif
     this.Close()
-    W.GoToEditorWindow()
+    W.GoToEditorWin()
     execute 'edit ' .. fnameescape(path)
   enddef
 
   def PickLabel(): void
-    var row: Row = this.SelectedRow()
-    if row is null_object || !row.item.IsDocument()
+    var row: Row = this.SelRow()
+    if row is null_object || !row.item.IsDoc()
       return
     endif
     var item: BI.BinderItem = row.item
-    var currentMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
-    PI.PickOne(IN.T("Label"), CO.LABELS, (choice: string) => {
+    var curMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
+    PI.PickOne(MC.Label(), CO.LABELS, (choice: string) => {
       var meta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
       meta.SetLabel(choice)
       meta.Save(item.MetaPath(this.project.BinderRoot()))
       this.Rebuild()
       this.Render()
-    }, currentMeta.label, D.LabelNames())
+    }, curMeta.label, D.LabelNames())
   enddef
 
   def PickStatus(): void
-    var row: Row = this.SelectedRow()
-    if row is null_object || !row.item.IsDocument()
+    var row: Row = this.SelRow()
+    if row is null_object || !row.item.IsDoc()
       return
     endif
     var item: BI.BinderItem = row.item
-    var currentMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
-    PI.PickOne(IN.T("Status"), CO.STATUSES, (choice: string) => {
+    var curMeta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
+    PI.PickOne(MC.Status(), CO.STATUSES, (choice: string) => {
       var meta: D.DocMeta = item.LoadMeta(this.project.BinderRoot())
       meta.SetStatus(choice)
       meta.Save(item.MetaPath(this.project.BinderRoot()))
       this.Rebuild()
       this.Render()
-    }, currentMeta.status, D.StatusNames())
+    }, curMeta.status, D.StatusNames())
   enddef
 
   def PickSort(): void
-    PI.PickOne(IN.T("Sort by"), SORT_KEYS, (choice: string) => {
+    PI.PickOne(MV.SortBy(), SORT_KEYS, (choice: string) => {
       this.sortKey = choice
       this.Rebuild()
       this.Render()
-    }, this.sortKey, ColumnNames())
+    }, this.sortKey, ColNames())
   enddef
 
   def ShowHelp(): void
-    H.Show(IN.T("Outliner"), [
-      ['<CR>', IN.T("Open document under cursor")],
-      ['l', IN.T("Set label")],
-      ['s', IN.T("Set status")],
-      ['gs', IN.T("Sort")],
-      ['q', IN.T("Close Outliner")],
-      ['?', IN.T("This help")],
+    H.Show(MV.Outliner2(), [
+      ['<CR>', MV.OpenDocUnder()],
+      ['l', MC.SetLabel()],
+      ['s', MC.SetStatus()],
+      ['gs', MV.Sort()],
+      ['q', MV.CloseOutliner()],
+      ['?', MC.Help()],
     ])
   enddef
 
@@ -341,14 +349,14 @@ class OutlinerPopup
       return true
     endif
 
-    if key ==# 'j' || key ==# "\<Down>"
+    if key ==# 'j' || key ==# CO.KEY_DOWN
       this.selectedIdx = min([max([len(this.rows) - 1, 0]), this.selectedIdx + 1])
       this.Render()
-    elseif key ==# 'k' || key ==# "\<Up>"
+    elseif key ==# 'k' || key ==# CO.KEY_UP
       this.selectedIdx = max([0, this.selectedIdx - 1])
       this.Render()
-    elseif key ==# "\<CR>"
-      this.OpenSelectedDoc()
+    elseif key ==# CO.KEY_CR
+      this.OpenSelDoc()
     elseif key ==# 'l'
       this.PickLabel()
     elseif key ==# 's'
@@ -357,7 +365,7 @@ class OutlinerPopup
       this.pendingG = true
     elseif key ==# '?'
       this.ShowHelp()
-    elseif key ==# 'q' || key ==# "\<Esc>"
+    elseif key ==# 'q' || key ==# CO.KEY_ESC
       this.Close()
     endif
     return true

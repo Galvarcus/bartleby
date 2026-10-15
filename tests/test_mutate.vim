@@ -18,7 +18,7 @@ def Test_is_immutable_folder_true_for_all_5_structural_roles(): void
   assert_true(MU.IsImmutableFolder(BI.BinderItem.NewFolder('x', CO.ROLE_FRONT_MATTER)))
   assert_true(MU.IsImmutableFolder(BI.BinderItem.NewFolder('x', CO.ROLE_MANUSCRIPT)))
   assert_true(MU.IsImmutableFolder(BI.BinderItem.NewFolder('x', CO.ROLE_BACK_MATTER)))
-  assert_true(MU.IsImmutableFolder(BI.BinderItem.NewFolder('x', CO.ROLE_CHARACTERS)))
+  assert_true(MU.IsImmutableFolder(BI.BinderItem.NewFolder('x', CO.ROLE_CHARS)))
   assert_true(MU.IsImmutableFolder(BI.BinderItem.NewFolder('x', CO.ROLE_RESEARCH)))
 enddef
 
@@ -224,22 +224,22 @@ def Test_same_operations_at_top_level_and_in_a_folder(): void
     var name: string = owner is project ? 'top level' : 'folder'
     # Move A down: B comes first.
     assert_true(MU.MoveWithinSiblings(project, RowOf(project, a.id), 1), name)
-    assert_true(owner.IndexOfChild(b.id) < owner.IndexOfChild(a.id), name)
+    assert_true(owner.IdxOfChild(b.id) < owner.IdxOfChild(a.id), name)
     # Remove B.
     var before: number = owner.ChildCount()
     MU.Remove(project, RowOf(project, b.id))
     assert_equal(before - 1, owner.ChildCount(), name)
-    assert_equal(-1, owner.IndexOfChild(b.id), name)
+    assert_equal(-1, owner.IdxOfChild(b.id), name)
   endfor
 
   # Indent: at the top level, Top A moves into Research, the folder just
   # before it. In the folder, In A moves into Places.
   assert_true(MU.Indent(project, RowOf(project, topA.id)))
-  assert_true(research.IndexOfChild(topA.id) >= 0)
-  assert_equal(-1, project.IndexOfChild(topA.id))
+  assert_true(research.IdxOfChild(topA.id) >= 0)
+  assert_equal(-1, project.IdxOfChild(topA.id))
   assert_true(MU.Indent(project, RowOf(project, inA.id)))
-  assert_true(subFolder.IndexOfChild(inA.id) >= 0)
-  assert_equal(-1, research.IndexOfChild(inA.id))
+  assert_true(subFolder.IdxOfChild(inA.id) >= 0)
+  assert_equal(-1, research.IdxOfChild(inA.id))
 enddef
 
 # FUNCTION: Return the id of item, or an empty string for null_object, so

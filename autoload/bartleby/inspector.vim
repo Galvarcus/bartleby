@@ -22,11 +22,10 @@ var is_loaded: bool = true
 # While it is open, the Inspector follows the document in the editor
 # window. Opening another document, from the Binder, the Corkboard, the
 # Outliner, or with :e, updates it through a BufEnter autocommand that
-# ignores Bartleby's own panes, see IsChromeBuffer in windows.vim.
+# ignores Bartleby's own panes, see IsChromeBuf in windows.vim.
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as PO
@@ -38,7 +37,12 @@ import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/progress.vim' as PG
 import autoload 'bartleby/progressview.vim' as PV
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/panes.vim' as MP
 import 'bartleby/variables/constants.vim' as CO
+
+const INSPECTOR_PROJ: string = 'bartleby_inspector_project'
+const INSPECTOR_ITEM: string = 'bartleby_inspector_item'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -56,19 +60,19 @@ const LINE_SYNOPSIS_HEADER: number = 9
 # syntax/bartleby-inspector.vim matches these labels.
 export def FieldLabels(): dict<string>
   return {
-    title: IN.T("Title:"),
-    label: IN.T("Label:"),
-    status: IN.T("Status:"),
-    target: IN.T("Target:"),
-    keywords: IN.T("Keywords:"),
-    synopsis: IN.T("Synopsis:"),
+    title: MP.Title(),
+    label: MP.Label(),
+    status: MP.Status(),
+    target: MP.Target(),
+    keywords: MP.Keywords(),
+    synopsis: MP.Synopsis(),
   }
 enddef
 
 def RenderContent(item: BI.BinderItem, meta: D.DocMeta): list<string>
   var labels: dict<string> = FieldLabels()
   var lines: list<string> = [
-    $'::{IN.T("Inspector")}::',
+    $'::{MP.Inspector()}::',
     $'{labels.title} {item.title}',
     $'{labels.label} {D.LabelName(meta.label)}',
     $'{labels.status} {D.StatusName(meta.status)}',
@@ -96,25 +100,25 @@ def GoalLines(): list<string>
   var T = PG.Thousands
   var lines: list<string> = []
   if goals.session > 0
-    lines->add($'{IN.T("Session:")} {T(max([written.session, 0]))} / {T(goals.session)}')
+    lines->add($'{MP.Session()} {T(max([written.session, 0]))} / {T(goals.session)}')
   endif
   if goals.daily > 0
-    lines->add($'{IN.T("Today:")} {T(max([written.today, 0]))} / {T(goals.daily)}')
+    lines->add($'{MP.Today()} {T(max([written.today, 0]))} / {T(goals.daily)}')
   endif
   var tracker: dict<any> = PG.Tracker()
   var f: dict<any> = PG.TrackerFigures(PG.DayOf(localtime()))
   if !empty(f)
     var gap: string = f.difference >= 0
-      ? printf(IN.T("%s over"), T(f.difference)) : printf(IN.T("%s under"), T(-f.difference))
-    lines->add(f.dayNumber == 0 ? $'{IN.T("Tracker:")} {printf(IN.T("starts %s"), tracker.start)}'
-      : $'{IN.T("Tracker:")} {printf(IN.T("day %d of %d"), min([f.dayNumber, tracker.days]), tracker.days)}, {gap}')
+      ? MC.Over(T(f.difference)) : MC.Under(T(-f.difference))
+    lines->add(f.dayNumber == 0 ? $'{MP.Tracker()} {MP.Starts(tracker.start)}'
+      : $'{MP.Tracker()} {MP.Day(min([f.dayNumber, tracker.days]), tracker.days)}, {gap}')
   endif
   return empty(lines) ? [] : [GoalsHeader()] + lines
 enddef
 
 # FUNCTION: Return the header of the goal lines.
 def GoalsHeader(): string
-  return $'::{IN.T("Goals")}::'
+  return $'::{MP.Goals()}::'
 enddef
 
 # FUNCTION: Write the Inspector buffer for item without moving the focus
@@ -131,19 +135,19 @@ def RefreshFor(project: PO.Project, item: BI.BinderItem): void
   setbufline(bufNr, 1, RenderContent(item, meta))
   setbufvar(bufNr, '&modifiable', 0)
   setbufvar(bufNr, '&modified', 0)
-  setbufvar(bufNr, 'bartleby_inspector_project', project)
-  setbufvar(bufNr, 'bartleby_inspector_item', item)
+  setbufvar(bufNr, INSPECTOR_PROJ, project)
+  setbufvar(bufNr, INSPECTOR_ITEM, item)
 enddef
 
-def CurrentContext(): dict<any>
+def CurContext(): dict<any>
   return {
-    project: get(b:, 'bartleby_inspector_project', null_object),
-    item: get(b:, 'bartleby_inspector_item', null_object),
+    project: get(b:, INSPECTOR_PROJ, null_object),
+    item: get(b:, INSPECTOR_ITEM, null_object),
   }
 enddef
 
 def EditUnderCursor(): void
-  var ctx: dict<any> = CurrentContext()
+  var ctx: dict<any> = CurContext()
   if ctx.project is null_object || ctx.item is null_object
     return
   endif
@@ -153,7 +157,7 @@ def EditUnderCursor(): void
 
   if lnum == LINE_LABEL
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    PI.PickOne(IN.T("Label"), CO.LABELS, (choice: string) => {
+    PI.PickOne(MC.Label(), CO.LABELS, (choice: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetLabel(choice)
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -161,7 +165,7 @@ def EditUnderCursor(): void
     }, meta.label, D.LabelNames())
   elseif lnum == LINE_STATUS
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    PI.PickOne(IN.T("Status"), CO.STATUSES, (choice: string) => {
+    PI.PickOne(MC.Status(), CO.STATUSES, (choice: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetStatus(choice)
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -170,7 +174,7 @@ def EditUnderCursor(): void
   elseif lnum == LINE_TARGET
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     var current: string = meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : ''
-    IP.PromptText(IN.T("Target word count"), current, (text: string) => {
+    IP.PromptText(MP.TargetWordCount(), current, (text: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetWordCountTarget(max([0, str2nr(text)]))
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -178,7 +182,7 @@ def EditUnderCursor(): void
     })
   elseif lnum == LINE_KEYWORDS
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    IP.PromptText(IN.T("Keywords"), join(meta.keywords, ', '), (text: string) => {
+    IP.PromptText(MC.Keywords(), join(meta.keywords, ', '), (text: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetKeywords(text ==# '' ? [] : split(text, ',\s*'))
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -189,7 +193,7 @@ def EditUnderCursor(): void
     PV.EditGoals()
   elseif lnum >= LINE_SYNOPSIS_HEADER
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-    IP.PromptMultiline(IN.T("Synopsis"), meta.synopsis, (text: string) => {
+    IP.PromptMultiline(MC.Synopsis(), meta.synopsis, (text: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
       m.SetSynopsis(text)
       m.Save(item.MetaPath(project.BinderRoot()))
@@ -211,14 +215,14 @@ def FollowEditor(): void
     augroup END
     return
   endif
-  if W.IsChromeBuffer(bufnr('%'))
+  if W.IsChromeBuf(bufnr('%'))
     return
   endif
   var project: PO.Project = ST.Get()
   if project is null_object
     return
   endif
-  var item: BI.BinderItem = SV.DocumentHere(project)
+  var item: BI.BinderItem = SV.DocHere(project)
   if item is null_object
     return
   endif
@@ -243,12 +247,12 @@ export def Toggle(): void
 
   var project: PO.Project = ST.Get()
   if project is null_object
-    log.Warn(IN.T("no scrive open"))
+    log.Warn(MP.NoScriveOpen())
     return
   endif
-  var item: BI.BinderItem = SV.DocumentHere(project)
+  var item: BI.BinderItem = SV.DocHere(project)
   if item is null_object
-    log.Info(IN.T("current buffer is not a document in the open scrive"))
+    log.Info(MP.CurBufNot())
     return
   endif
 

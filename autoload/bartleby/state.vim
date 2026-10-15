@@ -16,12 +16,12 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/project.vim' as PO
 
-var current_project: PO.Project
+var cur_proj: PO.Project
 
 export def Get(): PO.Project
-  return current_project
+  return cur_proj
 enddef
 
 export def Set(project: PO.Project): void
-  current_project = project
+  cur_proj = project
 enddef

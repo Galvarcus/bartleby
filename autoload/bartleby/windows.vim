@@ -1,7 +1,9 @@
 vim9script
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/panes.vim' as MP
 import 'bartleby/variables/constants.vim' as CO
+
+const PAT_NOMAGIC: string = '\V'
 
 if exists('s:is_loaded') || v:version < 902 || &cp
   finish
@@ -25,42 +27,42 @@ var is_loaded: bool = true
 
 var log = L.New(expand('<sfile>:t'))
 
-const CHROME_BUFFER_NAMES: list<string> = [
+const CHROME_BUF_NAMES: list<string> = [
   CO.BINDER_BUF,
   CO.INSPECTOR_BUF,
 ]
 
 # Side panes that code opening documents must never replace.
-const PROTECTED_BUFFER_NAMES: list<string> = [
+const PROTECTED_BUF_NAMES: list<string> = [
   CO.BINDER_BUF,
   CO.INSPECTOR_BUF,
 ]
 
 def MatchesAny(bufNr: number, names: list<string>): bool
   var name: string = bufname(bufNr)
-  for bufferName in names
-    if name =~# '\V' .. bufferName .. '\$'
+  for bufName in names
+    if name =~# PAT_NOMAGIC .. bufName .. '\$'
       return true
     endif
   endfor
   return false
 enddef
 
-export def IsChromeBuffer(bufNr: number): bool
-  return MatchesAny(bufNr, CHROME_BUFFER_NAMES)
+export def IsChromeBuf(bufNr: number): bool
+  return MatchesAny(bufNr, CHROME_BUF_NAMES)
 enddef
 
-def IsProtectedBuffer(bufNr: number): bool
-  return MatchesAny(bufNr, PROTECTED_BUFFER_NAMES)
+def IsProtectedBuf(bufNr: number): bool
+  return MatchesAny(bufNr, PROTECTED_BUF_NAMES)
 enddef
 
 # FUNCTION: Go to the first window of the current tab that is not a
 # protected pane, the Binder or the Inspector, and create one when every
 # window is protected. Always succeeds, and always leaves a window that
 # can be replaced.
-export def GoToEditorWindow(): bool
+export def GoToEditorWin(): bool
   for winNr in range(1, winnr('$'))
-    if !IsProtectedBuffer(winbufnr(winNr))
+    if !IsProtectedBuf(winbufnr(winNr))
       execute ':' .. winNr .. 'wincmd w'
       return true
     endif
@@ -74,10 +76,10 @@ enddef
 # window. Focus, Spotlight, and Quill call it first, because in a pane they
 # would change keys, text, or the view that the pane depends on.
 export def RefusedInPane(feature: string): bool
-  if !IsChromeBuffer(bufnr())
+  if !IsChromeBuf(bufnr())
     return false
   endif
-  log.Info(printf(IN.T("%s works only in the edit window"), feature))
+  log.Info(MP.WorksOnlyEdit(feature))
   return true
 enddef
 
@@ -88,12 +90,12 @@ enddef
 
 # FUNCTION: Return true when winId is a window for text: a normal window of
 # a file or a Scrivening, not a pane, help, or a list of results.
-def IsEditWindow(winId: number): bool
+def IsEditWin(winId: number): bool
   if win_gettype(winId) !=# ''
     return false
   endif
   var bufNr: number = winbufnr(winId)
-  return bufNr > 0 && !IsChromeBuffer(bufNr)
+  return bufNr > 0 && !IsChromeBuf(bufNr)
     && index(['', 'acwrite'], getbufvar(bufNr, '&buftype')) >= 0
 enddef
 
@@ -105,16 +107,16 @@ def IsPlaceholder(bufNr: number): bool
     && getbufvar(bufNr, '&buftype') ==# '' && getbufline(bufNr, 1, 2) == ['']
 enddef
 
-# FUNCTION: Start keeping the edit window. See KeepEditWindow.
-export def WatchEditWindow(): void
+# FUNCTION: Start keeping the edit window. See KeepEditWin.
+export def WatchEditWin(): void
   augroup bartleby_windows
     autocmd!
-    autocmd WinClosed * KeepEditWindow()
+    autocmd WinClosed * KeepEditWin()
   augroup END
 enddef
 
 # FUNCTION: Stop keeping the edit window, as when Bartleby closes.
-export def StopWatchingEditWindow(): void
+export def StopWatchingEditWin(): void
   augroup bartleby_windows
     autocmd!
   augroup END
@@ -123,35 +125,35 @@ enddef
 # FUNCTION: On WinClosed: when an edit window closes that shows a document,
 # note the panes of its tab and their widths, and once the window is gone,
 # make a new edit window if none is left.
-def KeepEditWindow(): void
+def KeepEditWin(): void
   var closing: number = str2nr(expand('<amatch>'))
-  if !IsEditWindow(closing) || IsPlaceholder(winbufnr(closing))
+  if !IsEditWin(closing) || IsPlaceholder(winbufnr(closing))
     return
   endif
   var tabNr: number = win_id2tabwin(closing)[0]
   var panes: list<dict<any>> = []
   for info in getwininfo()
-    if info.tabnr == tabNr && IsChromeBuffer(info.bufnr)
+    if info.tabnr == tabNr && IsChromeBuf(info.bufnr)
       panes->add({winid: info.winid, name: bufname(info.bufnr), width: info.width})
     endif
   endfor
   if !empty(panes)
-    # A window cannot be added while one closes. RestoreEditWindow looks
+    # A window cannot be added while one closes. RestoreEditWin looks
     # again, because another edit window may be there by then.
-    timer_start(0, (_) => RestoreEditWindow(panes))
+    timer_start(0, (_) => RestoreEditWin(panes))
   endif
 enddef
 
 # FUNCTION: Open an empty edit window between the panes, or beside the one
 # pane that is left, and give each pane the width that it had. Does nothing
 # when the panes are gone, or when an edit window is there again.
-def RestoreEditWindow(panes: list<dict<any>>): void
+def RestoreEditWin(panes: list<dict<any>>): void
   var alive: list<dict<any>> = panes->copy()->filter((_, p) => win_id2win(p.winid) > 0)
   if empty(alive)
     return
   endif
   for winNr in range(1, winnr('$'))
-    if IsEditWindow(win_getid(winNr))
+    if IsEditWin(win_getid(winNr))
       return
     endif
   endfor

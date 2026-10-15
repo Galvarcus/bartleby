@@ -29,9 +29,11 @@ var is_loaded: bool = true
 
 import 'bartleby/variables/constants.vim' as CO
 
+const PATH_LANG: string = '/lang'
+
 # The plugin folder, from this script's own path. This script imports
 # nothing else, so every script can import it without an import cycle.
-bindtextdomain(CO.TEXT_DOMAIN, expand('<sfile>:p:h:h:h') .. '/lang')
+bindtextdomain(CO.TEXT_DOMAIN, expand('<sfile>:p:h:h:h') .. PATH_LANG)
 
 # FUNCTION: Return text translated into the message language.
 export def T(text: string): string

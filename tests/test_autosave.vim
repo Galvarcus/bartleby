@@ -39,7 +39,7 @@ enddef
 def Test_saves_a_changed_scrive_document(): void
   var fx = Setup()
   execute 'edit ' .. fx.doc
-  assert_true(A.IsScriveDocument())
+  assert_true(A.IsScriveDoc())
   Edit('changed')
   A.Save(false)
   assert_equal(['changed'], readfile(fx.doc))
@@ -50,7 +50,7 @@ enddef
 def Test_ignores_files_outside_the_binder(): void
   var fx = Setup()
   execute 'edit ' .. fx.outside
-  assert_false(A.IsScriveDocument())
+  assert_false(A.IsScriveDoc())
   Edit('changed')
   A.Save(true)
   assert_equal(['start'], readfile(fx.outside))

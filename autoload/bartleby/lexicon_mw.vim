@@ -10,7 +10,7 @@ var is_loaded: bool = true
 # lexicon_mw.vim: the Merriam-Webster provider for lexicon.vim, through
 # dictionaryapi.com. A provider is a script with two functions:
 #   BuildUrl(ref, word, key)  The request URL for word, already cleaned.
-#                             ref is the entry of CO.REFERENCES.
+#                             ref is the entry of CO.REFS.
 #   Parse(kind, word, body)   The result, see lexicon_result.vim, from
 #                             the response body.
 # lexicon.vim registers each provider in its Provider function. See
@@ -19,31 +19,36 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/lexicon_result.vim' as LR
+import autoload 'bartleby/locale/compile.vim' as MK
 import 'bartleby/variables/constants.vim' as CO
+
+const PAT_CHARS: string = '\zs'
+const URL_ESCAPE: string = '%%%02X'
+var base_url: string = g:bartleby_lexicon_base_url
 
 # FUNCTION: Return the request URL. g:bartleby_lexicon_base_url replaces
 # the Merriam-Webster address, for a proxy or a test server.
 export def BuildUrl(ref: dict<string>, word: string, key: string): string
-  var base: string = substitute(g:bartleby_lexicon_base_url, '/\+$', '', '')
+  var base: string = substitute(base_url, '/\+$', '', '')
   return $'{base}/{ref.apiName}/json/{UrlEncode(word)}?key={key}'
 enddef
 
 # FUNCTION: Parse a Merriam-Webster response body. A list of strings means
 # not found, with spelling suggestions. Merriam-Webster answers a bad key
 # with plain text, not JSON: that becomes an error with its first line.
-export def Parse(kind: string, word: string, body: string): dict<any>
+export def Parse(kind: string, word: string, body: string): LR.Result
   var text: string = trim(body)
   if text ==# ''
-    return LR.Error('empty response from Merriam-Webster')
+    return LR.Error(MK.EmptyRespMerriam())
   endif
   var data: any
   try
     data = json_decode(text)
   catch
-    return LR.Error('Merriam-Webster: ' .. strcharpart(split(text, "\n")[0], 0, 120))
+    return LR.Error(MK.MerriamWebster(strcharpart(split(text, "\n")[0], 0, 120)))
   endtry
   if type(data) != v:t_list
-    return LR.Error('unexpected response from Merriam-Webster')
+    return LR.Error(MK.UnexpectedRespMerriam())
   endif
   if empty(data) || data->copy()->filter((_, v) => type(v) != v:t_string)->empty()
     return LR.NotFound(data)
@@ -54,7 +59,7 @@ export def Parse(kind: string, word: string, body: string): dict<any>
   var chosen: list<dict<any>> = empty(matching) ? raw : matching
   var entries: list<dict<any>> = kind ==# CO.KIND_THESAURUS
     ? chosen->mapnew((_, e) => ThesaurusEntry(e))
-    : chosen->mapnew((_, e) => DictionaryEntry(e))
+    : chosen->mapnew((_, e) => DictEntry(e))
   entries = entries->filter((_, e) => !empty(e))
   return empty(entries) ? LR.NotFound() : LR.Ok(entries)
 enddef
@@ -62,12 +67,12 @@ enddef
 # FUNCTION: Percent-encode every byte outside the RFC 3986 unreserved set.
 export def UrlEncode(text: string): string
   var encoded: string = ''
-  for ch in split(text, '\zs')
+  for ch in split(text, PAT_CHARS)
     if ch =~# '^[A-Za-z0-9._~-]$'
       encoded ..= ch
     else
       for byte in str2blob([ch])
-        encoded ..= printf('%%%02X', byte)
+        encoded ..= printf(URL_ESCAPE, byte)
       endfor
     endif
   endfor
@@ -88,7 +93,7 @@ def IsEntryFor(entry: dict<any>, word: string): bool
   return tolower(StripSyllables(hw)) ==# word
 enddef
 
-def DictionaryEntry(entry: dict<any>): dict<any>
+def DictEntry(entry: dict<any>): dict<any>
   var defs: list<any> = get(entry, 'shortdef', [])->filter((_, d) => type(d) == v:t_string)
   if empty(defs)
     return {}

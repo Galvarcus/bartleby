@@ -11,7 +11,7 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/lang.vim' as LA
-import autoload 'bartleby/pos.vim' as P
+import autoload 'bartleby/pos.vim' as POS
 import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/tagger.vim' as TA
 
@@ -22,7 +22,7 @@ const MOCK_TAGGER: string = expand('<sfile>:p:h') .. '/mock_tagger.py'
 def UseLanguage(code: string): void
   g:bartleby_language = code
   LA.ClearCache()
-  P.ClearLists()
+  POS.ClearLists()
 enddef
 
 def Test_setting_sets_the_code(): void
@@ -44,15 +44,15 @@ def Test_language_file_sets_the_rules(): void
     lists: {adverbs: [], adverb_exceptions: []},
   })], TEST_FILE)
   UseLanguage('zz')
-  var lists = P.Lists()
-  assert_true(P.IsHeuristicAdverb('rapidement', lists))
-  assert_false(P.IsHeuristicAdverb('quickly', lists))
-  assert_false(P.IsContraction("don't", lists))
+  var lists = POS.Lists()
+  assert_true(POS.IsHeuristicAdverb('rapidement', lists))
+  assert_false(POS.IsHeuristicAdverb('quickly', lists))
+  assert_false(POS.IsContraction("don't", lists))
   delete(TEST_FILE)
   UseLanguage('en')
-  lists = P.Lists()
-  assert_true(P.IsHeuristicAdverb('quickly', lists))
-  assert_true(P.IsContraction("don't", lists))
+  lists = POS.Lists()
+  assert_true(POS.IsHeuristicAdverb('quickly', lists))
+  assert_true(POS.IsContraction("don't", lists))
 enddef
 
 def Test_passive_hidden_without_a_passive_rule(): void

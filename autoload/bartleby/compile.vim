@@ -27,7 +27,6 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binderitem.vim' as BI
@@ -41,24 +40,55 @@ import autoload 'bartleby/helppopup.vim' as H
 import autoload 'bartleby/dialog_popup.vim' as DP
 import autoload 'dist/vim9.vim' as DV
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/compile.vim' as MK
 import 'bartleby/variables/constants.vim' as CO
+
+const FMT_HTML: string = 'HTML'
+const FMT_EPUB: string = 'EPUB'
+const FMT_MARKDOWN: string = 'Markdown'
+const FMT_FDX: string = 'FDX'
+const FMT_PDF: string = 'PDF'
+const PATH_COMPILE_TARGETS: string = '/compile/targets'
+const EXT_JSON: string = '.json'
+const FILE_JSON: string = '*.json'
+const SPACING_DOUBLE: string = 'Double'
+const SPACING_SINGLE: string = 'Single'
+const PATH_COMPILE_OUTPUT: string = '/compile/output'
+const PATH_TOOLS_LATEX_MANUSCRIPT_TEX: string = '/tools/latex/manuscript.tex'
+const PATH_TOOLS_LATEX_BOOK_TEX: string = '/tools/latex/book.tex'
+const PATH_TOOLS_CSS_BOOK_CSS: string = '/tools/css/book.css'
+const ARG_NOVEL: string = '--metadata=isnovel:true'
+const COURIER: string = 'courier'
+const ARG_COURIER: string = '--metadata=usecourier:true'
+const ARG_SINGLE: string = '--metadata=singlespaced:true'
+const EXT_LOG: string = '.log'
+const FLAG_STANDALONE: string = '--standalone'
+const FLAG_TOC: string = '--toc'
+const ARG_CHAPTERS: string = '--top-level-division=chapter'
+const ARG_XELATEX: string = '--pdf-engine=xelatex'
+const A4: string = 'a4'
+const LETTER: string = 'letter'
+const ACTION_EDIT: string = 'Edit'
+const ACTION_DELETE: string = 'Delete'
+const ACTION_RUN: string = 'Run'
 
 var log = L.New(expand('<sfile>:t'))
 var compilescriptpath: string = expand('<sfile>:p')
-var compilepandocbin: string = g:bartleby_compile_pandoc_bin
-var compilescreenplainbin: string = g:bartleby_compile_screenplain_bin
-var compilelang: string = g:bartleby_compile_lang
-var compilepapersize: string = g:bartleby_compile_papersize
-var compiletoc: bool = g:bartleby_compile_toc
-var compilestandalone: bool = g:bartleby_compile_standalone
-var compilemanuscriptfont: string = g:bartleby_compile_manuscript_font
-var compilebookfont: string = g:bartleby_compile_book_font
-var compilemanuscriptdoublespaced: bool = g:bartleby_compile_manuscript_double_spaced
-var compileindentparagraphs: bool = g:bartleby_compile_indent_paragraphs
-var compilebookchapterstyle: string = g:bartleby_compile_book_chapter_style
-var compilebookpartstyle: string = g:bartleby_compile_book_part_style
-var compileextraargs: list<string> = g:bartleby_compile_extra_args
-var compilelogretention: number = g:bartleby_compile_log_retention
+var pandoc_bin: string = g:bartleby_compile_pandoc_bin
+var screenplain_bin: string = g:bartleby_compile_screenplain_bin
+var compile_lang: string = g:bartleby_compile_lang
+var papersize: string = g:bartleby_compile_papersize
+var toc: bool = g:bartleby_compile_toc
+var standalone: bool = g:bartleby_compile_standalone
+var manuscript_font: string = g:bartleby_compile_manuscript_font
+var book_font: string = g:bartleby_compile_book_font
+var manuscript_double_spaced: bool = g:bartleby_compile_manuscript_double_spaced
+var indent_paras: bool = g:bartleby_compile_indent_paragraphs
+var book_chapter_style: string = g:bartleby_compile_book_chapter_style
+var book_part_style: string = g:bartleby_compile_book_part_style
+var extra_args: list<string> = g:bartleby_compile_extra_args
+var log_retention: number = g:bartleby_compile_log_retention
 
 const KIND_MANUSCRIPT: string = 'Manuscript'
 const KIND_BOOK: string = 'Book'
@@ -67,10 +97,10 @@ const KINDS: list<string> = [KIND_MANUSCRIPT, KIND_BOOK, KIND_SCREENPLAY]
 # The picker option that starts a new target, shown translated.
 const NEW_TARGET: string = '+ New Target'
 
-const KIND_FORMATS: dict<list<string>> = {
+const KIND_FMTS: dict<list<string>> = {
   Manuscript: ['PDF'],
-  Book: ['PDF', 'HTML', 'EPUB', 'Markdown'],
-  Screenplay: ['PDF', 'HTML', 'FDX'],
+  Book: ['PDF', FMT_HTML, FMT_EPUB, FMT_MARKDOWN],
+  Screenplay: ['PDF', FMT_HTML, FMT_FDX],
 }
 const PANDOC_EXT: dict<string> = {PDF: 'pdf', HTML: 'html', EPUB: 'epub', Markdown: 'md'}
 const SCREENPLAY_EXT: dict<string> = {PDF: 'pdf', HTML: 'html', FDX: 'fdx'}
@@ -92,7 +122,7 @@ export class CompileTarget
     var t: CompileTarget = CompileTarget.new()
     t.name = get(src, 'name', '')
     t.kind = get(src, 'kind', KIND_MANUSCRIPT)
-    t.format = get(src, 'format', 'PDF')
+    t.format = get(src, 'format', FMT_PDF)
     t.font = get(src, 'font', '')
     t.coverImage = get(src, 'coverImage', '')
     t.doubleSpaced = get(src, 'doubleSpaced', true)
@@ -109,11 +139,11 @@ export class CompileTarget
 endclass
 
 def TargetsDir(project: PO.Project): string
-  return project.scriveDir .. '/compile/targets'
+  return project.scriveDir .. PATH_COMPILE_TARGETS
 enddef
 
 def TargetPath(project: PO.Project, name: string): string
-  return TargetsDir(project) .. '/' .. SU.Slugify(name) .. '.json'
+  return TargetsDir(project) .. '/' .. SU.Slugify(name) .. EXT_JSON
 enddef
 
 export def ListTargets(project: PO.Project): list<string>
@@ -121,7 +151,7 @@ export def ListTargets(project: PO.Project): list<string>
   if !isdirectory(dir)
     return []
   endif
-  return globpath(dir, '*.json', false, true)
+  return globpath(dir, FILE_JSON, false, true)
     ->mapnew((_, p) => CompileTarget.FromDict(PE.ReadJson(p)).name)
 enddef
 
@@ -186,13 +216,13 @@ enddef
 
 def AllDocIds(project: PO.Project): list<string>
   return SelectableRows(project)
-    ->filter((_, row) => row.item.IsDocument())
+    ->filter((_, row) => row.item.IsDoc())
     ->mapnew((_, row) => row.item.id)
 enddef
 
 def RenderSelectLines(rows: list<T.Row>, included: dict<bool>): list<string>
   return rows->mapnew((_, row) => {
-    var box: string = row.item.IsDocument()
+    var box: string = row.item.IsDoc()
       ? (get(included, row.item.id, false) ? '[x]' : '[ ]') : '   '
     var marker: string = row.item.IsFolder() ? '▸ ' : '· '
     # A trailing slash marks a folder, for the Directory highlight in
@@ -204,14 +234,14 @@ enddef
 
 def ToggleInclude(rows: list<T.Row>, included: dict<bool>, idx: number): void
   var item: BI.BinderItem = rows[idx].item
-  if item.IsDocument()
+  if item.IsDoc()
     included[item.id] = !get(included, item.id, false)
     return
   endif
   var descendantIds: list<string> = []
   var i: number = idx + 1
   while i < len(rows) && rows[i].depth > rows[idx].depth
-    if rows[i].item.IsDocument()
+    if rows[i].item.IsDoc()
       descendantIds->add(rows[i].item.id)
     endif
     i += 1
@@ -229,7 +259,7 @@ def RedrawSelect(): void
   var state: SelectState = b:bartleby_compile_select
   setlocal modifiable
   deletebufline('%', 1, '$')
-  setline(1, [printf('*** %s ***', IN.T("Compile")), state.project.name]
+  setline(1, [printf('*** %s ***', MC.Compile()), state.project.name]
     + RenderSelectLines(state.rows, state.included))
   setlocal nomodifiable
 enddef
@@ -291,25 +321,25 @@ enddef
 # in the message language.
 def KindNames(): dict<string>
   return {
-    [KIND_MANUSCRIPT]: IN.T("Manuscript"),
-    [KIND_BOOK]: IN.T("Book"),
-    [KIND_SCREENPLAY]: IN.T("Screenplay"),
+    [KIND_MANUSCRIPT]: MC.Manuscript(),
+    [KIND_BOOK]: MK.Book(),
+    [KIND_SCREENPLAY]: MC.Screenplay(),
   }
 enddef
 
 def ShowSelectHelp(): void
-  H.Show(IN.T("Compile - Select Contents"), [
-    ['x', IN.T("Toggle inclusion (folders toggle all descendants)")],
-    ['<CR>', IN.T("Confirm selection and continue")],
-    ['q', IN.T("Cancel")],
-    ['?', IN.T("This help")],
+  H.Show(MK.CompileSelectContents(), [
+    ['x', MK.ToggleInclusionFolders()],
+    ['<CR>', MK.ConfirmSelContinue()],
+    ['q', MC.Cancel()],
+    ['?', MC.Help()],
   ])
 enddef
 
 # FUNCTION: Return the default font for a compile kind.
 
 def DefaultFont(kind: string): string
-  return kind ==# KIND_BOOK ? compilebookfont : compilemanuscriptfont
+  return kind ==# KIND_BOOK ? book_font : manuscript_font
 enddef
 
 # FUNCTION: Show the settings form: name, font, cover image for Book, and
@@ -330,23 +360,23 @@ def FinishWizard(project: PO.Project, kind: string, format: string,
     : {name: existing.name, font: existing.font, coverimage: existing.coverImage,
        separator: existing.separator}
   var form: IP.InputPopup = IP.InputPopup.new(IP.TextFields(fields), defaults,
-    {title: printf(' %s ', IN.T("Compile Settings")), labels: {
-      name: IN.T("Name"), font: IN.T("Font"), coverimage: IN.T("Cover Image"),
-      separator: IN.T("Separator")}})
-  form.OnSubmit((values: dict<any>) => {
-    var name: string = get(values, 'name', '')
+    {title: printf(CO.TITLE_FMT, MK.CompileSettings()), labels: {
+      name: MK.Name(), font: MK.Font(), coverimage: MK.CoverImg(),
+      separator: MK.Sep()}})
+  form.OnSubmit((vals: dict<any>) => {
+    var name: string = get(vals, 'name', '')
     if name ==# ''
-      log.Error(IN.T("compile target name is required"))
+      log.Error(MK.CompileTargetName())
       return
     endif
     var v: dict<any> = {}
     v.name = name
     v.kind = kind
     v.format = format
-    v.font = get(values, 'font', '')
-    v.coverImage = get(values, 'coverimage', '')
+    v.font = get(vals, 'font', '')
+    v.coverImage = get(vals, 'coverimage', '')
     v.doubleSpaced = doubleSpaced
-    v.separator = get(values, 'separator', '* * *')
+    v.separator = get(vals, 'separator', '* * *')
     v.includedIds = ids
     var target: CompileTarget = CompileTarget.FromDict(v)
     if existing isnot null_object && existing.name !=# name
@@ -365,30 +395,30 @@ def RunTargetForm(project: PO.Project, existing: CompileTarget): void
   var preselected: list<string> = existing is null_object ? [] : existing.includedIds
   var kindDefault: string = existing is null_object ? KIND_MANUSCRIPT : existing.kind
   SelectContents(project, preselected, (ids: list<string>) => {
-    PI.PickOne(IN.T("Compile Kind"), KINDS, (kind: string) => {
-      var formats: list<string> = get(KIND_FORMATS, kind, [])
-      var formatDefault: string = (existing isnot null_object && existing.kind ==# kind)
-        ? existing.format : formats[0]
-      PI.PickOne(IN.T("Format"), formats, (format: string) => {
+    PI.PickOne(MK.CompileKind(), KINDS, (kind: string) => {
+      var fmts: list<string> = get(KIND_FMTS, kind, [])
+      var fmtDefault: string = (existing isnot null_object && existing.kind ==# kind)
+        ? existing.format : fmts[0]
+      PI.PickOne(MK.Fmt(), fmts, (format: string) => {
         if kind ==# KIND_MANUSCRIPT
           var spacingDefault: string = existing isnot null_object
-            ? (existing.doubleSpaced ? 'Double' : 'Single')
-            : (compilemanuscriptdoublespaced ? 'Double' : 'Single')
-          PI.PickOne(IN.T("Line Spacing"), ['Double', 'Single'], (spacing: string) => {
-            FinishWizard(project, kind, format, spacing ==# 'Double', ids, existing)
-          }, spacingDefault, {Double: IN.T("Double"), Single: IN.T("Single")})
+            ? (existing.doubleSpaced ? SPACING_DOUBLE : SPACING_SINGLE)
+            : (manuscript_double_spaced ? SPACING_DOUBLE : SPACING_SINGLE)
+          PI.PickOne(MK.LineSpacing(), ['Double', SPACING_SINGLE], (spacing: string) => {
+            FinishWizard(project, kind, format, spacing ==# SPACING_DOUBLE, ids, existing)
+          }, spacingDefault, {Double: MK.Double(), Single: MK.Single()})
         else
           FinishWizard(project, kind, format, true, ids, existing)
         endif
-      }, formatDefault)
+      }, fmtDefault)
     }, kindDefault, KindNames())
   })
 enddef
 
 def DeleteTargetConfirm(project: PO.Project, target: CompileTarget): void
-  DP.Confirm(printf(IN.T("Delete compile target \"%s\"?"), target.name), () => {
+  DP.Confirm(MK.DeleteCompileTarget(target.name), () => {
     DeleteTarget(project, target.name)
-    log.Info(printf(IN.T("deleted compile target: %s"), target.name))
+    log.Info(MK.DeletedCompileTarget(target.name))
   })
 enddef
 
@@ -397,23 +427,23 @@ enddef
 ##############################################################################
 
 def OutputDir(project: PO.Project): string
-  return project.scriveDir .. '/compile/output'
+  return project.scriveDir .. PATH_COMPILE_OUTPUT
 enddef
 
 def PluginRoot(): string
   return fnamemodify(compilescriptpath, ':h:h:h')
 enddef
 
-def ManuscriptTemplatePath(): string
-  return PluginRoot() .. '/tools/latex/manuscript.tex'
+def ManuscriptTmplPath(): string
+  return PluginRoot() .. PATH_TOOLS_LATEX_MANUSCRIPT_TEX
 enddef
 
-def BookTemplatePath(): string
-  return PluginRoot() .. '/tools/latex/book.tex'
+def BookTmplPath(): string
+  return PluginRoot() .. PATH_TOOLS_LATEX_BOOK_TEX
 enddef
 
 def BookCssPath(): string
-  return PluginRoot() .. '/tools/css/book.css'
+  return PluginRoot() .. PATH_TOOLS_CSS_BOOK_CSS
 enddef
 
 def WriteFontOverrideCss(outDir: string, font: string): string
@@ -434,13 +464,13 @@ enddef
 export def ConcatenateDocs(project: PO.Project, target: CompileTarget, separator: string): list<string>
   # Only the folders that compile, so that an included document that was
   # moved to the Trash is left out.
-  var rows: list<T.Row> = SelectableRows(project)->filter((_, row) => row.item.IsDocument()
+  var rows: list<T.Row> = SelectableRows(project)->filter((_, row) => row.item.IsDoc()
     && index(target.includedIds, row.item.id) >= 0)
   var lines: list<string> = []
   for i in range(len(rows))
     var path: string = rows[i].item.AbsPath(project.BinderRoot())
     if !filereadable(path)
-      log.Warn(printf(IN.T("skipping missing file: %s"), path))
+      log.Warn(MK.SkippingMissingFile(path))
       continue
     endif
     if i > 0
@@ -454,7 +484,7 @@ enddef
 def ReadDocLines(item: BI.BinderItem, binderRoot: string): list<string>
   var path: string = item.AbsPath(binderRoot)
   if !filereadable(path)
-    log.Warn(printf(IN.T("skipping missing file: %s"), path))
+    log.Warn(MK.SkippingMissingFile(path))
     return []
   endif
   return readfile(path)
@@ -492,7 +522,7 @@ def WalkManuscript(items: list<BI.BinderItem>, target: CompileTarget,
     binderRoot: string, separator: string): list<string>
   var blocks: list<list<string>> = []
   for item in items
-    if item.IsDocument()
+    if item.IsDoc()
       if index(target.includedIds, item.id) >= 0
         blocks->add(ReadDocLines(item, binderRoot))
       endif
@@ -532,7 +562,7 @@ def WalkBook(items: list<BI.BinderItem>, target: CompileTarget, binderRoot: stri
     separator: string, partLevel: string, chapterLevel: string): list<string>
   var blocks: list<list<string>> = []
   for item in items
-    if item.IsDocument()
+    if item.IsDoc()
       if index(target.includedIds, item.id) >= 0
         blocks->add(ReadDocLines(item, binderRoot))
       endif
@@ -564,7 +594,7 @@ def WalkFrontOrBackMatter(items: list<BI.BinderItem>, target: CompileTarget,
     binderRoot: string, separator: string): list<string>
   var blocks: list<list<string>> = []
   for item in items
-    if item.IsDocument()
+    if item.IsDoc()
       if index(target.includedIds, item.id) >= 0
         blocks->add(['# ' .. item.title .. ' {-}', ''] + ReadDocLines(item, binderRoot))
       endif
@@ -659,7 +689,7 @@ enddef
 
 # FUNCTION: Return City, State, Country Zip. Missing parts are left out,
 # with no stray comma or space.
-def CityStateLine(info: PR.ProjectInfo): string
+def CityStateLine(info: PR.ProjInfo): string
   var cityState: string = JoinNonEmpty([info.city, info.state], ', ')
   var cityStateCountry: string = JoinNonEmpty([cityState, info.countrycode], ', ')
   return JoinNonEmpty([cityStateCountry, info.zip], ' ')
@@ -673,7 +703,7 @@ enddef
 # uses: whether to show the word Chapter or Part, and whether to spell
 # the number with fmtcount. Styles: numeral, spelled, bare-numeral, and
 # bare-spelled.
-def BookNumberStyleArgs(prefix: string, style: string): list<string>
+def BookNumStyleArgs(prefix: string, style: string): list<string>
   var bare: string = style =~# '^bare' ? 'true' : 'false'
   var spelled: string = style =~# 'spelled' ? 'true' : 'false'
   return [$'--metadata={prefix}bare:{bare}', $'--metadata={prefix}spelled:{spelled}']
@@ -687,19 +717,19 @@ def ManuscriptMetadataArgs(project: PO.Project, target: CompileTarget,
     mdLines: list<string>): list<string>
   var args: list<string> = [$'--metadata=wordcount:{CountWords(mdLines)}']
   if project.projectType ==# CO.TYPE_NOVEL || project.projectType ==# CO.TYPE_NOVEL_PARTS
-    args->add('--metadata=isnovel:true')
+    args->add(ARG_NOVEL)
   endif
-  if target.font =~? 'courier'
-    args->add('--metadata=usecourier:true')
+  if target.font =~? COURIER
+    args->add(ARG_COURIER)
   endif
   if !target.doubleSpaced
-    args->add('--metadata=singlespaced:true')
+    args->add(ARG_SINGLE)
   endif
   return args
 enddef
 
 def PandocMetadataArgs(project: PO.Project): list<string>
-  var info: PR.ProjectInfo = PR.Resolve(project)
+  var info: PR.ProjInfo = PR.Resolve(project)
   var args: list<string> = [$'--metadata=title:{project.name}']
   if info.EffectiveAuthor() !=# ''
     args->add($'--metadata=author:{info.EffectiveAuthor()}')
@@ -734,9 +764,9 @@ enddef
 # replaced. Every other format opens in the system viewer with Vim's
 # dist#vim9#Open, the function behind :Open.
 def OfferToOpen(target: CompileTarget, outputPath: string): void
-  log.Info(printf(IN.T("compiled: %s"), fnamemodify(outputPath, ":~")))
-  DP.Confirm(printf(IN.T("Compiled \"%s\". Open it?"), target.name), () => {
-    if target.format ==# 'Markdown'
+  log.Info(MK.Compiled(fnamemodify(outputPath, ":~")))
+  DP.Confirm(MK.CompiledOpen(target.name), () => {
+    if target.format ==# FMT_MARKDOWN
       execute 'tabedit ' .. fnameescape(outputPath)
     else
       DV.Open(outputPath)
@@ -751,15 +781,15 @@ enddef
 def RunJob(label: string, cmd: list<string>, target: CompileTarget,
     outputPath: string, logBase: string): void
   var errLines: list<string> = []
-  log.Info(printf(IN.T("compiling \"%s\" (%s)..."), target.name, label))
+  log.Info(MK.Compiling(target.name, label))
   job_start(cmd, {
     err_cb: (_, line) => errLines->add(line),
     exit_cb: (_, status) => {
       if status ==# 0
         OfferToOpen(target, outputPath)
       else
-        log.Error(printf(IN.T("%s exited with status %s: %s"), cmd[0], status, join(errLines, " | ")))
-        OfferFailureLog(target, WriteFailureLog(logBase .. '.log', cmd, status, errLines))
+        log.Error(MK.ExitedStatus(cmd[0], status, join(errLines, " | ")))
+        OfferFailureLog(target, WriteFailureLog(logBase .. EXT_LOG, cmd, status, errLines))
       endif
     },
   })
@@ -770,25 +800,25 @@ enddef
 def WriteFailureLog(path: string, cmd: list<string>, status: number,
     errLines: list<string>): string
   var lines: list<string> = [
-    printf(IN.T("Command: %s"), join(cmd, " ")),
-    printf(IN.T("Exit status: %s"), status),
+    MK.Cmd(join(cmd, " ")),
+    MK.ExitStatus(status),
     '',
   ]
-  writefile(lines + (empty(errLines) ? [IN.T("No error output.")] : errLines), path)
+  writefile(lines + (empty(errLines) ? [MK.NoErrOutput()] : errLines), path)
   return path
 enddef
 
 # FUNCTION: Ask whether to open the failure log, with yes as the default.
 # It opens in a new tab, so that no scrive window is replaced.
 def OfferFailureLog(target: CompileTarget, path: string): void
-  DP.Confirm(printf(IN.T("Compiling \"%s\" failed. Open the log?"), target.name), () => {
+  DP.Confirm(MK.CompilingFailedOpen(target.name), () => {
     execute 'tabedit ' .. fnameescape(path)
   }, true)
 enddef
 
 def ExecuteScreenplay(project: PO.Project, target: CompileTarget): void
-  if !executable(compilescreenplainbin)
-    log.Error(printf(IN.T("screenplain not found (%s) - install via pip, or set g:bartleby_compile_screenplain_bin"), compilescreenplainbin))
+  if !executable(screenplain_bin)
+    log.Error(MK.ScreenplainNotFound(screenplain_bin))
     return
   endif
   var outDir: string = OutputDir(project)
@@ -799,7 +829,7 @@ def ExecuteScreenplay(project: PO.Project, target: CompileTarget): void
   var outputPath: string = $'{outDir}/{SU.Slugify(target.name)}.{ext}'
   var fountainPath: string = $'{outDir}/.{SU.Slugify(target.name)}-src.fountain'
   writefile(ConcatenateDocs(project, target, ''), fountainPath)
-  RunJob($'{target.kind}/{target.format}', [compilescreenplainbin, fountainPath, outputPath],
+  RunJob($'{target.kind}/{target.format}', [screenplain_bin, fountainPath, outputPath],
     target, outputPath, NewLogBase(project, target))
 enddef
 
@@ -821,14 +851,14 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   var ext: string = get(PANDOC_EXT, target.format, 'pdf')
   var outputPath: string = $'{outDir}/{SU.Slugify(target.name)}.{ext}'
 
-  if target.format ==# 'Markdown'
+  if target.format ==# FMT_MARKDOWN
     writefile(BuildDocLines(project, target), outputPath)
     OfferToOpen(target, outputPath)
     return
   endif
 
-  if !executable(compilepandocbin)
-    log.Error(printf(IN.T("pandoc not found (%s) - install it or set g:bartleby_compile_pandoc_bin"), compilepandocbin))
+  if !executable(pandoc_bin)
+    log.Error(MK.PandocNotFound(pandoc_bin))
     return
   endif
 
@@ -837,40 +867,40 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   writefile(docLines, mdPath)
 
   var args: list<string> = [mdPath, '-o', outputPath] + PandocMetadataArgs(project)
-  if compilestandalone
-    args->add('--standalone')
+  if standalone
+    args->add(FLAG_STANDALONE)
   endif
-  if compiletoc
-    args->add('--toc')
+  if toc
+    args->add(FLAG_TOC)
   endif
 
   if target.kind ==# KIND_MANUSCRIPT
     # Pandoc's default engine, pdflatex. manuscript.tex explains why.
-    args->add($'--template={ManuscriptTemplatePath()}')
+    args->add($'--template={ManuscriptTmplPath()}')
     # Required. Pandoc cannot tell that the custom sffms class is based on
     # report, so without this it maps level 1 headings to sections, sffms
     # chapter styling does not apply, and its numbering collides with the
     # heading text.
-    args->add('--top-level-division=chapter')
+    args->add(ARG_CHAPTERS)
     args += ManuscriptMetadataArgs(project, target, docLines)
   elseif target.kind ==# KIND_BOOK
     args->add($'--variable=mainfont:{target.font}')
-    if target.format ==# 'PDF'
-      args->add('--pdf-engine=xelatex')
-      args->add($'--template={BookTemplatePath()}')
+    if target.format ==# FMT_PDF
+      args->add(ARG_XELATEX)
+      args->add($'--template={BookTmplPath()}')
       var hasPart: bool = HasIncludedPart(project.items->copy()->filter((_, item) => item.structureRole !=# CO.ROLE_TRASH),
         target.includedIds)
       args->add($'--top-level-division={hasPart ? "part" : "chapter"}')
-      args->add($'--variable=indentparagraphs:{compileindentparagraphs ? "true" : "false"}')
-      args += BookNumberStyleArgs('chapter', compilebookchapterstyle)
-      args += BookNumberStyleArgs('part', compilebookpartstyle)
+      args->add($'--variable=indentparagraphs:{indent_paras ? "true" : "false"}')
+      args += BookNumStyleArgs(CO.ROLE_CHAPTER, book_chapter_style)
+      args += BookNumStyleArgs(CO.ROLE_PART, book_part_style)
       if target.coverImage !=# ''
         args->add($'--variable=cover-image:{target.coverImage}')
       endif
     else
       args->add($'--css={BookCssPath()}')
       args->add($'--css={WriteFontOverrideCss(outDir, target.font)}')
-      if target.format ==# 'EPUB' && target.coverImage !=# ''
+      if target.format ==# FMT_EPUB && target.coverImage !=# ''
         args->add($'--epub-cover-image={target.coverImage}')
       endif
     endif
@@ -878,26 +908,26 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   # The language of the text, for Pandoc: the lang attribute in HTML, the
   # EPUB language, and LaTeX templates that use $lang$. An empty setting
   # means the pandoc_lang of the language file.
-  var lang: string = compilelang ==# '' ? LA.Get('pandoc_lang', '') : compilelang
+  var lang: string = compile_lang ==# '' ? LA.Get('pandoc_lang', '') : compile_lang
   if lang !=# ''
     args->add($'--metadata=lang:{lang}')
   endif
   args->add($'--metadata=papersize:{PaperSize()}')
-  args += compileextraargs
+  args += extra_args
   var logBase: string = NewLogBase(project, target)
   args->add($'--log={logBase}.json')
 
-  RunJob($'{target.kind}/{target.format}', [compilepandocbin] + args, target, outputPath, logBase)
+  RunJob($'{target.kind}/{target.format}', [pandoc_bin] + args, target, outputPath, logBase)
 enddef
 
 # FUNCTION: Return the paper size for PDF: g:bartleby_compile_papersize
 # when set, else the papersize of the language file. letter and a4 are the
 # sizes that sffms supports, so any other value warns and uses letter.
 def PaperSize(): string
-  var size: string = compilepapersize ==# '' ? LA.Get('papersize', 'letter') : compilepapersize
-  if index(['letter', 'a4'], size) < 0
-    log.Warn(printf(IN.T("unknown paper size \"%s\", using letter"), size))
-    return 'letter'
+  var size: string = papersize ==# '' ? LA.Get('papersize', 'letter') : papersize
+  if index(['letter', A4], size) < 0
+    log.Warn(MK.UnknownPaperSize(size))
+    return LETTER
   endif
   return size
 enddef
@@ -916,9 +946,9 @@ def NewLogBase(project: PO.Project, target: CompileTarget): string
   endif
   var prefix: string = SU.Slugify(fnamemodify(project.scriveDir, ':t:r'))
     .. '_' .. SU.Slugify(target.name) .. '_'
-  if compilelogretention > 0
+  if log_retention > 0
     var older: list<string> = sort(glob($'{logDir}/{prefix}[0-9]*.*', false, true))
-    var excess: number = len(older) - (compilelogretention - 1)
+    var excess: number = len(older) - (log_retention - 1)
     if excess > 0
       for path in older[0 : excess - 1]
         delete(path)
@@ -942,24 +972,24 @@ enddef
 export def Run(project: PO.Project): void
   var names: list<string> = ListTargets(project)
   var options: list<string> = names + [NEW_TARGET]
-  PI.PickOne(IN.T("Compile"), options, (choice: string) => {
+  PI.PickOne(MC.Compile(), options, (choice: string) => {
     if choice ==# NEW_TARGET
       RunTargetForm(project, null_object)
       return
     endif
     var target: CompileTarget = LoadTarget(project, choice)
     if target is null_object
-      log.Error(printf(IN.T("target not found: %s"), choice))
+      log.Error(MK.TargetNotFound(choice))
       return
     endif
-    PI.PickOne(printf(IN.T("\"%s\""), choice), ['Run', 'Edit', 'Delete'], (action: string) => {
-      if action ==# 'Run'
+    PI.PickOne(MK.Msg(choice), ['Run', ACTION_EDIT, ACTION_DELETE], (action: string) => {
+      if action ==# ACTION_RUN
         Execute(project, target)
-      elseif action ==# 'Edit'
+      elseif action ==# ACTION_EDIT
         RunTargetForm(project, target)
-      elseif action ==# 'Delete'
+      elseif action ==# ACTION_DELETE
         DeleteTargetConfirm(project, target)
       endif
-    }, '', {Run: IN.T("Run"), Edit: IN.T("Edit"), Delete: IN.T("Delete")})
-  }, '', {[NEW_TARGET]: IN.T("+ New Target")})
+    }, '', {Run: MK.Run(), Edit: MK.Edit(), Delete: MK.Delete()})
+  }, '', {[NEW_TARGET]: MK.NewTarget()})
 enddef

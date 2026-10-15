@@ -60,12 +60,12 @@ def Layout(fx: dict<any>, binder: bool, inspector: bool): void
   endif
   var edit: number = win_findbuf(bufnr(fx.path1))[0]
   win_gotoid(edit)
-  W.WatchEditWindow()
+  W.WatchEditWin()
 enddef
 
 def Cleanup(fx: dict<any>): void
   SP.Off()
-  W.StopWatchingEditWindow()
+  W.StopWatchingEditWin()
   silent! only
   silent! :%bwipe!
   ST.Set(null_object)

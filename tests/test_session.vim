@@ -44,15 +44,15 @@ enddef
 def Test_a_capture_writes_only_a_changed_state(): void
   var fx = OpenScene()
   cursor(2, 1)
-  SS.CaptureCurrentDoc()
+  SS.CaptureCurDoc()
   assert_equal(2, Saved(fx, 'cursorLine'))
   # Nothing changed: no write, so the deleted file stays away.
   delete(fx.session)
-  SS.CaptureCurrentDoc()
+  SS.CaptureCurDoc()
   assert_false(filereadable(fx.session))
   # The cursor moved: written again.
   cursor(3, 1)
-  SS.CaptureCurrentDoc()
+  SS.CaptureCurDoc()
   assert_equal(3, Saved(fx, 'cursorLine'))
   Close(fx)
 enddef
@@ -74,7 +74,7 @@ def Test_a_capture_keeps_the_fields_it_does_not_set(): void
   var fx = OpenScene()
   PE.WriteJson(fx.session, {binderOpen: true, collapsedIds: ['kept']})
   cursor(2, 1)
-  SS.CaptureCurrentDoc()
+  SS.CaptureCurDoc()
   assert_equal([true, ['kept'], 2], [Saved(fx, 'binderOpen'), Saved(fx, 'collapsedIds'), Saved(fx, 'cursorLine')])
   Close(fx)
 enddef

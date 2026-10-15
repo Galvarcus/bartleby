@@ -15,9 +15,12 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/document.vim' as D
+import autoload 'bartleby/locale/binder.vim' as MB
 import 'bartleby/variables/constants.vim' as CO
+
+const EXT_META_JSON: string = '.meta.json'
+const TEXT_UNTITLED: string = '(untitled)'
 
 
 
@@ -27,7 +30,7 @@ var id_counter: number = 0
 
 def NewId(): string
   id_counter += 1
-  return printf('%s-%03d', strftime('%Y%m%d%H%M%S'), id_counter)
+  return printf(CO.ID_FMT, strftime(CO.ID_TIME_FMT), id_counter)
 enddef
 
 # INTERFACE: A list of binder items that can be changed in place: the
@@ -46,7 +49,7 @@ export interface ItemContainer
   def RemoveChildAt(idx: number): void
   def ChildAt(idx: number): any
   def ChildCount(): number
-  def IndexOfChild(id: string): number
+  def IdxOfChild(id: string): number
   def SwapChildren(i: number, j: number): void
 endinterface
 
@@ -57,7 +60,7 @@ endinterface
 # existed loads with an empty role, a plain folder, so old scrives still
 # work. syntax/bartleby-binder.vim matches these prefixes.
 export def RolePrefixes(): dict<string>
-  return {[CO.ROLE_PART]: IN.T("Part: "), [CO.ROLE_CHAPTER]: IN.T("Chapter: ")}
+  return {[CO.ROLE_PART]: MB.Part(), [CO.ROLE_CHAPTER]: MB.Chapter()}
 enddef
 
 export class BinderItem implements ItemContainer
@@ -89,7 +92,7 @@ export class BinderItem implements ItemContainer
     var item: BinderItem = BinderItem.new()
     item.id = NewId()
     item.title = title
-    item.kind = CO.KIND_DOCUMENT
+    item.kind = CO.KIND_DOC
     item.relPath = relPath
     return item
   enddef
@@ -143,7 +146,7 @@ export class BinderItem implements ItemContainer
     return len(this.children)
   enddef
 
-  def IndexOfChild(id: string): number
+  def IdxOfChild(id: string): number
     for i in range(len(this.children))
       if this.children[i].id ==# id
         return i
@@ -166,8 +169,8 @@ export class BinderItem implements ItemContainer
     return this.kind ==# CO.KIND_FOLDER
   enddef
 
-  def IsDocument(): bool
-    return this.kind ==# CO.KIND_DOCUMENT
+  def IsDoc(): bool
+    return this.kind ==# CO.KIND_DOC
   enddef
 
   # METHOD: Return the Chapter or Part prefix for roles that have one, or
@@ -179,25 +182,25 @@ export class BinderItem implements ItemContainer
   # METHOD: Return the absolute path of this document's text file, or an
   # empty string for a folder.
   def AbsPath(binderRoot: string): string
-    return this.IsDocument() ? binderRoot .. '/' .. this.relPath : ''
+    return this.IsDoc() ? binderRoot .. '/' .. this.relPath : ''
   enddef
 
   # METHOD: Return the absolute path of this document's metadata file, or
   # an empty string for a folder.
   def MetaPath(binderRoot: string): string
-    return this.IsDocument() ? fnamemodify(this.AbsPath(binderRoot), ':r') .. '.meta.json' : ''
+    return this.IsDoc() ? fnamemodify(this.AbsPath(binderRoot), ':r') .. EXT_META_JSON : ''
   enddef
 
   # METHOD: Load the metadata when needed. Folders, and documents without
   # metadata, get the defaults.
   def LoadMeta(binderRoot: string): D.DocMeta
-    return this.IsDocument() ? D.DocMeta.Load(this.MetaPath(binderRoot)) : D.DocMeta.new()
+    return this.IsDoc() ? D.DocMeta.Load(this.MetaPath(binderRoot)) : D.DocMeta.new()
   enddef
 
   static def FromDict(src: dict<any>): BinderItem
     var item: BinderItem = BinderItem.new()
     item.id = get(src, 'id', '')
-    item.title = get(src, 'title', '(untitled)')
+    item.title = get(src, 'title', TEXT_UNTITLED)
     item.kind = get(src, 'kind', CO.KIND_FOLDER)
     item.structureRole = get(src, 'structureRole', CO.ROLE_NONE)
     item.relPath = get(src, 'relPath', '')
@@ -210,7 +213,7 @@ export class BinderItem implements ItemContainer
 
   def ToDict(): dict<any>
     var result: dict<any> = {id: this.id, title: this.title, kind: this.kind}
-    if this.IsDocument()
+    if this.IsDoc()
       result.relPath = this.relPath
     else
       result.structureRole = this.structureRole

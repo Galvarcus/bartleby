@@ -17,19 +17,19 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/data.vim' as MD
 
 var log = L.New(expand('<sfile>:t'))
 
 # The suffix of the file that a write fills before it replaces the file.
-const TEMPORARY_SUFFIX: string = '.tmp'
+const TMP_SUFFIX: string = '.tmp'
 # The suffix of the copy of a file before its last write, see WriteJson.
 export const BACKUP_SUFFIX: string = '.bak'
 
 export def ReadJson(path: string): dict<any>
   if !filereadable(path)
-    log.Warn(printf(IN.T("no such file: %s"), path))
+    log.Warn(MD.NoSuchFile(path))
     return {}
   endif
   try
@@ -45,7 +45,7 @@ enddef
 # path with BACKUP_SUFFIX. Returns false, with an error, when a step fails.
 # path is then as it was.
 export def WriteJson(path: string, data: dict<any>, keepBackup: bool = false): bool
-  var temporary: string = path .. TEMPORARY_SUFFIX
+  var temporary: string = path .. TMP_SUFFIX
   try
     var dir: string = fnamemodify(path, ':h')
     if !isdirectory(dir)
@@ -70,8 +70,8 @@ enddef
 # FUNCTION: Report that path was not written, because of detail, and remove
 # the temporary file. Returns false, for WriteJson to return.
 def WriteFailed(path: string, detail: string): bool
-  log.Error(printf(IN.T("%s could not be written, so it was not changed: %s"), path, detail))
-  var temporary: string = path .. TEMPORARY_SUFFIX
+  log.Error(MD.CouldNotWritten(path, detail))
+  var temporary: string = path .. TMP_SUFFIX
   if filereadable(temporary)
     delete(temporary)
   endif

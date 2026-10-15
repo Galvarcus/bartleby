@@ -30,12 +30,21 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/writing.vim' as MW
 import 'bartleby/variables/constants.vim' as CO
+
+const FILETYPE_MARKDOWN: string = 'markdown'
+const COMMENT_FLAGS: string = 'b:'
+const KEY_NAME_C_H: string = '<C-h>'
+const KEY_NAME_C_W: string = '<C-w>'
+const KEY_NAME_C_U: string = '<C-u>'
+const KEYS_UP_UP: string = "\<Up>\<Up>"
+const KEYS_DOWN_DOWN: string = "\<Down>\<Down>"
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -66,9 +75,9 @@ enddef
 # Chapter or Part for those roles.
 def FolderLabel(folder: BI.BinderItem): string
   if folder.structureRole ==# CO.ROLE_CHAPTER
-    return IN.T("Chapter") .. ': ' .. folder.title
+    return MC.Chapter() .. ': ' .. folder.title
   elseif folder.structureRole ==# CO.ROLE_PART
-    return IN.T("Part") .. ': ' .. folder.title
+    return MC.Part() .. ': ' .. folder.title
   endif
   return folder.title
 enddef
@@ -76,11 +85,11 @@ enddef
 # FUNCTION: Return the documents of folder and of the folders inside it, in
 # Binder order, each with its label: the folders below folder, then its
 # title, as in Chapter: 2 / Scene 1.
-def DocumentsOf(folder: BI.BinderItem): list<list<any>>
+def DocsOf(folder: BI.BinderItem): list<list<any>>
   var found: list<list<any>> = []
   def Walk(items: list<BI.BinderItem>, labels: list<string>): void
     for item in items
-      if item.IsDocument()
+      if item.IsDoc()
         found->add([item, join(labels + [item.title], ' / ')])
       else
         Walk(item.children, labels + [FolderLabel(item)])
@@ -105,12 +114,12 @@ enddef
 # does not open.
 export def Open(project: PO.Project, folder: BI.BinderItem, docId: string = '', offset: number = 0): bool
   if !CanOpen(project, folder)
-    log.Info(IN.T("a Scrivening opens only for a folder in the Manuscript"))
+    log.Info(MC.ScriveningOpensOnly())
     return false
   endif
-  var docs: list<list<any>> = DocumentsOf(folder)
+  var docs: list<list<any>> = DocsOf(folder)
   if empty(docs)
-    log.Info(IN.T("this folder has no documents"))
+    log.Info(MW.FolderHasNo())
     return false
   endif
   if !empty(current) && !Close()
@@ -129,23 +138,23 @@ export def Open(project: PO.Project, folder: BI.BinderItem, docId: string = '', 
     cursorId = paths[here]
     cursorOffset = line('.') - 1
   endif
-  var members: list<number> = SaveMemberBuffers(paths)
+  var members: list<number> = SaveMemberBufs(paths)
   if !has_key(paths, here)
-    W.GoToEditorWindow()
+    W.GoToEditorWin()
   endif
   hide enew
   setlocal buftype=acwrite bufhidden=hide noswapfile
   execute 'silent file ' .. fnameescape(CO.SCRIVENINGS_BUF)
-  &l:filetype = project.DocExt() ==# '.fountain' ? 'fountain' : 'markdown'
+  &l:filetype = project.DocExt() ==# CO.EXT_FOUNTAIN ? CO.FILETYPE_FOUNTAIN : FILETYPE_MARKDOWN
   current = {bufnr: bufnr(), folderId: folder.id, section: -1}
   Build(project, docs)
-  SetupBuffer()
+  SetupBuf()
   for bufNr in members
     if bufexists(bufNr)
       execute 'silent! bwipe ' .. bufNr
     endif
   endfor
-  GoToDocument(cursorId, cursorOffset)
+  GoToDoc(cursorId, cursorOffset)
   StartRedirect()
   # The buffer was entered before it was a Scrivening, so the features that
   # apply to documents on entry, such as Quill, did not see it as one.
@@ -155,7 +164,7 @@ enddef
 
 # FUNCTION: Save the changes of the documents in paths that are open in
 # buffers, so that the Scrivening shows them. Returns their buffers.
-def SaveMemberBuffers(paths: dict<string>): list<number>
+def SaveMemberBufs(paths: dict<string>): list<number>
   var found: list<number> = []
   for info in getbufinfo({bufloaded: 1})
     var path: string = fnamemodify(info.name, ':p')
@@ -211,11 +220,11 @@ enddef
 
 # FUNCTION: Set the commands and keys of the Scrivening buffer: saving,
 # the protection of the title lines, and the section events.
-def SetupBuffer(): void
+def SetupBuf(): void
   # Paragraph formatting never joins lines with different comment leaders,
   # so with the title mark as one, formatting, as in the auto mode of
   # Quill, leaves the title lines alone.
-  &l:comments = 'b:' .. trim(TITLE_LEAD)
+  &l:comments = COMMENT_FLAGS .. trim(TITLE_LEAD)
   augroup bartleby_scrivening
     autocmd! * <buffer>
     autocmd BufWriteCmd <buffer> Write()
@@ -225,7 +234,7 @@ def SetupBuffer(): void
     autocmd CursorMoved,CursorMovedI <buffer> NotifySection()
     autocmd BufUnload <buffer> Discard()
   augroup END
-  for key in ['<BS>', '<C-h>', '<C-w>', '<C-u>']
+  for key in ['<BS>', KEY_NAME_C_H, KEY_NAME_C_W, KEY_NAME_C_U]
     execute $'inoremap <buffer> <expr> {key} <SID>AtSectionStart() ? "" : "\{key}"'
   endfor
   inoremap <buffer> <expr> <Del> <SID>AtSectionEnd() ? "" : "\<Del>"
@@ -236,7 +245,7 @@ enddef
 # onto a title line goes past it. Any other move uses up and down, so
 # that Quill, which moves by screen lines, calls this instead of mapping
 # the arrow keys itself, and the title lines stay passable.
-export def MapArrows(up: string = "\<Up>", down: string = "\<Down>"): void
+export def MapArrows(up: string = CO.KEY_UP, down: string = CO.KEY_DOWN): void
   b:bartleby_scrivening_arrows = [up, down]
   inoremap <buffer> <expr> <Up> <SID>KeyUp()
   inoremap <buffer> <expr> <Down> <SID>KeyDown()
@@ -286,13 +295,13 @@ enddef
 def Write(): void
   var sections: list<list<string>> = Sections()
   if empty(sections)
-    log.Error(IN.T("the Scrivening was not saved, because a title line was changed or removed. Press u to undo it"))
+    log.Error(MW.ScriveningNotSaved())
     return
   endif
   for i in range(len(sections))
     if sections[i] != current.saved[i]
       if writefile(sections[i], current.paths[i]) != 0
-        log.Error(printf(IN.T("%s could not be written"), current.paths[i]))
+        log.Error(MW.CouldNotWritten(current.paths[i]))
         return
       endif
       current.saved[i] = sections[i]
@@ -307,7 +316,7 @@ def Protect(): void
     return
   endif
   silent! undo
-  log.Warn(IN.T("the title lines of a Scrivening cannot be changed"))
+  log.Warn(MW.TitleLinesScrivening())
 enddef
 
 # FUNCTION: Return true when the text property of a title line is on lnum.
@@ -345,7 +354,7 @@ def KeyUp(): string
   if !IsTitleLine(line('.') - 1) || !OnScreenRowOf(1)
     return b:bartleby_scrivening_arrows[0]
   endif
-  return line('.') - 1 > 1 ? "\<Up>\<Up>" : ''
+  return line('.') - 1 > 1 ? KEYS_UP_UP : ''
 enddef
 
 # FUNCTION: Return the keys for Down in Insert mode. From the last screen
@@ -355,7 +364,7 @@ def KeyDown(): string
   if !IsTitleLine(line('.') + 1) || !OnScreenRowOf(col([line('.'), '$']))
     return b:bartleby_scrivening_arrows[1]
   endif
-  return "\<Down>\<Down>"
+  return KEYS_DOWN_DOWN
 enddef
 
 # FUNCTION: Start Insert mode off the title lines, toward the document
@@ -400,7 +409,7 @@ enddef
 
 # FUNCTION: Return the item of the document under the cursor in the
 # Scrivening, or null_object outside it.
-export def DocumentAtCursor(project: PO.Project): BI.BinderItem
+export def DocAtCursor(project: PO.Project): BI.BinderItem
   if !IsScrivening(bufnr())
     return null_object
   endif
@@ -411,13 +420,13 @@ enddef
 # FUNCTION: Return the item of the document the cursor is in: in a
 # Scrivening the document under the cursor, or else the document of the
 # current buffer. null_object when there is none.
-export def DocumentHere(project: PO.Project): BI.BinderItem
-  return IsScrivening(bufnr()) ? DocumentAtCursor(project) : project.FindItemByPath(expand('%:p'))
+export def DocHere(project: PO.Project): BI.BinderItem
+  return IsScrivening(bufnr()) ? DocAtCursor(project) : project.FindItemByPath(expand('%:p'))
 enddef
 
 # FUNCTION: Return the line of the cursor inside its document, from 1, as
 # if the document were alone in a buffer.
-export def LineInDocument(): number
+export def LineInDoc(): number
   var title: dict<any> = prop_find({type: PROP_TITLE, lnum: line('.'), col: col([line('.'), '$']),
     bufnr: current.bufnr}, 'b')
   return empty(title) ? line('.') : max([line('.') - title.lnum, 1])
@@ -443,7 +452,7 @@ def LineOf(id: string, offset: number): number
 enddef
 
 # FUNCTION: Put the cursor offset lines into the document with id.
-def GoToDocument(id: string, offset: number): void
+def GoToDoc(id: string, offset: number): void
   cursor(LineOf(id, offset), 1)
   current.section = -1
   NotifySection()
@@ -451,7 +460,7 @@ enddef
 
 # FUNCTION: Show the document with id in the Scrivening, offset lines into
 # it, when the Scrivening holds it. Returns false when it does not.
-export def ShowDocument(id: string, offset: number = 0): bool
+export def ShowDoc(id: string, offset: number = 0): bool
   if empty(current) || index(current.ids, id) < 0
     return false
   endif
@@ -459,10 +468,10 @@ export def ShowDocument(id: string, offset: number = 0): bool
   if winId != -1
     win_gotoid(winId)
   else
-    W.GoToEditorWindow()
+    W.GoToEditorWin()
     execute 'hide buffer ' .. current.bufnr
   endif
-  GoToDocument(id, offset)
+  GoToDoc(id, offset)
   return true
 enddef
 
@@ -499,7 +508,7 @@ def RedirectNow(bufNr: number, id: string, offset: number): void
     execute 'hide buffer ' .. current.bufnr
   endif
   execute 'silent! bwipe ' .. bufNr
-  ShowDocument(id, offset)
+  ShowDoc(id, offset)
 enddef
 
 # FUNCTION: Return true when a Scrivening is open.
@@ -583,7 +592,7 @@ export def SyncWithTree(project: PO.Project, force: bool = false): void
     Close()
     return
   endif
-  var docs: list<list<any>> = DocumentsOf(row.item)
+  var docs: list<list<any>> = DocsOf(row.item)
   var root: string = project.BinderRoot()
   var ids: list<string> = docs->mapnew((_, d) => d[0].id)
   var paths: list<string> = docs->mapnew((_, d) => d[0].AbsPath(root))

@@ -14,7 +14,7 @@ var is_loaded: bool = true
 # changes the tree.
 #
 # Row is defined before the functions that use it because Flatten,
-# FindRowById, and IndexOfRowById name it in their signatures, and Vim9
+# FindRowById, and IdxOfRowById name it in their signatures, and Vim9
 # resolves a signature when the function is defined. A class used only
 # inside a function body can come later. Moving Row after these functions
 # gives error E1010, Type not recognized: Row.
@@ -69,7 +69,7 @@ export def FindRowById(rows: list<Row>, id: string): Row
   return null_object
 enddef
 
-export def IndexOfRowById(rows: list<Row>, id: string): number
+export def IdxOfRowById(rows: list<Row>, id: string): number
   for i in range(len(rows))
     if rows[i].item.id ==# id
       return i

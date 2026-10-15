@@ -14,7 +14,7 @@ var is_loaded: bool = true
 # leads back to binder.vim, so the two import each other in one direction
 # only: binder.vim reports its state here.
 #
-# Two capture functions, for two kinds of events. CaptureCurrentDoc runs
+# Two capture functions, for two kinds of events. CaptureCurDoc runs
 # on CursorHold, which Vim limits to idle moments, so it saves often
 # without a change counter, and on VimLeavePre. binder.vim calls
 # CaptureBinderState with its state when it shows, hides, or collapses,
@@ -31,6 +31,10 @@ import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/scrivenings.vim' as SV
+import 'bartleby/variables/constants.vim' as CO
+
+const PATH_SESSION_JSON: string = '/session.json'
+const SCRIVE_DIR: string = 'scriveDir'
 
 export class SessionState
   var activeDocRelPath: string = ''
@@ -56,7 +60,7 @@ export class SessionState
 endclass
 
 def SessionPath(project: PO.Project): string
-  return project.scriveDir .. '/session.json'
+  return project.scriveDir .. PATH_SESSION_JSON
 enddef
 
 export def Load(project: PO.Project): SessionState
@@ -74,7 +78,7 @@ var known: dict<dict<any>> = {}
 
 # FUNCTION: Return the state of the session of project, as a dict that the
 # caller may change: the state last read or written, or else the file.
-def Current(project: PO.Project): dict<any>
+def Cur(project: PO.Project): dict<any>
   var path: string = SessionPath(project)
   if !has_key(known, path)
     known[path] = Load(project).ToDict()
@@ -113,21 +117,21 @@ export def RememberLastScrive(scriveDir: string): void
 enddef
 
 export def LastScrive(): string
-  return get(PE.ReadJson(LastScrivePath()), 'scriveDir', '')
+  return get(PE.ReadJson(LastScrivePath()), SCRIVE_DIR, '')
 enddef
 
 ##############################################################################
 # SECTION: Capture.
 ##############################################################################
 
-def IsProjectDoc(project: PO.Project, path: string): bool
-  return path !=# '' && path =~# '^\V' .. escape(project.BinderRoot(), '\')
+def IsProjDoc(project: PO.Project, path: string): bool
+  return path !=# '' && path =~# CO.PAT_NOMAGIC_BOL .. escape(project.BinderRoot(), '\')
 enddef
 
 # FUNCTION: Save the document and cursor of the current window. Runs on
 # CursorHold in a document buffer and on VimLeavePre. Both events give
 # the current window, so no other window is looked up.
-export def CaptureCurrentDoc(): void
+export def CaptureCurDoc(): void
   var project: PO.Project = ST.Get()
   if project is null_object
     return
@@ -136,17 +140,17 @@ export def CaptureCurrentDoc(): void
   var lnum: number = line('.')
   # In a Scrivening, the document under the cursor, as if it were alone.
   if SV.IsScrivening(bufnr())
-    var doc: BI.BinderItem = SV.DocumentAtCursor(project)
+    var doc: BI.BinderItem = SV.DocAtCursor(project)
     if doc is null_object
       return
     endif
     path = doc.AbsPath(project.BinderRoot())
-    lnum = SV.LineInDocument()
+    lnum = SV.LineInDoc()
   endif
-  if !IsProjectDoc(project, path)
+  if !IsProjDoc(project, path)
     return
   endif
-  var v: dict<any> = Current(project)
+  var v: dict<any> = Cur(project)
   v.activeDocRelPath = path[len(project.BinderRoot()) + 1 : ]
   v.cursorLine = lnum
   v.cursorCol = col('.')
@@ -161,7 +165,7 @@ export def CaptureBinderState(binderOpen: bool, collapsedIds: list<string>): voi
   if project is null_object
     return
   endif
-  var v: dict<any> = Current(project)
+  var v: dict<any> = Cur(project)
   v.binderOpen = binderOpen
   v.collapsedIds = collapsedIds
   Save(project, SessionState.FromDict(v))

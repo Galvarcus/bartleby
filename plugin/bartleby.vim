@@ -13,7 +13,6 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/scrive.vim' as S
 import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/project.vim' as PO
@@ -48,6 +47,8 @@ import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/closeall.vim' as CL
 import autoload 'bartleby/progress.vim' as PG
 import autoload 'bartleby/progressview.vim' as PV
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/ui.vim' as MI
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
@@ -138,7 +139,7 @@ g:bartleby_lexicon_base_url = get(g:, 'bartleby_lexicon_base_url',
 def OpenScrive(name: string): void
   var scriveName: string = name ==# '' ? fnamemodify(SS.LastScrive(), ':t:r') : name
   if scriveName ==# ''
-    log.Warn(IN.T("no scrive name given, and no previously-opened scrive to fall back to - showing the scrive list"))
+    log.Warn(MI.NoScriveName())
     SL.Show()
     return
   endif
@@ -160,7 +161,7 @@ enddef
 # FUNCTION: Ask for the scrive type with PickOne, as the other pickers
 # do, then create the scrive. Esc creates nothing.
 def NewScrive(name: string): void
-  PI.PickOne(IN.T("Scrive Type"), CO.TYPES, (projectType: string) => {
+  PI.PickOne(MI.ScriveType(), CO.TYPES, (projectType: string) => {
     CreateScrive(name, projectType)
   }, CO.TYPE_NOVEL, PO.TypeNames())
 enddef
@@ -178,7 +179,7 @@ enddef
 
 def ToggleBinder(): void
   if ST.Get() is null_object
-    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    log.Warn(MC.NoScriveOpen())
     return
   endif
   B.Toggle(ST.Get())
@@ -186,7 +187,7 @@ enddef
 
 def RunSearch(): void
   if ST.Get() is null_object
-    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    log.Warn(MC.NoScriveOpen())
     return
   endif
   SE.Run(ST.Get())
@@ -203,7 +204,7 @@ command! -bar -bang -nargs=? BartlebyFocus F.Execute('<bang>' ==# '!', <q-args>)
 command! -bar -bang -nargs=? BartlebySpotlight SP.Execute('<bang>' ==# '!', <q-args>)
 def EditProjectInfo(): void
   if ST.Get() is null_object
-    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    log.Warn(MC.NoScriveOpen())
     return
   endif
   PR.EditForScrive(ST.Get())
@@ -212,61 +213,61 @@ enddef
 # FUNCTION: Return the BinderItem of the current buffer in the open
 # scrive, or null_object with a warning when no scrive is open or the
 # buffer is not one of its documents.
-def CurrentDoc(): BI.BinderItem
+def CurDoc(): BI.BinderItem
   var project: PO.Project = ST.Get()
   if project is null_object
-    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    log.Warn(MC.NoScriveOpen())
     return null_object
   endif
-  var doc: BI.BinderItem = SV.DocumentHere(project)
+  var doc: BI.BinderItem = SV.DocHere(project)
   if doc is null_object
-    log.Warn(IN.T("current buffer is not a document of the open scrive"))
+    log.Warn(MI.CurBufNot())
   endif
   return doc
 enddef
 
-def SnapshotCurrentDoc(): void
+def SnapCurDoc(): void
   var project: PO.Project = ST.Get()
-  var doc: BI.BinderItem = CurrentDoc()
+  var doc: BI.BinderItem = CurDoc()
   if doc is null_object
     return
   endif
-  IP.PromptText(IN.T("Snapshot label (optional)"), '', (label: string) => {
+  IP.PromptText(MC.SnapLabelOptional(), '', (label: string) => {
     SN.Take(project, doc, label)
   })
 enddef
 
-def ViewSnapshotsForCurrentDoc(): void
+def ViewSnapsForCurDoc(): void
   var project: PO.Project = ST.Get()
-  var doc: BI.BinderItem = CurrentDoc()
+  var doc: BI.BinderItem = CurDoc()
   if doc is null_object
     return
   endif
-  var snapshots: list<SN.Snapshot> = reverse(SN.List(project, doc))
-  if empty(snapshots)
-    log.Info(printf(IN.T("no snapshots for \"%s\""), doc.title))
+  var snaps: list<SN.Snap> = reverse(SN.List(project, doc))
+  if empty(snaps)
+    log.Info(MC.NoSnaps(doc.title))
     return
   endif
-  var names: list<string> = snapshots->mapnew((_, s) => s.DisplayName())
-  PI.PickOne(IN.T("Snapshots"), names, (choice: string) => {
-    var snapshot: SN.Snapshot = snapshots[index(names, choice)]
-    PI.PickOne(printf(IN.T(" %s "), choice), ['Restore', 'Cancel'], (action: string) => {
-      if action ==# 'Restore'
-        SN.Restore(project, doc, snapshot)
+  var names: list<string> = snaps->mapnew((_, s) => s.DisplayName())
+  PI.PickOne(MC.Snaps(), names, (choice: string) => {
+    var snap: SN.Snap = snaps[index(names, choice)]
+    PI.PickOne(MC.Msg(choice), ['Restore', CO.CANCEL], (action: string) => {
+      if action ==# CO.ACTION_RESTORE
+        SN.Restore(project, doc, snap)
       endif
-    }, '', {Restore: IN.T("Restore"), Cancel: IN.T("Cancel")})
+    }, '', {Restore: MC.Restore(), Cancel: MC.Cancel()})
   })
 enddef
 
 command! -bar -nargs=? BartlebyQuill Q.Init(<q-args> ==# '' ? 'detect' : <q-args>)
-command! -bar BartlebySnapshot SnapshotCurrentDoc()
-command! -bar BartlebySnapshots ViewSnapshotsForCurrentDoc()
+command! -bar BartlebySnapshot SnapCurDoc()
+command! -bar BartlebySnapshots ViewSnapsForCurDoc()
 command! -bar BartlebyProfile PR.EditGlobal()
 command! -bar BartlebyProjectInfo EditProjectInfo()
 
 def RunCompile(): void
   if ST.Get() is null_object
-    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    log.Warn(MC.NoScriveOpen())
     return
   endif
   C.Run(ST.Get())
@@ -276,7 +277,7 @@ command! -bar BartlebyCompile RunCompile()
 
 def EmptyTrash(): void
   if ST.Get() is null_object
-    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    log.Warn(MC.NoScriveOpen())
     return
   endif
   B.EmptyTrash(ST.Get())
@@ -292,30 +293,29 @@ def Recover(name: string): void
   if name ==# ''
     var project: PO.Project = ST.Get()
     if project is null_object
-      log.Warn(IN.T("no scrive open - run :BartlebyRecover <name> for a scrive that does not open"))
+      log.Warn(MI.NoScriveOpen())
       return
     endif
     var count: number = RC.Recover(project)
     if count == 0
-      log.Info(IN.T("every document on disk is in the Binder"))
+      log.Info(MI.EveryDocDisk())
       return
     endif
     project.Save()
     B.RenderIfOpen(project)
-    log.Info(printf(IN.N("recovered %d document into the folder Recovered",
-      "recovered %d documents into the folder Recovered", count), count))
+    log.Info(MI.RecoveredDocFolder(count))
     return
   endif
   var dir: string = S.ScrivePath(S.ResolveName(name))
   if !isdirectory(dir)
-    log.Error(printf(IN.T("no scrive named \"%s\" under %s"), name, S.BinderRoot()))
+    log.Error(MC.NoScriveNamed(name, S.BinderRoot()))
     return
   endif
   if PO.Project.new(dir).Load()
-    log.Info(printf(IN.T("\"%s\" opens. Open it, then run :BartlebyRecover to recover its documents."), name))
+    log.Info(MI.OpensOpenThen(name))
     return
   endif
-  DP.Confirm(printf(IN.T("Rebuild the Binder of \"%s\"? The damaged project.json is kept as project.json.damaged, its backup is used if it loads, and every document on disk is recovered."), name), () => {
+  DP.Confirm(MI.RebuildBinderDamaged(name), () => {
     if RC.Rebuild(dir) isnot null_object
       OpenScrive(fnamemodify(dir, ':t:r'))
     endif
@@ -331,22 +331,21 @@ command! -bar -nargs=? -complete=customlist,bartleby#scrive#CompleteNames
 def TidyFiles(): void
   var project: PO.Project = ST.Get()
   if project is null_object
-    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    log.Warn(MC.NoScriveOpen())
     return
   endif
   var moves: list<dict<any>> = LY.Plan(project)
   if empty(moves)
-    log.Info(IN.T("the files already follow the Binder"))
+    log.Info(MI.FilesAlreadyFollow())
     return
   endif
-  DP.Confirm(printf(IN.N("Move %d file, so that the folders on disk follow the Binder?",
-      "Move %d files, so that the folders on disk follow the Binder?", len(moves)), len(moves)), () => {
+  DP.Confirm(MI.MoveFileSo(len(moves)), () => {
     var failed: list<string> = LY.Tidy(project, moves)
     B.RenderIfOpen(project)
     if empty(failed)
-      log.Info(printf(IN.N("moved %d file", "moved %d files", len(moves)), len(moves)))
+      log.Info(MI.MovedFile(len(moves)))
     else
-      log.Warn(printf(IN.T("these files did not move, so save any changes and run it again: %s"),
+      log.Warn(MI.FilesDidNot(
         join(failed, ', ')))
     endif
   })
@@ -361,9 +360,9 @@ command! -bar BartlebyTidyFiles TidyFiles()
 def OpenScrivening(close: bool): void
   if close
     if !SV.IsOpen()
-      log.Info(IN.T("no Scrivening is open"))
+      log.Info(MI.NoScriveningOpen())
     elseif !SV.Close()
-      log.Warn(IN.T("the Scrivening stays open, because it could not be saved"))
+      log.Warn(MI.ScriveningStaysOpen())
     endif
     return
   endif
@@ -371,17 +370,17 @@ def OpenScrivening(close: bool): void
     B.OpenScrivening()
     return
   endif
-  var doc: BI.BinderItem = CurrentDoc()
+  var doc: BI.BinderItem = CurDoc()
   if doc is null_object
     return
   endif
   var project: PO.Project = ST.Get()
   var row: T.Row = T.FindRowById(T.Flatten(project), doc.id)
   if row is null_object || row.ownerItem is null_object
-    log.Info(IN.T("a Scrivening opens only for a folder in the Manuscript"))
+    log.Info(MC.ScriveningOpensOnly())
     return
   endif
-  var offset: number = SV.IsScrivening(bufnr()) ? SV.LineInDocument() - 1 : line('.') - 1
+  var offset: number = SV.IsScrivening(bufnr()) ? SV.LineInDoc() - 1 : line('.') - 1
   SV.Open(project, row.ownerItem, doc.id, offset)
 enddef
 
@@ -391,8 +390,8 @@ command! -bar BartlebyGoals PV.EditGoals()
 command! -bar BartlebyProgress PV.Show()
 command! -bar BartlebyCommands CP.Open()
 command! -bar BartlebyMenu BM.Toggle()
-command! -bar -nargs=? BartlebyDefine LP.LookupCommand(CO.KIND_DICTIONARY, <q-args>)
-command! -bar -nargs=? BartlebyThesaurus LP.LookupCommand(CO.KIND_THESAURUS, <q-args>)
+command! -bar -nargs=? BartlebyDefine LP.LookupCmd(CO.KIND_DICT, <q-args>)
+command! -bar -nargs=? BartlebyThesaurus LP.LookupCmd(CO.KIND_THESAURUS, <q-args>)
 command! -bar BartlebyLexiconClearCache LE.ClearCache()
 
 nnoremap <silent> <leader>bi <ScriptCmd>I.Toggle()<CR>
@@ -406,9 +405,9 @@ nnoremap <silent> <leader>bm <ScriptCmd>BM.Toggle()<CR>
 # The lookup mappings exist only when their kind has an API key, set
 # before Bartleby loads. The commands always exist and report what is
 # missing.
-if LE.IsEnabled(CO.KIND_DICTIONARY)
-  nnoremap <silent> <leader>bd <ScriptCmd>LP.LookupAtCursor(CO.KIND_DICTIONARY)<CR>
-  xnoremap <silent> <leader>bd <Esc><ScriptCmd>LP.LookupVisual(CO.KIND_DICTIONARY)<CR>
+if LE.IsEnabled(CO.KIND_DICT)
+  nnoremap <silent> <leader>bd <ScriptCmd>LP.LookupAtCursor(CO.KIND_DICT)<CR>
+  xnoremap <silent> <leader>bd <Esc><ScriptCmd>LP.LookupVisual(CO.KIND_DICT)<CR>
 endif
 if LE.IsEnabled(CO.KIND_THESAURUS)
   nnoremap <silent> <leader>bt <ScriptCmd>LP.LookupAtCursor(CO.KIND_THESAURUS)<CR>
@@ -435,7 +434,7 @@ def StartScriveHooks(): void
     autocmd BufEnter * Q.AutoApply()
   augroup END
   # An empty edit window stays when the last one closes beside a pane.
-  W.WatchEditWindow()
+  W.WatchEditWin()
   # Count the words for the goals on pauses and saves, never on each key.
   augroup bartleby_progress
     autocmd!
@@ -474,8 +473,8 @@ augroup END
 
 augroup bartleby_session
   autocmd!
-  autocmd CursorHold * SS.CaptureCurrentDoc()
-  autocmd VimLeavePre * SS.CaptureCurrentDoc()
+  autocmd CursorHold * SS.CaptureCurDoc()
+  autocmd VimLeavePre * SS.CaptureCurDoc()
   autocmd VimEnter * AutoRestoreSession()
 augroup END
 

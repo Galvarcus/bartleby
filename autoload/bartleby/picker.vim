@@ -28,8 +28,8 @@ export def PickOne(title: string, options: list<string>, OnPick: func(string),
   var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'choice', options: shown}]]
   var defaults: dict<any> = current ==# '' ? {} : {choice: get(names, current, current)}
   var form: IP.InputPopup = IP.InputPopup.new(fields, defaults, {title: $' {title} ', buttons: []})
-  form.OnSubmit((values: dict<any>) => {
-    OnPick(options[index(shown, values.choice)])
+  form.OnSubmit((vals: dict<any>) => {
+    OnPick(options[index(shown, vals.choice)])
   })
   form.Open()
 enddef

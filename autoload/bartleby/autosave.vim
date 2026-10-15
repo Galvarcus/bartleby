@@ -28,17 +28,20 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/scrivenings.vim' as SV
+import autoload 'bartleby/locale/writing.vim' as MW
+import 'bartleby/variables/constants.vim' as CO
+
+const AUTOSAVE_PENDING: string = 'bartleby_autosave_pending'
 
 var log = L.New(expand('<sfile>:t'))
 
 # FUNCTION: Return true when the current buffer is a document of the open
 # scrive.
-export def IsScriveDocument(): bool
+export def IsScriveDoc(): bool
   if SV.IsScrivening(bufnr())
     return true
   endif
@@ -59,7 +62,7 @@ export def Save(force: bool): void
   if !g:bartleby_autosave || !&modified || &readonly || !&modifiable
     return
   endif
-  if !IsScriveDocument()
+  if !IsScriveDoc()
     return
   endif
   var now: number = localtime()
@@ -78,7 +81,7 @@ export def Save(force: bool): void
     endif
     b:bartleby_autosave_time = now
   catch
-    log.Warn(printf(IN.T("auto-save failed for %s: %s"), expand("%:t"), v:exception))
+    log.Warn(MW.AutoSaveFailed(expand("%:t"), v:exception))
   endtry
 enddef
 
@@ -88,14 +91,14 @@ enddef
 # Insert or Replace mode. If you left the buffer, BufLeave already saved
 # it. If you are typing, InsertLeave saves it later.
 def ScheduleSave(seconds: number): void
-  if get(b:, 'bartleby_autosave_pending', false)
+  if get(b:, AUTOSAVE_PENDING, false)
     return
   endif
   b:bartleby_autosave_pending = true
   var buf: number = bufnr('%')
   timer_start(seconds * 1000, (_) => {
-    setbufvar(buf, 'bartleby_autosave_pending', false)
-    if bufnr('%') == buf && mode() !~# '^[iR]'
+    setbufvar(buf, AUTOSAVE_PENDING, false)
+    if bufnr('%') == buf && mode() !~# CO.PAT_INSERT
       Save(false)
     endif
   })

@@ -22,7 +22,6 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/focus.vim' as F
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/progress.vim' as PG
 import autoload 'bartleby/project.vim' as PO
@@ -31,13 +30,16 @@ import autoload 'bartleby/session.vim' as SS
 import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/locale/panes.vim' as MP
 import 'bartleby/variables/constants.vim' as CO
+
+const FOCUS_SESSION: string = 'bartleby_focus_session'
 
 var log = L.New(expand('<sfile>:t'))
 
 # The window options that Bartleby sets in its windows, which an empty
 # buffer must not inherit, because options of a window stay with the window.
-const WINDOW_OPTIONS: list<string> = [
+const WIN_OPTIONS: list<string> = [
   'winfixwidth', 'winfixheight', 'wrap', 'linebreak', 'breakindent',
   'breakindentopt', 'number', 'relativenumber', 'foldenable',
 ]
@@ -50,7 +52,7 @@ enddef
 
 # FUNCTION: Return the buffers of the documents of project, and the one of a
 # Scrivening.
-def ScriveBuffers(project: PO.Project): list<number>
+def ScriveBufs(project: PO.Project): list<number>
   return getbufinfo()
     ->filter((_, info) => SV.IsScrivening(info.bufnr) || InScrive(project, info.name))
     ->mapnew((_, info) => info.bufnr)
@@ -59,7 +61,7 @@ enddef
 # FUNCTION: Return the tab with a Focus session, or 0.
 def FocusTab(): number
   for tabNr in range(1, tabpagenr('$'))
-    if gettabvar(tabNr, 'bartleby_focus_session', null_object) isnot null_object
+    if gettabvar(tabNr, FOCUS_SESSION, null_object) isnot null_object
       return tabNr
     endif
   endfor
@@ -76,10 +78,10 @@ enddef
 # none afterward. The write is that of the window that shows it, so that
 # the options and the hooks of the buffer apply.
 def Save(bufNr: number): bool
-  var windows: list<number> = win_findbuf(bufNr)
+  var wins: list<number> = win_findbuf(bufNr)
   try
-    if !empty(windows)
-      win_execute(windows[0], 'silent update')
+    if !empty(wins)
+      win_execute(wins[0], 'silent update')
     else
       writefile(getbufline(bufNr, 1, '$'), fnamemodify(bufname(bufNr), ':p'))
       setbufvar(bufNr, '&modified', 0)
@@ -93,7 +95,7 @@ enddef
 # FUNCTION: Close the windows of Bartleby in the current tab. Windows of
 # other files stay. When there are none, one window stays, with an empty
 # buffer that has none of the window options of Bartleby.
-def CloseWindows(bufNrs: list<number>): void
+def CloseWins(bufNrs: list<number>): void
   var panes: list<number> = []
   var docs: list<number> = []
   var others: number = 0
@@ -101,7 +103,7 @@ def CloseWindows(bufNrs: list<number>): void
     if info.tabnr != tabpagenr() || win_gettype(info.winid) !=# ''
       continue
     endif
-    if W.IsChromeBuffer(info.bufnr)
+    if W.IsChromeBuf(info.bufnr)
       panes->add(info.winid)
     elseif index(bufNrs, info.bufnr) >= 0
       docs->add(info.winid)
@@ -123,7 +125,7 @@ def CloseWindows(bufNrs: list<number>): void
     enew
     clearmatches()
     unlet! w:bartleby_spotlight_matches
-    for option in WINDOW_OPTIONS
+    for option in WIN_OPTIONS
       execute 'setlocal ' .. option .. '<'
     endfor
   endif
@@ -135,18 +137,18 @@ enddef
 export def All(discard: bool = false): bool
   var project: PO.Project = ST.Get()
   if !IsAnythingOpen(project)
-    log.Info(IN.T("nothing of Bartleby is open"))
+    log.Info(MP.NothingOpen())
     return true
   endif
 
   # Remember where the writer was, for when the scrive opens again.
   if project isnot null_object
-    var docWindows: list<number> = ScriveBuffers(project)
+    var docWins: list<number> = ScriveBufs(project)
       ->mapnew((_, b) => win_findbuf(b))->flattennew()->filter((_, w) => win_id2tabwin(w)[0] == tabpagenr())
-    if !empty(docWindows) && index(docWindows, win_getid()) < 0
-      win_gotoid(docWindows[0])
+    if !empty(docWins) && index(docWins, win_getid()) < 0
+      win_gotoid(docWins[0])
     endif
-    SS.CaptureCurrentDoc()
+    SS.CaptureCurDoc()
     SS.CaptureBinderState(B.IsOpen(), B.GetCollapsedIds())
   endif
 
@@ -162,30 +164,30 @@ export def All(discard: bool = false): bool
   # Changes to throw away are marked as saved first, because leaving a
   # buffer would let auto-save write them.
   if discard
-    for bufNr in ScriveBuffers(project)
+    for bufNr in ScriveBufs(project)
       setbufvar(bufNr, '&modified', 0)
     endfor
   endif
   # A Scrivening writes its documents, and then they are buffers of their own.
   if SV.IsOpen()
     if !SV.Close()
-      log.Error(IN.T("the Scrivening could not be saved, so it stays open. Use :BartlebyClose! to throw its changes away"))
+      log.Error(MP.ScriveningCouldNot())
       return false
     endif
   endif
-  var bufNrs: list<number> = ScriveBuffers(project)
+  var bufNrs: list<number> = ScriveBufs(project)
   if !discard
     for bufNr in bufNrs
       if getbufvar(bufNr, '&modified') && !Save(bufNr)
-        log.Error(printf(IN.T("%s could not be saved, so the windows stay open. Use :BartlebyClose! to throw its changes away"), bufname(bufNr)))
+        log.Error(MP.CouldNotSaved(bufname(bufNr)))
         return false
       endif
     endfor
   endif
 
-  W.StopWatchingEditWindow()
+  W.StopWatchingEditWin()
   var paneBufs: list<number> = [bufnr(CO.BINDER_BUF), bufnr(CO.INSPECTOR_BUF)]->filter((_, b) => b > 0)
-  CloseWindows(bufNrs)
+  CloseWins(bufNrs)
   for bufNr in bufNrs + paneBufs
     if bufexists(bufNr)
       execute 'silent! bwipe! ' .. bufNr

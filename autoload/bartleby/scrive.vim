@@ -13,22 +13,23 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/templates.vim' as TE
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/binder.vim' as MB
+import autoload 'bartleby/locale/common.vim' as MC
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
-var binderroot: string = g:bartleby_binder_root
+var binder_root: string = g:bartleby_binder_root
 
 
 # FUNCTION: Return the folder that holds the scrives: a Bartleby folder
 # in g:bartleby_binder_root when it is set, else in ~/Documents. The
 # default is ~/Documents/Bartleby.
 export def BinderRoot(): string
-  var normalized: string = substitute(fnamemodify(binderroot, ':p'), '[/\\]$', '', '')
+  var normalized: string = substitute(fnamemodify(binder_root, ':p'), '[/\\]$', '', '')
   return normalized .. '/' .. CO.SCRIVE_FOLDER
 enddef
 
@@ -90,7 +91,7 @@ enddef
 export def Open(name: string): PO.Project
   var dir: string = ScrivePath(ResolveName(name))
   if !isdirectory(dir)
-    log.Error(printf(IN.T("no scrive named \"%s\" under %s"), name, BinderRoot()))
+    log.Error(MC.NoScriveNamed(name, BinderRoot()))
     return null_object
   endif
   var project: PO.Project = PO.Project.new(dir)
@@ -106,10 +107,10 @@ enddef
 export def Create(name: string, projectType: string = CO.TYPE_NOVEL): PO.Project
   var dir: string = ScrivePath(name)
   if isdirectory(dir)
-    log.Error(printf(IN.T("scrive \"%s\" already exists at %s"), name, dir))
+    log.Error(MB.ScriveAlreadyExists(name, dir))
     return null_object
   endif
-  mkdir(dir .. '/binder', 'p')
+  mkdir(dir .. CO.PATH_BINDER, 'p')
   var project: PO.Project = PO.Project.new(dir)
   project.InitNew(name, projectType)
   var tree: list<BI.BinderItem> = TE.DefaultTree(projectType, project.DocExt())

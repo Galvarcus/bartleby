@@ -96,13 +96,13 @@ def DamagedScrive(): any
   endfor
   project.Save()
   project.Save()
-  writefile(['{"name": "Damaged", "ite'], project.ProjectFilePath())
+  writefile(['{"name": "Damaged", "ite'], project.ProjFilePath())
   return project
 enddef
 
 def Test_rebuild_takes_the_backup_and_recovers_the_rest(): void
   var damaged = DamagedScrive()
-  var path: string = damaged.ProjectFilePath()
+  var path: string = damaged.ProjFilePath()
   var project = RC.Rebuild(damaged.scriveDir)
   assert_true(project isnot null_object)
   assert_equal(['{"name": "Damaged", "ite'], LinesOf(path .. RC.DAMAGED_SUFFIX))
@@ -117,7 +117,7 @@ enddef
 
 def Test_rebuild_without_a_backup_starts_from_the_structural_folders(): void
   var damaged = DamagedScrive()
-  var path: string = damaged.ProjectFilePath()
+  var path: string = damaged.ProjFilePath()
   delete(path .. PE.BACKUP_SUFFIX)
   var project = RC.Rebuild(damaged.scriveDir)
   assert_true(project isnot null_object)

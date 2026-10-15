@@ -17,11 +17,11 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binder.vim' as B
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/session.vim' as SS
 import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/locale/data.vim' as MD
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -40,11 +40,11 @@ export def Restore(project: PO.Project): void
   if state.activeDocRelPath !=# ''
     var path: string = project.BinderRoot() .. '/' .. state.activeDocRelPath
     if filereadable(path)
-      W.GoToEditorWindow()
+      W.GoToEditorWin()
       execute 'edit ' .. fnameescape(path)
       cursor(state.cursorLine, state.cursorCol)
     else
-      log.Warn(printf(IN.T("session: previously active document no longer exists: %s"), path))
+      log.Warn(MD.SessionPreviouslyActive(path))
     endif
   endif
 

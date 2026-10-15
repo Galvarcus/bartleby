@@ -26,16 +26,20 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/project.vim' as PO
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/scrive.vim' as S
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/helppopup.vim' as H
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/views.vim' as MV
 import 'bartleby/variables/constants.vim' as CO
+
+const TYPE_SCRIVE_LIST_HEADER: string = 'ScriveListHeader'
+const TYPE_SCRIVE_LIST_SEL: string = 'ScriveListSelected'
 
 var log = L.New(expand('<sfile>:t'))
 
-const COLUMN_GAP: string = '    '
+const COL_GAP: string = '    '
 const MAX_VISIBLE_ROWS: number = 15
 const SCRIVELIST_ZINDEX: number = 250
 
@@ -63,7 +67,7 @@ enddef
 # items list, or names an unknown project type. A missing or empty name
 # falls back to the folder name, as in Project.Load.
 export def ReadEntry(dir: string): ScriveEntry
-  var path: string = dir .. '/' .. CO.PROJECT_FILE
+  var path: string = dir .. '/' .. CO.PROJ_FILE
   if !filereadable(path)
     return null_object
   endif
@@ -115,8 +119,7 @@ export def Show(): void
   var entries: list<ScriveEntry> = FindScrives()
   var skipped: number = len(dirs) - len(entries)
   if skipped > 0
-    log.Warn(printf(IN.N("skipped %d folder under %s with no valid project.json",
-      "skipped %d folders under %s with no valid project.json", skipped), skipped, S.BinderRoot()))
+    log.Warn(MV.SkippedFolderUnder(skipped, S.BinderRoot()))
   endif
   if empty(entries)
     PromptNewScrive()
@@ -130,8 +133,8 @@ def Pad(text: string, width: number): string
 enddef
 
 def PromptNewScrive(): void
-  log.Info(printf(IN.T("no scrives found under %s - name a new one to create it"), S.BinderRoot()))
-  IP.PromptText(IN.T("No scrives - create one"), '', (name: string) => {
+  log.Info(MV.NoScrivesFound(S.BinderRoot()))
+  IP.PromptText(MV.NoScrivesCreate(), '', (name: string) => {
     if name !=# ''
       execute $'BartlebyNewScrive {name}'
     endif
@@ -153,8 +156,8 @@ class ScriveListPopup
     endfor
   enddef
 
-  def FormatRow(title: string, typeLabel: string): string
-    return Pad(title, this.titleWidth) .. COLUMN_GAP .. typeLabel
+  def FmtRow(title: string, typeLabel: string): string
+    return Pad(title, this.titleWidth) .. COL_GAP .. typeLabel
   enddef
 
   def Width(): number
@@ -162,7 +165,7 @@ class ScriveListPopup
     for entry in this.entries
       typeWidth = max([typeWidth, strdisplaywidth(TypeLabel(entry.projectType))])
     endfor
-    return max([this.titleWidth + strdisplaywidth(COLUMN_GAP) + typeWidth, 30])
+    return max([this.titleWidth + strdisplaywidth(COL_GAP) + typeWidth, 30])
   enddef
 
   def EnsurePropTypes(): void
@@ -184,7 +187,7 @@ class ScriveListPopup
     var width: number = this.Width()
     var height: number = min([len(this.entries), MAX_VISIBLE_ROWS]) + 2
     this.winid = popup_create(this.bufnr, {
-      title: printf(' %s ', IN.T("Scrives")),
+      title: printf(CO.TITLE_FMT, MV.Scrives()),
       border: [1, 1, 1, 1],
       padding: [0, 1, 0, 1],
       minwidth: width,
@@ -215,12 +218,12 @@ class ScriveListPopup
   enddef
 
   def Render(): void
-    var header: string = this.FormatRow(Headers()[0], Headers()[1])
+    var header: string = this.FmtRow(Headers()[0], Headers()[1])
     var lines: list<string> = [header, repeat('-', this.Width())]
     var [first: number, last: number] = this.VisibleSlice()
     for i in range(first, last - 1)
       var entry: ScriveEntry = this.entries[i]
-      lines->add(this.FormatRow(entry.title, TypeLabel(entry.projectType)))
+      lines->add(this.FmtRow(entry.title, TypeLabel(entry.projectType)))
     endfor
 
     setbufline(this.bufnr, 1, lines)
@@ -228,19 +231,19 @@ class ScriveListPopup
       deletebufline(this.bufnr, len(lines) + 1, '$')
     endif
 
-    prop_remove({type: 'ScriveListHeader', bufnr: this.bufnr}, 1, len(lines))
-    prop_remove({type: 'ScriveListSelected', bufnr: this.bufnr}, 1, len(lines))
-    prop_add(1, 1, {type: 'ScriveListHeader', bufnr: this.bufnr, length: strlen(header)})
+    prop_remove({type: TYPE_SCRIVE_LIST_HEADER, bufnr: this.bufnr}, 1, len(lines))
+    prop_remove({type: TYPE_SCRIVE_LIST_SEL, bufnr: this.bufnr}, 1, len(lines))
+    prop_add(1, 1, {type: TYPE_SCRIVE_LIST_HEADER, bufnr: this.bufnr, length: strlen(header)})
     var selLnum: number = 3 + (this.selectedIdx - first)
     prop_add(selLnum, 1, {
-      type: 'ScriveListSelected', bufnr: this.bufnr,
+      type: TYPE_SCRIVE_LIST_SEL, bufnr: this.bufnr,
       length: max([strlen(lines[selLnum - 1]), 1]),
     })
   enddef
 
   # METHOD: Open the selection with a timer after this popup filter call
   # returns, so the scrive's windows are never built inside a popup filter.
-  def OpenSelected(): void
+  def OpenSel(): void
     var name: string = this.entries[this.selectedIdx].name
     this.Close()
     timer_start(0, (_) => {
@@ -249,27 +252,27 @@ class ScriveListPopup
   enddef
 
   def ShowHelp(): void
-    H.Show(IN.T("Scrives"), [
-      ['<CR>', IN.T("Open the selected scrive")],
-      ['j / <Down>', IN.T("Next scrive")],
-      ['k / <Up>', IN.T("Previous scrive")],
-      ['q / <Esc>', IN.T("Close")],
-      ['?', IN.T("This help")],
+    H.Show(MV.Scrives(), [
+      ['<CR>', MV.OpenSelScrive()],
+      ['j / <Down>', MV.NextScrive()],
+      ['k / <Up>', MV.PrevScrive()],
+      ['q / <Esc>', MC.Close()],
+      ['?', MC.Help()],
     ])
   enddef
 
   def Filter(winid: number, key: string): bool
-    if key ==# 'j' || key ==# "\<Down>"
+    if key ==# 'j' || key ==# CO.KEY_DOWN
       this.selectedIdx = min([len(this.entries) - 1, this.selectedIdx + 1])
       this.Render()
-    elseif key ==# 'k' || key ==# "\<Up>"
+    elseif key ==# 'k' || key ==# CO.KEY_UP
       this.selectedIdx = max([0, this.selectedIdx - 1])
       this.Render()
-    elseif key ==# "\<CR>"
-      this.OpenSelected()
+    elseif key ==# CO.KEY_CR
+      this.OpenSel()
     elseif key ==# '?'
       this.ShowHelp()
-    elseif key ==# 'q' || key ==# "\<Esc>"
+    elseif key ==# 'q' || key ==# CO.KEY_ESC
       this.Close()
     endif
     return true
@@ -278,5 +281,5 @@ endclass
 
 # FUNCTION: Return the column headers in the message language.
 def Headers(): list<string>
-  return [IN.T("Title"), IN.T("Type")]
+  return [MV.Title(), MV.Type()]
 enddef

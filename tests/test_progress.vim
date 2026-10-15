@@ -53,7 +53,7 @@ def SheetHistory(fx: dict<any>): void
   var data: dict<any> = json_decode(join(readfile(file), ''))
   data.history = {}
   for i in range(9)
-    data.history[P.DateOf(P.DayNumber('2021-11-01') + i)] = {start: 0, total: i < 8 ? 1300 : 1600}
+    data.history[P.DateOf(P.DayNum('2021-11-01') + i)] = {start: 0, total: i < 8 ? 1300 : 1600}
   endfor
   writefile([json_encode(data)], file)
   P.Forget()
@@ -61,9 +61,9 @@ def SheetHistory(fx: dict<any>): void
 enddef
 
 def Test_dates_count_by_the_calendar(): void
-  assert_equal([0, 11016, 18932], ['1970-01-01', '2000-02-29', '2021-11-01']->mapnew((_, d) => P.DayNumber(d)))
+  assert_equal([0, 11016, 18932], ['1970-01-01', '2000-02-29', '2021-11-01']->mapnew((_, d) => P.DayNum(d)))
   for d in ['1999-12-31', '2000-03-01', '2024-02-29', '2026-10-09']
-    assert_equal(d, P.DateOf(P.DayNumber(d)))
+    assert_equal(d, P.DateOf(P.DayNum(d)))
   endfor
   assert_equal([true, false, false], [P.IsDate('2024-02-29'), P.IsDate('2021-02-29'), P.IsDate('11/01/2021')])
 enddef

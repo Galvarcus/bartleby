@@ -23,28 +23,41 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/scrivenings.vim' as SV
+import autoload 'bartleby/locale/writing.vim' as MW
+
+const QUILLWRAPMODEDEFAULT_SOFT: string = 'soft'
+const QUILLWRAPMODEDEFAULT_OFF: string = 'off'
+const ATTR_NAME: string = 'name'
+const KEYS_C_O_G_UP: string = "\<C-o>g\<Up>"
+const KEYS_C_O_G_DOWN: string = "\<C-o>g\<Down>"
+const KEY_NAME_CR: string = '<CR>'
+const WRAP_ARG_DETECT: string = 'detect'
+const WRAP_ARG_TOGGLE: string = 'toggle'
+const WRAP_ARG_HARD: string = 'hard'
+const WRAP_ARG_ON: string = 'on'
 
 var log = L.New(expand('<sfile>:t'))
-var quillwrapmodedefault: string = g:bartleby_quill_wrap_mode_default
-var quilltextwidth: number = g:bartleby_quill_textwidth
-var quillautoformat: bool = g:bartleby_quill_autoformat
-var quilljoinspaces: bool = g:bartleby_quill_joinspaces
-var quillcursorwrap: bool = g:bartleby_quill_cursorwrap
-var quillconceallevel: number = g:bartleby_quill_conceallevel
-var quillconcealcursor: string = g:bartleby_quill_concealcursor
-var quillautoapply: bool = g:bartleby_quill_auto
-var quillautoformatconfig: dict<any> = g:bartleby_quill_autoformat_config
-var quillautoformataliases: dict<any> = g:bartleby_quill_autoformat_aliases
+var wrap_mode_default: string = g:bartleby_quill_wrap_mode_default
+var quill_textwidth: number = g:bartleby_quill_textwidth
+var autoformat: bool = g:bartleby_quill_autoformat
+var quill_joinspaces: bool = g:bartleby_quill_joinspaces
+var cursorwrap: bool = g:bartleby_quill_cursorwrap
+var quill_conceallevel: number = g:bartleby_quill_conceallevel
+var quill_concealcursor: string = g:bartleby_quill_concealcursor
+var auto: bool = g:bartleby_quill_auto
+var autoformat_config: dict<any> = g:bartleby_quill_autoformat_config
+var autoformat_aliases: dict<any> = g:bartleby_quill_autoformat_aliases
 
 const MODE_OFF: number = 0
 const MODE_HARD: number = 1
 const MODE_SOFT: number = 2
+var soft_detect_sample: number = g:bartleby_quill_soft_detect_sample
+var soft_detect_threshold: number = g:bartleby_quill_soft_detect_threshold
 
 ##############################################################################
 # SECTION: Wrap mode detection. Reads modelines and sample lines for a
@@ -98,17 +111,17 @@ def DetectWrapMode(maxTextwidth: number): number
   if maxTextwidth > 0
     return MODE_HARD
   endif
-  if maxTextwidth ==# 0 || quillwrapmodedefault ==# 'soft'
+  if maxTextwidth ==# 0 || wrap_mode_default ==# QUILLWRAPMODEDEFAULT_SOFT
     return MODE_SOFT
   endif
-  var sample: number = g:bartleby_quill_soft_detect_sample
-  var threshold: number = g:bartleby_quill_soft_detect_threshold
+  var sample: number = soft_detect_sample
+  var threshold: number = soft_detect_threshold
   for l in getline(1, sample)
     if len(l) > threshold
       return MODE_SOFT
     endif
   endfor
-  return quillwrapmodedefault ==# 'off' ? MODE_OFF : MODE_HARD
+  return wrap_mode_default ==# QUILLWRAPMODEDEFAULT_OFF ? MODE_OFF : MODE_HARD
 enddef
 
 # CLASS: The Quill state of one buffer, stored in b:bartleby_quill.
@@ -141,7 +154,7 @@ export class QuillSession
   enddef
 endclass
 
-def CurrentSession(): QuillSession
+def CurSession(): QuillSession
   var session: QuillSession = get(b:, 'bartleby_quill', null_object)
   if session is null_object
     session = QuillSession.new()
@@ -158,18 +171,18 @@ enddef
 ##############################################################################
 
 def SynStackNames(lnum: number, col: number): list<string>
-  return synstack(lnum, col)->mapnew((_, id) => synIDattr(id, 'name'))
+  return synstack(lnum, col)->mapnew((_, id) => synIDattr(id, ATTR_NAME))
 enddef
 
 def MaybeEnableAutoformat(): void
-  var session: QuillSession = CurrentSession()
+  var session: QuillSession = CurSession()
   if session.suspendAf
     session.SetSuspendAf(false)
     return
   endif
 
-  var ft: string = get(quillautoformataliases, &filetype, &filetype)
-  var cfg: dict<any> = get(quillautoformatconfig, ft, {})
+  var ft: string = get(autoformat_aliases, &filetype, &filetype)
+  var cfg: dict<any> = get(autoformat_config, ft, {})
   var black: list<string> = get(cfg, 'black', [])
   var white: list<string> = get(cfg, 'white', [])
   var blackRe: string = empty(black) ? '' : '\v(' .. join(black, '|') .. ')'
@@ -216,8 +229,8 @@ enddef
 
 # FUNCTION: Set autoformat for the buffer. af is 1 to turn it on, 0 to
 # turn it off, and -1 to toggle it.
-export def SetAutoFormat(af: number): void
-  var session: QuillSession = CurrentSession()
+export def SetAutoFmt(af: number): void
+  var session: QuillSession = CurSession()
   var newAf: bool = af ==# -1 ? !session.lastAutoformat : af ==# 1
   var isHard: bool = session.wrapMode ==# MODE_HARD
 
@@ -232,7 +245,7 @@ export def SetAutoFormat(af: number): void
       autocmd! * <buffer>
     augroup END
     if newAf && !isHard
-      log.Warn(IN.T("autoformat can only be enabled in hard line break mode"))
+      log.Warn(MW.AutoformatCanOnly())
       return
     endif
   endif
@@ -248,7 +261,7 @@ def ApplyHardSettings(session: QuillSession): void
   if &modeline ==# false && session.maxTextwidth > 0
     execute $'setlocal textwidth={session.maxTextwidth}'
   elseif &textwidth ==# 0
-    execute $'setlocal textwidth={quilltextwidth}'
+    execute $'setlocal textwidth={quill_textwidth}'
   else
     setlocal textwidth<
   endif
@@ -327,7 +340,7 @@ def SetupNavigationMaps(wrapMode: number): void
     # A Scrivening maps the arrow keys itself, so that they pass its title
     # lines, and moves by screen lines otherwise.
     if SV.IsScrivening(bufnr())
-      SV.MapArrows("\<C-o>g\<Up>", "\<C-o>g\<Down>")
+      SV.MapArrows(KEYS_C_O_G_UP, KEYS_C_O_G_DOWN)
     else
       inoremap <buffer> <silent> <Up> <C-o>g<Up>
       inoremap <buffer> <silent> <Down> <C-o>g<Down>
@@ -355,7 +368,7 @@ def SetupPunctuationMaps(session: QuillSession): void
     endfor
     inoremap <buffer> <C-u> <C-g>u<C-u>
     inoremap <buffer> <C-w> <C-g>u<C-w>
-    if empty(maparg('<CR>', 'i'))
+    if empty(maparg(KEY_NAME_CR, 'i'))
       inoremap <buffer> <CR> <C-g>u<CR>
       session.SetCrMapped(true)
     else
@@ -373,21 +386,21 @@ def SetupPunctuationMaps(session: QuillSession): void
   endif
 enddef
 
-export def Init(wrapArg: string = 'detect'): void
-  if W.RefusedInPane(IN.T("Quill"))
+export def Init(wrapArg: string = WRAP_ARG_DETECT): void
+  if W.RefusedInPane(MW.Quill())
     return
   endif
-  var session: QuillSession = CurrentSession()
+  var session: QuillSession = CurSession()
   session.SetSuspendAf(false)
 
   var mode: number = session.wrapMode
-  if (mode !=# MODE_OFF && wrapArg ==# 'toggle') || wrapArg =~# '^\(0\|off\|disable\|false\)$'
+  if (mode !=# MODE_OFF && wrapArg ==# WRAP_ARG_TOGGLE) || wrapArg =~# '^\(0\|off\|disable\|false\)$'
     mode = MODE_OFF
-  elseif wrapArg ==# 'hard'
+  elseif wrapArg ==# WRAP_ARG_HARD
     mode = MODE_HARD
-  elseif wrapArg ==# 'soft'
+  elseif wrapArg ==# QUILLWRAPMODEDEFAULT_SOFT
     mode = MODE_SOFT
-  elseif wrapArg ==# 'on' || wrapArg ==# 'toggle'
+  elseif wrapArg ==# WRAP_ARG_ON || wrapArg ==# WRAP_ARG_TOGGLE
     session.SetMaxTextwidth(MaxTextwidthFromModelines())
     mode = DetectWrapMode(session.maxTextwidth)
   else
@@ -396,7 +409,7 @@ export def Init(wrapArg: string = 'detect'): void
   endif
   session.SetWrapMode(mode)
 
-  SetAutoFormat(mode ==# MODE_HARD && quillautoformat ? 1 : 0)
+  SetAutoFmt(mode ==# MODE_HARD && autoformat ? 1 : 0)
 
   if mode ==# MODE_HARD
     ApplyHardSettings(session)
@@ -409,14 +422,14 @@ export def Init(wrapArg: string = 'detect'): void
   if mode !=# MODE_OFF
     setlocal display+=lastline
     setlocal backspace=indent,eol,start
-    if quilljoinspaces
+    if quill_joinspaces
       setlocal joinspaces
     else
       setlocal nojoinspaces
     endif
   endif
 
-  if quillcursorwrap && mode !=# MODE_OFF
+  if cursorwrap && mode !=# MODE_OFF
     setlocal whichwrap+=<,>,b,s,h,l,[,]
   endif
 
@@ -434,8 +447,8 @@ export def Init(wrapArg: string = 'detect'): void
     setlocal formatoptions+=n1t
     setlocal formatoptions-=vwa2
     if exists('&conceal')
-      execute $'setlocal conceallevel={quillconceallevel}'
-      execute $'setlocal concealcursor={quillconcealcursor}'
+      execute $'setlocal conceallevel={quill_conceallevel}'
+      execute $'setlocal concealcursor={quill_concealcursor}'
     endif
   endif
 
@@ -448,25 +461,25 @@ enddef
 ##############################################################################
 
 export def Toggle(): void
-  Init('toggle')
+  Init(WRAP_ARG_TOGGLE)
 enddef
 
 # FUNCTION: Apply Quill in hard wrap mode to a document of the open
 # scrive. Runs on BufEnter, set in plugin/bartleby.vim, when
 # g:bartleby_quill_auto is on.
 export def AutoApply(): void
-  if !quillautoapply || exists('b:bartleby_quill')
+  if !auto || exists('b:bartleby_quill')
     return
   endif
-  if W.IsChromeBuffer(bufnr('%'))
+  if W.IsChromeBuf(bufnr('%'))
     return
   endif
   var project: PO.Project = ST.Get()
   if project is null_object
     return
   endif
-  if SV.DocumentHere(project) is null_object
+  if SV.DocHere(project) is null_object
     return
   endif
-  Init('detect')
+  Init(WRAP_ARG_DETECT)
 enddef

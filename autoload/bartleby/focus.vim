@@ -29,19 +29,22 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/locale/writing.vim' as MW
+
+const SIGNIFY_VAR: string = 'sy'
+const BG_1: string = '-1'
 
 var log = L.New(expand('<sfile>:t'))
-var focuswidth: any = g:bartleby_focus_width
-var focusheight: any = g:bartleby_focus_height
-var focusmargintop: number = g:bartleby_focus_margin_top
-var focusmarginbottom: number = g:bartleby_focus_margin_bottom
-var focuslinenr: number = g:bartleby_focus_linenr
-var focusbg: string = g:bartleby_focus_bg
+var focus_width: any = g:bartleby_focus_width
+var focus_height: any = g:bartleby_focus_height
+var margin_top: number = g:bartleby_focus_margin_top
+var margin_bottom: number = g:bartleby_focus_margin_bottom
+var linenr: number = g:bartleby_focus_linenr
+var focus_bg: string = g:bartleby_focus_bg
 var focusfullscreen: bool = !!g:bartleby_focus_fullscreen
-var focusguifont: string = g:bartleby_focus_guifont
+var focus_guifont: string = g:bartleby_focus_guifont
 
 def RelSize(expr: any, limit: number): number
   if type(expr) ==# v:t_number
@@ -73,7 +76,7 @@ def DisableThirdPartyStatuslines(): dict<bool>
     silent! execute 'GitGutterDisable'
   endif
 
-  disabled.signify = !empty(getbufvar(bufnr('%'), 'sy'))
+  disabled.signify = !empty(getbufvar(bufnr('%'), SIGNIFY_VAR))
   if disabled.signify
     silent! execute 'SignifyToggle'
   endif
@@ -188,13 +191,13 @@ enddef
 # save and restore the global options around it.
 
 def Enter(dimExpr: string): void
-  if exists('t:bartleby_focus_session') || W.RefusedInPane(IN.T("Focus"))
+  if exists('t:bartleby_focus_session') || W.RefusedInPane(MW.Focus())
     return
   endif
 
   var dim: Dimensions = Dimensions.Parse(dimExpr)
   if dim is null_object
-    log.Error(printf(IN.T("invalid dimension expression: %s"), dimExpr))
+    log.Error(MW.InvalidDimensionExpr(dimExpr))
     return
   endif
 
@@ -357,12 +360,12 @@ enddef
 # function cannot name them. eval and :execute reach them at run time,
 # and only when has('gui_running') is true.
 def ApplyGuiSettings(saved: dict<any>): void
-  if focusguifont !=# ''
+  if focus_guifont !=# ''
     saved.guifont = eval('&guifont')
     try
-      execute $'&guifont = {string(focusguifont)}'
+      execute $'&guifont = {string(focus_guifont)}'
     catch
-      log.Error(printf(IN.T("could not set g:bartleby_focus_guifont \"%s\": %s"), focusguifont, v:exception))
+      log.Error(MW.CouldNotSet(focus_guifont, v:exception))
       remove(saved, 'guifont')
     endtry
   endif
@@ -375,7 +378,7 @@ def ApplyGuiSettings(saved: dict<any>): void
   elseif has('gui_gtk') || has('gui_win32')
     set guioptions+=s
   else
-    log.Warn(IN.T("this GUI has no fullscreen mode - g:bartleby_focus_fullscreen has no effect"))
+    log.Warn(MW.GUIHasNo())
   endif
 enddef
 
@@ -470,13 +473,13 @@ class Dimensions
 
   static def Default(): Dimensions
     var dim: Dimensions = Dimensions.new()
-    dim.width = RelSize(focuswidth, &columns)
-    if focusmargintop < 0 && focusmarginbottom < 0
-      dim.height = RelSize(focusheight, &lines)
+    dim.width = RelSize(focus_width, &columns)
+    if margin_top < 0 && margin_bottom < 0
+      dim.height = RelSize(focus_height, &lines)
       dim.yoff = 0
     else
-      var top: number = max([0, RelSize(focusmargintop < 0 ? 4 : focusmargintop, &lines)])
-      var bot: number = max([0, RelSize(focusmarginbottom < 0 ? 4 : focusmarginbottom, &lines)])
+      var top: number = max([0, RelSize(margin_top < 0 ? 4 : margin_top, &lines)])
+      var bot: number = max([0, RelSize(margin_bottom < 0 ? 4 : margin_bottom, &lines)])
       dim.height = &lines - top - bot
       dim.yoff = top - bot
     endif
@@ -571,7 +574,7 @@ export class FocusSession
   enddef
 
   def HideLinenr(): void
-    if !focuslinenr
+    if !linenr
       setlocal nonumber
       if exists('&relativenumber')
         setlocal norelativenumber
@@ -658,8 +661,8 @@ export class FocusSession
     var groups: list<string> = ['NonText', 'FoldColumn', 'ColorColumn',
       'VertSplit', 'StatusLine', 'StatusLineNC', 'SignColumn']
     for grp in groups
-      if bg ==# '-1' || bg ==# ''
-        execute $'highlight {grp} {attr}fg={focusbg} {attr}bg=NONE'
+      if bg ==# BG_1 || bg ==# ''
+        execute $'highlight {grp} {attr}fg={focus_bg} {attr}bg=NONE'
       else
         execute $'highlight {grp} {attr}fg={bg} {attr}bg={bg}'
       endif
@@ -694,7 +697,7 @@ export class FocusSession
   def ResetDimensions(expr: string): void
     var parsed: Dimensions = Dimensions.Parse(expr)
     if parsed is null_object
-      log.Error(printf(IN.T("invalid dimension expression: %s"), expr))
+      log.Error(MW.InvalidDimensionExpr(expr))
       return
     endif
     this.dim = parsed

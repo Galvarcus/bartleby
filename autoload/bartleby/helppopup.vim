@@ -14,12 +14,15 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
+import 'bartleby/variables/constants.vim' as CO
+import autoload 'bartleby/locale/views.vim' as MV
+const HELP_ZINDEX: number = 300
+const HELP_MINWIDTH: number = 40
 
 # FUNCTION: Show entries, a list of key and description pairs in the
 # caller's order. title is the border title, or Help when it is empty.
 export def Show(title: string, entries: list<list<string>>): void
-  var popupTitle: string = printf(' %s ', title ==# '' ? IN.T("Help") : title)
+  var popupTitle: string = printf(' %s ', title ==# '' ? MV.Help() : title)
 
   var keyWidth: number = 0
   for entry in entries
@@ -31,16 +34,16 @@ export def Show(title: string, entries: list<list<string>>): void
     lines->add(printf('  %-' .. keyWidth .. 's   %s', entry[0], entry[1]))
   endfor
   lines->add('')
-  lines->add('  ' .. IN.T("Press Esc to close"))
+  lines->add('  ' .. MV.PressEscClose())
 
   popup_create(lines, {
     title: popupTitle,
     border: [1, 1, 1, 1],
     padding: [0, 1, 0, 1],
-    zindex: 300,
-    minwidth: 40,
+    zindex: HELP_ZINDEX,
+    minwidth: HELP_MINWIDTH,
     filter: (id: number, key: string): bool => {
-      if key ==# "\<Esc>"
+      if key ==# CO.KEY_ESC
         popup_close(id)
       endif
       return true

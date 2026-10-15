@@ -32,6 +32,9 @@ import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/scrivenings.vim' as SV
 import 'bartleby/variables/constants.vim' as CO
 
+const CHAPTER_PREFIX: string = 'chapter-'
+const PART_PREFIX: string = 'part-'
+
 # The name of a title that a slug leaves empty.
 const UNTITLED: string = 'untitled'
 
@@ -46,9 +49,9 @@ enddef
 export def FolderSlug(folder: BI.BinderItem): string
   var slug: string = SlugOf(folder.title)
   if folder.structureRole ==# CO.ROLE_CHAPTER
-    return 'chapter-' .. slug
+    return CHAPTER_PREFIX .. slug
   elseif folder.structureRole ==# CO.ROLE_PART
-    return 'part-' .. slug
+    return PART_PREFIX .. slug
   endif
   return slug
 enddef
@@ -76,19 +79,19 @@ enddef
 # and so on, and ext: a path that the layout could give.
 def FollowsLayout(relPath: string, base: string, ext: string): bool
   return relPath ==# base .. ext
-    || relPath =~# '^\V' .. escape(base, '\') .. '-\d\+' .. escape(ext, '\') .. '\$'
+    || relPath =~# CO.PAT_NOMAGIC_BOL .. escape(base, '\') .. '-\d\+' .. escape(ext, '\') .. '\$'
 enddef
 
 # FUNCTION: Call Visit for each document in items, with the folders from
 # the top level down to it, after the folders in holding. The Trash is
 # left out.
-def EachDocument(items: list<BI.BinderItem>, holding: list<BI.BinderItem>,
+def EachDoc(items: list<BI.BinderItem>, holding: list<BI.BinderItem>,
     Visit: func(BI.BinderItem, list<BI.BinderItem>)): void
   for item in items
-    if item.IsDocument()
+    if item.IsDoc()
       Visit(item, holding)
     elseif item.structureRole !=# CO.ROLE_TRASH
-      EachDocument(item.children, holding + [item], Visit)
+      EachDoc(item.children, holding + [item], Visit)
     endif
   endfor
 enddef
@@ -114,7 +117,7 @@ enddef
 def UsedPaths(project: PO.Project, skip: dict<bool>): dict<bool>
   var used: dict<bool> = {}
   for row in T.Flatten(project)
-    if row.item.IsDocument() && !has_key(skip, row.item.id)
+    if row.item.IsDoc() && !has_key(skip, row.item.id)
       used[row.item.relPath] = true
     endif
   endfor
@@ -125,7 +128,7 @@ enddef
 # their paths, with ext. Nothing is on disk yet.
 export def AssignPaths(items: list<BI.BinderItem>, ext: string): void
   var used: dict<bool> = {}
-  EachDocument(items, [], (doc, folders) => {
+  EachDoc(items, [], (doc, folders) => {
     var relPath: string = FreePath(BasePath(folders, doc.title), ext, (p) => has_key(used, p))
     doc.SetRelPath(relPath)
     used[relPath] = true
@@ -138,10 +141,10 @@ enddef
 export def Place(project: PO.Project, item: BI.BinderItem): void
   var holding: list<BI.BinderItem> = HoldingFolders(project, item.id)
   var docs: list<list<any>> = []
-  if item.IsDocument()
+  if item.IsDoc()
     docs->add([item, holding])
   else
-    EachDocument(item.children, holding + [item], (doc, folders) => {
+    EachDoc(item.children, holding + [item], (doc, folders) => {
       docs->add([doc, folders])
     })
   endif
@@ -168,7 +171,7 @@ export def Plan(project: PO.Project): list<dict<any>>
   var root: string = project.BinderRoot()
   var ext: string = project.DocExt()
   var docs: list<list<any>> = []
-  EachDocument(project.items, [], (doc, folders) => {
+  EachDoc(project.items, [], (doc, folders) => {
     docs->add([doc, BasePath(folders, doc.title)])
   })
   # The paths of these documents may be given anew. Those of the Trash stay.
@@ -204,7 +207,7 @@ enddef
 
 # FUNCTION: Return the loaded buffers of the documents that moves move, as
 # full path to buffer number.
-def BuffersOf(root: string, moves: list<dict<any>>): dict<number>
+def BufsOf(root: string, moves: list<dict<any>>): dict<number>
   var paths: dict<bool> = {}
   for move in moves
     paths[fnamemodify(root .. '/' .. move.from, ':p')] = true
@@ -222,7 +225,7 @@ enddef
 # FUNCTION: Move the text file of doc, and its metadata file when it has
 # one, to newRelPath, and give doc that path. Returns false, and changes
 # nothing, when a file cannot move.
-def MoveDocument(root: string, doc: BI.BinderItem, newRelPath: string): bool
+def MoveDoc(root: string, doc: BI.BinderItem, newRelPath: string): bool
   var oldRelPath: string = doc.relPath
   var oldText: string = doc.AbsPath(root)
   var oldMeta: string = doc.MetaPath(root)
@@ -256,8 +259,8 @@ export def Tidy(project: PO.Project, moves: list<dict<any>>): list<string>
   if !SV.SaveIfModified()
     return [CO.SCRIVENINGS_BUF]
   endif
-  var buffers: dict<number> = BuffersOf(root, moves)
-  var unsaved: list<string> = buffers->keys()->filter((_, p) => getbufvar(buffers[p], '&modified'))
+  var bufs: dict<number> = BufsOf(root, moves)
+  var unsaved: list<string> = bufs->keys()->filter((_, p) => getbufvar(bufs[p], '&modified'))
   if !empty(unsaved)
     return unsaved
   endif
@@ -265,8 +268,8 @@ export def Tidy(project: PO.Project, moves: list<dict<any>>): list<string>
   var views: list<dict<any>> = []
   for move in moves
     var path: string = fnamemodify(root .. '/' .. move.from, ':p')
-    if has_key(buffers, path)
-      for winid in win_findbuf(buffers[path])
+    if has_key(bufs, path)
+      for winid in win_findbuf(bufs[path])
         var pos: list<number> = getcurpos(winid)
         views->add({winid: winid, item: move.item, lnum: pos[1], col: pos[2]})
       endfor
@@ -279,7 +282,7 @@ export def Tidy(project: PO.Project, moves: list<dict<any>>): list<string>
   var moving: list<dict<any>> = []
   for move in moves
     var temporary: string = fnamemodify(move.from, ':r') .. '.tidy-' .. move.item.id .. project.DocExt()
-    if MoveDocument(root, move.item, temporary)
+    if MoveDoc(root, move.item, temporary)
       moving->add(move)
     else
       failed->add(move.from)
@@ -287,7 +290,7 @@ export def Tidy(project: PO.Project, moves: list<dict<any>>): list<string>
   endfor
   project.Save()
   for move in moving
-    if !MoveDocument(root, move.item, move.to)
+    if !MoveDoc(root, move.item, move.to)
       failed->add(move.item.relPath)
     endif
   endfor
@@ -303,9 +306,9 @@ export def Tidy(project: PO.Project, moves: list<dict<any>>): list<string>
       win_execute(view.winid, $'cursor({view.lnum}, {view.col})')
     endif
   endfor
-  for path in keys(buffers)
-    if bufexists(buffers[path])
-      execute 'silent! bwipe ' .. buffers[path]
+  for path in keys(bufs)
+    if bufexists(bufs[path])
+      execute 'silent! bwipe ' .. bufs[path]
     endif
   endfor
   return failed

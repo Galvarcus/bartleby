@@ -8,7 +8,7 @@ var is_loaded: bool = true
 ##############################################################################
 # Plugin_Name: Bartleby
 # corkboard.vim: a grid of index cards for the documents directly in one
-# folder, built on PopupButtonMenu from buttonspopup.vim. Each card is a
+# folder, built on PopupBtnMenu from buttonspopup.vim. Each card is a
 # box with the title on its own line and the synopsis wrapped below it,
 # see wrap.vim. buttonspopup.vim draws a label with line breaks as a box
 # instead of a bracketed line.
@@ -22,7 +22,6 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as PO
@@ -33,6 +32,10 @@ import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/wrap.vim' as WR
 import autoload 'bartleby/helppopup.vim' as H
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/views.vim' as MV
+
+const PATH_H_J_K_L: string = ' / h j k l'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -40,7 +43,7 @@ const CARD_CONTENT_WIDTH: number = 24
 const CARD_SPACING: number = 2
 const MAX_SYNOPSIS_LINES: number = 3
 # Width of one card on screen, with its border and padding: the content
-# plus 2 border characters and 2 spaces, see RenderButton in
+# plus 2 border characters and 2 spaces, see RenderBtn in
 # buttonspopup.vim.
 const CARD_TOTAL_WIDTH: number = CARD_CONTENT_WIDTH + 4
 
@@ -51,7 +54,7 @@ enddef
 # terminal, so the grid is never wider than the screen. An 80-column
 # terminal fits 2 columns of the default card width. MARGIN leaves room
 # for the popup border and padding and a little space at the screen edge.
-def MaxColumns(): number
+def MaxCols(): number
   const MARGIN: number = 4
   var available: number = &columns - MARGIN
   var maxFit: number = (available + CARD_SPACING) / (CARD_TOTAL_WIDTH + CARD_SPACING)
@@ -79,7 +82,7 @@ enddef
 def EditSynopsis(project: PO.Project, folder: BI.BinderItem, doc: BI.BinderItem,
     OnDocumentPicked: func(BI.BinderItem)): void
   var meta: D.DocMeta = doc.LoadMeta(project.BinderRoot())
-  IP.PromptText(IN.T("Synopsis"), meta.synopsis, (newSynopsis: string) => {
+  IP.PromptText(MC.Synopsis(), meta.synopsis, (newSynopsis: string) => {
     if newSynopsis !=# meta.synopsis
       meta.SetSynopsis(newSynopsis)
       meta.Save(doc.MetaPath(project.BinderRoot()))
@@ -98,7 +101,7 @@ def Reorder(project: PO.Project, folder: BI.BinderItem, doc: BI.BinderItem,
   if MU.MoveWithinSiblings(project, row, delta)
     project.Save()
   else
-    log.Info(IN.T("already at that end of the folder"))
+    log.Info(MV.AlreadyEndFolder())
   endif
   Show(project, folder, OnDocumentPicked, doc.id)
 enddef
@@ -128,13 +131,13 @@ def HandleExtraKey(project: PO.Project, folder: BI.BinderItem, docs: list<BI.Bin
 enddef
 
 def ShowHelp(): void
-  H.Show(IN.T("Corkboard"), [
-    [IN.T("Arrows") .. ' / h j k l', IN.T("Move between cards")],
-    ['<CR> / <Space>', IN.T("Open the selected document")],
-    ['e', IN.T("Edit the synopsis")],
-    ['J / K', IN.T("Move the card later / earlier")],
-    ['<Esc>', IN.T("Close")],
-    ['?', IN.T("This help")],
+  H.Show(MV.Corkboard(), [
+    [MV.Arrows() .. PATH_H_J_K_L, MV.MoveBetweenCards()],
+    ['<CR> / <Space>', MV.OpenSelDoc()],
+    ['e', MV.EditSynopsis()],
+    ['J / K', MV.MoveCardLater()],
+    ['<Esc>', MC.Close()],
+    ['?', MC.Help()],
   ])
 enddef
 
@@ -147,14 +150,14 @@ export def Show(project: PO.Project, folder: BI.BinderItem,
   # Copy first: filter changes its list in place, and folder.children is
   # the live tree. Filtering it directly would delete every child that is
   # not a document from the binder.
-  var docs: list<BI.BinderItem> = copy(folder.children)->filter((_, c) => c.IsDocument())
+  var docs: list<BI.BinderItem> = copy(folder.children)->filter((_, c) => c.IsDoc())
   if empty(docs)
-    log.Info(printf(IN.T("\"%s\" has no documents to show on the corkboard"), folder.title))
+    log.Info(MV.HasNoDocs(folder.title))
     return
   endif
 
-  var buttons: list<BP.Button> = docs->mapnew((_, doc) =>
-    BP.Button.new(CardLabel(doc, project.BinderRoot()), Noop, doc))
+  var buttons: list<BP.Btn> = docs->mapnew((_, doc) =>
+    BP.Btn.new(CardLabel(doc, project.BinderRoot()), Noop, doc))
 
   var initialIdx: number = 0
   for i in range(len(docs))
@@ -163,10 +166,10 @@ export def Show(project: PO.Project, folder: BI.BinderItem,
     endif
   endfor
 
-  var menu: BP.PopupButtonMenu = BP.PopupButtonMenu.new(buttons, {
+  var menu: BP.PopupBtnMenu = BP.PopupBtnMenu.new(buttons, {
     popup: {title: $' {folder.title} '},
     button: {
-      columns: min([len(docs), 3, MaxColumns()]),
+      columns: min([len(docs), 3, MaxCols()]),
       spacing: CARD_SPACING,
       width: CARD_CONTENT_WIDTH,
       selected: initialIdx,

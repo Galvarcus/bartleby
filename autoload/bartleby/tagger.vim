@@ -31,9 +31,15 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/compile.vim' as MK
+import 'bartleby/variables/constants.vim' as CO
+
+const SETTING_SPACY: string = 'spacy'
+const MODEL_KEY: string = 'spacy_model'
+const JOB_RUN: string = 'run'
+const IN_MODE_NL: string = 'nl'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -58,12 +64,12 @@ export def Command(): list<string>
   if type(setting) == v:t_list
     return setting
   endif
-  if setting ==# 'spacy'
+  if setting ==# SETTING_SPACY
     # An empty model setting means the model of the language file. A
     # language without one has no tagger.
     var model: string = get(g:, 'bartleby_spotlight_spacy_model', '')
     if model ==# ''
-      model = LA.Get('spacy_model', '')
+      model = LA.Get(MODEL_KEY, '')
     endif
     return model ==# '' ? [] : ['python3', $'{LA.PluginRoot()}/tools/pos/spacy_tagger.py', model]
   endif
@@ -103,7 +109,7 @@ export def Tags(text: string): dict<any>
   # No requests while you type: each key changes the paragraph, and one
   # request per key would queue faster than the tagger answers. The
   # paragraph is tagged when you leave Insert mode.
-  if !IsReady() || index(values(pending), hash) >= 0 || mode() =~# '^[iR]'
+  if !IsReady() || index(values(pending), hash) >= 0 || mode() =~# CO.PAT_INSERT
     return {}
   endif
   if !Start()
@@ -117,7 +123,7 @@ export def Tags(text: string): dict<any>
 enddef
 
 export def Stop(): void
-  if job_status(tagger_job) ==# 'run'
+  if job_status(tagger_job) ==# JOB_RUN
     job_stop(tagger_job)
   endif
   tagger_job = null_job
@@ -135,22 +141,22 @@ export def Reset(): void
 enddef
 
 def Start(): bool
-  if job_status(tagger_job) ==# 'run'
+  if job_status(tagger_job) ==# JOB_RUN
     return true
   endif
   stderr_lines = []
   tagger_job = job_start(Command(), {
-    in_mode: 'nl',
-    out_mode: 'nl',
-    err_mode: 'nl',
+    in_mode: IN_MODE_NL,
+    out_mode: IN_MODE_NL,
+    err_mode: IN_MODE_NL,
     out_cb: (_, line) => OnReply(line),
     err_cb: (_, line) => {
       stderr_lines->add(line)
     },
     exit_cb: (j, code) => OnExit(j, code),
   })
-  if job_status(tagger_job) !=# 'run'
-    Fail(printf(IN.T("the tagger command could not start: %s"), join(Command(), ' ')))
+  if job_status(tagger_job) !=# JOB_RUN
+    Fail(MK.TaggerCmdCould(join(Command(), ' ')))
     return false
   endif
   return true
@@ -191,8 +197,8 @@ def OnExit(exited: job, code: number): void
     return
   endif
   if code != 0 && !failed
-    var detail: string = empty(stderr_lines) ? printf(IN.T("exit code %s"), code) : stderr_lines[-1]
-    Fail(printf(IN.T("the part-of-speech tagger stopped: %s"), detail))
+    var detail: string = empty(stderr_lines) ? MK.ExitCode(code) : stderr_lines[-1]
+    Fail(MK.PartSpeechTagger(detail))
   endif
   tagger_job = null_job
   pending = {}

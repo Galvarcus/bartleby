@@ -14,11 +14,20 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/progress.vim' as P
 import autoload 'bartleby/state.vim' as ST
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/progress.vim' as MG
+import 'bartleby/variables/constants.vim' as CO
+
+const SESSION: string = 'session'
+const DAILY: string = 'daily'
+const TARGET: string = 'target'
+const START: string = 'start'
+const DAYS: string = 'days'
+const CMD_PROGRESS_HEADER: string = 'BartlebyProgressHeader'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -30,7 +39,7 @@ const POPUP_ZINDEX: number = 250
 # filled with them, and set them on Save.
 export def EditGoals(): void
   if ST.Get() is null_object
-    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    log.Warn(MC.NoScriveOpen())
     return
   endif
   P.Refresh()
@@ -38,28 +47,28 @@ export def EditGoals(): void
   var tracker: dict<any> = P.Tracker()
   var Text = (n: number) => n > 0 ? string(n) : ''
   var fields: list<list<dict<any>>> = [
-    [{name: 'session', type: 'text'}, {name: 'daily', type: 'text'}],
-    [{name: 'target', type: 'text'}],
-    [{name: 'start', type: 'text'}, {name: 'days', type: 'text'}],
+    [{name: SESSION, type: CO.TYPE_TEXT}, {name: DAILY, type: CO.TYPE_TEXT}],
+    [{name: TARGET, type: CO.TYPE_TEXT}],
+    [{name: START, type: CO.TYPE_TEXT}, {name: DAYS, type: CO.TYPE_TEXT}],
   ]
-  var values: dict<string> = {
+  var vals: dict<string> = {
     session: Text(goals.session),
     daily: Text(goals.daily),
     target: Text(get(tracker, 'target', 0)),
     start: get(tracker, 'start', P.DayOf(localtime())),
     days: string(get(tracker, 'days', 30)),
   }
-  var form = IP.InputPopup.new(fields, values, {
-    title: IN.T(" Writing goals. 0 or empty is off "),
+  var form = IP.InputPopup.new(fields, vals, {
+    title: MG.WritingGoalsEmpty(),
     labels: {
-      session: IN.T("Session goal"),
-      daily: IN.T("Daily goal"),
-      target: IN.T("Tracker target"),
-      start: IN.T("Start date"),
-      days: IN.T("Days"),
+      session: MG.SessionGoal(),
+      daily: MG.DailyGoal(),
+      target: MG.TrackerTarget(),
+      start: MG.StartDate(),
+      days: MG.Days(),
     },
     widths: {session: 8, daily: 8, target: 8, start: 10, days: 4},
-    submit_label: IN.T("Save"),
+    submit_label: MC.Save(),
   })
   form.OnSubmit((v: dict<any>) => {
     var error: string = P.SetGoals(str2nr(v.session), str2nr(v.daily), str2nr(v.target),
@@ -101,25 +110,25 @@ export def Lines(today: string): list<string>
   var lines: list<string> = []
   var summary: list<list<string>> = []
   if goals.session > 0
-    summary->add([IN.T("Session"), $'{T(max([written.session, 0]))} / {T(goals.session)}'])
+    summary->add([MG.Session(), $'{T(max([written.session, 0]))} / {T(goals.session)}'])
   endif
   if goals.daily > 0
-    summary->add([IN.T("Today"), $'{T(max([written.today, 0]))} / {T(goals.daily)}'])
+    summary->add([MG.Today(), $'{T(max([written.today, 0]))} / {T(goals.daily)}'])
   endif
   var tracker: dict<any> = P.Tracker()
   var f: dict<any> = P.TrackerFigures(today)
   if !empty(f)
     var gap: string = f.difference >= 0
-      ? printf(IN.T("%s over"), T(f.difference)) : printf(IN.T("%s under"), T(-f.difference))
+      ? MC.Over(T(f.difference)) : MC.Under(T(-f.difference))
     summary += Table([
-      [IN.T("Target"), T(tracker.target), IN.T("Day"), printf(IN.T("%d of %d"), f.dayNumber, tracker.days),
-        IN.T("Written"), T(f.written)],
-      [IN.T("Start"), tracker.start, IN.T("Days to go"), string(f.daysToGo),
-        IN.T("Should have"), T(f.shouldHave)],
-      [IN.T("End"), f.end, IN.T("On track"), gap, IN.T("Per day"), T(f.perDay)],
-      [IN.T("Pace"), printf(IN.T("%s a day"), T(f.pace)), IN.T("Finish"), f.finish ==# '' ? '-' : f.finish, '', ''],
+      [MC.Target(), T(tracker.target), MG.Day(), MG.Of(f.dayNumber, tracker.days),
+        MG.Written(), T(f.written)],
+      [MG.Start(), tracker.start, MG.DaysGo(), string(f.daysToGo),
+        MG.ShouldHave(), T(f.shouldHave)],
+      [MG.End(), f.end, MG.Track(), gap, MG.PerDay(), T(f.perDay)],
+      [MG.Pace(), MG.ADay(T(f.pace)), MG.Finish(), f.finish ==# '' ? '-' : f.finish, '', ''],
     ])->mapnew((_, line) => [line])
-    summary->add([f.done ? IN.T("You did it! Winner!") : IN.T("You can do this!")])
+    summary->add([f.done ? MG.DidWinner() : MG.CanDo()])
   endif
   lines += summary->mapnew((_, row) => len(row) == 1 ? row[0] : join(row, ': '))
   if !empty(lines)
@@ -131,8 +140,8 @@ export def Lines(today: string): list<string>
   endfor
   var rows: list<list<string>> = []
   if !empty(f)
-    rows->add([IN.T("Day"), IN.T("Date"), IN.T("Words"), IN.T("Total")])
-    var start: number = P.DayNumber(tracker.start)
+    rows->add([MG.Day(), MG.Date(), MC.Words(), MG.Total()])
+    var start: number = P.DayNum(tracker.start)
     var total: number = 0
     for i in range(tracker.days)
       var day: string = P.DateOf(start + i)
@@ -142,7 +151,7 @@ export def Lines(today: string): list<string>
         future ? '' : T(total)])
     endfor
   else
-    rows->add([IN.T("Date"), IN.T("Words")])
+    rows->add([MG.Date(), MC.Words()])
     for [day, words] in P.History()[-HISTORY_DAYS :]
       rows->add([day, T(words)])
     endfor
@@ -154,7 +163,7 @@ enddef
 # scroll, e edits the goals, q and Esc close.
 export def Show(): void
   if ST.Get() is null_object
-    log.Warn(IN.T("no scrive open - run :BartlebyOpen <name> first"))
+    log.Warn(MC.NoScriveOpen())
     return
   endif
   P.Refresh()
@@ -166,21 +175,21 @@ export def Show(): void
   # the first line when there is no summary.
   var header: number = index(lines, '') + 1
   var content: list<dict<any>> = lines->mapnew((i, line) => i == header && line !=# ''
-    ? {text: line, props: [{col: 1, length: strlen(line), type: 'BartlebyProgressHeader'}]}
+    ? {text: line, props: [{col: 1, length: strlen(line), type: CMD_PROGRESS_HEADER}]}
     : {text: line})
   popup_create(content, {
-    title: $' {IN.T("Writing progress")}  (e: {IN.T("goals")}, q: {IN.T("close")}) ',
+    title: $' {MG.WritingProgress()}  (e: {MG.Goals()}, q: {MG.Close()}) ',
     border: [], padding: [0, 1, 0, 1], scrollbar: true, zindex: POPUP_ZINDEX,
     maxheight: max([&lines - 6, 5]), mapping: false,
     filter: (winid: number, key: string): bool => {
-      if key ==# 'q' || key == "\<Esc>"
+      if key ==# 'q' || key == CO.KEY_ESC
         popup_close(winid)
       elseif key ==# 'e'
         popup_close(winid)
         EditGoals()
-      elseif key ==# 'j' || key == "\<Down>"
+      elseif key ==# 'j' || key == CO.KEY_DOWN
         popup_setoptions(winid, {firstline: popup_getoptions(winid).firstline + 1})
-      elseif key ==# 'k' || key == "\<Up>"
+      elseif key ==# 'k' || key == CO.KEY_UP
         popup_setoptions(winid, {firstline: max([popup_getoptions(winid).firstline - 1, 1])})
       endif
       return true

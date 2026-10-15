@@ -12,25 +12,38 @@ var is_loaded: bool = true
 # per scrive, merged by field: an empty scrive field takes the global
 # value. Edited with inputpopup.vim.
 #
-# ProjectInfo is defined before the functions that use it because several
+# ProjInfo is defined before the functions that use it because several
 # of them name it in a parameter or return type, and Vim9 resolves a
 # signature when the function is defined.
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/data.vim' as MD
 import 'bartleby/variables/constants.vim' as CO
+
+const AUTHORNAME: string = 'authorname'
+const ADDR: string = 'address'
+const CITY: string = 'city'
+const STATE: string = 'state'
+const COUNTRYCODE: string = 'countrycode'
+const ZIP: string = 'zip'
+const PHONENUMBER: string = 'phonenumber'
+const EMAIL: string = 'email'
+const PATH_PROJ_INFO_JSON: string = '/project-info.json'
+const FIRSTNAME: string = 'firstname'
+const MIDDLENAME: string = 'middlename'
+const SUFFIX: string = 'suffix'
 
 var log = L.New(expand('<sfile>:t'))
 
 const FIELDS: list<string> = ['prefix', 'firstname', 'middlename', 'surname', 'suffix',
-  'authorname', 'address', 'city', 'state', 'countrycode', 'zip', 'phonenumber', 'email']
+  AUTHORNAME, ADDR, CITY, STATE, COUNTRYCODE, ZIP, PHONENUMBER, EMAIL]
 
-export class ProjectInfo
+export class ProjInfo
   var prefix: string = ''
   var firstname: string = ''
   var middlename: string = ''
@@ -45,8 +58,8 @@ export class ProjectInfo
   var phonenumber: string = ''
   var email: string = ''
 
-  static def FromDict(src: dict<any>): ProjectInfo
-    var info: ProjectInfo = ProjectInfo.new()
+  static def FromDict(src: dict<any>): ProjInfo
+    var info: ProjInfo = ProjInfo.new()
     info.prefix = get(src, 'prefix', '')
     info.firstname = get(src, 'firstname', '')
     info.middlename = get(src, 'middlename', '')
@@ -98,93 +111,93 @@ export def GlobalPath(): string
 enddef
 
 export def ScriveInfoPath(project: PO.Project): string
-  return project.scriveDir .. '/project-info.json'
+  return project.scriveDir .. PATH_PROJ_INFO_JSON
 enddef
 
-def LoadFrom(path: string): ProjectInfo
+def LoadFrom(path: string): ProjInfo
   if !filereadable(path)
-    return ProjectInfo.new()
+    return ProjInfo.new()
   endif
-  return ProjectInfo.FromDict(PE.ReadJson(path))
+  return ProjInfo.FromDict(PE.ReadJson(path))
 enddef
 
-export def LoadGlobal(): ProjectInfo
+export def LoadGlobal(): ProjInfo
   return LoadFrom(GlobalPath())
 enddef
 
-export def LoadForScrive(project: PO.Project): ProjectInfo
+export def LoadForScrive(project: PO.Project): ProjInfo
   return LoadFrom(ScriveInfoPath(project))
 enddef
 
 # FUNCTION: Merge the scrive profile of project with the global profile,
 # by field: an empty scrive field takes the global value.
-export def Resolve(project: PO.Project): ProjectInfo
+export def Resolve(project: PO.Project): ProjInfo
   var g: dict<any> = LoadGlobal().ToDict()
   var s: dict<any> = LoadForScrive(project).ToDict()
   var merged: dict<any> = {}
   for f in FIELDS
     merged[f] = get(s, f, '') !=# '' ? s[f] : get(g, f, '')
   endfor
-  return ProjectInfo.FromDict(merged)
+  return ProjInfo.FromDict(merged)
 enddef
 
 def FormLayout(): list<list<string>>
-  return [['prefix', 'firstname', 'middlename'], ['surname', 'suffix'], ['authorname'],
-    ['address'], ['city', 'state', 'countrycode', 'zip'], ['phonenumber'], ['email']]
+  return [['prefix', FIRSTNAME, MIDDLENAME], ['surname', SUFFIX], ['authorname'],
+    ['address'], ['city', STATE, COUNTRYCODE, ZIP], ['phonenumber'], ['email']]
 enddef
 
 # FUNCTION: Return the width of each form field. A field with a fixed
-# international maximum is that wide, see FormMaxLengths, and
+# international maximum is that wide, see FormMaxLens, and
 # inputpopup.vim adds one column for the cursor. The others are wide
 # enough for usual values, and longer text scrolls.
 def FormWidths(): dict<number>
   return {
     prefix: 8, firstname: 16, middlename: 16, surname: 20, suffix: 6,
     authorname: 32, address: 40, city: 20, phonenumber: 20, email: 32,
-  }->extend(FormMaxLengths())
+  }->extend(FormMaxLens())
 enddef
 
 # FUNCTION: Return the maximum length of the fields that have a fixed
 # international maximum: a subdivision code of ISO 3166-2 has at most 3
 # characters, a country code of ISO 3166-1 alpha-2 has 2, and the longest
 # postal codes have 10, such as a US ZIP+4 code.
-def FormMaxLengths(): dict<number>
+def FormMaxLens(): dict<number>
   return {state: 3, countrycode: 2, zip: 10}
 enddef
 
 def FormLabels(): dict<string>
   return {
-    prefix: IN.T("Prefix"),
-    firstname: IN.T("First"),
-    middlename: IN.T("Middle"),
-    surname: IN.T("Surname"),
-    suffix: IN.T("Suffix"),
-    authorname: IN.T("Author Name"),
-    address: IN.T("Address"),
-    city: IN.T("City"),
-    state: IN.T("State"),
-    countrycode: IN.T("Country"),
-    zip: IN.T("Zip"),
-    phonenumber: IN.T("Phone Number"),
-    email: IN.T("Email"),
+    prefix: MD.Prefix(),
+    firstname: MD.First(),
+    middlename: MD.Middle(),
+    surname: MD.Surname(),
+    suffix: MD.Suffix(),
+    authorname: MD.AuthorName(),
+    address: MD.Addr(),
+    city: MD.City(),
+    state: MD.State(),
+    countrycode: MD.Country(),
+    zip: MD.Zip(),
+    phonenumber: MD.PhoneNum(),
+    email: MD.Email(),
   }
 enddef
 
-def SaveAndValidate(path: string, values: dict<any>, requireName: bool): void
-  if requireName && get(values, 'firstname', '') ==# '' && get(values, 'surname', '') ==# ''
-    log.Error(IN.T("Name is required"))
+def SaveAndValidate(path: string, vals: dict<any>, requireName: bool): void
+  if requireName && get(vals, 'firstname', '') ==# '' && get(vals, 'surname', '') ==# ''
+    log.Error(MD.NameRequired())
     return
   endif
-  PE.WriteJson(path, values)
+  PE.WriteJson(path, vals)
 enddef
 
 export def EditGlobal(): void
   var current: dict<any> = LoadGlobal().ToDict()
   var form: IP.InputPopup = IP.InputPopup.new(IP.TextFields(FormLayout()), current,
-    {title: printf(IN.T(" %s Profile "), CO.PLUGIN_NAME), labels: FormLabels(),
-      widths: FormWidths(), maxlengths: FormMaxLengths()})
-  form.OnSubmit((values: dict<any>) => {
-    SaveAndValidate(GlobalPath(), values, true)
+    {title: MD.Profile(CO.PLUGIN_NAME), labels: FormLabels(),
+      widths: FormWidths(), maxlengths: FormMaxLens()})
+  form.OnSubmit((vals: dict<any>) => {
+    SaveAndValidate(GlobalPath(), vals, true)
   })
   form.Open()
 enddef
@@ -193,12 +206,12 @@ export def EditForScrive(project: PO.Project): void
   var globalDict: dict<any> = LoadGlobal().ToDict()
   var current: dict<any> = Resolve(project).ToDict()
   var form: IP.InputPopup = IP.InputPopup.new(IP.TextFields(FormLayout()), current,
-    {title: printf(IN.T(" %s Info "), project.name), labels: FormLabels(),
-      widths: FormWidths(), maxlengths: FormMaxLengths()})
-  form.OnSubmit((values: dict<any>) => {
+    {title: MD.Info(project.name), labels: FormLabels(),
+      widths: FormWidths(), maxlengths: FormMaxLens()})
+  form.OnSubmit((vals: dict<any>) => {
     var overrides: dict<any> = {}
-    for key in keys(values)
-      overrides[key] = values[key] ==# get(globalDict, key, '') ? '' : values[key]
+    for key in keys(vals)
+      overrides[key] = vals[key] ==# get(globalDict, key, '') ? '' : vals[key]
     endfor
     SaveAndValidate(ScriveInfoPath(project), overrides, false)
   })

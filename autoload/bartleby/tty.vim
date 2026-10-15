@@ -37,6 +37,11 @@ var is_loaded: bool = true
 
 import 'bartleby/variables/constants.vim' as CO
 
+const HL_CURSOR: string = 'Cursor'
+const HL_LINE_NR: string = 'LineNr'
+const DIM_BOLD: string = 'ctermfg=0 cterm=bold'
+const DIM_GREY: string = 'ctermfg=8'
+
 # The groups, one per row: name, text color, background color, attributes.
 # Colors are the numbers 0 to 7, and NONE leaves a color unset. Attributes
 # are for the terminal, and NONE removes the defaults. Bold means bright
@@ -112,17 +117,17 @@ const GROUPS: list<string> = [
 
 # Groups that only point at another group.
 const LINKS: list<list<string>> = [
-  ['lCursor', 'Cursor'],
-  ['CursorIM', 'Cursor'],
+  ['lCursor', HL_CURSOR],
+  ['CursorIM', HL_CURSOR],
   ['CursorLineFold', 'FoldColumn'],
   ['CursorLineSign', 'SignColumn'],
-  ['LineNrAbove', 'LineNr'],
-  ['LineNrBelow', 'LineNr'],
+  ['LineNrAbove', HL_LINE_NR],
+  ['LineNrBelow', HL_LINE_NR],
   ['CurSearch', 'IncSearch'],
   ['StatusLineTerm', 'StatusLine'],
   ['StatusLineTermNC', 'StatusLineNC'],
-  ['PopupNotification', 'Pmenu'],
-  ['MessageWindow', 'Pmenu'],
+  ['PopupNotification', CO.HL_PMENU],
+  ['MessageWindow', CO.HL_PMENU],
   ['Terminal', 'Normal'],
   ['EndOfBuffer', 'NonText'],
 ]
@@ -158,8 +163,8 @@ enddef
 
 # FUNCTION: Return the arguments of highlight for the dark gray that
 # Spotlight dims to: bold black on 8 colors, and color 8 on 16 colors.
-export def DimArguments(): string
-  return str2nr(&t_Co) < 16 ? 'ctermfg=0 cterm=bold' : 'ctermfg=8'
+export def DimArgs(): string
+  return str2nr(&t_Co) < 16 ? DIM_BOLD : DIM_GREY
 enddef
 
 # FUNCTION: Apply the colors under name, which colors/<name>.vim passes

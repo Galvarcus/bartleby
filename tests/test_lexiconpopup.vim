@@ -9,11 +9,12 @@ vim9script
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/lexicon_result.vim' as LR
 import autoload 'bartleby/lexicon.vim' as LE
 import autoload 'bartleby/lexiconpopup.vim' as LP
 import 'bartleby/variables/constants.vim' as CO
 
-const NOTFOUND: dict<any> = {status: 'notfound', message: '', suggestions: ['murmurous', 'murmurs']}
+const NOTFOUND: LR.Result = LR.NotFound(['murmurous', 'murmurs'])
 
 # FUNCTION: Make a buffer with the word in a sentence, and return the target
 # that a lookup of the word has, as WordAtCursor makes it.
@@ -25,7 +26,7 @@ def Target(word: string): dict<any>
   return {text: word, bufnr: bufnr(), lnum: 1, start: 2, end: 2 + strlen(word)}
 enddef
 
-def Popup(kind: string, target: dict<any>, word: string, result: dict<any>): LP.LexiconPopup
+def Popup(kind: string, target: dict<any>, word: string, result: LR.Result): LP.LexiconPopup
   var popup = LP.LexiconPopup.new(kind, word, target)
   popup.Open()
   popup.OnResult(result)
@@ -56,7 +57,7 @@ enddef
 
 def Test_r_replaces_the_word_with_the_selected_suggestion(): void
   var target = Target('murmurus')
-  var popup = Popup(CO.KIND_DICTIONARY, target, 'murmurus', NOTFOUND)
+  var popup = Popup(CO.KIND_DICT, target, 'murmurus', NOTFOUND)
   popup.Filter(0, 'r')
   assert_equal('A murmurous here', getline(1))
   assert_false(popup.IsOpen())
@@ -65,7 +66,7 @@ enddef
 
 def Test_r_uses_the_suggestion_that_j_selected(): void
   var target = Target('murmurus')
-  var popup = Popup(CO.KIND_DICTIONARY, target, 'murmurus', NOTFOUND)
+  var popup = Popup(CO.KIND_DICT, target, 'murmurus', NOTFOUND)
   popup.Filter(0, 'j')
   popup.Filter(0, 'r')
   assert_equal('A murmurs here', getline(1))
@@ -74,7 +75,7 @@ enddef
 
 def Test_r_keeps_the_capitalization(): void
   var target = Target('Murmurus')
-  var popup = Popup(CO.KIND_DICTIONARY, target, 'Murmurus', NOTFOUND)
+  var popup = Popup(CO.KIND_DICT, target, 'Murmurus', NOTFOUND)
   popup.Filter(0, 'r')
   assert_equal('A Murmurous here', getline(1))
   Cleanup()
@@ -83,7 +84,7 @@ enddef
 def Test_r_copies_the_suggestion_when_the_lookup_has_no_text(): void
   Target('murmurus')
   setreg('"', 'untouched')
-  var popup = Popup(CO.KIND_DICTIONARY, {}, 'murmurus', NOTFOUND)
+  var popup = Popup(CO.KIND_DICT, {}, 'murmurus', NOTFOUND)
   popup.Filter(0, 'r')
   assert_equal('murmurous', getreg('"'))
   assert_equal('A murmurus here', getline(1))
@@ -93,7 +94,7 @@ enddef
 
 def Test_r_does_nothing_without_a_suggestion(): void
   var target = Target('murmurus')
-  var popup = Popup(CO.KIND_DICTIONARY, target, 'murmurus', {status: 'notfound', message: '', suggestions: []})
+  var popup = Popup(CO.KIND_DICT, target, 'murmurus', LR.NotFound())
   popup.Filter(0, 'r')
   assert_equal('A murmurus here', getline(1))
   assert_true(popup.IsOpen())
@@ -110,7 +111,7 @@ enddef
 
 def Test_enter_on_a_suggestion_looks_it_up_and_does_not_replace(): void
   var target = Target('murmurus')
-  var popup = Popup(CO.KIND_DICTIONARY, target, 'murmurus', NOTFOUND)
+  var popup = Popup(CO.KIND_DICT, target, 'murmurus', NOTFOUND)
   popup.Filter(0, "\<CR>")
   assert_equal('A murmurus here', getline(1))
   assert_false(popup.IsOpen())
@@ -119,13 +120,13 @@ enddef
 
 def Test_the_help_lists_r_on_a_suggestion_only(): void
   var target = Target('murmurus')
-  var popup = Popup(CO.KIND_DICTIONARY, target, 'murmurus', NOTFOUND)
+  var popup = Popup(CO.KIND_DICT, target, 'murmurus', NOTFOUND)
   popup.Filter(0, '?')
   var shown: string = popup_list()->mapnew((_, id) => join(getbufline(winbufnr(id), 1, '$'), "\n"))->join("\n")
   assert_match('\n\s*r\s\+Replace the word in the text', shown)
   Cleanup()
   target = Target('murmurus')
-  popup = Popup(CO.KIND_DICTIONARY, target, 'murmurus', {status: 'notfound', message: '', suggestions: []})
+  popup = Popup(CO.KIND_DICT, target, 'murmurus', LR.NotFound())
   popup.Filter(0, '?')
   shown = popup_list()->mapnew((_, id) => join(getbufline(winbufnr(id), 1, '$'), "\n"))->join("\n")
   assert_notmatch('\n\s*r\s\+Replace', shown)
@@ -147,7 +148,7 @@ enddef
 # FUNCTION: A thesaurus word that is found shows synonyms, and then <CR>
 # replaces the word, or copies the synonym when the lookup has no text.
 def Test_the_thesaurus_help_for_a_word_found_describes_the_synonyms(): void
-  var result = LE.ParseResponse(CO.KIND_THESAURUS, 'component', THESAURUS_BODY)
+  var result = LE.ParseResp(CO.KIND_THESAURUS, 'component', THESAURUS_BODY)
   var target = Target('component')
   var shown = HelpText(Popup(CO.KIND_THESAURUS, target, 'component', result))
   assert_match('\n\s*<CR>\s\+Replace the word in the text', shown)
@@ -164,7 +165,7 @@ enddef
 
 def Test_the_dictionary_help_for_a_word_not_found_lists_the_suggestion_keys(): void
   var target = Target('murmurus')
-  var shown = HelpText(Popup(CO.KIND_DICTIONARY, target, 'murmurus', NOTFOUND))
+  var shown = HelpText(Popup(CO.KIND_DICT, target, 'murmurus', NOTFOUND))
   assert_match('\n\s*<CR>\s\+Look up the selected suggestion', shown)
   assert_match('\n\s*r\s\+Replace the word in the text', shown)
   assert_notmatch('Toggle antonyms', shown)
@@ -174,9 +175,9 @@ enddef
 # FUNCTION: The definitions of a found word have nothing to select, so <CR>
 # does nothing and the help does not list it.
 def Test_the_dictionary_help_for_a_word_found_has_no_enter(): void
-  var result = LE.ParseResponse(CO.KIND_DICTIONARY, 'murmurous', DICTIONARY_BODY)
+  var result = LE.ParseResp(CO.KIND_DICT, 'murmurous', DICTIONARY_BODY)
   var target = Target('murmurous')
-  var shown = HelpText(Popup(CO.KIND_DICTIONARY, target, 'murmurous', result))
+  var shown = HelpText(Popup(CO.KIND_DICT, target, 'murmurous', result))
   assert_notmatch('<CR>', shown)
   assert_notmatch('\n\s*r\s', shown)
   Cleanup()
@@ -186,7 +187,7 @@ enddef
 # neither, and there are no antonyms to toggle.
 def Test_the_thesaurus_help_with_nothing_to_select_lists_no_selection_keys(): void
   var target = Target('xyzzy')
-  var shown = HelpText(Popup(CO.KIND_THESAURUS, target, 'xyzzy', {status: 'notfound', message: '', suggestions: []}))
+  var shown = HelpText(Popup(CO.KIND_THESAURUS, target, 'xyzzy', LR.NotFound()))
   assert_notmatch('<CR>', shown)
   assert_notmatch('\n\s*d\s', shown)
   assert_notmatch('Toggle antonyms', shown)

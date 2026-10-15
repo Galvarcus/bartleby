@@ -31,7 +31,7 @@ var loaded_lists: dict<dict<any>> = {}
 # and upper, not alpha: in Vim only these two match letters beyond ASCII,
 # such as é, ß, and Cyrillic or Greek letters. Scripts without letter
 # case, such as Chinese or Japanese, still match nothing here.
-const WORD_PATTERN: string = '\v[[:lower:][:upper:]]+%([''’][[:lower:][:upper:]]+)*'
+const WORD_PAT: string = '\v[[:lower:][:upper:]]+%([''’][[:lower:][:upper:]]+)*'
 
 # FUNCTION: Return the word lists of the language code, or of the current
 # language when code is empty, with the user's additions and removals, as
@@ -77,7 +77,7 @@ export def Tokens(text: string): list<list<number>>
   var tokens: list<list<number>> = []
   var from: number = 0
   while true
-    var found: list<any> = matchstrpos(text, WORD_PATTERN, from)
+    var found: list<any> = matchstrpos(text, WORD_PAT, from)
     if found[1] < 0
       break
     endif
@@ -138,9 +138,9 @@ export def LexicalSpans(mode: string, text: string, lists: dict<any>): list<list
   for [start, end] in Tokens(text)
     var word: string = strpart(text, start, end - start)
     var lit: bool
-    if mode ==# 'Contractions'
+    if mode ==# CO.MODE_CONTRACTIONS
       lit = IsContraction(word, lists)
-    elseif mode ==# 'Adverbs'
+    elseif mode ==# CO.MODE_ADVERBS
       lit = IsHeuristicAdverb(word, lists)
     else
       # it's and they're count as pronouns and don't as an auxiliary: try the
@@ -160,12 +160,12 @@ enddef
 # transition. A mode keeps nothing bright on these lines. A blank line is
 # not prose either.
 export def IsProseLine(text: string, filetype: string): bool
-  if text !~ '\S'
+  if text !~ CO.PAT_NONBLANK
     return false
   endif
-  if filetype ==# 'fountain'
-    return text !~# CO.FOUNTAIN_SCENE_HEADING_PATTERN
-      && text !~# CO.FOUNTAIN_CHARACTER_PATTERN
+  if filetype ==# CO.FILETYPE_FOUNTAIN
+    return text !~# CO.FOUNTAIN_SCENE_HEADING_PAT
+      && text !~# CO.FOUNTAIN_CHAR_PAT
       && text !~# '^\s*>'
   endif
   return text !~# '^\s*#'
@@ -179,12 +179,12 @@ export def GapPositions(lnum: number, text: string, spans: list<list<number>>): 
   var positions: list<list<number>> = []
   var cursor: number = 0
   for [start, end] in sort(copy(spans), (a, b) => a[0] - b[0])
-    if start > cursor && strpart(text, cursor, start - cursor) =~ '\S'
+    if start > cursor && strpart(text, cursor, start - cursor) =~ CO.PAT_NONBLANK
       positions->add([lnum, cursor + 1, start - cursor])
     endif
     cursor = max([cursor, end])
   endfor
-  if cursor < strlen(text) && strpart(text, cursor) =~ '\S'
+  if cursor < strlen(text) && strpart(text, cursor) =~ CO.PAT_NONBLANK
     positions->add([lnum, cursor + 1, strlen(text) - cursor])
   endif
   return positions

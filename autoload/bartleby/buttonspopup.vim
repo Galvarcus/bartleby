@@ -19,7 +19,7 @@ var is_loaded: bool = true
 #     BP.Button.new('Cancel', MyCancelFunc),
 #   ]
 #
-#   var menu = BP.PopupButtonMenu.new(buttons, {
+#   var menu = BP.PopupBtnMenu.new(buttons, {
 #     button: {columns: 3},
 #     popup:  {title: ' Confirm ', border: []},
 #     callback: (selected: any) => {
@@ -42,7 +42,7 @@ var is_loaded: bool = true
 #   data    any       Optional payload for the caller, such as an id.
 #                     Default v:none.
 #
-# PopupButtonMenu.new(buttons: list<Button>, opts: dict<any> = {})
+# PopupBtnMenu.new(buttons: list<Button>, opts: dict<any> = {})
 #   opts has three sections. Only callback is required. The keys of opts
 #   are a data contract, not Vim identifiers, so they keep snake_case.
 #
@@ -91,8 +91,15 @@ var is_loaded: bool = true
 #   Esc, C-c                        Cancel. The callback receives null.
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/ui.vim' as MI
+import 'bartleby/variables/constants.vim' as CO
+
+const DIRECTION_RIGHT: string = 'right'
+const DIRECTION_LEFT: string = 'left'
+const DIRECTION_DOWN: string = 'down'
+const DIRECTION_UP: string = 'up'
+const KEY_LEFT_RELEASE: string = "\<LeftRelease>"
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -107,7 +114,7 @@ def BoxChars(): list<string>
   return ['+', '+', '+', '+', '-', '|']
 enddef
 
-export class Button
+export class Btn
   public var label: string
   public var Action: func
   public var data: any = v:none
@@ -116,9 +123,9 @@ export class Button
   enddef
 endclass
 
-export class PopupButtonMenu
+export class PopupBtnMenu
   # Configuration, set from opts in the constructor.
-  var buttons: list<Button>
+  var buttons: list<Btn>
   var callback: func(any)
   var columns: number = 1
   var spacing: number = 2
@@ -140,26 +147,26 @@ export class PopupButtonMenu
 
   def new(this.buttons, opts: dict<any> = {})
     if empty(this.buttons)
-      log.Error(IN.T("PopupButtonMenu: buttons list must not be empty"))
+      log.Error(MI.PopupButtonMenuBtnsList())
       throw 'PopupButtonMenu: buttons list must not be empty'
     endif
 
-    var buttonOpts: dict<any> = get(opts, 'button', {})
+    var btnOpts: dict<any> = get(opts, 'button', {})
     this.popupOpts = copy(get(opts, 'popup', {}))
     this.callback = get(opts, 'callback', null)
     if this.callback == null
-      log.Error(IN.T("PopupButtonMenu: opts.callback is required"))
+      log.Error(MI.PopupButtonMenuOptsCb())
       throw 'PopupButtonMenu: opts.callback is required'
     endif
 
-    this.columns = max([1, get(buttonOpts, 'columns', len(this.buttons))])
-    this.spacing = get(buttonOpts, 'spacing', 2)
-    this.rowSpacing = max([0, get(buttonOpts, 'row_spacing', 1)])
-    this.buttonWidth = get(buttonOpts, 'width', 0)
-    this.normalHl = get(buttonOpts, 'normal_hl', 'Pmenu')
-    this.selectHl = get(buttonOpts, 'select_hl', 'PmenuSel')
+    this.columns = max([1, get(btnOpts, 'columns', len(this.buttons))])
+    this.spacing = get(btnOpts, 'spacing', 2)
+    this.rowSpacing = max([0, get(btnOpts, 'row_spacing', 1)])
+    this.buttonWidth = get(btnOpts, 'width', 0)
+    this.normalHl = get(btnOpts, 'normal_hl', CO.HL_PMENU)
+    this.selectHl = get(btnOpts, 'select_hl', CO.HL_PMENU_SEL)
     this.OnKey = get(opts, 'on_key', null)
-    this.selected = max([0, min([len(this.buttons) - 1, get(buttonOpts, 'selected', 0)])])
+    this.selected = max([0, min([len(this.buttons) - 1, get(btnOpts, 'selected', 0)])])
   enddef
 
   ############################################################################
@@ -228,7 +235,7 @@ export class PopupButtonMenu
   # wider. A label with a line break is a bordered box, each line padded
   # to the widest line or opts.button.width. Returns a dict with lines
   # and width. All lines have the same display width.
-  def RenderButton(button: Button): dict<any>
+  def RenderBtn(button: Btn): dict<any>
     var cellLines: list<string> = split(button.label, "\n", true)
 
     if len(cellLines) == 1
@@ -261,8 +268,8 @@ export class PopupButtonMenu
     var newLines: list<string> = []
     var newPositions: list<dict<any>> = []
     var idx: number = 0
-    var buttonCount: number = len(this.buttons)
-    var rowCount: number = (buttonCount + this.columns - 1) / this.columns
+    var btnCount: number = len(this.buttons)
+    var rowCount: number = (btnCount + this.columns - 1) / this.columns
     var curLine: number = 1
 
     for r in range(rowCount)
@@ -270,10 +277,10 @@ export class PopupButtonMenu
       # tallest button, is known. Shorter buttons get blank lines to match.
       var rendered: list<dict<any>> = []
       for c in range(this.columns)
-        if idx + c >= buttonCount
+        if idx + c >= btnCount
           break
         endif
-        rendered->add(this.RenderButton(this.buttons[idx + c]))
+        rendered->add(this.RenderBtn(this.buttons[idx + c]))
       endfor
       var rowHeight: number = 1
       for rb in rendered
@@ -342,7 +349,7 @@ export class PopupButtonMenu
     endif
   enddef
 
-  def SetSelected(newIdx: number): void
+  def SetSel(newIdx: number): void
     if newIdx == this.selected
       return
     endif
@@ -366,35 +373,35 @@ export class PopupButtonMenu
 
     var total: number = len(this.buttons)
 
-    if key == "\<CR>" || key == ' '
+    if key == CO.KEY_CR || key == ' '
       popup_close(id, this.selected)
       return true
-    elseif key == "\<Esc>" || key == "\<C-c>"
+    elseif key == CO.KEY_ESC || key == CO.KEY_C_C
       popup_close(id, -1)
       return true
-    elseif key == "\<Right>" || key == "\<Tab>" || key == 'l'
-      this.SetSelected(
-        PopupButtonMenu.NextIndex(this.selected, total, this.columns, 'right'))
+    elseif key == CO.KEY_RIGHT || key == CO.KEY_TAB || key == 'l'
+      this.SetSel(
+        PopupBtnMenu.NextIdx(this.selected, total, this.columns, DIRECTION_RIGHT))
       return true
-    elseif key == "\<Left>" || key == "\<S-Tab>" || key == 'h'
-      this.SetSelected(
-        PopupButtonMenu.NextIndex(this.selected, total, this.columns, 'left'))
+    elseif key == CO.KEY_LEFT || key == CO.KEY_S_TAB || key == 'h'
+      this.SetSel(
+        PopupBtnMenu.NextIdx(this.selected, total, this.columns, DIRECTION_LEFT))
       return true
-    elseif key == "\<Down>" || key == 'j'
-      this.SetSelected(
-        PopupButtonMenu.NextIndex(this.selected, total, this.columns, 'down'))
+    elseif key == CO.KEY_DOWN || key == 'j'
+      this.SetSel(
+        PopupBtnMenu.NextIdx(this.selected, total, this.columns, DIRECTION_DOWN))
       return true
-    elseif key == "\<Up>" || key == 'k'
-      this.SetSelected(
-        PopupButtonMenu.NextIndex(this.selected, total, this.columns, 'up'))
+    elseif key == CO.KEY_UP || key == 'k'
+      this.SetSel(
+        PopupBtnMenu.NextIdx(this.selected, total, this.columns, DIRECTION_UP))
       return true
-    elseif key == "\<ScrollWheelUp>"
+    elseif key == CO.KEY_SCROLL_WHEEL_UP
       win_execute(id, 'normal! 3k')
       return true
-    elseif key == "\<ScrollWheelDown>"
+    elseif key == CO.KEY_SCROLL_WHEEL_DOWN
       win_execute(id, 'normal! 3j')
       return true
-    elseif key == "\<LeftMouse>" || key == "\<LeftRelease>"
+    elseif key == CO.KEY_LEFT_MOUSE || key == KEY_LEFT_RELEASE
       var mousePos: dict<any> = getmousepos()
       if mousePos.winid == id
         for pos in this.positions
@@ -428,18 +435,18 @@ export class PopupButtonMenu
   # SECTION: Static helpers.
   ############################################################################
 
-  static def NextIndex(selected: number, total: number, columns: number,
+  static def NextIdx(selected: number, total: number, columns: number,
       direction: string): number
     var col: number = selected % columns
 
-    if direction == 'right'
+    if direction == DIRECTION_RIGHT
       return (selected + 1) % total
-    elseif direction == 'left'
+    elseif direction == DIRECTION_LEFT
       return (selected - 1 + total) % total
-    elseif direction == 'down'
+    elseif direction == DIRECTION_DOWN
       var candidate: number = selected + columns
       return candidate < total ? candidate : col
-    elseif direction == 'up'
+    elseif direction == DIRECTION_UP
       var candidate: number = selected - columns
       if candidate >= 0
         return candidate

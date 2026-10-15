@@ -23,11 +23,11 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/binderitem.vim' as BI
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/templates.vim' as TE
 import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/locale/data.vim' as MD
 import 'bartleby/variables/constants.vim' as CO
 
 # The suffix that a project.json that does not load gets from Rebuild.
@@ -40,7 +40,7 @@ export def UnlistedFiles(project: PO.Project): list<string>
   var root: string = project.BinderRoot()
   var listed: dict<bool> = {}
   for row in T.Flatten(project)
-    if row.item.IsDocument()
+    if row.item.IsDoc()
       listed[row.item.relPath] = true
     endif
   endfor
@@ -76,7 +76,7 @@ enddef
 # FUNCTION: Return the folder Recovered at the top level, made, before the
 # Trash, when there is none.
 def RecoveredFolder(project: PO.Project): BI.BinderItem
-  var title: string = IN.T("Recovered")
+  var title: string = MD.Recovered()
   for item in project.items
     if item.IsFolder() && item.structureRole ==# CO.ROLE_CUSTOM && item.title ==# title
       return item
@@ -93,7 +93,7 @@ enddef
 # null_object when the damaged file cannot be set aside.
 export def Rebuild(scriveDir: string): PO.Project
   var project: PO.Project = PO.Project.new(scriveDir)
-  var path: string = project.ProjectFilePath()
+  var path: string = project.ProjFilePath()
   var backup: string = path .. PE.BACKUP_SUFFIX
   if filereadable(path) && rename(path, path .. DAMAGED_SUFFIX) != 0
     return null_object

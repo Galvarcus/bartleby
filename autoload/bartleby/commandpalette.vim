@@ -21,47 +21,51 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/lexicon.vim' as LE
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/ui.vim' as MI
 import 'bartleby/variables/constants.vim' as CO
 
+const SPOTLIGHT: string = 'spotlight'
+const CHOICE_PICK_SPOTLIGHT_MODE: string = 'Pick Spotlight Mode'
+
 # Display name to Ex command, for commands without an argument.
-const COMMANDS: dict<string> = {
-  'List Scrives': 'BartlebyList',
-  'Toggle Binder': 'BartlebyToggleBinder',
-  'Search Scrive': 'BartlebySearch',
-  'Toggle Inspector': 'BartlebyToggleInspector',
-  'Toggle Focus': 'BartlebyFocus',
-  'Writing Progress': 'BartlebyProgress',
-  'Writing Goals': 'BartlebyGoals',
-  'Toggle Spotlight': 'BartlebySpotlight',
-  'Toggle Quill': 'BartlebyQuill',
-  'Edit Profile': 'BartlebyProfile',
-  'Edit Project Info': 'BartlebyProjectInfo',
-  'Compile': 'BartlebyCompile',
-  'Take Snapshot': 'BartlebySnapshot',
-  'View Snapshots': 'BartlebySnapshots',
-  'Empty Trash': 'BartlebyEmptyTrash',
-  'Recover Files': 'BartlebyRecover',
-  'Tidy Files': 'BartlebyTidyFiles',
-  'Open Scrivening': 'BartlebyScrivenings',
-  'Close Scrivening': 'BartlebyScrivenings!',
-  'Close Scrive': 'BartlebyClose',
+const CMDS: dict<string> = {
+  'List Scrives': CO.CMD_LIST,
+  'Toggle Binder': CO.CMD_TOGGLE_BINDER,
+  'Search Scrive': CO.CMD_SEARCH,
+  'Toggle Inspector': CO.CMD_TOGGLE_INSPECTOR,
+  'Toggle Focus': CO.CMD_FOCUS,
+  'Writing Progress': CO.CMD_PROGRESS,
+  'Writing Goals': CO.CMD_GOALS,
+  'Toggle Spotlight': CO.CMD_SPOTLIGHT,
+  'Toggle Quill': CO.CMD_QUILL,
+  'Edit Profile': CO.CMD_PROFILE,
+  'Edit Project Info': CO.CMD_PROJ_INFO,
+  'Compile': CO.CMD_COMPILE,
+  'Take Snapshot': CO.CMD_SNAP,
+  'View Snapshots': CO.CMD_SNAPS,
+  'Empty Trash': CO.CMD_EMPTY_TRASH,
+  'Recover Files': CO.CMD_RECOVER,
+  'Tidy Files': CO.CMD_TIDY_FILES,
+  'Open Scrivening': CO.CMD_SCRIVENINGS,
+  'Close Scrivening': CO.CMD_SCRIVENINGS_BANG,
+  'Close Scrive': CO.CMD_CLOSE,
 }
 
 # Display name to Ex command, for commands that need an argument, asked
 # for with a second PromptText.
-const COMMANDS_WITH_ARG: dict<string> = {
-  'Open Scrive': 'BartlebyOpen',
-  'New Scrive': 'BartlebyNewScrive',
+const CMDS_WITH_ARG: dict<string> = {
+  'Open Scrive': CO.CMD_OPEN,
+  'New Scrive': CO.CMD_NEW_SCRIVE,
 }
 
 # Entries with no Ex command, called through an exported function of
 # their module.
 const DIRECT_ACTIONS: dict<string> = {
-  'Pick Spotlight Mode': 'spotlight',
+  'Pick Spotlight Mode': SPOTLIGHT,
 }
 
 # Display name to lexicon kind, see EnabledLookups.
@@ -71,44 +75,44 @@ const LOOKUPS: dict<string> = {
 }
 
 export def Open(): void
-  var shown: dict<string> = CommandNames()
-  var options: list<string> = (keys(COMMANDS) + keys(COMMANDS_WITH_ARG)
+  var shown: dict<string> = CmdNames()
+  var options: list<string> = (keys(CMDS) + keys(CMDS_WITH_ARG)
     + keys(DIRECT_ACTIONS) + keys(EnabledLookups()))
     ->sort((a, b) => get(shown, a, a) ==? get(shown, b, b) ? 0 : get(shown, a, a) >? get(shown, b, b) ? 1 : -1)
-  IP.PromptFilter(IN.T("Command Palette"), options, (choice: string) => {
+  IP.PromptFilter(MI.CmdPalette(), options, (choice: string) => {
     Run(choice)
   }, 10, 0, shown)
 enddef
 
 # FUNCTION: Return each entry, by the name that the tables above use, to
 # its name in the message language. The list shows these names, sorted.
-def CommandNames(): dict<string>
+def CmdNames(): dict<string>
   return {
-    'List Scrives': IN.T("List Scrives"),
-    'Toggle Binder': IN.T("Toggle Binder"),
-    'Search Scrive': IN.T("Search Scrive"),
-    'Toggle Inspector': IN.T("Toggle Inspector"),
-    'Toggle Focus': IN.T("Toggle Focus"),
-    'Writing Progress': IN.T("Writing Progress"),
-    'Writing Goals': IN.T("Writing Goals"),
-    'Toggle Spotlight': IN.T("Toggle Spotlight"),
-    'Toggle Quill': IN.T("Toggle Quill"),
-    'Edit Profile': IN.T("Edit Profile"),
-    'Edit Project Info': IN.T("Edit Project Info"),
-    'Compile': IN.T("Compile"),
-    'Take Snapshot': IN.T("Take Snapshot"),
-    'View Snapshots': IN.T("View Snapshots"),
-    'Empty Trash': IN.T("Empty Trash"),
-    'Recover Files': IN.T("Recover Files"),
-    'Tidy Files': IN.T("Tidy Files"),
-    'Open Scrivening': IN.T("Open Scrivening"),
-    'Close Scrivening': IN.T("Close Scrivening"),
-    'Close Scrive': IN.T("Close Scrive"),
-    'Open Scrive': IN.T("Open Scrive"),
-    'New Scrive': IN.T("New Scrive"),
-    'Pick Spotlight Mode': IN.T("Pick Spotlight Mode"),
-    'Define Word': IN.T("Define Word"),
-    'Thesaurus': IN.T("Thesaurus"),
+    'List Scrives': MI.ListScrives(),
+    'Toggle Binder': MI.ToggleBinder(),
+    'Search Scrive': MI.SearchScrive(),
+    'Toggle Inspector': MI.ToggleInspector(),
+    'Toggle Focus': MI.ToggleFocus(),
+    'Writing Progress': MI.WritingProgress(),
+    'Writing Goals': MI.WritingGoals(),
+    'Toggle Spotlight': MI.ToggleSpotlight(),
+    'Toggle Quill': MI.ToggleQuill(),
+    'Edit Profile': MI.EditProfile(),
+    'Edit Project Info': MI.EditProjInfo(),
+    'Compile': MC.Compile(),
+    'Take Snapshot': MI.TakeSnap(),
+    'View Snapshots': MI.ViewSnaps(),
+    'Empty Trash': MI.EmptyTrash(),
+    'Recover Files': MI.RecoverFiles(),
+    'Tidy Files': MI.TidyFiles(),
+    'Open Scrivening': MC.OpenScrivening(),
+    'Close Scrivening': MI.CloseScrivening(),
+    'Close Scrive': MI.CloseScrive(),
+    'Open Scrive': MI.OpenScrive(),
+    'New Scrive': MI.NewScrive(),
+    'Pick Spotlight Mode': MI.PickSpotlightMode(),
+    'Define Word': MI.DefineWord(),
+    'Thesaurus': MI.Thesaurus(),
   }
 enddef
 
@@ -126,24 +130,24 @@ def EnabledLookups(): dict<string>
 enddef
 
 def Run(choice: string): void
-  if has_key(COMMANDS, choice)
-    execute COMMANDS[choice]
+  if has_key(CMDS, choice)
+    execute CMDS[choice]
     return
   endif
   if has_key(LOOKUPS, choice)
     execute LOOKUPS[choice] ==# CO.KIND_THESAURUS ? 'BartlebyThesaurus' : 'BartlebyDefine'
     return
   endif
-  if has_key(COMMANDS_WITH_ARG, choice)
-    var cmd: string = COMMANDS_WITH_ARG[choice]
-    IP.PromptText(get(CommandNames(), choice, choice), '', (name: string) => {
+  if has_key(CMDS_WITH_ARG, choice)
+    var cmd: string = CMDS_WITH_ARG[choice]
+    IP.PromptText(get(CmdNames(), choice, choice), '', (name: string) => {
       if name !=# ''
         execute $'{cmd} {name}'
       endif
     })
     return
   endif
-  if choice ==# 'Pick Spotlight Mode'
+  if choice ==# CHOICE_PICK_SPOTLIGHT_MODE
     SP.PickMode()
   endif
 enddef

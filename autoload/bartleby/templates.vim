@@ -19,21 +19,22 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/layout.vim' as LY
+import autoload 'bartleby/locale/binder.vim' as MB
+import autoload 'bartleby/locale/common.vim' as MC
 import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return the title of the first scene of a chapter, in the
 # message language. mutate.vim uses it too, for a new chapter.
 export def FirstSceneTitle(): string
-  return IN.T("Scene 1")
+  return MB.Scene()
 enddef
 
 # FUNCTION: Return a chapter folder with one starter scene. DefaultTree
 # gives the scene its path, see layout.vim.
-def ChapterWithScene(chapterNumber: string): BI.BinderItem
-  var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterNumber, CO.ROLE_CHAPTER)
+def ChapterWithScene(chapterNum: string): BI.BinderItem
+  var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterNum, CO.ROLE_CHAPTER)
   chapter.SetChildren([BI.BinderItem.NewDocument(FirstSceneTitle(), '')])
   return chapter
 enddef
@@ -50,55 +51,55 @@ enddef
 # FUNCTION: Return the Front Matter folder. It starts empty. Add a
 # dedication, acknowledgments, and similar pages as documents.
 def FrontMatterFolder(): BI.BinderItem
-  return BI.BinderItem.NewFolder(IN.T("Front Matter"), CO.ROLE_FRONT_MATTER)
+  return BI.BinderItem.NewFolder(MB.FrontMatter(), CO.ROLE_FRONT_MATTER)
 enddef
 
 # FUNCTION: Return the Back Matter folder. It starts empty, like Front
 # Matter, for pages such as an appendix or an author's note.
 def BackMatterFolder(): BI.BinderItem
-  return BI.BinderItem.NewFolder(IN.T("Back Matter"), CO.ROLE_BACK_MATTER)
+  return BI.BinderItem.NewFolder(MB.BackMatter(), CO.ROLE_BACK_MATTER)
 enddef
 
 # FUNCTION: Return the Characters folder. It starts empty, for character
 # sheets and notes that are never compiled.
-def CharactersFolder(): BI.BinderItem
-  return BI.BinderItem.NewFolder(IN.T("Characters"), CO.ROLE_CHARACTERS)
+def CharsFolder(): BI.BinderItem
+  return BI.BinderItem.NewFolder(MB.Chars(), CO.ROLE_CHARS)
 enddef
 
 # FUNCTION: Return the Research folder. It starts empty, for places, notes,
 # and anything else that you collect, which are never compiled.
 def ResearchFolder(): BI.BinderItem
-  return BI.BinderItem.NewFolder(IN.T("Research"), CO.ROLE_RESEARCH)
+  return BI.BinderItem.NewFolder(MB.Research(), CO.ROLE_RESEARCH)
 enddef
 
 # FUNCTION: Return the five structural folders around manuscript, in order.
 # A novel and a short story start with them. A screenplay has no Back Matter.
 def StandardTree(manuscript: BI.BinderItem): list<BI.BinderItem>
-  return [FrontMatterFolder(), manuscript, BackMatterFolder(), CharactersFolder(), ResearchFolder()]
+  return [FrontMatterFolder(), manuscript, BackMatterFolder(), CharsFolder(), ResearchFolder()]
 enddef
 
 export def DefaultTree(projectType: string, docExt: string): list<BI.BinderItem>
   var tree: list<BI.BinderItem> = []
   if projectType ==# CO.TYPE_NOVEL
-    var manuscript: BI.BinderItem = BI.BinderItem.NewFolder(IN.T("Manuscript"), CO.ROLE_MANUSCRIPT)
+    var manuscript: BI.BinderItem = BI.BinderItem.NewFolder(MC.Manuscript(), CO.ROLE_MANUSCRIPT)
     manuscript.SetChildren([ChapterWithScene('1')])
     tree = StandardTree(manuscript)
   elseif projectType ==# CO.TYPE_NOVEL_PARTS
     var part1: BI.BinderItem = BI.BinderItem.NewFolder('1', CO.ROLE_PART)
     part1.SetChildren([ChapterWithScene('1')])
     var part2: BI.BinderItem = BI.BinderItem.NewFolder('2', CO.ROLE_PART)
-    var manuscript: BI.BinderItem = BI.BinderItem.NewFolder(IN.T("Manuscript"), CO.ROLE_MANUSCRIPT)
+    var manuscript: BI.BinderItem = BI.BinderItem.NewFolder(MC.Manuscript(), CO.ROLE_MANUSCRIPT)
     manuscript.SetChildren([part1, part2])
     tree = StandardTree(manuscript)
   elseif projectType ==# CO.TYPE_SHORT_STORY
-    tree = StandardTree(FolderWithDoc(IN.T("Manuscript"), IN.T("Draft"), CO.ROLE_MANUSCRIPT))
+    tree = StandardTree(FolderWithDoc(MC.Manuscript(), MB.Draft(), CO.ROLE_MANUSCRIPT))
   elseif projectType ==# CO.TYPE_SCREENPLAY
     # A screenplay has no Back Matter, so it is the one type that does not use
     # StandardTree.
     tree = [
       FrontMatterFolder(),
-      FolderWithDoc(IN.T("Screenplay"), FirstSceneTitle(), CO.ROLE_MANUSCRIPT),
-      CharactersFolder(),
+      FolderWithDoc(MC.Screenplay(), FirstSceneTitle(), CO.ROLE_MANUSCRIPT),
+      CharsFolder(),
       ResearchFolder(),
     ]
   else

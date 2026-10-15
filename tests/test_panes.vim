@@ -59,7 +59,7 @@ def Layout(binder: bool, inspector: bool): dict<any>
     win_execute(ids.inspector, 'vertical resize ' .. INSPECTOR_WIDTH)
   endif
   win_gotoid(ids.edit)
-  W.WatchEditWindow()
+  W.WatchEditWin()
   return ids
 enddef
 
@@ -77,7 +77,7 @@ enddef
 # buffer that is not a pane, in order.
 def EditWindows(): list<number>
   return range(1, winnr('$'))->mapnew((_, n) => win_getid(n))
-    ->filter((_, id) => !W.IsChromeBuffer(winbufnr(id)))
+    ->filter((_, id) => !W.IsChromeBuf(winbufnr(id)))
 enddef
 
 def PrepareSpotlight(): void

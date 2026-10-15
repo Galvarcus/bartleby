@@ -24,12 +24,22 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lexicon.vim' as LE
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/helppopup.vim' as H
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/compile.vim' as MK
+import autoload 'bartleby/lexicon_result.vim' as LR
 import 'bartleby/variables/constants.vim' as CO
+
+const HL_COMMENT: string = 'Comment'
+const POS_TOPLEFT: string = 'topleft'
+const HL_LEXICON_COMMENT: string = 'LexiconComment'
+const HL_LEXICON_ERR: string = 'LexiconError'
+const HL_LEXICON_TITLE: string = 'LexiconTitle'
+const ACTION_LOOKUP: string = 'lookup'
+const ACTION_REPLACE: string = 'replace'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -43,7 +53,7 @@ const MAX_HEIGHT: number = 15
 # restyle them.
 const PROP_TYPES: dict<list<string>> = {
   LexiconTitle: ['BartlebyLexiconTitle', 'Title'],
-  LexiconComment: ['BartlebyLexiconNote', 'Comment'],
+  LexiconComment: ['BartlebyLexiconNote', HL_COMMENT],
   LexiconError: ['BartlebyLexiconError', 'ErrorMsg'],
   LexiconSelected: ['BartlebyLexiconSelected', 'PmenuSel'],
 }
@@ -53,13 +63,13 @@ export def LookupAtCursor(kind: string): void
   if !CanLookUp(kind)
     return
   endif
-  if W.IsChromeBuffer(bufnr('%'))
-    log.Info(IN.T("lookups are not available in Bartleby panes"))
+  if W.IsChromeBuf(bufnr('%'))
+    log.Info(MK.LookupsNotAvailable())
     return
   endif
   var target: dict<any> = WordAtCursor()
   if empty(target)
-    log.Info(IN.T("no word under the cursor"))
+    log.Info(MK.NoWordUnder())
     return
   endif
   OpenLookup(kind, LE.CleanWord(target.text), target)
@@ -71,7 +81,7 @@ export def LookupVisual(kind: string): void
   if !CanLookUp(kind)
     return
   endif
-  var target: dict<any> = VisualSelection()
+  var target: dict<any> = VisualSel()
   if empty(target)
     return
   endif
@@ -81,7 +91,7 @@ enddef
 # FUNCTION: Run :BartlebyDefine or :BartlebyThesaurus. A typed word is
 # looked up without a target. No argument means the word under the
 # cursor.
-export def LookupCommand(kind: string, arg: string): void
+export def LookupCmd(kind: string, arg: string): void
   if arg ==# ''
     LookupAtCursor(kind)
     return
@@ -103,7 +113,7 @@ enddef
 
 def OpenLookup(kind: string, word: string, target: dict<any>): void
   if word ==# ''
-    log.Info(IN.T("nothing to look up"))
+    log.Info(MK.NothingLookUp())
     return
   endif
   LexiconPopup.new(kind, word, target).Open()
@@ -130,11 +140,11 @@ def WordAtCursor(): dict<any>
   return {}
 enddef
 
-def VisualSelection(): dict<any>
+def VisualSel(): dict<any>
   var first: list<number> = getpos("'<")
   var last: list<number> = getpos("'>")
   if first[1] != last[1]
-    log.Info(IN.T("select text on one line only"))
+    log.Info(MK.SelectTextOne())
     return {}
   endif
   var line: string = getline(first[1])
@@ -143,7 +153,7 @@ def VisualSelection(): dict<any>
   var end: number = lastStart + strlen(matchstr(strpart(line, lastStart), '^.'))
   var text: string = strpart(line, start, end - start)
   if trim(text) ==# ''
-    log.Info(IN.T("the selection is empty"))
+    log.Info(MK.SelEmpty())
     return {}
   endif
   return {text: text, bufnr: bufnr('%'), lnum: first[1], start: start, end: end}
@@ -153,7 +163,7 @@ export class LexiconPopup
   var kind: string
   var word: string
   var target: dict<any>
-  var result: dict<any> = {}
+  var result: LR.Result
   var rows: list<dict<any>> = []
   var selected: number = -1
   var firstline: number = 1
@@ -176,10 +186,10 @@ export class LexiconPopup
     setbufvar(this.bufnr, '&swapfile', false)
     setbufvar(this.bufnr, '&bufhidden', 'wipe')
     this.winid = popup_create(this.bufnr, {
-      line: 'cursor+1',
+      line: CO.BELOW_CURSOR,
       col: 'cursor',
-      pos: 'topleft',
-      title: $' {LE.Reference(this.kind).title}: {this.word} ',
+      pos: POS_TOPLEFT,
+      title: $' {LE.Ref(this.kind).title}: {this.word} ',
       border: [1, 1, 1, 1],
       padding: [0, 1, 0, 1],
       minwidth: MIN_WIDTH,
@@ -190,7 +200,7 @@ export class LexiconPopup
       mapping: false,
       filter: (id, key) => this.Filter(id, key),
     })
-    this.rows = [{text: printf(IN.T("Looking up \"%s\" ..."), this.word), hl: 'LexiconComment'}]
+    this.rows = [{text: MK.LookingUp(this.word), hl: HL_LEXICON_COMMENT}]
     this.Render()
     LE.Lookup(this.kind, this.word, (result) => this.OnResult(result))
   enddef
@@ -206,7 +216,7 @@ export class LexiconPopup
     endif
   enddef
 
-  def OnResult(result: dict<any>): void
+  def OnResult(result: LR.Result): void
     if !this.IsOpen()
       return
     endif
@@ -218,35 +228,35 @@ export class LexiconPopup
   def BuildRows(): void
     var rows: list<dict<any>> = []
     var status: string = this.result.status
-    if status ==# 'error'
-      rows->add({text: this.result.message, hl: 'LexiconError'})
-    elseif status ==# 'notfound'
-      rows->add({text: printf(IN.T("No entry for \"%s\"."), this.word)})
+    if status ==# CO.STATUS_ERR
+      rows->add({text: this.result.message, hl: HL_LEXICON_ERR})
+    elseif status ==# CO.STATUS_NOTFOUND
+      rows->add({text: MK.NoEntry(this.word)})
       if !empty(this.result.suggestions)
         rows->add({text: ''})
-        rows->add({text: IN.T("Did you mean:"), hl: 'LexiconTitle'})
+        rows->add({text: MK.DidMean(), hl: HL_LEXICON_TITLE})
         for suggestion in this.result.suggestions
-          rows->add({text: '  ' .. suggestion, value: suggestion, action: 'lookup'})
+          rows->add({text: '  ' .. suggestion, value: suggestion, action: ACTION_LOOKUP})
         endfor
       endif
     elseif this.kind ==# CO.KIND_THESAURUS
       rows = this.ThesaurusRows()
     else
-      rows = this.DictionaryRows()
+      rows = this.DictRows()
     endif
     this.rows = rows
     this.selected = this.NextSelectable(-1, 1)
     this.firstline = 1
   enddef
 
-  def DictionaryRows(): list<dict<any>>
+  def DictRows(): list<dict<any>>
     var rows: list<dict<any>> = []
     for entry in this.result.entries
       if !empty(rows)
         rows->add({text: ''})
       endif
       var heading: string = entry.fl ==# '' ? entry.display : $'{entry.display}  ({entry.fl})'
-      rows->add({text: heading, hl: 'LexiconTitle'})
+      rows->add({text: heading, hl: HL_LEXICON_TITLE})
       for i in range(len(entry.defs))
         rows->add({text: $'  {i + 1}. {entry.defs[i]}'})
       endfor
@@ -261,29 +271,29 @@ export class LexiconPopup
         rows->add({text: ''})
       endif
       var heading: string = entry.fl ==# '' ? entry.headword : $'{entry.headword}  ({entry.fl})'
-      rows->add({text: heading, hl: 'LexiconTitle'})
+      rows->add({text: heading, hl: HL_LEXICON_TITLE})
       if this.showAntonyms
         if empty(entry.ants)
-          rows->add({text: '  ' .. IN.T("(no antonyms)"), hl: 'LexiconComment'})
+          rows->add({text: '  ' .. MK.NoAntonyms(), hl: HL_LEXICON_COMMENT})
         endif
         for ant in entry.ants
-          rows->add({text: '    ' .. ant, value: ant, action: 'replace'})
+          rows->add({text: '    ' .. ant, value: ant, action: ACTION_REPLACE})
         endfor
         continue
       endif
       for sense in entry.senses
         if sense.label !=# ''
-          rows->add({text: '  ' .. sense.label, hl: 'LexiconComment'})
+          rows->add({text: '  ' .. sense.label, hl: HL_LEXICON_COMMENT})
         endif
         for syn in sense.syns
-          rows->add({text: '    ' .. syn, value: syn, action: 'replace'})
+          rows->add({text: '    ' .. syn, value: syn, action: ACTION_REPLACE})
         endfor
       endfor
     endfor
     rows->add({text: ''})
     var enter: string = empty(this.target) ? 'copy' : 'replace'
     var toggle: string = this.showAntonyms ? 'synonyms' : 'antonyms'
-    rows->add({text: $'<CR> {enter}  a {toggle}  d define  ? help', hl: 'LexiconComment'})
+    rows->add({text: $'<CR> {enter}  a {toggle}  d define  ? help', hl: HL_LEXICON_COMMENT})
     return rows
   enddef
 
@@ -345,7 +355,7 @@ export class LexiconPopup
     endif
     var row: dict<any> = this.rows[this.selected]
     this.Close()
-    if row.action ==# 'lookup'
+    if row.action ==# ACTION_LOOKUP
       OpenLookup(this.kind, LE.CleanWord(row.value), this.target)
     else
       this.Use(row.value)
@@ -357,7 +367,7 @@ export class LexiconPopup
   def Use(value: string): void
     if empty(this.target)
       setreg('"', value)
-      log.Info(printf(IN.T("\"%s\" copied to the unnamed register"), value))
+      log.Info(MK.CopiedUnnamedRegister(value))
     else
       this.ReplaceTarget(value)
     endif
@@ -365,14 +375,14 @@ export class LexiconPopup
 
   # METHOD: Return the action of the selected row, or an empty string when
   # no row is selected.
-  def SelectedAction(): string
+  def SelAction(): string
     return this.selected < 0 ? '' : get(this.rows[this.selected], 'action', '')
   enddef
 
   # METHOD: Use the selected suggestion of a misspelled word instead of
   # looking it up, as the thesaurus does with a synonym.
   def ReplaceWithSuggestion(): void
-    if this.SelectedAction() !=# 'lookup'
+    if this.SelAction() !=# ACTION_LOOKUP
       return
     endif
     var suggestion: string = this.rows[this.selected].value
@@ -384,33 +394,33 @@ export class LexiconPopup
     var t: dict<any> = this.target
     var line: string = get(getbufline(t.bufnr, t.lnum), 0, '')
     if strpart(line, t.start, t.end - t.start) !=# t.text
-      log.Warn(printf(IN.T("\"%s\" changed since the lookup - not replaced"), t.text))
+      log.Warn(MK.ChangedSinceLookup(t.text))
       return
     endif
     if !getbufvar(t.bufnr, '&modifiable')
-      log.Warn(IN.T("this buffer cannot be changed"))
+      log.Warn(MK.BufCannotChanged())
       return
     endif
     var newText: string = LE.MatchCase(t.text, replacement)
     setbufline(t.bufnr, t.lnum, strpart(line, 0, t.start) .. newText .. strpart(line, t.end))
   enddef
 
-  def DefineSelected(): void
+  def DefineSel(): void
     if this.kind !=# CO.KIND_THESAURUS || this.selected < 0
       return
     endif
-    var reason: string = LE.DisabledReason(CO.KIND_DICTIONARY)
+    var reason: string = LE.DisabledReason(CO.KIND_DICT)
     if reason !=# ''
       log.Warn(reason)
       return
     endif
     var word: string = this.rows[this.selected].value
     this.Close()
-    OpenLookup(CO.KIND_DICTIONARY, LE.CleanWord(word), {})
+    OpenLookup(CO.KIND_DICT, LE.CleanWord(word), {})
   enddef
 
   def ToggleAntonyms(): void
-    if this.kind !=# CO.KIND_THESAURUS || get(this.result, 'status', '') !=# 'ok'
+    if this.kind !=# CO.KIND_THESAURUS || this.result is null_object || this.result.status !=# CO.STATUS_OK
       return
     endif
     this.showAntonyms = !this.showAntonyms
@@ -420,44 +430,44 @@ export class LexiconPopup
 
   def ShowHelp(): void
     var entries: list<list<string>> = [
-      ['j / <Down>', this.selected >= 0 ? IN.T("Next word") : IN.T("Scroll down")],
-      ['k / <Up>', this.selected >= 0 ? IN.T("Previous word") : IN.T("Scroll up")],
+      ['j / <Down>', this.selected >= 0 ? MK.NextWord() : MK.ScrollDown()],
+      ['k / <Up>', this.selected >= 0 ? MK.PrevWord() : MK.ScrollUp()],
     ]
-    var use: string = empty(this.target) ? IN.T("Copy the word") : IN.T("Replace the word in the text")
-    if this.SelectedAction() ==# 'lookup'
-      entries->add(['<CR>', IN.T("Look up the selected suggestion")])
+    var use: string = empty(this.target) ? MK.CopyWord() : MK.ReplaceWordText()
+    if this.SelAction() ==# ACTION_LOOKUP
+      entries->add(['<CR>', MK.LookUpSel()])
       entries->add(['r', use])
     elseif this.kind ==# CO.KIND_THESAURUS && this.selected >= 0
       entries->add(['<CR>', use])
     endif
     if this.kind ==# CO.KIND_THESAURUS
-      if get(this.result, 'status', '') ==# 'ok'
-        entries->add(['a', IN.T("Toggle antonyms")])
+      if this.result isnot null_object && this.result.status ==# CO.STATUS_OK
+        entries->add(['a', MK.ToggleAntonyms()])
       endif
       if this.selected >= 0
-        entries->add(['d', IN.T("Define the selected word")])
+        entries->add(['d', MK.DefineSelWord()])
       endif
     endif
-    entries += [['q / <Esc>', IN.T("Close")], ['?', IN.T("This help")]]
-    H.Show(IN.T("Lookup"), entries)
+    entries += [['q / <Esc>', MC.Close()], ['?', MC.Help()]]
+    H.Show(MK.Lookup(), entries)
   enddef
 
   def Filter(id: number, key: string): bool
-    if key ==# 'j' || key ==# "\<Down>"
+    if key ==# 'j' || key ==# CO.KEY_DOWN
       this.Move(1)
-    elseif key ==# 'k' || key ==# "\<Up>"
+    elseif key ==# 'k' || key ==# CO.KEY_UP
       this.Move(-1)
-    elseif key ==# "\<CR>"
+    elseif key ==# CO.KEY_CR
       this.Accept()
     elseif key ==# 'r'
       this.ReplaceWithSuggestion()
     elseif key ==# 'a'
       this.ToggleAntonyms()
     elseif key ==# 'd'
-      this.DefineSelected()
+      this.DefineSel()
     elseif key ==# '?'
       this.ShowHelp()
-    elseif key ==# 'q' || key ==# "\<Esc>"
+    elseif key ==# 'q' || key ==# CO.KEY_ESC
       this.Close()
     endif
     return true

@@ -70,13 +70,13 @@ def Test_index_of_row_by_id_finds_known_row(): void
   var project = FI.BuildProject()
   var rows = T.Flatten(project)
   var manuscriptId = project.ChildAt(1).id
-  assert_equal(1, T.IndexOfRowById(rows, manuscriptId))
+  assert_equal(1, T.IdxOfRowById(rows, manuscriptId))
 enddef
 
 def Test_index_of_row_by_id_returns_minus_one_for_unknown_id(): void
   var project = FI.BuildProject()
   var rows = T.Flatten(project)
-  assert_equal(-1, T.IndexOfRowById(rows, 'no-such-id'))
+  assert_equal(-1, T.IdxOfRowById(rows, 'no-such-id'))
 enddef
 
 # FUNCTION: Each row knows the item at the top level that holds it, so that

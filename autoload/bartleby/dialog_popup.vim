@@ -24,8 +24,9 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/wrap.vim' as WR
+import autoload 'bartleby/locale/ui.vim' as MI
+import 'bartleby/variables/constants.vim' as CO
 
 const WIDTH: number = 60
 const ZINDEX: number = 320
@@ -40,17 +41,17 @@ export def Confirm(question: string, OnYes: func(), defaultYes: bool = false): n
     prop_type_add(PROP_DEFAULT, {highlight: 'PmenuSel'})
   endif
   var lines: list<string> = []
-  for paragraph in split(question, "\n")
-    lines += WR.Wrap(paragraph, WIDTH)
+  for para in split(question, "\n")
+    lines += WR.Wrap(para, WIDTH)
   endfor
   # A translation keeps the y and n keys visible, such as [Y] Ja.
-  var yesLabel: string = IN.T("[Y]es")
-  var noLabel: string = IN.T("[N]o")
+  var yesLabel: string = MI.Es()
+  var noLabel: string = MI.Msg()
   var answers: string = $'{yesLabel}   {noLabel}'
   lines += ['', answers]
 
   var id: number = popup_dialog(lines, {
-    title: printf(' %s ', IN.T("Confirm")),
+    title: printf(CO.TITLE_FMT, MI.Confirm()),
     zindex: ZINDEX,
     padding: [0, 1, 0, 1],
     filter: (winid, key) => Filter(winid, key, defaultYes),
@@ -73,7 +74,7 @@ def Filter(winid: number, key: string, defaultYes: bool): bool
     popup_close(winid, 1)
   elseif index(NO_KEYS, key) >= 0
     popup_close(winid, 0)
-  elseif key ==# "\<CR>"
+  elseif key ==# CO.KEY_CR
     popup_close(winid, defaultYes ? 1 : 0)
   endif
   return true

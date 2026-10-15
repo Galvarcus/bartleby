@@ -63,7 +63,7 @@ enddef
 
 # FUNCTION: Return the title of the document under the cursor.
 def TitleHere(project: any): string
-  var doc = SV.DocumentHere(project)
+  var doc = SV.DocHere(project)
   return doc is null_object ? '' : doc.title
 enddef
 
@@ -75,7 +75,7 @@ def Test_a_scrivening_shows_the_folder_tree_in_binder_order(): void
     '── Chapter: 2 / Departure ──', 'The train left.'], getline(1, '$'))
   assert_equal('Arrival', TitleHere(fx.project))
   cursor(5, 1)
-  assert_equal(['Departure', 1], [TitleHere(fx.project), SV.LineInDocument()])
+  assert_equal(['Departure', 1], [TitleHere(fx.project), SV.LineInDoc()])
   Close(fx)
 enddef
 
@@ -172,7 +172,7 @@ def Test_a_document_opened_alone_shows_in_the_scrivening(): void
   doautocmd BufEnter
   sleep 50m
   assert_equal(CO.SCRIVENINGS_BUF, bufname())
-  assert_equal(['Departure', 1], [TitleHere(fx.project), SV.LineInDocument()])
+  assert_equal(['Departure', 1], [TitleHere(fx.project), SV.LineInDoc()])
   assert_equal(-1, bufnr(fx.departurePath))
   Close(fx)
 enddef
@@ -225,7 +225,7 @@ def Test_the_session_records_the_document_under_the_cursor(): void
   SS.ForgetKnownStates()
   SV.Open(fx.project, fx.manuscript)
   cursor(5, 1)
-  SS.CaptureCurrentDoc()
+  SS.CaptureCurDoc()
   var saved = PE.ReadJson(fx.project.scriveDir .. '/session.json')
   assert_equal([fx.departure.relPath, 1], [get(saved, 'activeDocRelPath', ''), get(saved, 'cursorLine', 0)])
   SS.ForgetKnownStates()

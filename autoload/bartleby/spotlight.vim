@@ -40,25 +40,44 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/inputpopup.vim' as IP
-import autoload 'bartleby/pos.vim' as P
+import autoload 'bartleby/pos.vim' as POS
 import autoload 'bartleby/tagger.vim' as TA
 import autoload 'bartleby/tty.vim' as TY
 import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/locale/writing.vim' as MW
 import 'bartleby/variables/constants.vim' as CO
 
+const NOUNS: string = 'Nouns'
+const VERBS: string = 'Verbs'
+const ADJECTIVES: string = 'Adjectives'
+const PRONOUNS: string = 'Pronouns'
+const DETERMINERS: string = 'Determiners'
+const PREPOSITIONS: string = 'Prepositions'
+const CONJUNCTIONS: string = 'Conjunctions'
+const AUXILIARIES: string = 'Auxiliaries'
+const FILLERS: string = 'Fillers'
+const PROPN: string = 'PROPN'
+const SCONJ: string = 'SCONJ'
+const PASSIVE_KEY: string = 'tagger_passive'
+const SEARCH_BACK_HERE: string = 'cbW'
+const SEARCH_BACK: string = 'bW'
+const WIN_TOP: string = 'w0'
+const DIALOGUE_KEY: string = 'dialogue_pattern'
+const HEX_FMT: string = '%02x'
+const HL_DIM: string = 'SpotlightDim'
+
 var log = L.New(expand('<sfile>:t'))
-var spotlightdefaultcoefficient: float = g:bartleby_spotlight_default_coefficient
-var spotlightconcealguifg: string = g:bartleby_spotlight_conceal_guifg
+var default_coefficient: float = g:bartleby_spotlight_default_coefficient
+var conceal_guifg: string = g:bartleby_spotlight_conceal_guifg
 # A terminal color is a number, which a user may write without quotes.
 var spotlightconcealctermfg: string = $'{g:bartleby_spotlight_conceal_ctermfg}'
-var spotlightbop: string = g:bartleby_spotlight_bop
-var spotlighteop: string = g:bartleby_spotlight_eop
-var spotlightparagraphspan: number = g:bartleby_spotlight_paragraph_span
-var spotlightpriority: number = g:bartleby_spotlight_priority
+var bop: string = g:bartleby_spotlight_bop
+var eop: string = g:bartleby_spotlight_eop
+var para_span: number = g:bartleby_spotlight_paragraph_span
+var priority: number = g:bartleby_spotlight_priority
 
 ##############################################################################
 # SECTION: Mode registry. A handler takes the mode name and returns what
@@ -69,7 +88,7 @@ var spotlightpriority: number = g:bartleby_spotlight_priority
 # Handlers are plain functions that receive the mode name, not closures.
 ##############################################################################
 
-const MODE_PARAGRAPH: string = 'Paragraph'
+const MODE_PARA: string = 'Paragraph'
 const MODE_DIALOGUE: string = 'Dialogue'
 const MODE_PASSIVE: string = 'Passive'
 
@@ -80,29 +99,29 @@ var mode_order: list<string> = []
 # The last positions per buffer. The key covers the mode, the text, the
 # window range, and the tagger results. See CachedPositions.
 var span_cache: dict<dict<any>> = {}
-const SPOTLIGHT_DIALOGUE_WINDOW_MARGIN: number = 200
-const SPOTLIGHT_POS_WINDOW_MARGIN: number = 50
+const SPOTLIGHT_DIALOGUE_WIN_MARGIN: number = 200
+const SPOTLIGHT_POS_WIN_MARGIN: number = 50
 # How far past the window edge a paragraph is followed, so that a
 # paragraph cut by the edge is still classified as a whole.
-const SPOTLIGHT_PARAGRAPH_LIMIT: number = 200
+const SPOTLIGHT_PARA_LIMIT: number = 200
 
 # The part-of-speech modes in picker order, and the Universal POS tags
 # that keep a word bright when a tagger is set. An empty list means the
 # mode always uses its word list or pattern, see pos.vim. Nouns, Verbs,
 # Adjectives, and Passive have no word list, so they need the tagger.
 const POS_MODES: list<string> = [
-  'Nouns', 'Verbs', 'Adjectives', 'Adverbs', 'Pronouns', 'Determiners',
-  'Prepositions', 'Conjunctions', 'Auxiliaries', 'Contractions', 'Fillers',
+  NOUNS, VERBS, ADJECTIVES, CO.MODE_ADVERBS, PRONOUNS, DETERMINERS,
+  PREPOSITIONS, CONJUNCTIONS, AUXILIARIES, CO.MODE_CONTRACTIONS, FILLERS,
 ]
 const POS_TAGS: dict<list<string>> = {
-  Nouns: ['NOUN', 'PROPN'],
+  Nouns: ['NOUN', PROPN],
   Verbs: ['VERB'],
   Adjectives: ['ADJ'],
   Adverbs: ['ADV'],
   Pronouns: ['PRON'],
   Determiners: ['DET'],
   Prepositions: ['ADP'],
-  Conjunctions: ['CCONJ', 'SCONJ'],
+  Conjunctions: ['CCONJ', SCONJ],
   Auxiliaries: ['AUX'],
   Contractions: [],
   Fillers: [],
@@ -111,8 +130,9 @@ const TAGGER_ONLY_MODES: list<string> = ['Nouns', 'Verbs', 'Adjectives', 'Passiv
 
 const GRAY_CONVERTER: dict<number> = {0: 231, 7: 254, 15: 256, 16: 231, 231: 256}
 
-var current_mode: string = MODE_PARAGRAPH
-var current_coeff: float = -1.0
+var cur_mode: string = MODE_PARA
+var cur_coeff: float = -1.0
+var dialogue_pat: string = g:bartleby_spotlight_dialogue_pattern
 
 def RegisterMode(name: string, Handler: func(string): dict<any>,
     Available: func(): bool): void
@@ -144,7 +164,7 @@ enddef
 # FUNCTION: Return true when the tagger is ready and the language file
 # declares that the tagger has a passive rule for the language.
 def PassiveReady(): bool
-  return TA.IsReady() && LA.Get('tagger_passive', false)
+  return TA.IsReady() && LA.Get(PASSIVE_KEY, false)
 enddef
 
 # FUNCTION: Return true when mode takes its words from the tagger now.
@@ -156,42 +176,42 @@ enddef
 # with the cursor, as Limelight's getpos and hl do.
 # g:bartleby_spotlight_paragraph_span, Limelight's paragraph_span, keeps
 # that many more paragraphs bright on each side.
-def ParagraphPattern(): string
+def ParaPat(): string
   var emptyAdjust: number = getline('.') =~# '^\s*$' ? 1 : 0
-  var span: number = max([0, spotlightparagraphspan - emptyAdjust])
+  var span: number = max([0, para_span - emptyAdjust])
 
   var pos: list<number> = getcurpos()
   var start: number = 0
   for i in range(0, span)
-    start = searchpos(spotlightbop, i == 0 ? 'cbW' : 'bW')[0]
+    start = searchpos(bop, i == 0 ? SEARCH_BACK_HERE : SEARCH_BACK)[0]
   endfor
   setpos('.', pos)
 
   var endLine: number = 0
   for _ in range(0, span)
-    endLine = searchpos(spotlighteop, 'W')[0]
+    endLine = searchpos(eop, 'W')[0]
   endfor
   setpos('.', pos)
 
   # When bop never matched, start is 0 and the cursor paragraph is the
   # first in the buffer. The pattern for line 0 then matches nothing, which
   # is harmless, so it needs no special case. Limelight uses the same trick.
-  var patterns: list<string> = [$'\%<{start}l.']
+  var pats: list<string> = [$'\%<{start}l.']
   if endLine > 0
-    patterns->add($'\%>{endLine}l.')
+    pats->add($'\%>{endLine}l.')
   endif
-  return join(patterns, '\|')
+  return join(pats, '\|')
 enddef
 
 # FUNCTION: Return the first and last line of the visible window, widened
 # by margin lines on each side.
 
 def VisibleLineRange(margin: number): list<number>
-  return [max([1, line('w0') - margin]), min([line('$'), line('w$') + margin])]
+  return [max([1, line(WIN_TOP) - margin]), min([line('$'), line('w$') + margin])]
 enddef
 
-def ParagraphSpec(mode: string): dict<any>
-  var pattern: string = ParagraphPattern()
+def ParaSpec(mode: string): dict<any>
+  var pattern: string = ParaPat()
   return {key: $'{mode}:{pattern}', pattern: pattern}
 enddef
 
@@ -214,9 +234,55 @@ def CachedPositions(mode: string, margin: number,
   return spec
 enddef
 
+# The most line results that the line cache keeps before it starts again:
+# enough for every line of a long manuscript in a few modes.
+const CACHE_MAX: number = 20000
+
+# CLASS: Remembers the dim positions of each line text, so that a refresh
+# recomputes only the lines that changed or came into view. Typing changes
+# one line and scrolling brings a few into view, while the whole window
+# cache of CachedPositions misses on both. The positions are kept with line
+# number 0 and get the real number when used, so an entry stays valid when
+# lines above it are added or removed. New word lists, as from another
+# language, start the cache again.
+class LineCache
+  var _items: dict<list<any>> = {}
+  var _size: number = 0
+  var _lists: dict<any> = {}
+
+  # METHOD: Return the dim positions of text on line lnum. kind names what
+  # the positions depend on besides the text, such as the mode or the
+  # dialogue pattern. Compute makes them, for line number 0, on a miss.
+  def Get(kind: string, lnum: number, text: string,
+      Compute: func(string): list<any>): list<any>
+    var key: string = kind .. "\n" .. text
+    if !has_key(this._items, key)
+      if this._size >= CACHE_MAX
+        this._items = {}
+        this._size = 0
+      endif
+      this._items[key] = Compute(text)
+      this._size += 1
+    endif
+    return this._items[key]->mapnew((_, p) => [lnum] + p[1 :])
+  enddef
+
+  # METHOD: Start again when the word lists are not the ones that the
+  # cached positions were made with.
+  def UseLists(lists: dict<any>): void
+    if lists isnot this._lists
+      this._items = {}
+      this._size = 0
+      this._lists = lists
+    endif
+  enddef
+endclass
+
+var line_cache: LineCache = LineCache.new()
+
 # FUNCTION: Return the dim position for a whole nonblank line.
 def WholeLine(lnum: number, text: string): list<any>
-  return text =~ '\S' ? [[lnum]] : []
+  return text =~ CO.PAT_NONBLANK ? [[lnum]] : []
 enddef
 
 # FUNCTION: Dialogue mode. Dims everything except quoted speech, in
@@ -230,51 +296,58 @@ enddef
 # and WinScrolled recompute it, so text is ready before it scrolls into
 # view.
 def DialogueSpec(mode: string): dict<any>
-  return CachedPositions(mode, SPOTLIGHT_DIALOGUE_WINDOW_MARGIN, DialoguePositions)
+  return CachedPositions(mode, SPOTLIGHT_DIALOGUE_WIN_MARGIN, DialoguePositions)
 enddef
 
 def DialoguePositions(mode: string, first: number, last: number): list<any>
-  return &filetype ==# 'fountain' ? FountainDialoguePositions(first, last)
+  return &filetype ==# CO.FILETYPE_FOUNTAIN ? FountainDialoguePositions(first, last)
     : ProseDialoguePositions(first, last)
 enddef
 
 # FUNCTION: Return the dialogue pattern: g:bartleby_spotlight_dialogue_pattern
 # when set, else the dialogue quotes of the language file. Read on each
 # use, not when this script loads, so that a changed language applies.
-def DialoguePattern(): string
-  return g:bartleby_spotlight_dialogue_pattern !=# '' ? g:bartleby_spotlight_dialogue_pattern
-    : LA.Get('dialogue_pattern', '"[^"]*"')
+def DialoguePat(): string
+  return dialogue_pat !=# '' ? dialogue_pat
+    : LA.Get(DIALOGUE_KEY, '"[^"]*"')
 enddef
 
 def ProseDialoguePositions(first: number, last: number): list<any>
-  var pattern: string = DialoguePattern()
+  var pattern: string = DialoguePat()
   var positions: list<any> = []
   for lnum in range(first, last)
-    var text: string = getline(lnum)
-    var spans: list<list<number>> = []
-    var from: number = 0
-    while true
-      var found: list<any> = matchstrpos(text, pattern, from)
-      if found[1] < 0 || found[2] <= found[1]
-        break
-      endif
-      spans->add([found[1], found[2]])
-      from = found[2]
-    endwhile
-    positions += empty(spans) ? WholeLine(lnum, text) : P.GapPositions(lnum, text, spans)
+    positions += line_cache.Get('dialogue:' .. pattern, lnum, getline(lnum),
+      (text: string): list<any> => DialogueLine(text, pattern))
   endfor
   return positions
+enddef
+
+# FUNCTION: Return the dim positions of one prose line in Dialogue mode,
+# for line number 0: the text outside the quotes, or the whole line when it
+# has none.
+def DialogueLine(text: string, pattern: string): list<any>
+  var spans: list<list<number>> = []
+  var from: number = 0
+  while true
+    var found: list<any> = matchstrpos(text, pattern, from)
+    if found[1] < 0 || found[2] <= found[1]
+      break
+    endif
+    spans->add([found[1], found[2]])
+    from = found[2]
+  endwhile
+  return empty(spans) ? WholeLine(0, text) : POS.GapPositions(0, text, spans)
 enddef
 
 # FUNCTION: Return true for a Fountain character cue: a line in capitals,
 # optionally with a parenthetical such as V.O., that is not a scene
 # heading. Fountain dialogue has no quotes. The lines after a cue, up to
 # the next blank line, are spoken dialogue.
-def IsFountainCharacterCue(text: string): bool
-  if text ==# '' || text =~# CO.FOUNTAIN_SCENE_HEADING_PATTERN
+def IsFountainCharCue(text: string): bool
+  if text ==# '' || text =~# CO.FOUNTAIN_SCENE_HEADING_PAT
     return false
   endif
-  return text =~# CO.FOUNTAIN_CHARACTER_PATTERN
+  return text =~# CO.FOUNTAIN_CHAR_PAT
 enddef
 
 def FountainDialoguePositions(first: number, last: number): list<any>
@@ -287,7 +360,7 @@ def FountainDialoguePositions(first: number, last: number): list<any>
   var lnum: number = first
   var back: number = first - 1
   while back >= 1 && getline(back) !=# ''
-    if IsFountainCharacterCue(getline(back))
+    if IsFountainCharCue(getline(back))
       var dEnd: number = back + 1
       while dEnd <= total && getline(dEnd) !=# ''
         dEnd += 1
@@ -301,7 +374,7 @@ def FountainDialoguePositions(first: number, last: number): list<any>
   while lnum <= last
     var text: string = getline(lnum)
     positions += WholeLine(lnum, text)
-    if IsFountainCharacterCue(text)
+    if IsFountainCharCue(text)
       # The cue line dims, because it is not spoken. The lines after it are
       # the bright dialogue.
       lnum += 1
@@ -316,7 +389,7 @@ def FountainDialoguePositions(first: number, last: number): list<any>
 enddef
 
 def PosSpec(mode: string): dict<any>
-  return CachedPositions(mode, SPOTLIGHT_POS_WINDOW_MARGIN, PosPositions)
+  return CachedPositions(mode, SPOTLIGHT_POS_WIN_MARGIN, PosPositions)
 enddef
 
 # FUNCTION: Keep the words of the part of speech mode bright and dim the
@@ -328,30 +401,30 @@ def PosPositions(mode: string, first: number, last: number): list<any>
   var ft: string = &filetype
   var total: number = line('$')
   var start: number = first
-  while start > 1 && first - start < SPOTLIGHT_PARAGRAPH_LIMIT
-      && P.IsProseLine(getline(start - 1), ft)
+  while start > 1 && first - start < SPOTLIGHT_PARA_LIMIT
+      && POS.IsProseLine(getline(start - 1), ft)
     start -= 1
   endwhile
   var stop: number = last
-  while stop < total && stop - last < SPOTLIGHT_PARAGRAPH_LIMIT
-      && P.IsProseLine(getline(stop + 1), ft)
+  while stop < total && stop - last < SPOTLIGHT_PARA_LIMIT
+      && POS.IsProseLine(getline(stop + 1), ft)
     stop += 1
   endwhile
 
   var tagged: bool = UsesTagger(mode)
-  var lists: dict<any> = tagged ? {} : P.Lists()
+  var lists: dict<any> = tagged ? {} : POS.Lists()
   var positions: list<any> = []
   var lnum: number = start
   while lnum <= stop
     var text: string = getline(lnum)
-    if !P.IsProseLine(text, ft)
+    if !POS.IsProseLine(text, ft)
       positions += WholeLine(lnum, text)
       lnum += 1
       continue
     endif
     var blockStart: number = lnum
     var lines: list<string> = []
-    while lnum <= stop && P.IsProseLine(getline(lnum), ft)
+    while lnum <= stop && POS.IsProseLine(getline(lnum), ft)
       lines->add(getline(lnum))
       lnum += 1
     endwhile
@@ -363,9 +436,11 @@ enddef
 
 def LexicalPositions(mode: string, blockStart: number, lines: list<string>,
     lists: dict<any>): list<any>
+  line_cache.UseLists(lists)
   var positions: list<any> = []
   for i in range(len(lines))
-    positions += P.GapPositions(blockStart + i, lines[i], P.LexicalSpans(mode, lines[i], lists))
+    positions += line_cache.Get(mode, blockStart + i, lines[i],
+      (text: string): list<any> => POS.GapPositions(0, text, POS.LexicalSpans(mode, text, lists)))
   endfor
   return positions
 enddef
@@ -409,12 +484,12 @@ def TaggedPositions(mode: string, blockStart: number, lines: list<string>): list
 
   var positions: list<any> = []
   for i in range(len(lines))
-    positions += P.GapPositions(blockStart + i, lines[i], perLine[i])
+    positions += POS.GapPositions(blockStart + i, lines[i], perLine[i])
   endfor
   return positions
 enddef
 
-RegisterMode(MODE_PARAGRAPH, ParagraphSpec, Always)
+RegisterMode(MODE_PARA, ParaSpec, Always)
 RegisterMode(MODE_DIALOGUE, DialogueSpec, Always)
 for posMode in POS_MODES
   RegisterMode(posMode, PosSpec, index(TAGGER_ONLY_MODES, posMode) >= 0 ? TaggerReady : Always)
@@ -452,9 +527,9 @@ def GrayAnsi(col: number): number
 enddef
 
 def ValidateCoeff(coeff: float): float
-  var c: float = coeff < 0 ? spotlightdefaultcoefficient : coeff
+  var c: float = coeff < 0 ? default_coefficient : coeff
   if c < 0 || c > 1
-    throw IN.T("Invalid g:bartleby_spotlight_default_coefficient. Expected: 0.0 to 1.0")
+    throw MW.InvalidSpotlightDefault()
   endif
   return c
 enddef
@@ -462,11 +537,11 @@ enddef
 def Unsupported(): string
   var isGui: bool = has('gui_running')
   var varName: string = $'g:bartleby_spotlight_conceal_{isGui ? "gui" : "cterm"}fg'
-  var concealSet: bool = isGui ? spotlightconcealguifg !=# '' : spotlightconcealctermfg !=# ''
+  var concealSet: bool = isGui ? conceal_guifg !=# '' : spotlightconcealctermfg !=# ''
   if concealSet
-    return IN.T("Cannot calculate background color.")
+    return MW.CannotCalcBg()
   endif
-  return printf(IN.T("Unsupported color scheme. %s required."), varName)
+  return MW.UnsupportedColorScheme(varName)
 enddef
 
 # FUNCTION: Compute and set the SpotlightDim highlight group for the
@@ -479,8 +554,8 @@ def Dim(coeff: float): void
 
   if has('gui_running') || (has('termguicolors') && &termguicolors)
     var dim: string
-    if coeff < 0 && spotlightconcealguifg !=# ''
-      dim = spotlightconcealguifg
+    if coeff < 0 && conceal_guifg !=# ''
+      dim = conceal_guifg
     elseif fg ==# '' || bg ==# ''
       throw Unsupported()
     else
@@ -492,7 +567,7 @@ def Dim(coeff: float): void
         float2nr(bgRgb[1] * c + fgRgb[1] * (1 - c)),
         float2nr(bgRgb[2] * c + fgRgb[2] * (1 - c)),
       ]
-      dim = '#' .. join(dimRgb->mapnew((_, v) => printf('%02x', v)), '')
+      dim = '#' .. join(dimRgb->mapnew((_, v) => printf(HEX_FMT, v)), '')
     endif
     execute $'highlight SpotlightDim guifg={dim} guisp=bg'
   elseif str2nr(&t_Co) ==# 256
@@ -515,10 +590,10 @@ def Dim(coeff: float): void
     if coeff < 0 && spotlightconcealctermfg !=# ''
       execute $'highlight SpotlightDim ctermfg={spotlightconcealctermfg}'
     else
-      execute 'highlight SpotlightDim ' .. TY.DimArguments()
+      execute 'highlight SpotlightDim ' .. TY.DimArgs()
     endif
   else
-    throw IN.T("Unsupported terminal.")
+    throw MW.UnsupportedTerminal()
   endif
 enddef
 
@@ -527,7 +602,7 @@ enddef
 # Limelight, see IsOn, but a match belongs to one window, so each window
 # keeps its own match id.
 
-class WindowMatches
+class WinMatches
   var dimMatchId: number = -1
   var prevKey: string = ''
 
@@ -552,10 +627,10 @@ class WindowMatches
     this.prevKey = spec.key
     if has_key(spec, 'pattern')
       if spec.pattern !=# ''
-        this.dimMatchId = matchadd('SpotlightDim', spec.pattern, spotlightpriority)
+        this.dimMatchId = matchadd('SpotlightDim', spec.pattern, priority)
       endif
     elseif !empty(spec.positions)
-      this.dimMatchId = matchaddpos('SpotlightDim', spec.positions, spotlightpriority)
+      this.dimMatchId = matchaddpos(HL_DIM, spec.positions, priority)
     endif
   enddef
 endclass
@@ -564,31 +639,31 @@ endclass
 # SECTION: Session state and lifecycle.
 ##############################################################################
 
-def CurrentHandler(): func(string): dict<any>
-  return get(mode_handlers, current_mode, mode_handlers[MODE_PARAGRAPH])
+def CurHandler(): func(string): dict<any>
+  return get(mode_handlers, cur_mode, mode_handlers[MODE_PARA])
 enddef
 
-def RefreshCurrentWindow(): void
-  var wm: WindowMatches = get(w:, 'bartleby_spotlight_matches', null_object)
+def RefreshCurWin(): void
+  var wm: WinMatches = get(w:, 'bartleby_spotlight_matches', null_object)
   # A pane of Bartleby is never dimmed, because Spotlight works only in the
   # edit window.
-  if W.IsChromeBuffer(bufnr())
+  if W.IsChromeBuf(bufnr())
     if wm isnot null_object
       wm.ClearHl()
     endif
     return
   endif
   if wm is null_object
-    wm = WindowMatches.new()
+    wm = WinMatches.new()
     w:bartleby_spotlight_matches = wm
   endif
-  var Handler: func(string): dict<any> = CurrentHandler()
-  wm.RefreshDim(Handler(current_mode))
+  var Handler: func(string): dict<any> = CurHandler()
+  wm.RefreshDim(Handler(cur_mode))
 enddef
 
 def RedimSafely(): void
   try
-    Dim(current_coeff)
+    Dim(cur_coeff)
   catch
     Off()
     log.Error(v:exception)
@@ -597,7 +672,7 @@ enddef
 
 def CleanupIfOff(): void
   if !IsOn()
-    var wm: WindowMatches = get(w:, 'bartleby_spotlight_matches', null_object)
+    var wm: WinMatches = get(w:, 'bartleby_spotlight_matches', null_object)
     if wm isnot null_object
       wm.ClearHl()
     endif
@@ -609,41 +684,41 @@ export def IsOn(): bool
 enddef
 
 def On(mode: string, coeffArg: float): void
-  if W.RefusedInPane(IN.T("Spotlight"))
+  if W.RefusedInPane(MW.Spotlight())
     return
   endif
-  var actualMode: string = mode ==# '' ? current_mode : mode
+  var actualMode: string = mode ==# '' ? cur_mode : mode
   if !has_key(mode_handlers, actualMode)
-    log.Error(printf(IN.T("unknown Spotlight mode: %s"), actualMode))
+    log.Error(MW.UnknownSpotlightMode(actualMode))
     return
   endif
   if !mode_available[actualMode]()
     var reason: string = TA.FailureReason()
     if reason ==# ''
-      log.Error(printf(IN.T("Spotlight mode %s needs a part-of-speech tagger. Set g:bartleby_spotlight_tagger"), ModeName(actualMode)))
+      log.Error(MW.SpotlightModeNeeds(ModeName(actualMode)))
     else
-      log.Error(printf(IN.T("Spotlight mode %s needs a part-of-speech tagger: %s"), ModeName(actualMode), reason))
+      log.Error(MW.SpotlightModeNeedsPart(ModeName(actualMode), reason))
     endif
     return
   endif
-  current_mode = actualMode
-  current_coeff = coeffArg
+  cur_mode = actualMode
+  cur_coeff = coeffArg
 
   try
-    Dim(current_coeff)
+    Dim(cur_coeff)
   catch
     log.Error(v:exception)
     return
   endtry
 
-  RefreshCurrentWindow()
+  RefreshCurWin()
 
   augroup bartleby_spotlight
     autocmd!
-    autocmd CursorMoved,CursorMovedI,WinScrolled * RefreshCurrentWindow()
+    autocmd CursorMoved,CursorMovedI,WinScrolled * RefreshCurWin()
     # During InsertLeave, mode still reports Insert mode, and the tagger
     # sends no requests in Insert mode, so refresh just after it.
-    autocmd InsertLeave * timer_start(0, (_) => RefreshCurrentWindow())
+    autocmd InsertLeave * timer_start(0, (_) => RefreshCurWin())
     autocmd ColorScheme * RedimSafely()
   augroup END
   augroup bartleby_spotlight_cleanup
@@ -653,7 +728,7 @@ def On(mode: string, coeffArg: float): void
 enddef
 
 export def Off(): void
-  var wm: WindowMatches = get(w:, 'bartleby_spotlight_matches', null_object)
+  var wm: WinMatches = get(w:, 'bartleby_spotlight_matches', null_object)
   if wm isnot null_object
     wm.ClearHl()
   endif
@@ -681,20 +756,20 @@ enddef
 # and the word-list settings use, to its name in the message language.
 export def ModeNames(): dict<string>
   return {
-    Paragraph: IN.T("Paragraph"),
-    Dialogue: IN.T("Dialogue"),
-    Nouns: IN.T("Nouns"),
-    Verbs: IN.T("Verbs"),
-    Adjectives: IN.T("Adjectives"),
-    Adverbs: IN.T("Adverbs"),
-    Pronouns: IN.T("Pronouns"),
-    Determiners: IN.T("Determiners"),
-    Prepositions: IN.T("Prepositions"),
-    Conjunctions: IN.T("Conjunctions"),
-    Auxiliaries: IN.T("Auxiliaries"),
-    Contractions: IN.T("Contractions"),
-    Fillers: IN.T("Fillers"),
-    Passive: IN.T("Passive"),
+    Paragraph: MW.Para(),
+    Dialogue: MW.Dialogue(),
+    Nouns: MW.Nouns(),
+    Verbs: MW.Verbs(),
+    Adjectives: MW.Adjectives(),
+    Adverbs: MW.Adverbs(),
+    Pronouns: MW.Pronouns(),
+    Determiners: MW.Determiners(),
+    Prepositions: MW.Prepositions(),
+    Conjunctions: MW.Conjunctions(),
+    Auxiliaries: MW.Auxiliaries(),
+    Contractions: MW.Contractions(),
+    Fillers: MW.Fillers(),
+    Passive: MW.Passive(),
   }
 enddef
 
@@ -711,9 +786,9 @@ export def PickMode(): void
   # title is never cut and the width does not change with the current mode.
   var names: dict<string> = ModeNames()
   var longest: number = max(modes->mapnew((_, m) => strdisplaywidth(get(names, m, m))))
-  var width: number = strdisplaywidth(printf(IN.T("Spotlight Mode: %s"), repeat('x', longest))) + 2
-  IP.PromptFilter(printf(IN.T("Spotlight Mode: %s"), ModeName(current_mode)), modes, (choice: string) => {
-    On(choice, current_coeff)
+  var width: number = strdisplaywidth(MW.SpotlightMode(repeat('x', longest))) + 2
+  IP.PromptFilter(MW.SpotlightMode(ModeName(cur_mode)), modes, (choice: string) => {
+    On(choice, cur_coeff)
   }, 10, width, names)
 enddef
 
@@ -724,11 +799,11 @@ def OnTaggerUpdate(): void
   if !IsOn()
     return
   endif
-  if !IsModeAvailable(current_mode)
+  if !IsModeAvailable(cur_mode)
     Off()
     return
   endif
-  RefreshCurrentWindow()
+  RefreshCurWin()
 enddef
 
 TA.OnUpdate(OnTaggerUpdate)
@@ -750,7 +825,7 @@ export def Execute(bang: bool, args: string): void
   endif
 
   if has_key(mode_handlers, args)
-    On(args, current_coeff)
+    On(args, cur_coeff)
   else
     On('', str2float(args))
   endif

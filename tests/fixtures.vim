@@ -23,7 +23,7 @@ export def BuildProject(): PO.Project
   var frontMatter = BI.BinderItem.NewFolder('Front Matter', CO.ROLE_FRONT_MATTER)
   var manuscript = BI.BinderItem.NewFolder('Manuscript', CO.ROLE_MANUSCRIPT)
   var backMatter = BI.BinderItem.NewFolder('Back Matter', CO.ROLE_BACK_MATTER)
-  var characters = BI.BinderItem.NewFolder('Characters', CO.ROLE_CHARACTERS)
+  var characters = BI.BinderItem.NewFolder('Characters', CO.ROLE_CHARS)
   var research = BI.BinderItem.NewFolder('Research', CO.ROLE_RESEARCH)
 
   var chapter1 = BI.BinderItem.NewFolder('1', CO.ROLE_CHAPTER)

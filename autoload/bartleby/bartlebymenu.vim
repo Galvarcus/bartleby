@@ -20,12 +20,16 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/menu.vim' as M
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/lexicon.vim' as LE
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/ui.vim' as MI
 import 'bartleby/variables/constants.vim' as CO
+
+const CMD_DEFINE: string = 'BartlebyDefine'
+const CMD_THESAURUS: string = 'BartlebyThesaurus'
 
 var menu: M.Menu = null_object
 
@@ -48,44 +52,44 @@ enddef
 def BuildMenu(): M.Menu
   var m: M.Menu = M.Menu.new(CO.MENU_NAME, CO.PLUGIN_NAME)
 
-  var scrive: M.MenuItem = m.AddItem(IN.T("Scrive"))
-  scrive.AddItem(IN.T("List..."), RunEx('BartlebyList'))
-  scrive.AddItem(IN.T("Open..."), PromptThenEx(IN.T("Open Scrive"), 'BartlebyOpen'))
-  scrive.AddItem(IN.T("New..."), PromptThenEx(IN.T("New Scrive"), 'BartlebyNewScrive'))
-  scrive.AddItem(IN.T("Close"), RunEx('BartlebyClose'))
+  var scrive: M.MenuItem = m.AddItem(MI.Scrive())
+  scrive.AddItem(MI.List(), RunEx(CO.CMD_LIST))
+  scrive.AddItem(MI.Open(), PromptThenEx(MI.OpenScrive(), CO.CMD_OPEN))
+  scrive.AddItem(MI.New(), PromptThenEx(MI.NewScrive(), CO.CMD_NEW_SCRIVE))
+  scrive.AddItem(MC.Close(), RunEx(CO.CMD_CLOSE))
 
-  var binder: M.MenuItem = m.AddItem(IN.T("Binder"))
-  binder.AddItem(IN.T("Toggle"), RunEx('BartlebyToggleBinder'))
-  binder.AddItem(IN.T("Search"), RunEx('BartlebySearch'))
-  binder.AddItem(IN.T("Empty Trash"), RunEx('BartlebyEmptyTrash'))
-  binder.AddItem(IN.T("Recover Files"), RunEx('BartlebyRecover'))
-  binder.AddItem(IN.T("Tidy Files"), RunEx('BartlebyTidyFiles'))
-  binder.AddItem(IN.T("Open Scrivening"), RunEx('BartlebyScrivenings'))
-  binder.AddItem(IN.T("Close Scrivening"), RunEx('BartlebyScrivenings!'))
+  var binder: M.MenuItem = m.AddItem(MC.Binder())
+  binder.AddItem(MI.Toggle(), RunEx(CO.CMD_TOGGLE_BINDER))
+  binder.AddItem(MI.Search(), RunEx(CO.CMD_SEARCH))
+  binder.AddItem(MI.EmptyTrash(), RunEx(CO.CMD_EMPTY_TRASH))
+  binder.AddItem(MI.RecoverFiles(), RunEx(CO.CMD_RECOVER))
+  binder.AddItem(MI.TidyFiles(), RunEx(CO.CMD_TIDY_FILES))
+  binder.AddItem(MC.OpenScrivening(), RunEx(CO.CMD_SCRIVENINGS))
+  binder.AddItem(MI.CloseScrivening(), RunEx(CO.CMD_SCRIVENINGS_BANG))
 
-  var view: M.MenuItem = m.AddItem(IN.T("View"))
-  view.AddItem(IN.T("Toggle Inspector"), RunEx('BartlebyToggleInspector'))
-  view.AddItem(IN.T("Toggle Focus"), RunEx('BartlebyFocus'))
-  view.AddItem(IN.T("Writing Progress"), RunEx('BartlebyProgress'))
-  view.AddItem(IN.T("Writing Goals"), RunEx('BartlebyGoals'))
-  view.AddItem(IN.T("Toggle Spotlight"), RunEx('BartlebySpotlight'))
-  view.AddItem(IN.T("Pick Spotlight Mode"), (_: M.MenuItem) => SP.PickMode())
-  view.AddItem(IN.T("Toggle Quill"), RunEx('BartlebyQuill'))
+  var view: M.MenuItem = m.AddItem(MC.View())
+  view.AddItem(MI.ToggleInspector(), RunEx(CO.CMD_TOGGLE_INSPECTOR))
+  view.AddItem(MI.ToggleFocus(), RunEx(CO.CMD_FOCUS))
+  view.AddItem(MI.WritingProgress(), RunEx(CO.CMD_PROGRESS))
+  view.AddItem(MI.WritingGoals(), RunEx(CO.CMD_GOALS))
+  view.AddItem(MI.ToggleSpotlight(), RunEx(CO.CMD_SPOTLIGHT))
+  view.AddItem(MI.PickSpotlightMode(), (_: M.MenuItem) => SP.PickMode())
+  view.AddItem(MI.ToggleQuill(), RunEx(CO.CMD_QUILL))
 
-  var doc: M.MenuItem = m.AddItem(IN.T("Document"))
-  doc.AddItem(IN.T("Take Snapshot"), RunEx('BartlebySnapshot'))
-  doc.AddItem(IN.T("View Snapshots"), RunEx('BartlebySnapshots'))
-  if LE.IsEnabled(CO.KIND_DICTIONARY)
-    doc.AddItem(IN.T("Define Word"), RunEx('BartlebyDefine'))
+  var doc: M.MenuItem = m.AddItem(MI.Doc())
+  doc.AddItem(MI.TakeSnap(), RunEx(CO.CMD_SNAP))
+  doc.AddItem(MI.ViewSnaps(), RunEx(CO.CMD_SNAPS))
+  if LE.IsEnabled(CO.KIND_DICT)
+    doc.AddItem(MI.DefineWord(), RunEx(CMD_DEFINE))
   endif
   if LE.IsEnabled(CO.KIND_THESAURUS)
-    doc.AddItem(IN.T("Thesaurus"), RunEx('BartlebyThesaurus'))
+    doc.AddItem(MI.Thesaurus(), RunEx(CMD_THESAURUS))
   endif
 
-  var project: M.MenuItem = m.AddItem(IN.T("Project"))
-  project.AddItem(IN.T("Edit Profile"), RunEx('BartlebyProfile'))
-  project.AddItem(IN.T("Edit Info"), RunEx('BartlebyProjectInfo'))
-  project.AddItem(IN.T("Compile"), RunEx('BartlebyCompile'))
+  var project: M.MenuItem = m.AddItem(MI.Proj())
+  project.AddItem(MI.EditProfile(), RunEx(CO.CMD_PROFILE))
+  project.AddItem(MI.EditInfo(), RunEx(CO.CMD_PROJ_INFO))
+  project.AddItem(MC.Compile(), RunEx(CO.CMD_COMPILE))
 
   return m
 enddef

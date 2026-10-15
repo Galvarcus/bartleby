@@ -14,7 +14,6 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/document.vim' as D
@@ -35,10 +34,18 @@ import autoload 'bartleby/snapshot.vim' as SN
 import autoload 'bartleby/dialog_popup.vim' as DP
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/scrivenings.vim' as SV
+import autoload 'bartleby/locale/binder.vim' as MB
+import autoload 'bartleby/locale/common.vim' as MC
 import 'bartleby/variables/constants.vim' as CO
 
+const ACTION_VIEW: string = 'View'
+const KIND_CHAPTER: string = 'Chapter'
+const KIND_PART: string = 'Part'
+const KIND_CUSTOM: string = 'Custom'
+const COLLAPSED: string = 'bartleby_collapsed'
+
 var log = L.New(expand('<sfile>:t'))
-var binderShowRoleLabels: bool = g:bartleby_binder_show_role_labels
+var show_role_labels: bool = g:bartleby_binder_show_role_labels
 
 # Render draws the title line, the project name, above the tree. Every
 # mapping from a cursor line to a tree row subtracts this.
@@ -52,13 +59,13 @@ def RenderLines(rows: list<T.Row>, binderRoot: string, collapsed: dict<bool>): l
       marker = get(collapsed, row.item.id, false) ? '▸ ' : '▾ '
     endif
     var suffix: string = ''
-    if row.item.IsDocument()
+    if row.item.IsDoc()
       var meta: D.DocMeta = row.item.LoadMeta(binderRoot)
       if meta.label !=# CO.LABELS[0]
         suffix = $' ({D.LabelName(meta.label)})'
       endif
     endif
-    var label: string = binderShowRoleLabels ? row.item.DisplayLabel() : ''
+    var label: string = show_role_labels ? row.item.DisplayLabel() : ''
     # A trailing slash marks a folder, for the Directory highlight in
     # syntax/bartleby-binder.vim. Display only: the stored title has no slash.
     var title: string = row.item.IsFolder() ? row.item.title .. '/' : row.item.title
@@ -66,7 +73,7 @@ def RenderLines(rows: list<T.Row>, binderRoot: string, collapsed: dict<bool>): l
   })
 enddef
 
-def FindOrCreateWindow(): number
+def FindOrCreateWin(): number
   var winNr: number = bufwinnr(CO.BINDER_BUF)
   if winNr != -1
     return winNr
@@ -87,10 +94,10 @@ enddef
 # drawn at all, see tree.vim Flatten. This is not a Vim fold. The
 # collapsed folders are kept across renders in b:bartleby_collapsed.
 def Render(project: PO.Project): void
-  var previousRows: list<T.Row> = get(b:, 'bartleby_rows', [])
-  var previousLine: number = line('.')
-  var previousId: string = previousLine > HEADER_LINES && previousLine <= len(previousRows) + HEADER_LINES
-    ? previousRows[previousLine - 1 - HEADER_LINES].item.id : ''
+  var prevRows: list<T.Row> = get(b:, 'bartleby_rows', [])
+  var prevLine: number = line('.')
+  var prevId: string = prevLine > HEADER_LINES && prevLine <= len(prevRows) + HEADER_LINES
+    ? prevRows[prevLine - 1 - HEADER_LINES].item.id : ''
 
   var collapsed: dict<bool> = get(b:, 'bartleby_collapsed', {})
   var rows: list<T.Row> = T.Flatten(project, collapsed)
@@ -103,7 +110,7 @@ def Render(project: PO.Project): void
 
   # After deletebufline and setline, the cursor is on line 1. Put it back
   # on the same item, at its new line, when the item still exists.
-  var newIdx: number = previousId ==# '' ? -1 : T.IndexOfRowById(rows, previousId)
+  var newIdx: number = prevId ==# '' ? -1 : T.IdxOfRowById(rows, prevId)
   if newIdx >= 0
     cursor(newIdx + 1 + HEADER_LINES, 1)
   endif
@@ -128,20 +135,20 @@ def OpenUnderCursor(): void
   if ctx.project is null_object || ctx.row is null_object
     return
   endif
-  if !ctx.row.item.IsDocument()
+  if !ctx.row.item.IsDoc()
     ToggleCollapse()
     return
   endif
   # A document of the open Scrivening shows there, not in a second buffer.
-  if SV.ShowDocument(ctx.row.item.id)
+  if SV.ShowDoc(ctx.row.item.id)
     return
   endif
   var path: string = ctx.row.item.AbsPath(ctx.project.BinderRoot())
   if !filereadable(path)
-    log.Error(printf(IN.T("missing file on disk: %s"), path))
+    log.Error(MC.MissingFileDisk(path))
     return
   endif
-  W.GoToEditorWindow()
+  W.GoToEditorWin()
   execute 'edit ' .. fnameescape(path)
 enddef
 
@@ -157,7 +164,7 @@ export def OpenScrivening(): void
   elseif ctx.row.ownerItem isnot null_object
     SV.Open(ctx.project, ctx.row.ownerItem, ctx.row.item.id)
   else
-    log.Info(IN.T("a Scrivening opens only for a folder in the Manuscript"))
+    log.Info(MC.ScriveningOpensOnly())
   endif
 enddef
 
@@ -170,56 +177,56 @@ def OpenCorkboard(): void
   CR.Show(project, ctx.row.item, (doc: BI.BinderItem) => {
     var path: string = doc.AbsPath(project.BinderRoot())
     if !filereadable(path)
-      log.Error(printf(IN.T("missing file on disk: %s"), path))
+      log.Error(MC.MissingFileDisk(path))
       return
     endif
-    W.GoToEditorWindow()
+    W.GoToEditorWin()
     execute 'edit ' .. fnameescape(path)
   })
 enddef
 
 def TakeSnapshot(): void
   var ctx: dict<any> = CursorContext()
-  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
+  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDoc()
     return
   endif
   var project: PO.Project = ctx.project
   var doc: BI.BinderItem = ctx.row.item
-  IP.PromptText(IN.T("Snapshot label (optional)"), '', (label: string) => {
+  IP.PromptText(MC.SnapLabelOptional(), '', (label: string) => {
     SN.Take(project, doc, label)
   })
 enddef
 
-def ShowSnapshotReadOnly(doc: BI.BinderItem, snapshot: SN.Snapshot): void
-  W.GoToEditorWindow()
+def ShowSnapReadOnly(doc: BI.BinderItem, snap: SN.Snap): void
+  W.GoToEditorWin()
   execute 'enew'
-  setline(1, snapshot.lines)
-  execute 'silent file ' .. fnameescape($'[Snapshot] {doc.title} - {snapshot.DisplayName()}')
+  setline(1, snap.lines)
+  execute 'silent file ' .. fnameescape($'[Snapshot] {doc.title} - {snap.DisplayName()}')
   setlocal buftype=nofile bufhidden=wipe noswapfile nobuflisted nomodifiable readonly
 enddef
 
 def ViewSnapshots(): void
   var ctx: dict<any> = CursorContext()
-  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
+  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDoc()
     return
   endif
   var project: PO.Project = ctx.project
   var doc: BI.BinderItem = ctx.row.item
-  var snapshots: list<SN.Snapshot> = reverse(SN.List(project, doc))
-  if empty(snapshots)
-    log.Info(printf(IN.T("no snapshots for \"%s\""), doc.title))
+  var snaps: list<SN.Snap> = reverse(SN.List(project, doc))
+  if empty(snaps)
+    log.Info(MC.NoSnaps(doc.title))
     return
   endif
-  var names: list<string> = snapshots->mapnew((_, s) => s.DisplayName())
-  PI.PickOne(IN.T("Snapshots"), names, (choice: string) => {
-    var snapshot: SN.Snapshot = snapshots[index(names, choice)]
-    PI.PickOne(printf(IN.T(" %s "), choice), ['Restore', 'View', 'Cancel'], (action: string) => {
-      if action ==# 'Restore'
-        SN.Restore(project, doc, snapshot)
-      elseif action ==# 'View'
-        ShowSnapshotReadOnly(doc, snapshot)
+  var names: list<string> = snaps->mapnew((_, s) => s.DisplayName())
+  PI.PickOne(MC.Snaps(), names, (choice: string) => {
+    var snap: SN.Snap = snaps[index(names, choice)]
+    PI.PickOne(MC.Msg(choice), ['Restore', ACTION_VIEW, CO.CANCEL], (action: string) => {
+      if action ==# CO.ACTION_RESTORE
+        SN.Restore(project, doc, snap)
+      elseif action ==# ACTION_VIEW
+        ShowSnapReadOnly(doc, snap)
       endif
-    }, '', {Restore: IN.T("Restore"), View: IN.T("View"), Cancel: IN.T("Cancel")})
+    }, '', {Restore: MC.Restore(), View: MC.View(), Cancel: MC.Cancel()})
   })
 enddef
 
@@ -239,7 +246,7 @@ def RunSearch(): void
   SE.Run(ctx.project)
 enddef
 
-def AddDocument(): void
+def AddDoc(): void
   var ctx: dict<any> = CursorContext()
   if RefusedInTrash(ctx)
     return
@@ -247,12 +254,12 @@ def AddDocument(): void
   if ctx.project is null_object
     return
   endif
-  IP.PromptText(IN.T("New document title"), '', (title: string) => {
-    FinishAddDocument(ctx, title)
+  IP.PromptText(MB.NewDocTitle(), '', (title: string) => {
+    FinishAddDoc(ctx, title)
   })
 enddef
 
-def FinishAddDocument(ctx: dict<any>, title: string): void
+def FinishAddDoc(ctx: dict<any>, title: string): void
   if title ==# ''
     return
   endif
@@ -275,35 +282,35 @@ def AddFolder(): void
   endif
   var options: list<string> = ['Custom']
   if ctx.project.projectType ==# CO.TYPE_NOVEL
-    options->add('Chapter')
+    options->add(KIND_CHAPTER)
   elseif ctx.project.projectType ==# CO.TYPE_NOVEL_PARTS
-    options->add('Part')
+    options->add(KIND_PART)
     var onOrInsidePart: bool = (ctx.row isnot null_object && ctx.row.item.structureRole ==# CO.ROLE_PART)
       || MU.FindAncestorWithRole(ctx.rows, ctx.row, CO.ROLE_PART) isnot null_object
     if onOrInsidePart
-      options->add('Chapter')
+      options->add(KIND_CHAPTER)
     endif
   endif
   if len(options) ==# 1
-    CreateFolder(ctx, 'Custom')
+    CreateFolder(ctx, KIND_CUSTOM)
   else
-    PI.PickOne(IN.T("Add Folder"), options, (choice: string) => {
+    PI.PickOne(MB.AddFolder(), options, (choice: string) => {
       CreateFolder(ctx, choice)
-    }, '', {Custom: IN.T("Folder"), Chapter: IN.T("Chapter"), Part: IN.T("Part")})
+    }, '', {Custom: MB.Folder(), Chapter: MC.Chapter(), Part: MC.Part()})
   endif
 enddef
 
 def CreateFolder(ctx: dict<any>, kind: string): void
-  var promptTitle: string = kind ==# 'Custom' ? IN.T("New folder title")
-    : kind ==# 'Part' ? IN.T("New Part title, or blank for the next number")
-    : IN.T("New Chapter title, or blank for the next number")
+  var promptTitle: string = kind ==# 'Custom' ? MB.NewFolderTitle()
+    : kind ==# KIND_PART ? MB.NewPartTitle()
+    : MB.NewChapterTitle()
   IP.PromptText(promptTitle, '', (title: string) => {
     FinishCreateFolder(ctx, kind, title)
   })
 enddef
 
 def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
-  if kind ==# 'Custom'
+  if kind ==# KIND_CUSTOM
     if title ==# ''
       return
     endif
@@ -313,7 +320,7 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
     return
   endif
 
-  if kind ==# 'Chapter'
+  if kind ==# KIND_CHAPTER
     var container: BI.BinderItem
     if ctx.project.projectType ==# CO.TYPE_NOVEL_PARTS
       container = (ctx.row isnot null_object && ctx.row.item.structureRole ==# CO.ROLE_PART)
@@ -322,7 +329,7 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
       container = MU.FindManuscript(ctx.project)
     endif
     if container is null_object
-      log.Error(IN.T("no Manuscript/Part folder found to add a chapter into"))
+      log.Error(MB.NoManuscriptPart())
       return
     endif
     var chapter: BI.BinderItem = MU.AddChapter(container, ctx.row, title)
@@ -331,7 +338,7 @@ def FinishCreateFolder(ctx: dict<any>, kind: string, title: string): void
   else
     var manuscript: BI.BinderItem = MU.FindManuscript(ctx.project)
     if manuscript is null_object
-      log.Error(IN.T("no Manuscript folder found to add a part into"))
+      log.Error(MB.NoManuscriptFolder())
       return
     endif
     MU.AddPart(manuscript, ctx.row, title)
@@ -361,9 +368,9 @@ def DeleteUnderCursor(): void
   endif
 
   if TR.RowInTrash(row)
-    DP.Confirm(printf(IN.T("Delete \"%s\" and its files for good? This cannot be undone."), item.title), () => {
+    DP.Confirm(MB.DeleteFilesGood(item.title), () => {
       ReportFailed(TR.DeleteForever(project, row))
-      log.Info(printf(IN.T("deleted \"%s\" for good"), item.title))
+      log.Info(MB.DeletedGood(item.title))
       project.Save()
       Render(project)
     })
@@ -372,13 +379,13 @@ def DeleteUnderCursor(): void
 
   if MU.IsImmutableFolder(item)
     if item.ChildCount() == 0
-      log.Info(printf(IN.T("\"%s\" is already empty"), item.title))
+      log.Info(MB.AlreadyEmpty(item.title))
       return
     endif
-    var clearPrompt: string = printf(IN.T("Move all contents of \"%s\" to the Trash? The folder itself will remain."), item.title)
+    var clearPrompt: string = MB.MoveAllContents(item.title)
     DP.Confirm(clearPrompt, () => {
       TR.MoveAllToTrash(project, item)
-      log.Info(printf(IN.T("moved the contents of \"%s\" to the Trash"), item.title))
+      log.Info(MB.MovedContentsTrash(item.title))
       project.Save()
       Render(project)
     })
@@ -387,10 +394,10 @@ def DeleteUnderCursor(): void
 
   if TR.HasFilesOnDisk(project, item)
     TR.MoveToTrash(project, row)
-    log.Info(printf(IN.T("moved \"%s\" to the Trash"), item.title))
+    log.Info(MB.MovedTrash(item.title))
   else
     MU.Remove(project, row)
-    log.Info(printf(IN.T("removed \"%s\", which had no files on disk"), item.title))
+    log.Info(MB.RemovedWhichHad(item.title))
   endif
   project.Save()
   Render(project)
@@ -406,20 +413,20 @@ def RestoreUnderCursor(): void
   var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.row.item
   if !TR.RowInTrash(ctx.row) || item.structureRole ==# CO.ROLE_TRASH
-    log.Info(IN.T("u restores an item from the Trash"))
+    log.Info(MB.RestoresItemTrash())
     return
   endif
   if ctx.row.ownerItem.structureRole !=# CO.ROLE_TRASH
-    log.Info(IN.T("restore the folder that holds this item, or move it out with m"))
+    log.Info(MB.RestoreFolderHolds())
     return
   endif
   if TR.Restore(project, ctx.row)
     ShowItem(project, item)
     project.Save()
     Render(project)
-    log.Info(printf(IN.T("restored \"%s\""), item.title))
+    log.Info(MB.Restored(item.title))
   else
-    log.Info(printf(IN.T("the folder of \"%s\" is gone. Choose where to restore it"), item.title))
+    log.Info(MB.FolderGoneChoose(item.title))
     MoveToUnderCursor()
   endif
 enddef
@@ -430,13 +437,12 @@ export def EmptyTrash(project: PO.Project): void
   var trash: BI.BinderItem = project.TrashFolder()
   var count: number = trash is null_object ? 0 : trash.ChildCount()
   if count == 0
-    log.Info(IN.T("the Trash is empty"))
+    log.Info(MB.TrashEmpty())
     return
   endif
-  DP.Confirm(printf(IN.N("Delete the %d item in the Trash and its files for good? This cannot be undone.",
-      "Delete the %d items in the Trash and their files for good? This cannot be undone.", count), count), () => {
+  DP.Confirm(MB.DeleteItemTrash(count), () => {
     ReportFailed(TR.EmptyTrash(project))
-    log.Info(IN.T("emptied the Trash"))
+    log.Info(MB.EmptiedTrash())
     project.Save()
     RenderIfOpen(project)
   })
@@ -445,7 +451,7 @@ enddef
 # FUNCTION: Warn about the paths that could not be deleted, if any.
 def ReportFailed(failed: list<string>): void
   if !empty(failed)
-    log.Warn(printf(IN.T("could not delete: %s"), join(failed, ', ')))
+    log.Warn(MB.CouldNotDelete(join(failed, ', ')))
   endif
 enddef
 
@@ -475,7 +481,7 @@ def RefusedInTrash(ctx: dict<any>): bool
   if ctx.project is null_object || ctx.row is null_object || !TR.RowInTrash(ctx.row)
     return false
   endif
-  log.Info(IN.T("in the Trash, u restores, m moves out, and dd deletes for good"))
+  log.Info(MB.TrashRestoresMoves())
   return true
 enddef
 
@@ -485,11 +491,11 @@ def RenameUnderCursor(): void
     return
   endif
   if MU.IsImmutableFolder(ctx.row.item)
-    log.Info(printf(IN.T("\"%s\" cannot be renamed"), ctx.row.item.title))
+    log.Info(MB.CannotRenamed(ctx.row.item.title))
     return
   endif
   var oldTitle: string = ctx.row.item.title
-  IP.PromptText(IN.T("Rename to"), oldTitle, (newTitle: string) => {
+  IP.PromptText(MB.Rename(), oldTitle, (newTitle: string) => {
     if newTitle ==# '' || newTitle ==# oldTitle
       return
     endif
@@ -512,7 +518,7 @@ def Move(delta: number): void
   if !MU.MoveWithinSiblings(ctx.project, ctx.row, delta)
     var target: BI.BinderItem = MU.MoveAcrossFolders(ctx.project, ctx.row, delta)
     if target is null_object
-      log.Info(IN.T("this item cannot be reordered here"))
+      log.Info(MB.ItemCannotReordered())
       return
     endif
     ShowFolder(ctx.project, target)
@@ -532,7 +538,7 @@ def MoveToUnderCursor(): void
   endif
   var targets: list<list<BI.BinderItem>> = MU.MoveTargets(ctx.project, ctx.row)
   if empty(targets)
-    log.Info(IN.T("this item cannot be moved to another folder"))
+    log.Info(MB.ItemCannotMoved())
     return
   endif
   var ids: list<string> = []
@@ -554,7 +560,7 @@ def MoveToUnderCursor(): void
   # never wider than the screen.
   var width: number = min([max(values(names)->mapnew((_, name) => strdisplaywidth(name))) + 4,
     &columns - 4])
-  IP.PromptFilter(IN.T("Move to"), ids, (id: string) => {
+  IP.PromptFilter(MB.Move(), ids, (id: string) => {
     MU.MoveInto(project, row, folders[id])
     ShowFolder(project, folders[id])
     project.Save()
@@ -603,7 +609,7 @@ def IndentUnderCursor(): void
     return
   endif
   if !MU.Indent(ctx.project, ctx.row)
-    log.Info(IN.T("no valid folder above to indent into"))
+    log.Info(MB.NoValidFolder())
     return
   endif
   ctx.project.Save()
@@ -619,7 +625,7 @@ def OutdentUnderCursor(): void
     return
   endif
   if !MU.Outdent(ctx.project, ctx.rows, ctx.row)
-    log.Info(IN.T("already at the top level, or not a valid destination for this item"))
+    log.Info(MB.AlreadyTopLevel())
     return
   endif
   ctx.project.Save()
@@ -628,40 +634,40 @@ enddef
 
 def PickLabel(): void
   var ctx: dict<any> = CursorContext()
-  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
+  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDoc()
     return
   endif
   var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.row.item
-  var currentMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-  PI.PickOne(IN.T("Label"), CO.LABELS, (choice: string) => {
+  var curMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
+  PI.PickOne(MC.Label(), CO.LABELS, (choice: string) => {
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     meta.SetLabel(choice)
     meta.Save(item.MetaPath(project.BinderRoot()))
     Render(project)
-  }, currentMeta.label, D.LabelNames())
+  }, curMeta.label, D.LabelNames())
 enddef
 
 def PickStatus(): void
   var ctx: dict<any> = CursorContext()
-  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDocument()
+  if ctx.project is null_object || ctx.row is null_object || !ctx.row.item.IsDoc()
     return
   endif
   var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.row.item
-  var currentMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
-  PI.PickOne(IN.T("Status"), CO.STATUSES, (choice: string) => {
+  var curMeta: D.DocMeta = item.LoadMeta(project.BinderRoot())
+  PI.PickOne(MC.Status(), CO.STATUSES, (choice: string) => {
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     meta.SetStatus(choice)
     meta.Save(item.MetaPath(project.BinderRoot()))
     Render(project)
-  }, currentMeta.status, D.StatusNames())
+  }, curMeta.status, D.StatusNames())
 enddef
 
 # FUNCTION: Show or hide the Chapter and Part prefixes and draw again.
 # The setting applies to the whole session, not only to this buffer.
 def ToggleRoleLabels(): void
-  binderShowRoleLabels = !binderShowRoleLabels
+  show_role_labels = !show_role_labels
   var project: PO.Project = get(b:, 'bartleby_project', null_object)
   if project isnot null_object
     Render(project)
@@ -669,28 +675,28 @@ def ToggleRoleLabels(): void
 enddef
 
 def ShowHelp(): void
-  H.Show(IN.T("Binder"), [
-    ['<CR>', IN.T("Open document / toggle folder")],
-    ['<Tab>', IN.T("Toggle folder collapse")],
-    ['a', IN.T("New document")],
-    ['A', IN.T("New folder (Chapter/Part when applicable)")],
-    ['dd', IN.T("Move item to the Trash, or in the Trash delete it for good")],
-    ['u', IN.T("Restore item from the Trash")],
-    ['r', IN.T("Rename item under cursor")],
-    ['J / K', IN.T("Move item down / up, and a scene into the next chapter")],
-    ['m', IN.T("Move item to another folder")],
-    ['>> / <<', IN.T("Indent / outdent item")],
-    ['l', IN.T("Set label")],
-    ['s', IN.T("Set status")],
-    ['L', IN.T("Toggle Chapter:/Part: labels")],
-    ['S', IN.T("Take snapshot")],
-    ['gS', IN.T("View/restore snapshots")],
-    ['gc', IN.T("Open Corkboard")],
-    ['go', IN.T("Open Outliner")],
-    ['v', IN.T("Open Scrivening")],
-    ['/', IN.T("Search project")],
-    ['q', IN.T("Close Binder")],
-    ['?', IN.T("This help")],
+  H.Show(MC.Binder(), [
+    ['<CR>', MB.OpenDocToggle()],
+    ['<Tab>', MB.ToggleFolderCollapse()],
+    ['a', MB.NewDoc()],
+    ['A', MB.NewFolderChapter()],
+    ['dd', MB.MoveItemTrash()],
+    ['u', MB.RestoreItemTrash()],
+    ['r', MB.RenameItemUnder()],
+    ['J / K', MB.MoveItemDown()],
+    ['m', MB.MoveItemAnother()],
+    ['>> / <<', MB.IndentOutdentItem()],
+    ['l', MC.SetLabel()],
+    ['s', MC.SetStatus()],
+    ['L', MB.ToggleChapterPart()],
+    ['S', MB.TakeSnap()],
+    ['gS', MB.ViewRestoreSnaps()],
+    ['gc', MB.OpenCorkboard()],
+    ['go', MB.OpenOutliner()],
+    ['v', MC.OpenScrivening()],
+    ['/', MB.SearchProj()],
+    ['q', MB.CloseBinder()],
+    ['?', MC.Help()],
   ])
 enddef
 
@@ -715,7 +721,7 @@ def SetupKeymaps(): void
   nnoremap <buffer> <silent> <CR> <ScriptCmd>OpenUnderCursor()<CR>
   nnoremap <buffer> <silent> q <ScriptCmd>close<CR>
   nnoremap <buffer> <silent> <Tab> <ScriptCmd>ToggleCollapse()<CR>
-  nnoremap <buffer> <silent> a <ScriptCmd>AddDocument()<CR>
+  nnoremap <buffer> <silent> a <ScriptCmd>AddDoc()<CR>
   nnoremap <buffer> <silent> A <ScriptCmd>AddFolder()<CR>
   nnoremap <buffer> <silent> dd <ScriptCmd>DeleteUnderCursor()<CR>
   nnoremap <buffer> <silent> u <ScriptCmd>RestoreUnderCursor()<CR>
@@ -740,7 +746,7 @@ enddef
 # FUNCTION: Draw the tree of project in the sidebar, and create the
 # sidebar if needed.
 export def Show(project: PO.Project): void
-  var winNr: number = FindOrCreateWindow()
+  var winNr: number = FindOrCreateWin()
   execute ':' .. winNr .. 'wincmd w'
   # Drop what was deleted from the Trash outside Bartleby.
   if TR.Prune(project)
@@ -772,7 +778,7 @@ enddef
 # closed, and Toggle saves the state after the window has closed.
 export def GetCollapsedIds(): list<string>
   var buf: number = bufnr(CO.BINDER_BUF)
-  return buf == -1 ? [] : keys(getbufvar(buf, 'bartleby_collapsed', {}))
+  return buf == -1 ? [] : keys(getbufvar(buf, COLLAPSED, {}))
 enddef
 
 export def ApplyCollapsedIds(ids: list<string>): void
@@ -784,5 +790,5 @@ export def ApplyCollapsedIds(ids: list<string>): void
   for id in ids
     collapsed[id] = true
   endfor
-  setbufvar(buf, 'bartleby_collapsed', collapsed)
+  setbufvar(buf, COLLAPSED, collapsed)
 enddef

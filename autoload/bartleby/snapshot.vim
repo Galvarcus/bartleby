@@ -20,30 +20,34 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/scrivenings.vim' as SV
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/data.vim' as MD
+import 'bartleby/variables/constants.vim' as CO
+
+const STAMP_FMT: string = '%s-%s-%s %s:%s:%s'
 
 var log = L.New(expand('<sfile>:t'))
-var snapshotretention: number = g:bartleby_snapshot_retention
+var retention: number = g:bartleby_snapshot_retention
 
 var id_counter: number = 0
 
 def NewTimestamp(): string
   id_counter += 1
-  return printf('%s-%03d', strftime('%Y%m%d%H%M%S'), id_counter)
+  return printf(CO.ID_FMT, strftime(CO.ID_TIME_FMT), id_counter)
 enddef
 
-export class Snapshot
+export class Snap
   var timestamp: string = ''
   var label: string = ''
   var lines: list<string> = []
 
-  static def FromDict(src: dict<any>): Snapshot
-    var s: Snapshot = Snapshot.new()
+  static def FromDict(src: dict<any>): Snap
+    var s: Snap = Snap.new()
     s.timestamp = get(src, 'timestamp', '')
     s.label = get(src, 'label', '')
     s.lines = get(src, 'lines', [])
@@ -62,38 +66,38 @@ export class Snapshot
     endif
     var t: string = this.timestamp
     if strlen(t) >= 14
-      return printf('%s-%s-%s %s:%s:%s', t[0 : 3], t[4 : 5], t[6 : 7], t[8 : 9], t[10 : 11], t[12 : 13])
+      return printf(STAMP_FMT, t[0 : 3], t[4 : 5], t[6 : 7], t[8 : 9], t[10 : 11], t[12 : 13])
     endif
     return t
   enddef
 endclass
 
-export def SnapshotDir(project: PO.Project, doc: BI.BinderItem): string
+export def SnapDir(project: PO.Project, doc: BI.BinderItem): string
   return $'{project.scriveDir}/snapshots/{doc.id}'
 enddef
 
-def SnapshotPath(project: PO.Project, doc: BI.BinderItem, timestamp: string): string
-  return $'{SnapshotDir(project, doc)}/{timestamp}.json'
+def SnapPath(project: PO.Project, doc: BI.BinderItem, timestamp: string): string
+  return $'{SnapDir(project, doc)}/{timestamp}.json'
 enddef
 
 # FUNCTION: Return the snapshots of doc, oldest first.
-export def List(project: PO.Project, doc: BI.BinderItem): list<Snapshot>
-  var dir: string = SnapshotDir(project, doc)
+export def List(project: PO.Project, doc: BI.BinderItem): list<Snap>
+  var dir: string = SnapDir(project, doc)
   if !isdirectory(dir)
     return []
   endif
   var files: list<string> = sort(globpath(dir, '*.json', false, true))
-  return files->mapnew((_, f) => Snapshot.FromDict(PE.ReadJson(f)))
+  return files->mapnew((_, f) => Snap.FromDict(PE.ReadJson(f)))
 enddef
 
 def EnforceRetention(project: PO.Project, doc: BI.BinderItem): void
-  var snapshots: list<Snapshot> = List(project, doc)
-  var excess: number = len(snapshots) - snapshotretention
+  var snaps: list<Snap> = List(project, doc)
+  var excess: number = len(snaps) - retention
   if excess <= 0
     return
   endif
   for i in range(excess)
-    var path: string = SnapshotPath(project, doc, snapshots[i].timestamp)
+    var path: string = SnapPath(project, doc, snaps[i].timestamp)
     if filereadable(path)
       delete(path)
     endif
@@ -107,32 +111,32 @@ enddef
 export def Take(project: PO.Project, doc: BI.BinderItem, label: string): void
   var path: string = doc.AbsPath(project.BinderRoot())
   if !filereadable(path)
-    log.Error(printf(IN.T("missing file on disk: %s"), path))
+    log.Error(MC.MissingFileDisk(path))
     return
   endif
   var v: dict<any> = {}
   v.timestamp = NewTimestamp()
   v.label = label
   v.lines = readfile(path)
-  PE.WriteJson(SnapshotPath(project, doc, v.timestamp), v)
+  PE.WriteJson(SnapPath(project, doc, v.timestamp), v)
   EnforceRetention(project, doc)
-  log.Info(printf(IN.T("snapshot taken: %s%s"), doc.title, label ==# "" ? "" : $" ({label})"))
+  log.Info(MD.SnapTaken(doc.title, label ==# "" ? "" : $" ({label})"))
 enddef
 
 # FUNCTION: Replace the file of doc with the content of snapshot. First
 # takes a snapshot of the current text, so a restore can always be
 # undone. Reloads the buffer when the document is open, so the editor
 # shows the restored text at once.
-export def Restore(project: PO.Project, doc: BI.BinderItem, snapshot: Snapshot): void
+export def Restore(project: PO.Project, doc: BI.BinderItem, snap: Snap): void
   # The snapshot before the restore holds the text of an open Scrivening.
   SV.SaveIfModified()
-  Take(project, doc, IN.T("before restore"))
+  Take(project, doc, MD.BeforeRestore())
   var path: string = doc.AbsPath(project.BinderRoot())
-  writefile(snapshot.lines, path)
+  writefile(snap.lines, path)
   SV.SyncWithTree(project, true)
   var winId: number = bufwinid(bufnr(path))
   if winId != -1
     win_execute(winId, 'edit!')
   endif
-  log.Info(printf(IN.T("restored \"%s\" to snapshot from %s"), doc.title, snapshot.DisplayName()))
+  log.Info(MD.RestoredSnap(doc.title, snap.DisplayName()))
 enddef

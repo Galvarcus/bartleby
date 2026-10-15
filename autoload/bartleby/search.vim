@@ -14,17 +14,17 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/trash.vim' as TR
+import autoload 'bartleby/locale/views.vim' as MV
 
 var log = L.New(expand('<sfile>:t'))
 
 export def Run(project: PO.Project): void
-  IP.PromptText(IN.T("Search scrive"), '', (query: string) => {
+  IP.PromptText(MV.SearchScrive(), '', (query: string) => {
     RunSearch(project, query)
   })
 enddef
@@ -34,7 +34,7 @@ enddef
 export def SearchFiles(project: PO.Project): list<string>
   var trashed: dict<bool> = TR.IdsInTrash(project)
   return T.Flatten(project)
-    ->filter((_, row) => row.item.IsDocument() && !has_key(trashed, row.item.id))
+    ->filter((_, row) => row.item.IsDoc() && !has_key(trashed, row.item.id))
     ->mapnew((_, row) => row.item.AbsPath(project.BinderRoot()))
     ->filter((_, path) => filereadable(path))
 enddef
@@ -46,7 +46,7 @@ def RunSearch(project: PO.Project, query: string): void
 
   var files: list<string> = SearchFiles(project)
   if empty(files)
-    log.Info(IN.T("no documents to search"))
+    log.Info(MV.NoDocsSearch())
     return
   endif
 
@@ -58,7 +58,7 @@ def RunSearch(project: PO.Project, query: string): void
   execute $'silent! vimgrep /{pattern}/j {fileArgs}'
 
   if empty(getqflist())
-    log.Info(printf(IN.T("no matches for \"%s\""), query))
+    log.Info(MV.NoMatches(query))
     return
   endif
   copen

@@ -27,7 +27,7 @@ def Test_enter_inserts_a_newline_rather_than_submitting(): void
   popup.Filter(popup.winid, "\<CR>")
   # Still open: Enter must not submit.
   assert_false(submitted)
-  assert_equal("First line\n", popup.Values().text)
+  assert_equal("First line\n", popup.Vals().text)
   popup.Close()
 enddef
 
@@ -36,7 +36,7 @@ def Test_typed_text_is_inserted_at_the_cursor(): void
   for c in 'Hi'
     popup.Filter(popup.winid, c)
   endfor
-  assert_equal('Hi', popup.Values().text)
+  assert_equal('Hi', popup.Vals().text)
   popup.Close()
 enddef
 
@@ -47,7 +47,7 @@ def Test_backspace_at_line_start_merges_with_previous_line(): void
   popup.Filter(popup.winid, "\<Down>")
   popup.Filter(popup.winid, "\<Home>")
   popup.Filter(popup.winid, "\<BS>")
-  assert_equal('FirstSecond', popup.Values().text)
+  assert_equal('FirstSecond', popup.Vals().text)
   popup.Close()
 enddef
 
@@ -96,10 +96,10 @@ def Test_filter_list_scrolls_with_the_selection(): void
   endfor
   # The fifth option is selected and visible.
   assert_equal(['three', 'four', 'five'], VisibleRows(popup))
-  assert_equal('five', popup.Values().choice)
+  assert_equal('five', popup.Vals().choice)
   popup.Filter(popup.winid, "\<PageUp>")
   assert_equal(['two', 'three', 'four'], VisibleRows(popup))
-  assert_equal('two', popup.Values().choice)
+  assert_equal('two', popup.Vals().choice)
   popup.Close()
 enddef
 
@@ -136,8 +136,8 @@ def Test_text_field_stops_at_its_maximum_length(): void
   for c in '1234567'
     popup.Filter(popup.winid, c)
   endfor
-  assert_equal('12345', popup.Values().zip)
-  assert_equal('Ontario', popup.Values().state)
+  assert_equal('12345', popup.Vals().zip)
+  assert_equal('Ontario', popup.Vals().state)
   popup.Close()
   # A full field still shows all of its text: the field has a column
   # for the cursor after the last character.
@@ -168,17 +168,17 @@ enddef
 def Test_text_keys_edit_at_the_cursor(): void
   var popup = NewTextPopup()
   Keys(popup, ["\<Home>", 'X'])
-  assert_equal('Xabcd', popup.Values().first)
+  assert_equal('Xabcd', popup.Vals().first)
   Keys(popup, ["\<End>", "\<BS>"])
-  assert_equal('Xabc', popup.Values().first)
+  assert_equal('Xabc', popup.Vals().first)
   Keys(popup, ["\<Left>", "\<Left>", "\<Del>"])
-  assert_equal('Xac', popup.Values().first)
+  assert_equal('Xac', popup.Vals().first)
   Keys(popup, ["\<Right>", 'Z', "\<C-a>", 'Y', "\<C-e>", 'W'])
-  assert_equal('YXacZW', popup.Values().first)
+  assert_equal('YXacZW', popup.Vals().first)
   Keys(popup, ["\<C-h>"])
-  assert_equal('YXacZ', popup.Values().first)
+  assert_equal('YXacZ', popup.Vals().first)
   Keys(popup, ["\<C-u>"])
-  assert_equal('', popup.Values().first)
+  assert_equal('', popup.Vals().first)
   popup.Close()
 enddef
 
@@ -215,7 +215,7 @@ def Test_arrows_on_buttons_stay_among_the_buttons(): void
   assert_equal(popup.TotalControls() - 1, popup.currentIdx)
   # Typing on a button changes no field.
   Keys(popup, ['x'])
-  assert_equal(['abcd', ''], [popup.Values().first, popup.Values().second])
+  assert_equal(['abcd', ''], [popup.Vals().first, popup.Vals().second])
   popup.Close()
 enddef
 
@@ -224,11 +224,11 @@ def Test_arrows_choose_an_option_and_stop_at_the_ends(): void
     [{name: 'other', type: 'text'}]], {}, {})
   popup.Open()
   Keys(popup, ["\<Right>", "\<Right>", "\<Right>"])
-  assert_equal('C', popup.Values().kind)
+  assert_equal('C', popup.Vals().kind)
   Keys(popup, ["\<Left>"])
-  assert_equal('B', popup.Values().kind)
+  assert_equal('B', popup.Vals().kind)
   Keys(popup, ['x', "\<Left>", "\<Left>"])
-  assert_equal('A', popup.Values().kind)
+  assert_equal('A', popup.Vals().kind)
   Keys(popup, ["\<CR>"])
   assert_equal(1, popup.currentIdx)
   popup.Close()

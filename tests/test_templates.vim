@@ -16,7 +16,7 @@ import 'bartleby/variables/constants.vim' as CO
 def Documents(items: list<any>): list<any>
   var found: list<any> = []
   for item in items
-    found += item.IsDocument() ? [item] : Documents(item.children)
+    found += item.IsDoc() ? [item] : Documents(item.children)
   endfor
   return found
 enddef
@@ -26,14 +26,14 @@ def Roles(items: list<any>): list<string>
 enddef
 
 def Test_each_type_gets_its_folders_in_order(): void
-  assert_equal([CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_BACK_MATTER, CO.ROLE_CHARACTERS,
+  assert_equal([CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_BACK_MATTER, CO.ROLE_CHARS,
     CO.ROLE_RESEARCH], Roles(TE.DefaultTree(CO.TYPE_NOVEL, '.md')))
   var parts = TE.DefaultTree(CO.TYPE_NOVEL_PARTS, '.md')
   assert_equal(Roles(TE.DefaultTree(CO.TYPE_NOVEL, '.md')), Roles(parts))
   assert_equal([CO.ROLE_PART, CO.ROLE_PART], Roles(parts[1].children))
-  assert_equal([CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_BACK_MATTER, CO.ROLE_CHARACTERS,
+  assert_equal([CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_BACK_MATTER, CO.ROLE_CHARS,
     CO.ROLE_RESEARCH], Roles(TE.DefaultTree(CO.TYPE_SHORT_STORY, '.md')))
-  assert_equal([CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_CHARACTERS, CO.ROLE_RESEARCH],
+  assert_equal([CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT, CO.ROLE_CHARS, CO.ROLE_RESEARCH],
     Roles(TE.DefaultTree(CO.TYPE_SCREENPLAY, '.fountain')))
 enddef
 
@@ -43,7 +43,7 @@ def Test_a_short_story_starts_with_one_draft_and_empty_folders(): void
   var tree = TE.DefaultTree(CO.TYPE_SHORT_STORY, '.md')
   assert_equal(1, len(tree[1].children))
   if len(tree[1].children) == 1
-    assert_true(tree[1].children[0].IsDocument())
+    assert_true(tree[1].children[0].IsDoc())
   endif
   for index in [0, 2, 3, 4]
     assert_equal([], tree[index].children, tree[index].structureRole)

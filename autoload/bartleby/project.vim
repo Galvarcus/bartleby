@@ -13,11 +13,14 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/binder.vim' as MB
+import autoload 'bartleby/locale/common.vim' as MC
 import 'bartleby/variables/constants.vim' as CO
+
+const EXT_MD: string = '.md'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -27,10 +30,10 @@ var log = L.New(expand('<sfile>:t'))
 # name in the message language. CO.TYPES gives the order.
 export def TypeNames(): dict<string>
   return {
-    [CO.TYPE_NOVEL]: IN.T("Novel"),
-    [CO.TYPE_NOVEL_PARTS]: IN.T("Novel with Parts"),
-    [CO.TYPE_SHORT_STORY]: IN.T("Short Story"),
-    [CO.TYPE_SCREENPLAY]: IN.T("Screenplay"),
+    [CO.TYPE_NOVEL]: MB.Novel(),
+    [CO.TYPE_NOVEL_PARTS]: MB.NovelParts(),
+    [CO.TYPE_SHORT_STORY]: MB.ShortStory(),
+    [CO.TYPE_SCREENPLAY]: MC.Screenplay(),
   }
 enddef
 
@@ -94,7 +97,7 @@ export class Project implements BI.ItemContainer
     return len(this.items)
   enddef
 
-  def IndexOfChild(id: string): number
+  def IdxOfChild(id: string): number
     for i in range(len(this.items))
       if this.items[i].id ==# id
         return i
@@ -110,27 +113,27 @@ export class Project implements BI.ItemContainer
   enddef
 
   def BinderRoot(): string
-    return this.scriveDir .. '/binder'
+    return this.scriveDir .. CO.PATH_BINDER
   enddef
 
-  def ProjectFilePath(): string
-    return this.scriveDir .. '/' .. CO.PROJECT_FILE
+  def ProjFilePath(): string
+    return this.scriveDir .. '/' .. CO.PROJ_FILE
   enddef
 
   # METHOD: Return the document extension: .fountain for a screenplay, .md
   # for every other type.
   def DocExt(): string
-    return this.projectType ==# CO.TYPE_SCREENPLAY ? '.fountain' : '.md'
+    return this.projectType ==# CO.TYPE_SCREENPLAY ? CO.EXT_FOUNTAIN : EXT_MD
   enddef
 
   # METHOD: Read project.json. Returns false, and changes nothing, when the
   # file is missing, is not valid JSON, or does not hold a list of binder
   # items, as after a crash during a save. The error names the file.
   def Load(): bool
-    var path: string = this.ProjectFilePath()
+    var path: string = this.ProjFilePath()
     this.loadError = ''
     if !filereadable(path)
-      return this.LoadFailed(printf(IN.T("project.json not found in %s"), this.scriveDir))
+      return this.LoadFailed(MB.ProjJsonNot(this.scriveDir))
     endif
     var data: any
     var loadedItems: list<BI.BinderItem>
@@ -138,11 +141,11 @@ export class Project implements BI.ItemContainer
       data = json_decode(join(readfile(path), "\n"))
       if type(data) != v:t_dict || type(get(data, 'items', null)) != v:t_list
           || indexof(data.items, (_, i) => type(i) != v:t_dict) >= 0
-        return this.LoadFailed(printf(IN.T("%s holds no list of binder items. The scrive did not open, and nothing was changed."), path))
+        return this.LoadFailed(MB.HoldsNoList(path))
       endif
       loadedItems = data.items->mapnew((_, i) => BI.BinderItem.FromDict(i))
     catch
-      return this.LoadFailed(printf(IN.T("%s cannot be read: %s. The scrive did not open, and nothing was changed."), path, v:exception))
+      return this.LoadFailed(MB.CannotReadScrive(path, v:exception))
     endtry
     this.name = get(data, 'name', fnamemodify(this.scriveDir, ':t:r'))
     this.projectType = get(data, 'projectType', CO.TYPE_NOVEL)
@@ -155,9 +158,9 @@ export class Project implements BI.ItemContainer
   # METHOD: Record why Load failed, with the backup of project.json when
   # there is one, report it, and return false, for Load to return.
   def LoadFailed(reason: string): bool
-    var backup: string = this.ProjectFilePath() .. PE.BACKUP_SUFFIX
+    var backup: string = this.ProjFilePath() .. PE.BACKUP_SUFFIX
     this.loadError = reason .. (filereadable(backup)
-      ? ' ' .. printf(IN.T("The version before the last save is in %s."), backup) : '')
+      ? ' ' .. MB.VersionBeforeLast(backup) : '')
     log.Error(this.loadError)
     return false
   enddef
@@ -167,11 +170,11 @@ export class Project implements BI.ItemContainer
   # new, see saveAllowed.
   def Save(): void
     if !this.saveAllowed
-      log.Error(printf(IN.T("%s was not saved, because it did not load."), this.ProjectFilePath()))
+      log.Error(MB.NotSavedBecause(this.ProjFilePath()))
       return
     endif
     this.EnsureTrash()
-    PE.WriteJson(this.ProjectFilePath(), {
+    PE.WriteJson(this.ProjFilePath(), {
       name: this.name,
       projectType: this.projectType,
       items: this.items->mapnew((_, i) => i.ToDict()),
@@ -195,7 +198,7 @@ export class Project implements BI.ItemContainer
   def EnsureTrash(): void
     var trash: BI.BinderItem = this.TrashFolder()
     if trash is null_object
-      trash = BI.BinderItem.NewFolder(IN.T("Trash"), CO.ROLE_TRASH)
+      trash = BI.BinderItem.NewFolder(MB.Trash(), CO.ROLE_TRASH)
     else
       this.items->filter((_, item) => item.id !=# trash.id)
     endif
@@ -228,7 +231,7 @@ export class Project implements BI.ItemContainer
     var binderRoot: string = this.BinderRoot()
     def Walk(list: list<BI.BinderItem>): BI.BinderItem
       for item in list
-        if item.IsDocument() && item.AbsPath(binderRoot) ==# path
+        if item.IsDoc() && item.AbsPath(binderRoot) ==# path
           return item
         endif
         if item.IsFolder()

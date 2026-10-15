@@ -13,7 +13,7 @@ var is_loaded: bool = true
 # Merriam-Webster. The popups are in lexiconpopup.vim, and the result
 # format in lexicon_result.vim.
 #
-# Each kind, dictionary and thesaurus, uses one reference of CO.REFERENCES:
+# Each kind, dictionary and thesaurus, uses one reference of CO.REFS:
 # g:bartleby_<kind>_reference when set, else the one the language file
 # names. A kind is on when its reference and provider exist, curl is
 # installed, and, when the provider needs a key, the key is set in
@@ -36,12 +36,22 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
-import autoload 'bartleby/i18n.vim' as IN
 import autoload 'bartleby/lang.vim' as LA
-import autoload 'bartleby/lexicon_mw.vim' as LM
+import autoload 'bartleby/lexicon_mw.vim' as LXM
 import autoload 'bartleby/lexicon_result.vim' as LR
 import autoload 'bartleby/log.vim' as L
+import autoload 'bartleby/locale/compile.vim' as MK
 import 'bartleby/variables/constants.vim' as CO
+
+const CURL: string = 'curl'
+const PROVIDER_MW: string = 'merriam-webster'
+const MW_DICT_KEY: string = 'BARTLEBY_MW_DICTIONARY_KEY'
+const MW_THESAURUS_KEY: string = 'BARTLEBY_MW_THESAURUS_KEY'
+const FLAG_MAX_TIME: string = '--max-time'
+const FLAG_CONFIG: string = '--config'
+const IN_IO_PIPE: string = 'pipe'
+const OUT_MODE_RAW: string = 'raw'
+const JOB_FAIL: string = 'fail'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -51,16 +61,18 @@ var disk_cache_loaded: bool = false
 
 
 const CACHE_VERSION: number = 2
+var cache_max_entries: number = g:bartleby_lexicon_cache_max_entries
+var timeout: number = g:bartleby_lexicon_timeout
 
 # FUNCTION: Return the configured reference for kind, or an empty dict
 # when the name is not registered or belongs to the other kind. An empty
 # setting means the reference of the language file.
-export def Reference(kind: string): dict<string>
+export def Ref(kind: string): dict<string>
   var name: string = get(g:, $'bartleby_{kind}_reference', '')
   if name ==# ''
     name = LA.Get($'{kind}_reference', '')
   endif
-  var ref: dict<string> = get(CO.REFERENCES, name, {})
+  var ref: dict<string> = get(CO.REFS, name, {})
   return get(ref, 'kind', '') ==# kind ? ref : {}
 enddef
 
@@ -70,7 +82,7 @@ enddef
 export def ApiKey(kind: string): string
   var key: string = get(g:, $'bartleby_{kind}_api_key', '')
   if key ==# ''
-    var envName: string = get(get(Provider(get(Reference(kind), 'provider', '')), 'envKeys', {}), kind, '')
+    var envName: string = get(get(Provider(get(Ref(kind), 'provider', '')), 'envKeys', {}), kind, '')
     key = envName ==# '' ? '' : (getenv(envName) ?? '')
   endif
   return trim(key)
@@ -78,19 +90,19 @@ enddef
 
 # FUNCTION: Return why kind is off, or an empty string when it is on.
 export def DisabledReason(kind: string): string
-  var ref: dict<string> = Reference(kind)
+  var ref: dict<string> = Ref(kind)
   var provider: dict<any> = Provider(get(ref, 'provider', ''))
   if empty(ref) || empty(provider)
     var name: string = get(g:, $'bartleby_{kind}_reference', '')
-    return printf(IN.T("no %s reference \"%s\" for this language"), KindName(kind),
+    return MK.NoRefLang(KindName(kind),
       name ==# '' ? LA.Get($'{kind}_reference', '') : name)
   endif
   if provider.needsKey && ApiKey(kind) ==# ''
     var envName: string = get(provider.envKeys, kind, '')
-    return printf(IN.T("%s lookups are off: set g:bartleby_%s_api_key or $%s"), KindName(kind), kind, envName)
+    return MK.LookupsOffSet(KindName(kind), kind, envName)
   endif
-  if !executable('curl')
-    return printf(IN.T("%s lookups need curl, which was not found"), KindName(kind))
+  if !executable(CURL)
+    return MK.LookupsNeedCurl(KindName(kind))
   endif
   return ''
 enddef
@@ -111,7 +123,7 @@ export def CleanWord(raw: string): string
 enddef
 
 export def BuildUrl(kind: string, word: string): string
-  var ref: dict<string> = Reference(kind)
+  var ref: dict<string> = Ref(kind)
   var F: func(dict<string>, string, string): string = Provider(ref.provider).buildUrl
   return F(ref, word, ApiKey(kind))
 enddef
@@ -119,11 +131,11 @@ enddef
 # FUNCTION: Give replacement the capitalization of original: all capitals
 # when original has more than one letter and all are capitals, a capital
 # first letter, or no change.
-export def MatchCase(original: string, replacement: string): string
-  if strchars(original) > 1 && original =~# '^\u\+$'
+export def MatchCase(orig: string, replacement: string): string
+  if strchars(orig) > 1 && orig =~# '^\u\+$'
     return toupper(replacement)
   endif
-  if original =~# '^\u'
+  if orig =~# '^\u'
     return toupper(strcharpart(replacement, 0, 1)) .. strcharpart(replacement, 1)
   endif
   return replacement
@@ -131,33 +143,33 @@ enddef
 
 # FUNCTION: Parse a response body with the provider of kind's reference.
 # The result follows lexicon_result.vim.
-export def ParseResponse(kind: string, word: string, body: string): dict<any>
-  var ref: dict<string> = Reference(kind)
+export def ParseResp(kind: string, word: string, body: string): LR.Result
+  var ref: dict<string> = Ref(kind)
   var provider: dict<any> = Provider(get(ref, 'provider', ''))
   if empty(provider)
-    return LR.Error(printf(IN.T("no %s reference for this language"), KindName(kind)))
+    return LR.Error(MK.NoReferenceForThis(KindName(kind)))
   endif
-  var F: func(string, string, string): dict<any> = provider.parse
+  var F: func(string, string, string): LR.Result = provider.parse
   return F(kind, word, body)
 enddef
 
 # FUNCTION: Look up word, already cleaned, and call Callback with the
 # parsed result. A cached result also arrives through a timer, so the
 # callback always runs after Lookup returns.
-export def Lookup(kind: string, word: string, Callback: func(dict<any>)): void
+export def Lookup(kind: string, word: string, Callback: func(LR.Result)): void
   var reason: string = DisabledReason(kind)
   if reason !=# ''
     timer_start(0, (_) => Callback(LR.Error(reason)))
     return
   endif
-  var ref: dict<string> = Reference(kind)
+  var ref: dict<string> = Ref(kind)
   var cacheKey: string = $'{ref.provider}:{ref.apiName}:{word}'
-  var cached: dict<any> = CacheGet(cacheKey)
-  if !empty(cached)
+  var cached: LR.Result = CacheGet(cacheKey)
+  if cached isnot null_object
     timer_start(0, (_) => Callback(cached))
     return
   endif
-  StartRequest(kind, word, cacheKey, Callback)
+  StartReq(kind, word, cacheKey, Callback)
 enddef
 
 # FUNCTION: Remove every cached result, in memory and on disk.
@@ -171,7 +183,7 @@ enddef
 
 # FUNCTION: Return the translated name of kind, for messages.
 def KindName(kind: string): string
-  return kind ==# CO.KIND_THESAURUS ? IN.T("thesaurus") : IN.T("dictionary")
+  return kind ==# CO.KIND_THESAURUS ? MK.Thesaurus() : MK.Dict()
 enddef
 
 # FUNCTION: Return the provider name to its functions and key settings.
@@ -179,22 +191,22 @@ enddef
 # lexicon_mw.vim, and add an entry here. envKeys names the environment
 # variable that holds the key of each kind, when the provider needs one.
 def Provider(name: string): dict<any>
-  if name ==# 'merriam-webster'
+  if name ==# PROVIDER_MW
     return {
-      buildUrl: LM.BuildUrl,
-      parse: LM.Parse,
+      buildUrl: LXM.BuildUrl,
+      parse: LXM.Parse,
       needsKey: true,
       envKeys: {
-        [CO.KIND_DICTIONARY]: 'BARTLEBY_MW_DICTIONARY_KEY',
-        [CO.KIND_THESAURUS]: 'BARTLEBY_MW_THESAURUS_KEY',
+        [CO.KIND_DICT]: MW_DICT_KEY,
+        [CO.KIND_THESAURUS]: MW_THESAURUS_KEY,
       },
     }
   endif
   return {}
 enddef
 
-def StartRequest(kind: string, word: string, cacheKey: string,
-    Callback: func(dict<any>)): void
+def StartReq(kind: string, word: string, cacheKey: string,
+    Callback: func(LR.Result)): void
   var out: list<string> = []
   var err: list<string> = []
   var state: dict<any> = {closed: false, exited: false, done: false, code: -1}
@@ -207,22 +219,22 @@ def StartRequest(kind: string, word: string, cacheKey: string,
     endif
     state.done = true
     if state.code != 0
-      var detail: string = empty(err) ? printf(IN.T("exit code %s"), state.code) : trim(split(join(err, ''), "\n")[0])
-      Callback(LR.Error(printf(IN.T("lookup failed: %s"), detail)))
+      var detail: string = empty(err) ? MK.ExitCode(state.code) : trim(split(join(err, ''), "\n")[0])
+      Callback(LR.Error(MK.LookupFailed(detail)))
       return
     endif
-    var result: dict<any> = ParseResponse(kind, word, join(out, ''))
-    if result.status !=# 'error'
+    var result: LR.Result = ParseResp(kind, word, join(out, ''))
+    if result.status !=# CO.STATUS_ERR
       CachePut(cacheKey, result)
     endif
     Callback(result)
   }
 
   var job: job = job_start(['curl', '--silent', '--show-error',
-      '--max-time', string(g:bartleby_lexicon_timeout), '--config', '-'], {
-    in_io: 'pipe',
-    out_mode: 'raw',
-    err_mode: 'raw',
+      FLAG_MAX_TIME, string(timeout), FLAG_CONFIG, '-'], {
+    in_io: IN_IO_PIPE,
+    out_mode: OUT_MODE_RAW,
+    err_mode: OUT_MODE_RAW,
     out_cb: (_, msg) => {
       out->add(msg)
     },
@@ -239,8 +251,8 @@ def StartRequest(kind: string, word: string, cacheKey: string,
       Finish()
     },
   })
-  if job_status(job) ==# 'fail'
-    Callback(LR.Error(IN.T("could not start curl")))
+  if job_status(job) ==# JOB_FAIL
+    Callback(LR.Error(MK.CouldNotStart()))
     return
   endif
   ch_sendraw(job, $'url = "{BuildUrl(kind, word)}"' .. "\n")
@@ -256,7 +268,7 @@ def LoadDiskCache(): void
     return
   endif
   disk_cache_loaded = true
-  if g:bartleby_lexicon_cache_max_entries <= 0 || !filereadable(CachePath())
+  if cache_max_entries <= 0 || !filereadable(CachePath())
     return
   endif
   try
@@ -265,18 +277,18 @@ def LoadDiskCache(): void
       memory_cache = extend(get(data, 'entries', {}), memory_cache)
     endif
   catch
-    log.Warn(printf(IN.T("ignoring unreadable lexicon cache: %s"), CachePath()))
+    log.Warn(MK.IgnoringUnreadableLexicon(CachePath()))
   endtry
 enddef
 
-def CacheGet(key: string): dict<any>
+def CacheGet(key: string): LR.Result
   LoadDiskCache()
-  return has_key(memory_cache, key) ? memory_cache[key].result : {}
+  return has_key(memory_cache, key) ? LR.Result.FromDict(memory_cache[key].result) : null_object
 enddef
 
-def CachePut(key: string, result: dict<any>): void
-  memory_cache[key] = {time: localtime(), result: result}
-  var limit: number = g:bartleby_lexicon_cache_max_entries
+def CachePut(key: string, result: LR.Result): void
+  memory_cache[key] = {time: localtime(), result: result.ToDict()}
+  var limit: number = cache_max_entries
   if limit <= 0
     return
   endif
@@ -292,6 +304,6 @@ def CachePut(key: string, result: dict<any>): void
     mkdir(fnamemodify(CachePath(), ':h'), 'p')
     writefile([json_encode({version: CACHE_VERSION, entries: memory_cache})], CachePath())
   catch
-    log.Warn(printf(IN.T("could not write lexicon cache: %s"), CachePath()))
+    log.Warn(MK.CouldNotWrite(CachePath()))
   endtry
 enddef

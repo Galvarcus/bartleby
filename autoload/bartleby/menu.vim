@@ -5,6 +5,12 @@ if exists('s:is_loaded') || v:version < 902 || &cp
 endif
 var is_loaded: bool = true
 
+import 'bartleby/variables/constants.vim' as CO
+
+const POS_CENTER: string = 'center'
+const COL_CURSOR: string = 'cursor'
+const MENU_ZINDEX: number = 200
+
 ##############################################################################
 # Plugin_Name: Bartleby
 # menu.vim: a reusable menu widget for the terminal and the GUI.
@@ -233,7 +239,7 @@ export class Menu
       highlight: this.normal_hl,
       wrap: false,
       mapping: false,
-      zindex: 200,
+      zindex: MENU_ZINDEX,
       filter: (winid: number, key: string): bool => this._Filter(winid, key),
       callback: (winid: number, _result: any) => this._OnClose(winid),
     })
@@ -253,10 +259,10 @@ export class Menu
     endif
     if type(this.pos) == v:t_list
       return {line: this.pos[0], col: this.pos[1]}
-    elseif this.pos == 'center'
-      return {pos: 'center'}
+    elseif this.pos == POS_CENTER
+      return {pos: POS_CENTER}
     else
-      return {line: 'cursor+1', col: 'cursor'}
+      return {line: CO.BELOW_CURSOR, col: COL_CURSOR}
     endif
   enddef
 
@@ -270,7 +276,7 @@ export class Menu
       highlight: this.normal_hl,
       wrap: false,
       mapping: false,
-      zindex: 200 + len(this._stack),
+      zindex: MENU_ZINDEX + len(this._stack),
       filter: (winid: number, key: string): bool => this._Filter(winid, key),
       callback: (winid: number, _result: any) => this._OnClose(winid),
     })
@@ -334,38 +340,38 @@ export class Menu
     var items = this._itemsOf[winid]
     var idx = get(this._cur, winid, -1)
     if get(this._isBar, winid, false)
-      if key == 'h' || key == "\<Left>"
+      if key == 'h' || key == CO.KEY_LEFT
         this._cur[winid] = this._NextSelectable(items, idx, -1)
         this._Highlight(winid)
         return true
-      elseif key == 'l' || key == "\<Right>"
+      elseif key == 'l' || key == CO.KEY_RIGHT
         this._cur[winid] = this._NextSelectable(items, idx, 1)
         this._Highlight(winid)
         return true
-      elseif key == 'j' || key == "\<Down>" || key == "\<CR>" || key == ' '
+      elseif key == 'j' || key == CO.KEY_DOWN || key == CO.KEY_CR || key == ' '
         this._ActivateBar(winid, items, idx)
         return true
-      elseif key == "\<Esc>" || key == 'q'
+      elseif key == CO.KEY_ESC || key == 'q'
         this.Close()
         return true
       endif
       return false
     endif
-    if key == 'j' || key == "\<Down>"
+    if key == 'j' || key == CO.KEY_DOWN
       this._cur[winid] = this._NextSelectable(items, idx, 1)
       this._Highlight(winid)
       return true
-    elseif key == 'k' || key == "\<Up>"
+    elseif key == 'k' || key == CO.KEY_UP
       this._cur[winid] = this._NextSelectable(items, idx, -1)
       this._Highlight(winid)
       return true
-    elseif key == "\<CR>" || key == 'l' || key == "\<Right>" || key == ' '
+    elseif key == CO.KEY_CR || key == 'l' || key == CO.KEY_RIGHT || key == ' '
       this._Activate(winid, items, idx)
       return true
-    elseif key == 'h' || key == "\<Left>"
+    elseif key == 'h' || key == CO.KEY_LEFT
       this._Back(winid)
       return true
-    elseif key == "\<Esc>" || key == 'q'
+    elseif key == CO.KEY_ESC || key == 'q'
       this.Close()
       return true
     endif

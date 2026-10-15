@@ -28,6 +28,8 @@ import autoload 'bartleby/snapshot.vim' as SN
 import autoload 'bartleby/tree.vim' as T
 import 'bartleby/variables/constants.vim' as CO
 
+const DEL_RECURSIVE: string = 'rf'
+
 # FUNCTION: Return the ids of the items in the Trash, the Trash included,
 # as a set.
 export def IdsInTrash(project: PO.Project): dict<bool>
@@ -57,14 +59,14 @@ enddef
 # text file on disk.
 export def HasFilesOnDisk(project: PO.Project, item: BI.BinderItem): bool
   var root: string = project.BinderRoot()
-  return Documents(item)->indexof((_, doc) => filereadable(doc.AbsPath(root))) >= 0
+  return Docs(item)->indexof((_, doc) => filereadable(doc.AbsPath(root))) >= 0
 enddef
 
 # FUNCTION: Move the item of row to the top of the Trash, where the item
 # removed last is first, and remember its folder and index for Restore.
 export def MoveToTrash(project: PO.Project, row: T.Row): void
   var owner: BI.ItemContainer = row.ownerItem is null_object ? project : row.ownerItem
-  var idx: number = owner.IndexOfChild(row.item.id)
+  var idx: number = owner.IdxOfChild(row.item.id)
   owner.RemoveChildAt(idx)
   row.item.MarkTrashed(row.ownerItem is null_object ? '' : row.ownerItem.id, idx)
   project.TrashFolder().InsertChildAt(0, row.item)
@@ -106,7 +108,7 @@ export def Restore(project: PO.Project, row: T.Row): bool
     target = folder
     last = folder.ChildCount()
   endif
-  trash.RemoveChildAt(trash.IndexOfChild(item.id))
+  trash.RemoveChildAt(trash.IdxOfChild(item.id))
   target.InsertChildAt(min([max([item.trashIndex, 0]), last]), item)
   item.ClearTrashOrigin()
   return true
@@ -119,7 +121,7 @@ enddef
 export def DeleteForever(project: PO.Project, row: T.Row): list<string>
   var failed: list<string> = []
   var root: string = project.BinderRoot()
-  for doc in Documents(row.item)
+  for doc in Docs(row.item)
     if doc.relPath =~# '\.\.' || doc.relPath =~# '^/'
       failed->add(doc.relPath)
       continue
@@ -137,13 +139,13 @@ export def DeleteForever(project: PO.Project, row: T.Row): list<string>
         PE.RemoveEmptyDirectories(fnamemodify(path, ':h'), root)
       endif
     endfor
-    var snapshots: string = SN.SnapshotDir(project, doc)
-    if isdirectory(snapshots) && delete(snapshots, 'rf') != 0
-      failed->add(snapshots)
+    var snaps: string = SN.SnapDir(project, doc)
+    if isdirectory(snaps) && delete(snaps, DEL_RECURSIVE) != 0
+      failed->add(snaps)
     endif
   endfor
   var owner: BI.ItemContainer = row.ownerItem is null_object ? project : row.ownerItem
-  owner.RemoveChildAt(owner.IndexOfChild(row.item.id))
+  owner.RemoveChildAt(owner.IdxOfChild(row.item.id))
   return failed
 enddef
 
@@ -174,7 +176,7 @@ def PruneFolder(project: PO.Project, folder: BI.BinderItem): bool
   var changed: bool = false
   for child in copy(folder.children)
     if !HasFilesOnDisk(project, child)
-      folder.RemoveChildAt(folder.IndexOfChild(child.id))
+      folder.RemoveChildAt(folder.IdxOfChild(child.id))
       changed = true
     elseif child.IsFolder()
       changed = PruneFolder(project, child) || changed
@@ -184,8 +186,8 @@ def PruneFolder(project: PO.Project, folder: BI.BinderItem): bool
 enddef
 
 # FUNCTION: Return the documents of item, or item itself when it is one.
-def Documents(item: BI.BinderItem): list<BI.BinderItem>
-  return item.IsDocument() ? [item] : Descendants(item)->filter((_, d) => d.IsDocument())
+def Docs(item: BI.BinderItem): list<BI.BinderItem>
+  return item.IsDoc() ? [item] : Descendants(item)->filter((_, d) => d.IsDoc())
 enddef
 
 def Descendants(folder: BI.BinderItem): list<BI.BinderItem>

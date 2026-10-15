@@ -32,25 +32,25 @@ export def Count(lines: list<string>): number
 enddef
 
 # FUNCTION: Return the loaded buffers, as full path to buffer number.
-def LoadedBuffers(): dict<number>
-  var buffers: dict<number> = {}
+def LoadedBufs(): dict<number>
+  var bufs: dict<number> = {}
   for info in getbufinfo({bufloaded: 1})
     if info.name !=# ''
-      buffers[fnamemodify(info.name, ':p')] = info.bufnr
+      bufs[fnamemodify(info.name, ':p')] = info.bufnr
     endif
   endfor
-  return buffers
+  return bufs
 enddef
 
 # FUNCTION: Return the words of the document at path: from the open
 # Scrivening when it holds it, from its buffer when it is loaded, or else
 # from its file, through the cache. A missing file has no words.
-def DocumentWords(path: string, buffers: dict<number>, sections: dict<list<string>>): number
+def DocWords(path: string, bufs: dict<number>, sections: dict<list<string>>): number
   if has_key(sections, path)
     return Count(sections[path])
   endif
-  if has_key(buffers, path)
-    return Count(getbufline(buffers[path], 1, '$'))
+  if has_key(bufs, path)
+    return Count(getbufline(bufs[path], 1, '$'))
   endif
   if !filereadable(path)
     return 0
@@ -70,12 +70,12 @@ enddef
 # documents inside it.
 export def Totals(items: list<BI.BinderItem>, binderRoot: string): dict<number>
   var totals: dict<number> = {}
-  var buffers: dict<number> = LoadedBuffers()
+  var bufs: dict<number> = LoadedBufs()
   var sections: dict<list<string>> = SV.SectionTexts()
   def Walk(item: BI.BinderItem): number
     var words: number = 0
-    if item.IsDocument()
-      words = DocumentWords(item.AbsPath(binderRoot), buffers, sections)
+    if item.IsDoc()
+      words = DocWords(item.AbsPath(binderRoot), bufs, sections)
     else
       for child in item.children
         words += Walk(child)

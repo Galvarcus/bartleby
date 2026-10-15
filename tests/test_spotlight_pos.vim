@@ -10,6 +10,8 @@ vim9script
 
 import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/tagger.vim' as TA
+import autoload 'bartleby/lang.vim' as LA
+import autoload 'bartleby/pos.vim' as POS
 
 const MOCK_TAGGER: string = expand('<sfile>:p:h') .. '/mock_tagger.py'
 const TEXT: list<string> = [
@@ -182,12 +184,76 @@ def Test_mode_names_cover_every_mode(): void
   TA.Reset()
 enddef
 
+# FUNCTION: The line cache keys on the text, so an edited line is lit from its
+# new text, not from what the cache remembers.
+def Test_an_edited_line_is_lit_from_its_new_text(): void
+  UseTagger('')
+  OpenBuffer()
+  SP.Execute(false, 'Adverbs')
+  assert_equal(['quietly', 'away', 'very', 'slowly'], LitWords(3))
+  setline(3, 'She ran quickly.')
+  doautocmd CursorMoved
+  assert_equal(['quickly'], LitWords(3))
+  CloseBuffer()
+enddef
+
+# FUNCTION: The cache keeps positions without a line number, so a line that
+# moves down is lit at its new place.
+def Test_a_moved_line_is_lit_at_its_new_place(): void
+  UseTagger('')
+  OpenBuffer()
+  SP.Execute(false, 'Adverbs')
+  var expected: list<string> = LitWords(3)
+  append(1, 'A new line.')
+  doautocmd CursorMoved
+  assert_equal(expected, LitWords(4))
+  CloseBuffer()
+enddef
+
+def Test_an_edited_line_is_lit_again_in_dialogue_mode(): void
+  UseTagger('')
+  OpenBuffer()
+  SP.Execute(false, 'Dialogue')
+  setline(3, 'He said "go now" and left.')
+  doautocmd CursorMoved
+  assert_equal(['"go', 'now"'], LitWords(3))
+  CloseBuffer()
+enddef
+
+# FUNCTION: The dialogue pattern comes from the language, and the line cache
+# keys on it, so a new language relights a line whose text is the same.
+def Test_a_new_language_relights_dialogue(): void
+  var file: string = LA.PluginRoot() .. '/tools/lang/zz.json'
+  writefile([json_encode({language: 'Test', dialogue_pattern: '«[^»]*»'})], file)
+  UseTagger('')
+  OpenBuffer()
+  setline(3, 'He said «go now» and "stop here" then left.')
+  SP.Execute(false, 'Dialogue')
+  assert_equal(['"stop', 'here"'], LitWords(3))
+  g:bartleby_language = 'zz'
+  LA.ClearCache()
+  POS.ClearLists()
+  # Change another line, so that the whole window cache is not reused.
+  setline(1, getline(1) .. ' ')
+  doautocmd CursorMoved
+  assert_equal(['«go', 'now»'], LitWords(3))
+  CloseBuffer()
+  delete(file)
+  g:bartleby_language = 'en'
+  LA.ClearCache()
+  POS.ClearLists()
+enddef
+
 export def RunAll(): void
   # Spotlight computes its dim color from Normal.
   highlight Normal ctermfg=252 ctermbg=235 guifg=#d0d0d0 guibg=#262626
   set t_Co=256
   Test_tagger_modes_hidden_without_a_tagger()
   Test_word_list_modes_light_their_words()
+  Test_an_edited_line_is_lit_from_its_new_text()
+  Test_a_moved_line_is_lit_at_its_new_place()
+  Test_an_edited_line_is_lit_again_in_dialogue_mode()
+  Test_a_new_language_relights_dialogue()
   Test_heading_line_dims_entirely()
   Test_dialogue_lights_quoted_speech()
   Test_dialogue_lights_curly_quotes()

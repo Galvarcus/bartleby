@@ -55,7 +55,7 @@ enddef
 
 def Test_a_scrive_saved_before_the_trash_gets_one_on_load(): void
   var project = FI.BuildProject()
-  var path: string = project.ProjectFilePath()
+  var path: string = project.ProjFilePath()
   mkdir(fnamemodify(path, ':h'), 'p')
   writefile([json_encode({name: 'Old', projectType: CO.TYPE_NOVEL, items: [
     {id: 'm1', title: 'Manuscript', kind: CO.KIND_FOLDER, structureRole: CO.ROLE_MANUSCRIPT, children: []}]})], path)
@@ -112,10 +112,10 @@ def Test_restore_at_the_top_level_keeps_the_trash_last(): void
   var notes = BI.BinderItem.NewDocument('Notes', 'notes.md')
   project.AddChild(notes)
   FI.WriteDocContent(project, notes, ['A note.'])
-  var place: number = project.IndexOfChild(notes.id)
+  var place: number = project.IdxOfChild(notes.id)
   TR.MoveToTrash(project, RowOf(project, notes.id))
   assert_true(TR.Restore(project, RowOf(project, notes.id)))
-  assert_equal(place, project.IndexOfChild(notes.id))
+  assert_equal(place, project.IdxOfChild(notes.id))
   assert_equal(CO.ROLE_TRASH, LastRole(project))
   FI.CleanupProjectFiles(project)
 enddef
@@ -145,7 +145,7 @@ def Test_delete_forever_removes_the_files_and_nothing_else(): void
   var scene = project.ChildAt(1).ChildAt(0).ChildAt(0)
   var other = project.ChildAt(1).ChildAt(1).ChildAt(0)
   writefile(['{}'], scene.MetaPath(root))
-  var snapshots: string = SN.SnapshotDir(project, scene)
+  var snapshots: string = SN.SnapDir(project, scene)
   mkdir(snapshots, 'p')
   writefile(['{}'], snapshots .. '/1.json')
   TR.MoveToTrash(project, RowOf(project, scene.id))

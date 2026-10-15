@@ -48,7 +48,7 @@ enddef
 # FUNCTION: Return the next unused number title, 1, 2, and so on, among
 # the siblings with role. templates.vim numbers the same way, so an empty
 # title gives the same result as in a new scrive.
-def NextRoleNumber(siblings: list<BI.BinderItem>, role: string): string
+def NextRoleNum(siblings: list<BI.BinderItem>, role: string): string
   var n: number = 0
   for item in siblings
     if item.structureRole ==# role && item.title =~# '^\d\+$'
@@ -63,7 +63,7 @@ enddef
 # end. The same rule as AddNear, but for one given container.
 def AddIntoContainer(container: BI.BinderItem, row: T.Row, newItem: BI.BinderItem): void
   if row isnot null_object && row.ownerItem is container
-    container.InsertChildAt(container.IndexOfChild(row.item.id) + 1, newItem)
+    container.InsertChildAt(container.IdxOfChild(row.item.id) + 1, newItem)
   else
     container.AddChild(newItem)
   endif
@@ -75,7 +75,7 @@ enddef
 # does for a new scrive. An empty title becomes the next number among the
 # sibling chapters.
 export def AddChapter(container: BI.BinderItem, row: T.Row, title: string): BI.BinderItem
-  var chapterTitle: string = title ==# '' ? NextRoleNumber(container.children, CO.ROLE_CHAPTER) : title
+  var chapterTitle: string = title ==# '' ? NextRoleNum(container.children, CO.ROLE_CHAPTER) : title
   var chapter: BI.BinderItem = BI.BinderItem.NewFolder(chapterTitle, CO.ROLE_CHAPTER)
   # The caller gives the scene its path with layout.Place, once the chapter
   # has its place in the tree.
@@ -88,7 +88,7 @@ enddef
 # Part 2 of templates.vim starts empty. An empty title becomes the next
 # number among the sibling parts.
 export def AddPart(manuscript: BI.BinderItem, row: T.Row, title: string): BI.BinderItem
-  var partTitle: string = title ==# '' ? NextRoleNumber(manuscript.children, CO.ROLE_PART) : title
+  var partTitle: string = title ==# '' ? NextRoleNum(manuscript.children, CO.ROLE_PART) : title
   var part: BI.BinderItem = BI.BinderItem.NewFolder(partTitle, CO.ROLE_PART)
   AddIntoContainer(manuscript, row, part)
   return part
@@ -103,7 +103,7 @@ export def IsImmutableFolder(item: BI.BinderItem): bool
   return item.structureRole ==# CO.ROLE_FRONT_MATTER
     || item.structureRole ==# CO.ROLE_MANUSCRIPT
     || item.structureRole ==# CO.ROLE_BACK_MATTER
-    || item.structureRole ==# CO.ROLE_CHARACTERS
+    || item.structureRole ==# CO.ROLE_CHARS
     || item.structureRole ==# CO.ROLE_RESEARCH
     || item.structureRole ==# CO.ROLE_TRASH
 enddef
@@ -122,7 +122,7 @@ def RoleAllowedUnder(role: string, parent: BI.BinderItem): bool
     return parent is null_object
   endif
   if role ==# CO.ROLE_FRONT_MATTER || role ==# CO.ROLE_MANUSCRIPT
-      || role ==# CO.ROLE_BACK_MATTER || role ==# CO.ROLE_CHARACTERS
+      || role ==# CO.ROLE_BACK_MATTER || role ==# CO.ROLE_CHARS
       || role ==# CO.ROLE_RESEARCH || role ==# CO.ROLE_TRASH
     return parent is null_object
   endif
@@ -139,7 +139,7 @@ enddef
 # FUNCTION: Insert newItem right after row, in the same list.
 def InsertAfter(project: PO.Project, row: T.Row, newItem: BI.BinderItem): void
   var owner: BI.ItemContainer = Owner(project, row)
-  owner.InsertChildAt(owner.IndexOfChild(row.item.id) + 1, newItem)
+  owner.InsertChildAt(owner.IdxOfChild(row.item.id) + 1, newItem)
 enddef
 
 # FUNCTION: Add newItem next to row: as a child when row is a folder, else
@@ -159,7 +159,7 @@ enddef
 # removing from the binder does not delete work.
 export def Remove(project: PO.Project, row: T.Row): void
   var owner: BI.ItemContainer = Owner(project, row)
-  owner.RemoveChildAt(owner.IndexOfChild(row.item.id))
+  owner.RemoveChildAt(owner.IdxOfChild(row.item.id))
 enddef
 
 # FUNCTION: Remove all children of item but keep item, for the five
@@ -178,7 +178,7 @@ export def MoveWithinSiblings(project: PO.Project, row: T.Row, delta: number): b
     return false
   endif
   var owner: BI.ItemContainer = Owner(project, row)
-  var idx: number = owner.IndexOfChild(row.item.id)
+  var idx: number = owner.IdxOfChild(row.item.id)
   var target: number = idx + delta
   if target < 0 || target >= owner.ChildCount()
       || owner.ChildAt(target).structureRole ==# CO.ROLE_TRASH
@@ -232,7 +232,7 @@ export def MoveAcrossFolders(project: PO.Project, row: T.Row, delta: number): BI
       return null_object
     endif
     var target: BI.BinderItem = folders[targetIdx]
-    owner.RemoveChildAt(owner.IndexOfChild(row.item.id))
+    owner.RemoveChildAt(owner.IdxOfChild(row.item.id))
     if delta > 0
       target.InsertChildAt(0, row.item)
     else
@@ -301,7 +301,7 @@ enddef
 # or it is a document.
 export def Indent(project: PO.Project, row: T.Row): bool
   var owner: BI.ItemContainer = Owner(project, row)
-  var siblingIdx: number = owner.IndexOfChild(row.item.id) - 1
+  var siblingIdx: number = owner.IdxOfChild(row.item.id) - 1
   if siblingIdx < 0
     return false
   endif
