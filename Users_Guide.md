@@ -546,6 +546,9 @@ These keys work in any document:
 The keys for the Binder, Corkboard, Outliner, Inspector, synonym list,
 and scrive list are in their own sections.
 
+To use other keys, map the `<Plug>` names that the README lists, or set
+`g:bartleby_no_mappings = true` to turn all of these keys off.
+
 ## Help
 
 Press `?` in the Binder, Corkboard, Outliner, scrive list, or synonym

@@ -524,8 +524,8 @@ suggestions.
 Results are cached in `~/.bartleby/lexicon_cache.json`, so a repeated
 lookup sends no request. The cache does not contain your keys.
 
-Each lookup needs its own key. Without the key, its mapping and its
-palette and menu entries are not created, and its command reports the
+Each lookup needs its own key. Without the key, its palette and menu
+entries are not created, and its mapping and its command report the
 missing setting. Set the keys before Bartleby loads, or use the
 `$BARTLEBY_MW_DICTIONARY_KEY` and `$BARTLEBY_MW_THESAURUS_KEY`
 environment variables to keep them out of a shared vimrc.
@@ -603,19 +603,22 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 
 ## Mappings
 
-| Mapping | Action |
-| --- | --- |
-| `<leader>bi` | Toggle the Inspector |
-| `<leader>bz` | Toggle Focus |
-| `<leader>bl` | Toggle Spotlight |
-| `<leader>bL` | Pick a Spotlight mode |
-| `<leader>bp` | Toggle Quill |
-| `<leader>b<Space>` | Open the command palette |
-| `<leader>bm` | Open the command menu |
-| `<leader>bd` | Define the word under the cursor or the Visual selection |
-| `<leader>bt` | Thesaurus for the word under the cursor or the Visual selection |
+| Mapping | `<Plug>` name | Action |
+| --- | --- | --- |
+| `<leader>bi` | `<Plug>(BartlebyInspector)` | Toggle the Inspector |
+| `<leader>bz` | `<Plug>(BartlebyFocus)` | Toggle Focus |
+| `<leader>bl` | `<Plug>(BartlebySpotlight)` | Toggle Spotlight |
+| `<leader>bL` | `<Plug>(BartlebySpotlightMode)` | Pick a Spotlight mode |
+| `<leader>bp` | `<Plug>(BartlebyQuill)` | Toggle Quill |
+| `<leader>b<Space>` | `<Plug>(BartlebyCommands)` | Open the command palette |
+| `<leader>bm` | `<Plug>(BartlebyMenu)` | Open the command menu |
+| `<leader>bd` | `<Plug>(BartlebyDefine)` | Define the word under the cursor or the Visual selection |
+| `<leader>bt` | `<Plug>(BartlebyThesaurus)` | Thesaurus for the word under the cursor or the Visual selection |
 
-`<leader>bd` and `<leader>bt` exist only when their API key is set.
+To use other keys, map a `<Plug>` name in your vimrc, as in
+`nmap <F5> <Plug>(BartlebyInspector)`. Bartleby then leaves that
+default key free. To map none of the default keys, set
+`g:bartleby_no_mappings = true`.
 The Binder, Corkboard, Outliner, and other panes have their own keys,
 listed in their sections.
 
@@ -638,6 +641,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_day_starts_at` | `0` | The hour, 0 to 23, at which a writing day starts |
 | `g:bartleby_statusline` | `true` | Add the writing progress to the status line when the `statusline` option is empty |
 | `g:bartleby_airline_section` | `'y'` | The section of vim-airline that shows the writing progress |
+| `g:bartleby_no_mappings` | `false` | Map none of the default keys. The `<Plug>` mappings stay, for keys of your own |
 
 **Focus**
 
