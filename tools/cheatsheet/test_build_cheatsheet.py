@@ -394,7 +394,8 @@ class SheetTest(unittest.TestCase):
         self.assertEqual([], missing, "add these commands to doc/cheatsheet.md")
 
     def test_every_leader_mapping_of_the_plugin_is_on_the_sheet(self):
-        mappings = set(re.findall(r"[nx]noremap <silent> (<leader>b\S+)", self.plugin_text()))
+        # Rows of the MAPPINGS table: mode, default keys, <Plug> name, action.
+        mappings = set(re.findall(r"\['[nx]', '(<leader>b[^']+)'", self.plugin_text()))
         self.assertGreater(len(mappings), 5)
         missing = sorted(m for m in mappings if f"`{m}`" not in self.source())
         self.assertEqual([], missing, "add these mappings to doc/cheatsheet.md")
