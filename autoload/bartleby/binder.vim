@@ -220,13 +220,13 @@ def ViewSnapshots(): void
   var names: list<string> = snaps->mapnew((_, s) => s.DisplayName())
   PI.PickOne(MC.Snaps(), names, (choice: string) => {
     var snap: SN.Snap = snaps[index(names, choice)]
-    PI.PickOne(MC.Msg(choice), ['Restore', ACTION_VIEW, CO.CANCEL], (action: string) => {
+    PI.PickOne(MC.Msg(choice), [CO.ACTION_RESTORE, ACTION_VIEW, CO.CANCEL], (action: string) => {
       if action ==# CO.ACTION_RESTORE
         SN.Restore(project, doc, snap)
       elseif action ==# ACTION_VIEW
         ShowSnapReadOnly(doc, snap)
       endif
-    }, '', {Restore: MC.Restore(), View: MC.View(), Cancel: MC.Cancel()})
+    }, '', {[CO.ACTION_RESTORE]: MC.Restore(), [ACTION_VIEW]: MC.View(), [CO.CANCEL]: MC.Cancel()})
   })
 enddef
 
@@ -280,7 +280,7 @@ def AddFolder(): void
   if ctx.project is null_object
     return
   endif
-  var options: list<string> = ['Custom']
+  var options: list<string> = [KIND_CUSTOM]
   if ctx.project.projectType ==# CO.TYPE_NOVEL
     options->add(KIND_CHAPTER)
   elseif ctx.project.projectType ==# CO.TYPE_NOVEL_PARTS
@@ -296,12 +296,12 @@ def AddFolder(): void
   else
     PI.PickOne(MB.AddFolder(), options, (choice: string) => {
       CreateFolder(ctx, choice)
-    }, '', {Custom: MB.Folder(), Chapter: MC.Chapter(), Part: MC.Part()})
+    }, '', {[KIND_CUSTOM]: MB.Folder(), [KIND_CHAPTER]: MC.Chapter(), [KIND_PART]: MC.Part()})
   endif
 enddef
 
 def CreateFolder(ctx: dict<any>, kind: string): void
-  var promptTitle: string = kind ==# 'Custom' ? MB.NewFolderTitle()
+  var promptTitle: string = kind ==# KIND_CUSTOM ? MB.NewFolderTitle()
     : kind ==# KIND_PART ? MB.NewPartTitle()
     : MB.NewChapterTitle()
   IP.PromptText(promptTitle, '', (title: string) => {

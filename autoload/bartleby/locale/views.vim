@@ -111,12 +111,12 @@ enddef
 # SECTION: scrivelist.vim
 ##############################################################################
 
-export def SkippedFolderUnder(count: number, val2: any): string
-  return printf(IN.N("skipped %d folder under %s with no valid project.json", "skipped %d folders under %s with no valid project.json", count), count, val2)
+export def SkippedFolderUnder(count: number, root: any): string
+  return printf(IN.N("skipped %d folder under %s with no valid project.json", "skipped %d folders under %s with no valid project.json", count), count, root)
 enddef
 
-export def NoScrivesFound(val1: any): string
-  return printf(IN.T("no scrives found under %s - name a new one to create it"), val1)
+export def NoScrivesFound(root: any): string
+  return printf(IN.T("no scrives found under %s - name a new one to create it"), root)
 enddef
 
 export def NoScrivesCreate(): string

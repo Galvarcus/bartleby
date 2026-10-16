@@ -95,8 +95,8 @@ enddef
 # SECTION: scrive.vim
 ##############################################################################
 
-export def NoScriveNamed(name: any, val2: any): string
-  return printf(IN.T("no scrive named \"%s\" under %s"), name, val2)
+export def NoScriveNamed(name: any, root: any): string
+  return printf(IN.T("no scrive named \"%s\" under %s"), name, root)
 enddef
 
 ##############################################################################
@@ -155,12 +155,12 @@ enddef
 # SECTION: inspector.vim
 ##############################################################################
 
-export def Over(val1: any): string
-  return printf(IN.T("%s over"), val1)
+export def Over(amt: any): string
+  return printf(IN.T("%s over"), amt)
 enddef
 
-export def Under(val1: any): string
-  return printf(IN.T("%s under"), val1)
+export def Under(amt: any): string
+  return printf(IN.T("%s under"), amt)
 enddef
 
 export def Keywords(): string

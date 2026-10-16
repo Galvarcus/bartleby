@@ -67,8 +67,8 @@ export def MovedFile(count: number): string
   return printf(IN.N("moved %d file", "moved %d files", count), count)
 enddef
 
-export def FilesDidNot(val1: any): string
-  return printf(IN.T("these files did not move, so save any changes and run it again: %s"), val1)
+export def FilesDidNot(files: any): string
+  return printf(IN.T("these files did not move, so save any changes and run it again: %s"), files)
 enddef
 
 export def NoScriveningOpen(): string

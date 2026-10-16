@@ -404,9 +404,9 @@ def RunTargetForm(project: PO.Project, existing: CompileTarget): void
           var spacingDefault: string = existing isnot null_object
             ? (existing.doubleSpaced ? SPACING_DOUBLE : SPACING_SINGLE)
             : (manuscript_double_spaced ? SPACING_DOUBLE : SPACING_SINGLE)
-          PI.PickOne(MK.LineSpacing(), ['Double', SPACING_SINGLE], (spacing: string) => {
+          PI.PickOne(MK.LineSpacing(), [SPACING_DOUBLE, SPACING_SINGLE], (spacing: string) => {
             FinishWizard(project, kind, format, spacing ==# SPACING_DOUBLE, ids, existing)
-          }, spacingDefault, {Double: MK.Double(), Single: MK.Single()})
+          }, spacingDefault, {[SPACING_DOUBLE]: MK.Double(), [SPACING_SINGLE]: MK.Single()})
         else
           FinishWizard(project, kind, format, true, ids, existing)
         endif
@@ -1003,7 +1003,7 @@ export def Run(project: PO.Project): void
       log.Error(MK.TargetNotFound(choice))
       return
     endif
-    PI.PickOne(MK.Msg(choice), ['Run', ACTION_EDIT, ACTION_DELETE], (action: string) => {
+    PI.PickOne(MK.Msg(choice), [ACTION_RUN, ACTION_EDIT, ACTION_DELETE], (action: string) => {
       if action ==# ACTION_RUN
         Execute(project, target)
       elseif action ==# ACTION_EDIT
@@ -1011,6 +1011,6 @@ export def Run(project: PO.Project): void
       elseif action ==# ACTION_DELETE
         DeleteTargetConfirm(project, target)
       endif
-    }, '', {Run: MK.Run(), Edit: MK.Edit(), Delete: MK.Delete()})
+    }, '', {[ACTION_RUN]: MK.Run(), [ACTION_EDIT]: MK.Edit(), [ACTION_DELETE]: MK.Delete()})
   }, '', {[NEW_TARGET]: MK.NewTarget()})
 enddef

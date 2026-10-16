@@ -167,14 +167,14 @@ enddef
 # SECTION: snapshot.vim
 ##############################################################################
 
-export def SnapTaken(title: any, val2: any): string
-  return printf(IN.T("snapshot taken: %s%s"), title, val2)
+export def SnapTaken(title: any, suffix: any): string
+  return printf(IN.T("snapshot taken: %s%s"), title, suffix)
 enddef
 
 export def BeforeRestore(): string
   return IN.T("before restore")
 enddef
 
-export def RestoredSnap(title: any, val2: any): string
-  return printf(IN.T("restored \"%s\" to snapshot from %s"), title, val2)
+export def RestoredSnap(title: any, snap: any): string
+  return printf(IN.T("restored \"%s\" to snapshot from %s"), title, snap)
 enddef

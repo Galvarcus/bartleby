@@ -23,8 +23,8 @@ import autoload 'bartleby/i18n.vim' as IN
 # SECTION: autosave.vim
 ##############################################################################
 
-export def AutoSaveFailed(val1: any, val2: any): string
-  return printf(IN.T("auto-save failed for %s: %s"), val1, val2)
+export def AutoSaveFailed(file: any, err: any): string
+  return printf(IN.T("auto-save failed for %s: %s"), file, err)
 enddef
 
 ##############################################################################
@@ -39,8 +39,8 @@ export def InvalidDimensionExpr(dimExpr: any): string
   return printf(IN.T("invalid dimension expression: %s"), dimExpr)
 enddef
 
-export def CouldNotSet(focusguifont: any, val2: any): string
-  return printf(IN.T("could not set g:bartleby_focus_guifont \"%s\": %s"), focusguifont, val2)
+export def CouldNotSet(font: any, err: any): string
+  return printf(IN.T("could not set g:bartleby_focus_guifont \"%s\": %s"), font, err)
 enddef
 
 export def GUIHasNo(): string
@@ -71,8 +71,8 @@ export def ScriveningNotSaved(): string
   return IN.T("the Scrivening was not saved, because a title line was changed or removed. Press u to undo it")
 enddef
 
-export def CouldNotWritten(val1: any): string
-  return printf(IN.T("%s could not be written"), val1)
+export def CouldNotWritten(path: any): string
+  return printf(IN.T("%s could not be written"), path)
 enddef
 
 export def TitleLinesScrivening(): string
@@ -107,12 +107,12 @@ export def UnknownSpotlightMode(actualMode: any): string
   return printf(IN.T("unknown Spotlight mode: %s"), actualMode)
 enddef
 
-export def SpotlightModeNeeds(val1: any): string
-  return printf(IN.T("Spotlight mode %s needs a part-of-speech tagger. Set g:bartleby_spotlight_tagger"), val1)
+export def SpotlightModeNeeds(mode: any): string
+  return printf(IN.T("Spotlight mode %s needs a part-of-speech tagger. Set g:bartleby_spotlight_tagger"), mode)
 enddef
 
-export def SpotlightModeNeedsPart(val1: any, reason: any): string
-  return printf(IN.T("Spotlight mode %s needs a part-of-speech tagger: %s"), val1, reason)
+export def SpotlightModeNeedsPart(mode: any, reason: any): string
+  return printf(IN.T("Spotlight mode %s needs a part-of-speech tagger: %s"), mode, reason)
 enddef
 
 export def Para(): string
@@ -171,6 +171,6 @@ export def Passive(): string
   return IN.T("Passive")
 enddef
 
-export def SpotlightMode(val1: any): string
-  return printf(IN.T("Spotlight Mode: %s"), val1)
+export def SpotlightMode(mode: any): string
+  return printf(IN.T("Spotlight Mode: %s"), mode)
 enddef

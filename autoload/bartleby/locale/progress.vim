@@ -111,8 +111,8 @@ export def Pace(): string
   return IN.T("Pace")
 enddef
 
-export def ADay(val1: any): string
-  return printf(IN.T("%s a day"), val1)
+export def ADay(amt: any): string
+  return printf(IN.T("%s a day"), amt)
 enddef
 
 export def Finish(): string

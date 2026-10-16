@@ -141,11 +141,11 @@ export def ViewSnapsForCurDoc(): void
   var names: list<string> = snaps->mapnew((_, s) => s.DisplayName())
   PI.PickOne(MC.Snaps(), names, (choice: string) => {
     var snap: SN.Snap = snaps[index(names, choice)]
-    PI.PickOne(MC.Msg(choice), ['Restore', CO.CANCEL], (action: string) => {
+    PI.PickOne(MC.Msg(choice), [CO.ACTION_RESTORE, CO.CANCEL], (action: string) => {
       if action ==# CO.ACTION_RESTORE
         SN.Restore(project, doc, snap)
       endif
-    }, '', {Restore: MC.Restore(), Cancel: MC.Cancel()})
+    }, '', {[CO.ACTION_RESTORE]: MC.Restore(), [CO.CANCEL]: MC.Cancel()})
   })
 enddef
 export def RunCompile(): void

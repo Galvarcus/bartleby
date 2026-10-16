@@ -111,8 +111,8 @@ export def EmptiedTrash(): string
   return IN.T("emptied the Trash")
 enddef
 
-export def CouldNotDelete(val1: any): string
-  return printf(IN.T("could not delete: %s"), val1)
+export def CouldNotDelete(files: any): string
+  return printf(IN.T("could not delete: %s"), files)
 enddef
 
 export def TrashRestoresMoves(): string
@@ -251,16 +251,16 @@ export def HoldsNoList(path: any): string
   return printf(IN.T("%s holds no list of binder items. The scrive did not open, and nothing was changed."), path)
 enddef
 
-export def CannotReadScrive(path: any, val2: any): string
-  return printf(IN.T("%s cannot be read: %s. The scrive did not open, and nothing was changed."), path, val2)
+export def CannotReadScrive(path: any, err: any): string
+  return printf(IN.T("%s cannot be read: %s. The scrive did not open, and nothing was changed."), path, err)
 enddef
 
 export def VersionBeforeLast(backup: any): string
   return printf(IN.T("The version before the last save is in %s."), backup)
 enddef
 
-export def NotSavedBecause(val1: any): string
-  return printf(IN.T("%s was not saved, because it did not load."), val1)
+export def NotSavedBecause(path: any): string
+  return printf(IN.T("%s was not saved, because it did not load."), path)
 enddef
 
 export def Trash(): string

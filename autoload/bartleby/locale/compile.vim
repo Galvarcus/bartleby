@@ -95,8 +95,8 @@ export def SkippingMissingFile(path: any): string
   return printf(IN.T("skipping missing file: %s"), path)
 enddef
 
-export def Compiled(val1: any): string
-  return printf(IN.T("compiled: %s"), val1)
+export def Compiled(path: any): string
+  return printf(IN.T("compiled: %s"), path)
 enddef
 
 export def CompiledOpen(name: any): string
@@ -107,12 +107,12 @@ export def Compiling(name: any, label: any): string
   return printf(IN.T("compiling \"%s\" (%s)..."), name, label)
 enddef
 
-export def ExitedStatus(cmd: any, status: any, val3: any): string
-  return printf(IN.T("%s exited with status %s: %s"), cmd, status, val3)
+export def ExitedStatus(cmd: any, status: any, err: any): string
+  return printf(IN.T("%s exited with status %s: %s"), cmd, status, err)
 enddef
 
-export def Cmd(val1: any): string
-  return printf(IN.T("Command: %s"), val1)
+export def Cmd(cmd: any): string
+  return printf(IN.T("Command: %s"), cmd)
 enddef
 
 export def ExitStatus(status: any): string
@@ -127,12 +127,12 @@ export def CompilingFailedOpen(name: any): string
   return printf(IN.T("Compiling \"%s\" failed. Open the log?"), name)
 enddef
 
-export def ScreenplainNotFound(compilescreenplainbin: any): string
-  return printf(IN.T("screenplain not found (%s) - install via pip, or set g:bartleby_compile_screenplain_bin"), compilescreenplainbin)
+export def ScreenplainNotFound(bin: any): string
+  return printf(IN.T("screenplain not found (%s) - install via pip, or set g:bartleby_compile_screenplain_bin"), bin)
 enddef
 
-export def PandocNotFound(compilepandocbin: any): string
-  return printf(IN.T("pandoc not found (%s) - install it or set g:bartleby_compile_pandoc_bin"), compilepandocbin)
+export def PandocNotFound(bin: any): string
+  return printf(IN.T("pandoc not found (%s) - install it or set g:bartleby_compile_pandoc_bin"), bin)
 enddef
 
 export def CoverNotFound(path: any): string
@@ -187,20 +187,20 @@ enddef
 # SECTION: lexicon.vim
 ##############################################################################
 
-export def NoRefLang(val1: any, val2: any): string
-  return printf(IN.T("no %s reference \"%s\" for this language"), val1, val2)
+export def NoRefLang(label: any, ref: any): string
+  return printf(IN.T("no %s reference \"%s\" for this language"), label, ref)
 enddef
 
-export def LookupsOffSet(val1: any, kind: any, envName: any): string
-  return printf(IN.T("%s lookups are off: set g:bartleby_%s_api_key or $%s"), val1, kind, envName)
+export def LookupsOffSet(label: any, kind: any, envName: any): string
+  return printf(IN.T("%s lookups are off: set g:bartleby_%s_api_key or $%s"), label, kind, envName)
 enddef
 
-export def LookupsNeedCurl(val1: any): string
-  return printf(IN.T("%s lookups need curl, which was not found"), val1)
+export def LookupsNeedCurl(label: any): string
+  return printf(IN.T("%s lookups need curl, which was not found"), label)
 enddef
 
-export def NoReferenceForThis(val1: any): string
-  return printf(IN.T("no %s reference for this language"), val1)
+export def NoReferenceForThis(label: any): string
+  return printf(IN.T("no %s reference for this language"), label)
 enddef
 
 export def Thesaurus(): string
@@ -223,12 +223,12 @@ export def CouldNotStart(): string
   return IN.T("could not start curl")
 enddef
 
-export def IgnoringUnreadableLexicon(val1: any): string
-  return printf(IN.T("ignoring unreadable lexicon cache: %s"), val1)
+export def IgnoringUnreadableLexicon(path: any): string
+  return printf(IN.T("ignoring unreadable lexicon cache: %s"), path)
 enddef
 
-export def CouldNotWrite(val1: any): string
-  return printf(IN.T("could not write lexicon cache: %s"), val1)
+export def CouldNotWrite(path: any): string
+  return printf(IN.T("could not write lexicon cache: %s"), path)
 enddef
 
 ##############################################################################
@@ -327,8 +327,8 @@ enddef
 # SECTION: tagger.vim
 ##############################################################################
 
-export def TaggerCmdCould(val1: any): string
-  return printf(IN.T("the tagger command could not start: %s"), val1)
+export def TaggerCmdCould(cmd: any): string
+  return printf(IN.T("the tagger command could not start: %s"), cmd)
 enddef
 
 export def PartSpeechTagger(detail: any): string

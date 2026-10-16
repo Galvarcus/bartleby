@@ -31,8 +31,8 @@ export def ScriveningCouldNot(): string
   return IN.T("the Scrivening could not be saved, so it stays open. Use :BartlebyClose! to throw its changes away")
 enddef
 
-export def CouldNotSaved(val1: any): string
-  return printf(IN.T("%s could not be saved, so the windows stay open. Use :BartlebyClose! to throw its changes away"), val1)
+export def CouldNotSaved(name: any): string
+  return printf(IN.T("%s could not be saved, so the windows stay open. Use :BartlebyClose! to throw its changes away"), name)
 enddef
 
 ##############################################################################
@@ -83,8 +83,8 @@ export def Starts(start: any): string
   return printf(IN.T("starts %s"), start)
 enddef
 
-export def Day(val1: any, days: any): string
-  return printf(IN.T("day %d of %d"), val1, days)
+export def Day(day: any, days: any): string
+  return printf(IN.T("day %d of %d"), day, days)
 enddef
 
 export def Goals(): string
