@@ -491,7 +491,8 @@ change your documents.
    - **Screenplay** - a PDF, HTML page, or Final Draft file in the
      standard screenplay format.
 3. **Choose a format and the settings** for that kind, such as line
-   spacing or a cover image.
+   spacing or a cover image. A cover image is a path to an image file,
+   and can start with `~/` for your home folder.
 4. **Name the target.** Bartleby saves your answers. Next time, run
    `:BartlebyCompile`, pick the name, and choose Run. Choose Edit to
    change the settings, or Delete to remove the target.

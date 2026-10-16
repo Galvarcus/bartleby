@@ -534,8 +534,10 @@ environment variables to keep them out of a shared vimrc.
 
 `:BartlebyCompile` asks for the documents to include, a kind, a
 format, and settings for that kind such as font, line spacing, and
-cover image. It saves the answers as a named target that you can run
-again.
+cover image. The cover image is a path to an image file, which can start
+with `~/` for your home folder. A Book in PDF or EPUB stops with an error
+when the file does not exist. Bartleby saves the answers as a named
+target that you can run again.
 
 The selection pane lists the contents of Front Matter, Manuscript,
 and Back Matter. Only these folders go into a compile.

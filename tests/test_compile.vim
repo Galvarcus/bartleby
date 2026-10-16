@@ -13,6 +13,7 @@ vim9script
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/binderitem.vim' as BI
 import './fixtures.vim' as FI
+import 'Logger/messages.vim' as LM
 
 # FUNCTION: Build the shared fixture project, add one document each to
 # Front Matter and Back Matter, which the fixture leaves empty, and write
@@ -126,7 +127,60 @@ def Test_concatenate_book_omits_mainmatter_when_front_matter_not_included(): voi
   FI.CleanupProjectFiles(fx.project)
 enddef
 
+def Test_a_cover_path_from_home_is_expanded(): void
+  assert_equal($HOME .. '/covers/book.png', C.CoverPath('~/covers/book.png'))
+  assert_equal('', C.CoverPath(''))
+enddef
+
+# FUNCTION: expand() would read cover[1].png as a pattern and return
+# cover1.png, a different file, when both exist.
+def Test_a_cover_path_is_never_read_as_a_pattern(): void
+  var dir: string = tempname()
+  mkdir(dir, 'p')
+  writefile([], dir .. '/cover1.png')
+  writefile([], dir .. '/cover[1].png')
+  var cwd: string = getcwd()
+  execute 'cd ' .. fnameescape(dir)
+  var got: string = C.CoverPath('cover[1].png')
+  execute 'cd ' .. fnameescape(cwd)
+  delete(dir, 'rf')
+  assert_equal(dir .. '/cover[1].png', got)
+enddef
+
+# FUNCTION: A Book with a cover image that does not exist stops with an
+# error that names the path, before Pandoc runs.
+def Test_a_missing_cover_image_stops_the_compile(): void
+  var project = FI.BuildProject()
+  var scene = project.ChildAt(1).ChildAt(0).ChildAt(0)
+  var target = C.CompileTarget.FromDict({name: 'NoCover', kind: 'Book', format: 'PDF',
+    includedIds: [scene.id], coverImage: '/no/such/folder/cover.png'})
+  var before: number = len(LM.History())
+  C.Execute(project, target)
+  var logged: string = LM.History()[before :]->mapnew((_, m) => join(m.lines, ' '))->join(' ')
+  assert_match('cover image not found: /no/such/folder/cover.png', logged)
+  assert_notmatch('compiling "NoCover"', logged)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# FUNCTION: HTML and Markdown leave the cover out, so a missing cover image
+# does not stop them.
+def Test_a_missing_cover_does_not_stop_a_format_without_one(): void
+  var project = FI.BuildProject()
+  var scene = project.ChildAt(1).ChildAt(0).ChildAt(0)
+  var target = C.CompileTarget.FromDict({name: 'HtmlNoCover', kind: 'Book', format: 'HTML',
+    includedIds: [scene.id], coverImage: '/no/such/folder/cover.png'})
+  var before: number = len(LM.History())
+  C.Execute(project, target)
+  var logged: string = LM.History()[before :]->mapnew((_, m) => join(m.lines, ' '))->join(' ')
+  assert_notmatch('cover image not found', logged)
+  FI.CleanupProjectFiles(project)
+enddef
+
 export def RunAll(): void
+  Test_a_cover_path_from_home_is_expanded()
+  Test_a_cover_path_is_never_read_as_a_pattern()
+  Test_a_missing_cover_image_stops_the_compile()
+  Test_a_missing_cover_does_not_stop_a_format_without_one()
   Test_concatenate_manuscript_full_structure()
   Test_concatenate_manuscript_respects_content_selection()
   Test_concatenate_manuscript_separator_appears_between_scenes_in_same_chapter()

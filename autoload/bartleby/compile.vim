@@ -843,7 +843,28 @@ def BuildDocLines(project: PO.Project, target: CompileTarget): list<string>
   endif
 enddef
 
+# FUNCTION: Return a cover image path as a full path, or an empty string for
+# none. fnamemodify, not expand, so that a name such as cover[1].png is never
+# read as a pattern. A path that starts with ~/ is in the home folder, and a
+# relative one is from the current directory, which Pandoc runs in.
+export def CoverPath(path: string): string
+  return path ==# '' ? '' : fnamemodify(path, ':p')
+enddef
+
+# FUNCTION: Return true when the target uses its cover image: a Book in PDF
+# or EPUB. The other formats leave it out.
+def UsesCover(target: CompileTarget): bool
+  return target.kind ==# KIND_BOOK && (target.format ==# FMT_PDF || target.format ==# FMT_EPUB)
+enddef
+
 def ExecutePandoc(project: PO.Project, target: CompileTarget): void
+  var cover: string = UsesCover(target) ? CoverPath(target.coverImage) : ''
+  # Check before Pandoc runs, which would fail on the missing file with a
+  # less helpful message.
+  if cover !=# '' && !filereadable(cover)
+    log.Error(MK.CoverNotFound(cover))
+    return
+  endif
   var outDir: string = OutputDir(project)
   if !isdirectory(outDir)
     mkdir(outDir, 'p')
@@ -894,14 +915,14 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
       args->add($'--variable=indentparagraphs:{indent_paras ? "true" : "false"}')
       args += BookNumStyleArgs(CO.ROLE_CHAPTER, book_chapter_style)
       args += BookNumStyleArgs(CO.ROLE_PART, book_part_style)
-      if target.coverImage !=# ''
-        args->add($'--variable=cover-image:{target.coverImage}')
+      if cover !=# ''
+        args->add($'--variable=cover-image:{cover}')
       endif
     else
       args->add($'--css={BookCssPath()}')
       args->add($'--css={WriteFontOverrideCss(outDir, target.font)}')
-      if target.format ==# FMT_EPUB && target.coverImage !=# ''
-        args->add($'--epub-cover-image={target.coverImage}')
+      if target.format ==# FMT_EPUB && cover !=# ''
+        args->add($'--epub-cover-image={cover}')
       endif
     endif
   endif

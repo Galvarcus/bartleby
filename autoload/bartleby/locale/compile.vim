@@ -135,6 +135,10 @@ export def PandocNotFound(compilepandocbin: any): string
   return printf(IN.T("pandoc not found (%s) - install it or set g:bartleby_compile_pandoc_bin"), compilepandocbin)
 enddef
 
+export def CoverNotFound(path: any): string
+  return printf(IN.T("cover image not found: %s"), path)
+enddef
+
 export def UnknownPaperSize(size: any): string
   return printf(IN.T("unknown paper size \"%s\", using letter"), size)
 enddef
