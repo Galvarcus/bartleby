@@ -208,6 +208,12 @@ Commands, mappings, and keys of Bartleby, a writing environment for Vim.
 | `?` | Show the key list |
 | `q` | Cancel |
 
+### Links
+
+| Key | Action |
+| --- | --- |
+| `gf` on `[[Title]]` | Open the document with that title |
+
 ### Dictionary and thesaurus
 
 | Key | Action |

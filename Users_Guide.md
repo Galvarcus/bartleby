@@ -23,6 +23,7 @@ Bartleby without losing anything.
 - [Corkboard](#corkboard)
 - [Outliner](#outliner)
 - [Scrivenings](#scrivenings)
+- [Links](#links)
 - [Goals and progress](#goals-and-progress)
 - [Screenplays](#screenplays)
 - [Palette and menu](#palette-and-menu)
@@ -374,6 +375,22 @@ time.
 The word count of Vim, `g CTRL-G`, and the word count of vim-airline
 count the title lines too. The counts of Bartleby do not.
 
+## Links
+
+To link one document to another, write its title in double brackets:
+`[[Mara]]`. Put the cursor on the link and press `gf` to open Mara.
+`CTRL-O` takes you back. To show other words, add them after a bar:
+`[[Mara|the captain]]` links to Mara and reads "the captain".
+
+If two documents share the title, Bartleby lets you pick one. If no
+document has it, Bartleby offers to create it next to the one you are
+in. When you rename a document, Bartleby offers to update the links to
+it, and each link keeps the words that it shows.
+
+In a compiled book or manuscript, a link reads as its words. In a
+screenplay, `[[ ]]` is a note: `gf` opens it, but it stays out of the
+script.
+
 ## Goals and progress
 
 Run `:BartlebyGoals` to set your goals: words for this session, words
@@ -543,6 +560,7 @@ These keys work in any document:
 | `<leader>bt` | Synonyms for the word under the cursor |
 | `<leader>b<Space>` | Command palette |
 | `<leader>bm` | Command menu |
+| `gf` | Open the document of the link under the cursor |
 
 The keys for the Binder, Corkboard, Outliner, Inspector, synonym list,
 and scrive list are in their own sections.

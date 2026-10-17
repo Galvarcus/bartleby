@@ -42,6 +42,7 @@ import autoload 'dist/vim9.vim' as DV
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/compile.vim' as MK
+import autoload 'bartleby/links.vim' as LK
 import 'bartleby/variables/constants.vim' as CO
 
 const FMT_HTML: string = 'HTML'
@@ -476,7 +477,8 @@ export def ConcatenateDocs(project: PO.Project, target: CompileTarget, separator
     if i > 0
       lines += separator ==# '' ? [''] : ['', separator, '']
     endif
-    lines += readfile(path)
+    # Links read as their text, but in a screenplay [[ ]] is a Fountain note.
+    lines += target.kind ==# KIND_SCREENPLAY ? readfile(path) : LK.Plain(readfile(path))
   endfor
   return lines
 enddef
@@ -487,7 +489,7 @@ def ReadDocLines(item: BI.BinderItem, binderRoot: string): list<string>
     log.Warn(MK.SkippingMissingFile(path))
     return []
   endif
-  return readfile(path)
+  return LK.Plain(readfile(path))
 enddef
 
 # FUNCTION: Return true when lines start with a Markdown heading. Such a

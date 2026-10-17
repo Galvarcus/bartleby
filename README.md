@@ -296,6 +296,25 @@ The word counts of Bartleby leave the title lines out. The word count of
 Vim, `g CTRL-G`, and that of vim-airline count the whole buffer, so in a
 Scrivening they count the title lines too.
 
+## Links
+
+Write `[[Mara]]` in a document to link to the document titled Mara.
+With the cursor on the link, `gf` opens it, and `CTRL-O` goes back.
+`[[Mara|the captain]]` links to Mara and reads "the captain".
+
+- A title matches exactly, or else without regard to case. When
+  several documents share the title, a list shows each with its
+  folders.
+- A link to a title that no document has offers to create that
+  document next to the current one. A document in the Trash is not a
+  target.
+- Renaming a document offers to update the links to it. A link keeps
+  the text that it shows: `[[Mara]]` becomes `[[Mara Jones|Mara]]`.
+- Compile shows each link as its text. In a screenplay, `[[ ]]` is a
+  Fountain note: `gf` follows it, and the compiled script leaves it
+  out.
+- Off a link, `gf` works as it does without Bartleby.
+
 ## Goals and progress
 
 `:BartlebyGoals` sets the writing goals of the scrive. All are optional,
@@ -616,6 +635,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `<leader>bm` | `<Plug>(BartlebyMenu)` | Open the command menu |
 | `<leader>bd` | `<Plug>(BartlebyDefine)` | Define the word under the cursor or the Visual selection |
 | `<leader>bt` | `<Plug>(BartlebyThesaurus)` | Thesaurus for the word under the cursor or the Visual selection |
+| `gf` | `<Plug>(BartlebyFollowLink)` | Open the document of the link under the cursor, or what `gf` does without Bartleby |
 
 To use other keys, map a `<Plug>` name in your vimrc, as in
 `nmap <F5> <Plug>(BartlebyInspector)`. Bartleby then leaves that

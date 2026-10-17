@@ -302,3 +302,31 @@ enddef
 export def Draft(): string
   return IN.T("Draft")
 enddef
+
+##############################################################################
+# SECTION: links.vim
+##############################################################################
+
+export def PickLinked(title: any): string
+  return printf(IN.T("Documents titled \"%s\""), title)
+enddef
+
+export def LinkInTrash(title: any): string
+  return printf(IN.T("\"%s\" is in the Trash"), title)
+enddef
+
+export def NoLinked(title: any): string
+  return printf(IN.T("No document is titled \"%s\""), title)
+enddef
+
+export def CreateLinked(title: any): string
+  return printf(IN.T("No document is titled \"%s\". Create it next to this one?"), title)
+enddef
+
+export def UpdateLinks(count: number): string
+  return printf(IN.N("Update %d link to the new title?", "Update %d links to the new title?", count), count)
+enddef
+
+export def LinksUpdated(count: number): string
+  return printf(IN.N("%d link updated", "%d links updated", count), count)
+enddef

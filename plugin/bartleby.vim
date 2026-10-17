@@ -31,6 +31,7 @@ import autoload 'bartleby/autosave.vim' as A
 import autoload 'bartleby/tty.vim' as TY
 import autoload 'bartleby/closeall.vim' as CL
 import autoload 'bartleby/progressview.vim' as PV
+import autoload 'bartleby/links.vim' as LK
 import 'bartleby/variables/constants.vim' as CO
 
 # Every g:bartleby setting, with its default. -1 and empty strings mean
@@ -184,6 +185,7 @@ const MAPPINGS: list<list<string>> = [
   ['x', '<leader>bd', 'BartlebyDefine', '<Esc><ScriptCmd>LP.LookupVisual(CO.KIND_DICT)<CR>'],
   ['n', '<leader>bt', 'BartlebyThesaurus', '<ScriptCmd>LP.LookupAtCursor(CO.KIND_THESAURUS)<CR>'],
   ['x', '<leader>bt', 'BartlebyThesaurus', '<Esc><ScriptCmd>LP.LookupVisual(CO.KIND_THESAURUS)<CR>'],
+  ['n', 'gf', 'BartlebyFollowLink', '<ScriptCmd>LK.Follow()<CR>'],
 ]
 
 for [m, lhs, name, rhs] in MAPPINGS

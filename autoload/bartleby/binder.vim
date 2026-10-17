@@ -36,6 +36,7 @@ import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/locale/binder.vim' as MB
 import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/links.vim' as LK
 import 'bartleby/variables/constants.vim' as CO
 
 const ACTION_VIEW: string = 'View'
@@ -139,17 +140,37 @@ def OpenUnderCursor(): void
     ToggleCollapse()
     return
   endif
-  # A document of the open Scrivening shows there, not in a second buffer.
-  if SV.ShowDoc(ctx.row.item.id)
+  OpenDoc(ctx.project, ctx.row.item)
+enddef
+
+# FUNCTION: Open a document in the edit window. A document of the open
+# Scrivening shows there, not in a second buffer. The jump is in the
+# jumplist, so Ctrl-O returns.
+export def OpenDoc(project: PO.Project, item: BI.BinderItem): void
+  normal! m'
+  if SV.ShowDoc(item.id)
     return
   endif
-  var path: string = ctx.row.item.AbsPath(ctx.project.BinderRoot())
+  var path: string = item.AbsPath(project.BinderRoot())
   if !filereadable(path)
     log.Error(MC.MissingFileDisk(path))
     return
   endif
   W.GoToEditorWin()
   execute 'edit ' .. fnameescape(path)
+enddef
+
+# FUNCTION: Add a document titled title next to the item of row, with its
+# file, and return it.
+export def AddDocNear(project: PO.Project, row: T.Row, title: string): BI.BinderItem
+  var item: BI.BinderItem = BI.BinderItem.NewDocument(title, '')
+  MU.AddNear(project, row, item)
+  # Its path follows its place in the tree, see layout.vim.
+  LY.Place(project, item)
+  TE.Materialize([item], project.BinderRoot())
+  project.Save()
+  RenderIfOpen(project)
+  return item
 enddef
 
 # FUNCTION: Open a Scrivening of the folder under the cursor, or of the
@@ -263,13 +284,7 @@ def FinishAddDoc(ctx: dict<any>, title: string): void
   if title ==# ''
     return
   endif
-  var newItem: BI.BinderItem = BI.BinderItem.NewDocument(title, '')
-  MU.AddNear(ctx.project, ctx.row, newItem)
-  # Its path follows its place in the tree, see layout.vim.
-  LY.Place(ctx.project, newItem)
-  TE.Materialize([newItem], ctx.project.BinderRoot())
-  ctx.project.Save()
-  Render(ctx.project)
+  AddDocNear(ctx.project, ctx.row, title)
 enddef
 
 def AddFolder(): void
@@ -502,6 +517,9 @@ def RenameUnderCursor(): void
     MU.Rename(ctx.row, newTitle)
     ctx.project.Save()
     Render(ctx.project)
+    if ctx.row.item.IsDoc()
+      LK.OfferRetarget(ctx.project, oldTitle, newTitle)
+    endif
   })
 enddef
 

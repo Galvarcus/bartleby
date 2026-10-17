@@ -202,6 +202,34 @@ msgstr ""
 msgid "Add Folder"
 msgstr ""
 
+#: autoload/bartleby/locale/binder.vim:311
+msgid "Documents titled \"%s\""
+msgstr ""
+
+#: autoload/bartleby/locale/binder.vim:315
+msgid "\"%s\" is in the Trash"
+msgstr ""
+
+#: autoload/bartleby/locale/binder.vim:319
+msgid "No document is titled \"%s\""
+msgstr ""
+
+#: autoload/bartleby/locale/binder.vim:323
+msgid "No document is titled \"%s\". Create it next to this one?"
+msgstr ""
+
+#: autoload/bartleby/locale/binder.vim:327
+msgid "Update %d link to the new title?"
+msgid_plural "Update %d links to the new title?"
+msgstr[0] ""
+msgstr[1] ""
+
+#: autoload/bartleby/locale/binder.vim:331
+msgid "%d link updated"
+msgid_plural "%d links updated"
+msgstr[0] ""
+msgstr[1] ""
+
 #: autoload/bartleby/locale/binder.vim:35
 msgid "Folder"
 msgstr ""
