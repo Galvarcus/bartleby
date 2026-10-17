@@ -148,10 +148,17 @@ jobs:
           grep -qx 'All tests passed' tests/results.txt
 
   compile-smoke:
-    name: Compile pipeline smoke test
+    name: Compile pipeline smoke test (pandoc ${{ matrix.pandoc }})
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The pandoc of the distro, and a current release, as Homebrew has.
+        # A newer pandoc can need changes in the templates, see
+        # tools/latex.
+        pandoc: [distro, '3.10']
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -168,7 +175,15 @@ jobs:
       - name: Install Pandoc and LaTeX
         run: |
           sudo apt-get update
-          sudo apt-get install -y pandoc texlive-latex-extra texlive-fonts-recommended texlive-plain-generic
+          sudo apt-get install -y texlive-latex-extra texlive-fonts-recommended texlive-plain-generic
+          if [ "${{ matrix.pandoc }}" = distro ]; then
+            sudo apt-get install -y pandoc
+          else
+            curl -sSL -o /tmp/pandoc.deb \
+              "https://github.com/jgm/pandoc/releases/download/${{ matrix.pandoc }}/pandoc-${{ matrix.pandoc }}-1-amd64.deb"
+            sudo apt-get install -y /tmp/pandoc.deb
+          fi
+          pandoc --version | head -1
 
       - name: Run compile smoke test
         run: |

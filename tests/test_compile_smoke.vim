@@ -47,10 +47,11 @@ def BuildProjectWithContent(): dict<any>
   var project = FI.BuildProject()
   var chapter1 = project.ChildAt(1).ChildAt(0)
   var scene1 = chapter1.ChildAt(0)
-  # A table with a caption, so that every smoke compile checks that the
-  # templates load what a table needs, see tools/latex.
+  # A table with a caption and one without, so that every smoke compile
+  # checks that the templates load what tables need, see tools/latex.
   FI.WriteDocContent(project, scene1, ['It was a dark and stormy night.', '',
-    '| Name | Age |', '| :--- | --: |', '| Mara |  34 |', '', 'Table: The crew'])
+    '| Name | Age |', '| :--- | --: |', '| Mara |  34 |', '', 'Table: The crew', '',
+    '| Ship | Port |', '| ---- | ---- |', '| Wren | Hull |'])
   return {project: project, scene1: scene1}
 enddef
 

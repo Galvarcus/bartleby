@@ -196,6 +196,14 @@ def Test_both_latex_templates_load_the_table_packages(): void
   assert_match('\\captionsetup{', join(readfile($'{TOOLS}/latex/manuscript.tex'), "\n"))
 enddef
 
+# FUNCTION: Pandoc 3.8.2.1 and later need the counter none for a table
+# without a caption, and only their own template defines it.
+def Test_both_latex_templates_define_the_none_counter(): void
+  for name in ['book', 'manuscript']
+    assert_match('\\newcounter{none}', join(readfile($'{TOOLS}/latex/{name}.tex'), "\n"), name)
+  endfor
+enddef
+
 # FUNCTION: The bug: in a Bartleby document, Quill turns autoformat on, and
 # autoformat joined a table into one line at the first key. Autoformat does
 # not use formatexpr, so Quill must keep it off in a table.
@@ -261,6 +269,7 @@ export def RunAll(): void
   Test_spotlight_skips_table_rows()
   Test_the_table_key_maps_to_its_plug_name()
   Test_both_latex_templates_load_the_table_packages()
+  Test_both_latex_templates_define_the_none_counter()
   Test_quill_autoformat_leaves_a_table_whole()
   Test_typing_into_a_table_turns_autoformat_off()
   Test_tables_line_up_in_any_buffer_but_a_screenplay()

@@ -78,6 +78,14 @@ $endif$
 $if(tables)$
 \usepackage{longtable,booktabs,array}
 \usepackage{calc}
+% Pandoc 3.8.2.1 and later write a table without a caption with
+% \LTcaptype{none}, so that it takes no table number, and only its own
+% template defines that counter. Without it, caption and other packages
+% that read \LTcaptype stop with "No counter 'none' defined".
+% REFERENCE: https://github.com/jgm/pandoc/issues/11201
+\makeatletter
+\@ifundefined{c@none}{\newcounter{none}}{}
+\makeatother
 $endif$
 
 \begin{document}
