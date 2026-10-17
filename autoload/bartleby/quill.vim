@@ -29,6 +29,7 @@ import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/locale/writing.vim' as MW
+import autoload 'bartleby/table.vim' as TB
 
 const QUILLWRAPMODEDEFAULT_SOFT: string = 'soft'
 const QUILLWRAPMODEDEFAULT_OFF: string = 'off'
@@ -180,6 +181,10 @@ def MaybeEnableAutoformat(): void
     session.SetSuspendAf(false)
     return
   endif
+  # Autoformat does not use formatexpr, and would join the rows of a table.
+  if TB.InPara(line('.'))
+    return
+  endif
 
   var ft: string = get(autoformat_aliases, &filetype, &filetype)
   var cfg: dict<any> = get(autoformat_config, ft, {})
@@ -227,6 +232,14 @@ def MaybeEnableAutoformat(): void
   endif
 enddef
 
+# FUNCTION: Turn autoformat off when the cursor moves into a table while
+# you type. It comes back at the next InsertEnter outside a table.
+def StopAutoformatInTable(): void
+  if &formatoptions =~# 'a' && TB.InPara(line('.'))
+    set formatoptions-=a
+  endif
+enddef
+
 # FUNCTION: Set autoformat for the buffer. af is 1 to turn it on, 0 to
 # turn it off, and -1 to toggle it.
 export def SetAutoFmt(af: number): void
@@ -238,6 +251,7 @@ export def SetAutoFmt(af: number): void
     augroup bartleby_quill_autoformat
       autocmd! * <buffer>
       autocmd InsertEnter <buffer> MaybeEnableAutoformat()
+      autocmd CursorMovedI <buffer> StopAutoformatInTable()
       autocmd InsertLeave <buffer> set formatoptions-=a
     augroup END
   else

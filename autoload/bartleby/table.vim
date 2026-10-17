@@ -352,18 +352,34 @@ export def FormatCmd(): void
 enddef
 
 # FUNCTION: Line up the table under the cursor when you leave insert mode,
-# unless g:bartleby_table_autoformat is false. It is read here, so that a
-# change takes effect at once.
+# in any buffer but a screenplay, unless g:bartleby_table_autoformat is
+# false. It is read here, so that a change takes effect at once.
 export def OnInsertLeave(): void
-  if g:bartleby_table_autoformat && getline('.') =~# CO.TABLE_ROW_PAT
+  if g:bartleby_table_autoformat && &modifiable && &filetype !=# CO.FILETYPE_FOUNTAIN
+      && getline('.') =~# CO.TABLE_ROW_PAT
     FormatAt(line('.'))
   endif
 enddef
 
+# FUNCTION: Return true when the paragraph around line lnum, between blank
+# lines, holds a table row. Autoformat would join that paragraph into one
+# line, and it does not use formatexpr, so Quill keeps it off there.
+export def InPara(lnum: number): bool
+  var first: number = lnum
+  while first > 1 && getline(first - 1) =~ '\S'
+    first -= 1
+  endwhile
+  var last: number = lnum
+  while last < line('$') && getline(last + 1) =~ '\S'
+    last += 1
+  endwhile
+  return !empty(getline(first, last)->filter((_, l) => l =~# CO.TABLE_ROW_PAT))
+enddef
+
 # FUNCTION: The formatexpr that Quill sets. While you type, text that holds
-# a table row is left alone, so that autoformat does not join the rows and
-# wrapping does not break one, and gq lines up the table. Other text gets
-# the formatting of Vim.
+# a table row is left alone, so that wrapping at textwidth does not break a
+# row, and gq lines up the table. Other text gets the formatting of Vim.
+# Autoformat does not use formatexpr, see InPara.
 export def FormatExpr(): number
   var lnums: list<number> = range(v:lnum, v:lnum + max([v:count, 1]) - 1)
   var rows: list<number> = lnums->copy()->filter((_, l) => getline(l) =~# CO.TABLE_ROW_PAT)

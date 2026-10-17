@@ -196,6 +196,49 @@ def Test_both_latex_templates_load_the_table_packages(): void
   assert_match('\\captionsetup{', join(readfile($'{TOOLS}/latex/manuscript.tex'), "\n"))
 enddef
 
+# FUNCTION: The bug: in a Bartleby document, Quill turns autoformat on, and
+# autoformat joined a table into one line at the first key. Autoformat does
+# not use formatexpr, so Quill must keep it off in a table.
+def Test_quill_autoformat_leaves_a_table_whole(): void
+  for above in [['Text above.', ''], ['Text right above.']]
+    Scratch(above + ['| A | B |', '| --- | --- |', '| 1 | 2 |', '| 3 | 4 |', '', 'Text below.'])
+    setlocal textwidth=72
+    Q.Init('hard')
+    Q.SetAutoFmt(1)
+    var lines: number = line('$')
+    cursor(len(above) + 3, 3)
+    normal! ix
+    assert_equal(lines, line('$'), string(above))
+    Q.Init('off')
+    Cleanup()
+  endfor
+enddef
+
+def Test_typing_into_a_table_turns_autoformat_off(): void
+  Scratch(['Text.', '', '| A | B |', '| --- | --- |', '| 1 | 2 |'])
+  Q.Init('hard')
+  Q.SetAutoFmt(1)
+  set formatoptions+=a
+  cursor(5, 3)
+  doautocmd CursorMovedI
+  assert_notmatch('a', &formatoptions)
+  Q.Init('off')
+  Cleanup()
+enddef
+
+# FUNCTION: The bug: tables lined up only in Markdown buffers, not in a new
+# buffer with no filetype or a .txt file. A screenplay has no tables.
+def Test_tables_line_up_in_any_buffer_but_a_screenplay(): void
+  for ft in ['', 'text', 'markdown', 'fountain']
+    Scratch(['| A | Bee |', '|---|---|', '| long cell | x |'], ft)
+    cursor(3, 1)
+    doautocmd InsertLeave
+    var want: string = ft ==# 'fountain' ? '| A | Bee |' : '| A         | Bee |'
+    assert_equal(want, getline(1), $'filetype "{ft}"')
+    Cleanup()
+  endfor
+enddef
+
 export def RunAll(): void
   Test_cells_split_on_bars_that_are_not_escaped()
   Test_format_lines_up_columns_by_their_alignment()
@@ -218,4 +261,7 @@ export def RunAll(): void
   Test_spotlight_skips_table_rows()
   Test_the_table_key_maps_to_its_plug_name()
   Test_both_latex_templates_load_the_table_packages()
+  Test_quill_autoformat_leaves_a_table_whole()
+  Test_typing_into_a_table_turns_autoformat_off()
+  Test_tables_line_up_in_any_buffer_but_a_screenplay()
 enddef

@@ -76,8 +76,8 @@ these files with any editor.
   logging utility that Bartleby uses. Install it the same way as
   Bartleby.
 - **Compile** needs [Pandoc](https://pandoc.org) 3.x and a LaTeX
-  distribution with `pdflatex`, `xelatex`, `microtype`, and the
-  [sffms](https://ctan.org/pkg/sffms) class. A Book in a language
+  distribution with `pdflatex`, `xelatex`, `microtype`, `ulem`,[^ulem]
+  and the [sffms](https://ctan.org/pkg/sffms) class. A Book in a language
   other than English also needs the LaTeX support for that language,
   such as `texlive-lang-german`. Without it, words such as Contents
   stay English. Screenplays need
@@ -91,6 +91,16 @@ these files with any editor.
 
 Writing needs only Vim. Compile, the lookups, and the tagger modes are
 the only features with other requirements.
+
+[^ulem]: The sffms class loads `ulem`, so a Manuscript needs it. Full
+    TeX Live and MacTeX include it, but some Linux distributions ship it
+    in a package of its own: `texlive-plain-generic` on Debian and
+    Ubuntu, `texlive-plaingeneric` on Arch, and `texlive-ulem` on
+    Fedora. With BasicTeX, run `sudo tlmgr install ulem`. Package names
+    change between releases, so to check: `kpsewhich ulem.sty` prints
+    its path when it is installed. To find the package that has it, use
+    `apt-file search ulem.sty`, `dnf provides 'tex(ulem.sty)'`, or
+    `pacman -F ulem.sty`.
 
 [^fullscreen]: MacVim uses its `'fullscreen'` option. The GTK and
     Windows GUIs use the `s` flag in `'guioptions'`. Other GUIs have no

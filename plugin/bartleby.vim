@@ -222,11 +222,11 @@ augroup END
 
 
 # Auto-save for scrive documents, see autoload/bartleby/autosave.vim.
-# Tables line up when you leave insert mode, in Markdown buffers only. The
-# hook is per buffer, so that table.vim loads only when one is edited.
+# Tables line up when you leave insert mode on a row, in any buffer. The
+# row is checked here, so that table.vim loads only for a table.
 augroup bartleby_table
   autocmd!
-  autocmd FileType markdown autocmd! bartleby_table InsertLeave <buffer> TB.OnInsertLeave()
+  autocmd InsertLeave * if getline('.') =~# CO.TABLE_ROW_PAT | TB.OnInsertLeave() | endif
 augroup END
 
 augroup bartleby_autosave
