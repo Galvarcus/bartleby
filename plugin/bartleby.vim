@@ -32,6 +32,7 @@ import autoload 'bartleby/tty.vim' as TY
 import autoload 'bartleby/closeall.vim' as CL
 import autoload 'bartleby/progressview.vim' as PV
 import autoload 'bartleby/links.vim' as LK
+import autoload 'bartleby/table.vim' as TB
 import 'bartleby/variables/constants.vim' as CO
 
 # Every g:bartleby setting, with its default. -1 and empty strings mean
@@ -51,6 +52,8 @@ g:bartleby_airline_section = get(g:, 'bartleby_airline_section', 'y')
 # No default keys, as for a user who maps the <Plug> mappings to keys of
 # their own.
 g:bartleby_no_mappings = get(g:, 'bartleby_no_mappings', false)
+# Line up a table when you leave insert mode in it.
+g:bartleby_table_autoformat = get(g:, 'bartleby_table_autoformat', true)
 g:bartleby_snapshot_retention = get(g:, 'bartleby_snapshot_retention', 5)
 g:bartleby_binder_show_role_labels = get(g:, 'bartleby_binder_show_role_labels', true)
 g:bartleby_focus_width = get(g:, 'bartleby_focus_width', 80)
@@ -129,6 +132,8 @@ command! -bar -nargs=? -complete=customlist,bartleby#scrive#CompleteNames
   \ BartlebyOpen BA.OpenScrive(<q-args>)
 command! -bar -nargs=1 BartlebyNewScrive BA.NewScrive(<q-args>)
 command! -bar BartlebyList SL.Show()
+command! -bar BartlebyTable TB.Edit()
+command! -bar BartlebyTableFormat TB.FormatCmd()
 command! -bar BartlebyToggleBinder BA.ToggleBinder()
 command! -bar BartlebySearch BA.RunSearch()
 command! -bar BartlebyToggleInspector I.Toggle()
@@ -186,6 +191,7 @@ const MAPPINGS: list<list<string>> = [
   ['n', '<leader>bt', 'BartlebyThesaurus', '<ScriptCmd>LP.LookupAtCursor(CO.KIND_THESAURUS)<CR>'],
   ['x', '<leader>bt', 'BartlebyThesaurus', '<Esc><ScriptCmd>LP.LookupVisual(CO.KIND_THESAURUS)<CR>'],
   ['n', 'gf', 'BartlebyFollowLink', '<ScriptCmd>LK.Follow()<CR>'],
+  ['n', '<leader>b<Bar>', 'BartlebyTable', '<ScriptCmd>TB.Edit()<CR>'],
 ]
 
 for [m, lhs, name, rhs] in MAPPINGS
@@ -216,6 +222,13 @@ augroup END
 
 
 # Auto-save for scrive documents, see autoload/bartleby/autosave.vim.
+# Tables line up when you leave insert mode, in Markdown buffers only. The
+# hook is per buffer, so that table.vim loads only when one is edited.
+augroup bartleby_table
+  autocmd!
+  autocmd FileType markdown autocmd! bartleby_table InsertLeave <buffer> TB.OnInsertLeave()
+augroup END
+
 augroup bartleby_autosave
   autocmd!
   autocmd CursorHold,InsertLeave * A.Save(false)

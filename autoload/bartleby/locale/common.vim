@@ -178,3 +178,15 @@ enddef
 export def Target(): string
   return IN.T("Target")
 enddef
+
+##############################################################################
+# SECTION: table.vim
+##############################################################################
+
+export def Yes(): string
+  return IN.T("Yes")
+enddef
+
+export def No(): string
+  return IN.T("No")
+enddef

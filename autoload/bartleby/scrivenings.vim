@@ -38,7 +38,6 @@ import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/writing.vim' as MW
 import 'bartleby/variables/constants.vim' as CO
 
-const FILETYPE_MARKDOWN: string = 'markdown'
 const COMMENT_FLAGS: string = 'b:'
 const KEY_NAME_C_H: string = '<C-h>'
 const KEY_NAME_C_W: string = '<C-w>'
@@ -145,7 +144,7 @@ export def Open(project: PO.Project, folder: BI.BinderItem, docId: string = '', 
   hide enew
   setlocal buftype=acwrite bufhidden=hide noswapfile
   execute 'silent file ' .. fnameescape(CO.SCRIVENINGS_BUF)
-  &l:filetype = project.DocExt() ==# CO.EXT_FOUNTAIN ? CO.FILETYPE_FOUNTAIN : FILETYPE_MARKDOWN
+  &l:filetype = project.DocExt() ==# CO.EXT_FOUNTAIN ? CO.FILETYPE_FOUNTAIN : CO.FILETYPE_MARKDOWN
   current = {bufnr: bufnr(), folderId: folder.id, section: -1}
   Build(project, docs)
   SetupBuf()

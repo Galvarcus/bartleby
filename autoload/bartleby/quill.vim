@@ -299,6 +299,7 @@ def ClearWrapSettings(): void
   setlocal list<
   setlocal wrapmargin<
   setlocal formatoptions<
+  setlocal formatexpr<
 enddef
 
 def SetupNavigationMaps(wrapMode: number): void
@@ -446,6 +447,8 @@ export def Init(wrapArg: string = WRAP_ARG_DETECT): void
     endif
     setlocal formatoptions+=n1t
     setlocal formatoptions-=vwa2
+    # Autoformat and wrapping leave a table alone, see table.vim.
+    setlocal formatexpr=bartleby#table#FormatExpr()
     if exists('&conceal')
       execute $'setlocal conceallevel={quill_conceallevel}'
       execute $'setlocal concealcursor={quill_concealcursor}'

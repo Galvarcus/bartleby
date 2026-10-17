@@ -270,3 +270,11 @@ enddef
 export def Input(): string
   return IN.T("Input")
 enddef
+
+##############################################################################
+# SECTION: table.vim
+##############################################################################
+
+export def InsertTable(): string
+  return IN.T("Insert Table")
+enddef

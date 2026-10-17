@@ -168,7 +168,7 @@ export def IsProseLine(text: string, filetype: string): bool
       && text !~# CO.FOUNTAIN_CHAR_PAT
       && text !~# '^\s*>'
   endif
-  return text !~# '^\s*#'
+  return text !~# '^\s*#' && text !~# CO.TABLE_ROW_PAT
 enddef
 
 # FUNCTION: Return the dim positions of one line for matchaddpos: the gaps

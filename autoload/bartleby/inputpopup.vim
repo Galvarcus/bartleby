@@ -69,7 +69,6 @@ import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/ui.vim' as MI
 import 'bartleby/variables/constants.vim' as CO
 
-const TYPE_CHOICE: string = 'choice'
 const TYPE_FILTER: string = 'filter'
 const TYPE_MULTILINE: string = 'multiline'
 const ACTION_SUBMIT: string = 'submit'
@@ -224,7 +223,7 @@ export class InputPopup
           type: fieldType,
           row: rowIdx,
         }
-        if fieldType ==# TYPE_CHOICE
+        if fieldType ==# CO.TYPE_CHOICE
           var options: list<string> = get(spec, 'options', [])
           var startVal: string = get(this.defaults, name, '')
           var selectedIdx: number = max([0, index(options, startVal)])
@@ -316,7 +315,7 @@ export class InputPopup
 
   def FieldLineText(f: dict<any>): string
     var label: string = f.label .. ': '
-    if f.type ==# TYPE_CHOICE
+    if f.type ==# CO.TYPE_CHOICE
       var parts: list<string> = []
       for opt in f.options
         add(parts, '[ ' .. opt .. ' ]')
@@ -347,7 +346,7 @@ export class InputPopup
     var rowCount: number = 0
     for f in this.fields
       var w: number = strchars(this.FieldLineText(f))
-      if f.type !=# TYPE_CHOICE
+      if f.type !=# CO.TYPE_CHOICE
         w = get(rowWidths, string(f.row), 0) + strchars(f.label) + 2 + f.width + 2
       endif
       rowWidths[string(f.row)] = w
@@ -552,7 +551,7 @@ export class InputPopup
         result = this.BtnKey(winid, key)
       elseif type ==# TYPE_FILTER
         result = this.FilterFieldKey(winid, key)
-      elseif type ==# TYPE_CHOICE
+      elseif type ==# CO.TYPE_CHOICE
         result = this.ChoiceKey(winid, key)
       else
         result = this.TextKey(winid, key)
@@ -777,7 +776,7 @@ export class InputPopup
   def Vals(): dict<any>
     var result: dict<any> = {}
     for f in this.fields
-      if f.type ==# TYPE_CHOICE
+      if f.type ==# CO.TYPE_CHOICE
         result[f.name] = empty(f.options) ? '' : f.options[f.selectedIdx]
         continue
       endif
@@ -1016,7 +1015,7 @@ export class InputPopup
       var label: string = f.label .. ': '
       var labelStartChar: number = row.chars
       AppendTo(row, label)
-      if f.type ==# TYPE_CHOICE
+      if f.type ==# CO.TYPE_CHOICE
         add(meta, this.LayoutChoice(idx, f, row, labelStartChar, strchars(label)))
         add(lines, row.text)
         row = {num: -1, text: '', chars: 0}
@@ -1140,7 +1139,7 @@ export class InputPopup
       add(this._fieldHit, {idx: m.idx, lnum: m.lnum, startCol: valStartCol, endCol: valEndCol})
     endfor
 
-    if this.currentIdx < len(this.fields) && this.fields[this.currentIdx].type !=# TYPE_CHOICE
+    if this.currentIdx < len(this.fields) && this.fields[this.currentIdx].type !=# CO.TYPE_CHOICE
       var activeMeta: dict<any> = meta[this.currentIdx]
       var f: dict<any> = activeMeta.field
       var cursorCharIdx: number = activeMeta.valueStartChar + (f.cursor - f.offset)

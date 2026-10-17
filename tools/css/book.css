@@ -24,3 +24,23 @@ p {
 h1 + p, h2 + p {
   text-indent: 0;
 }
+
+/* Tables: Pandoc writes a header, in thead, and an optional caption. */
+table {
+  border-collapse: collapse;
+  margin: 1em auto;
+}
+
+th, td {
+  padding: 0.25em 0.75em;
+  border-bottom: 1px solid #999;
+}
+
+thead th {
+  border-bottom: 2px solid #333;
+}
+
+caption {
+  font-style: italic;
+  margin-bottom: 0.5em;
+}

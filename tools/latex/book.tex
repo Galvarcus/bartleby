@@ -72,6 +72,14 @@ $endif$
 \providecommand{\tightlist}{%
   \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
 
+% Pandoc writes a table as a longtable with booktabs rules, and only its
+% own default template loads these packages, when a document has a table.
+% A custom template must load them too, or a table fails to compile.
+$if(tables)$
+\usepackage{longtable,booktabs,array}
+\usepackage{calc}
+$endif$
+
 \begin{document}
 
 $if(cover-image)$

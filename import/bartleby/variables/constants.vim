@@ -169,6 +169,7 @@ export const CMD_PROFILE: string = 'BartlebyProfile'
 export const CMD_PROGRESS: string = 'BartlebyProgress'
 export const CMD_PROJ_INFO: string = 'BartlebyProjectInfo'
 export const CMD_QUILL: string = 'BartlebyQuill'
+export const CMD_TABLE: string = 'BartlebyTable'
 export const CMD_RECOVER: string = 'BartlebyRecover'
 export const CMD_SCRIVENINGS: string = 'BartlebyScrivenings'
 export const CMD_SEARCH: string = 'BartlebySearch'
@@ -188,6 +189,10 @@ export const STATUS_ERR: string = 'error'
 export const STATUS_NOTFOUND: string = 'notfound'
 export const STATUS_OK: string = 'ok'
 export const TYPE_TEXT: string = 'text'
+export const TYPE_CHOICE: string = 'choice'
+export const FILETYPE_MARKDOWN: string = 'markdown'
+# A row of a pipe table: a line that starts with a bar.
+export const TABLE_ROW_PAT: string = '^\s*|'
 
 ##############################################################################
 # SECTION: Patterns and formats that more than one script uses.

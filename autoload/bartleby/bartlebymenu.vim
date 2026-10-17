@@ -79,6 +79,7 @@ def BuildMenu(): M.Menu
   var doc: M.MenuItem = m.AddItem(MI.Doc())
   doc.AddItem(MI.TakeSnap(), RunEx(CO.CMD_SNAP))
   doc.AddItem(MI.ViewSnaps(), RunEx(CO.CMD_SNAPS))
+  doc.AddItem(MI.InsertTable(), RunEx(CO.CMD_TABLE))
   if LE.IsEnabled(CO.KIND_DICT)
     doc.AddItem(MI.DefineWord(), RunEx(CMD_DEFINE))
   endif

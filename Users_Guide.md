@@ -24,6 +24,7 @@ Bartleby without losing anything.
 - [Outliner](#outliner)
 - [Scrivenings](#scrivenings)
 - [Links](#links)
+- [Tables](#tables)
 - [Goals and progress](#goals-and-progress)
 - [Screenplays](#screenplays)
 - [Palette and menu](#palette-and-menu)
@@ -391,6 +392,22 @@ In a compiled book or manuscript, a link reads as its words. In a
 screenplay, `[[ ]]` is a note: `gf` opens it, but it stays out of the
 script.
 
+## Tables
+
+To add a table, press `<leader>b<Bar>` (the `|` key). A small form asks
+for the number of columns and rows, whether the table has a header row,
+how to align the columns, and an optional caption. Bartleby puts the
+table below the cursor and moves the cursor into its first cell.
+
+Type in the cells. When you leave insert mode, the columns line up
+again. To change the shape of a table later, put the cursor on it and
+press `<leader>b<Bar>` again. The form shows its current shape. If a
+smaller table would drop cells that hold text, Bartleby asks first.
+
+To align one column differently, edit the colons in the second row:
+`:---` is left, `---:` is right, and `:---:` is center. Tables compile
+in a Book or a Manuscript. A screenplay has no tables.
+
 ## Goals and progress
 
 Run `:BartlebyGoals` to set your goals: words for this session, words
@@ -561,6 +578,7 @@ These keys work in any document:
 | `<leader>b<Space>` | Command palette |
 | `<leader>bm` | Command menu |
 | `gf` | Open the document of the link under the cursor |
+| `<leader>b<Bar>` | Insert a table, or reshape the one under the cursor |
 
 The keys for the Binder, Corkboard, Outliner, Inspector, synonym list,
 and scrive list are in their own sections.

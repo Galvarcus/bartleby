@@ -315,6 +315,25 @@ With the cursor on the link, `gf` opens it, and `CTRL-O` goes back.
   out.
 - Off a link, `gf` works as it does without Bartleby.
 
+## Tables
+
+`<leader>b<Bar>`, or `:BartlebyTable`, opens a form for a pipe table:
+the number of columns and rows, a header row, an alignment for every
+column, and a caption. The table goes below the cursor. On a table, the
+form shows its shape, and changing it adds or drops rows and columns at
+the end. Bartleby asks before it drops cells that hold text, and turning
+the header off moves its text down as the first row.
+
+- A table lines up when you leave insert mode in it, with each column
+  as wide as its widest cell. `:BartlebyTableFormat` does the same, and
+  `g:bartleby_table_autoformat = false` turns the automatic one off.
+- The colons of the separator row set the alignment of each column:
+  `:---` left, `---:` right, and `:---:` center.
+- Quill does not join or break the rows of a table, and `gq` on a table
+  lines it up.
+- A Book or a Manuscript compiles tables to PDF, HTML, EPUB, and
+  Markdown. A screenplay has none.
+
 ## Goals and progress
 
 `:BartlebyGoals` sets the writing goals of the scrive. All are optional,
@@ -605,6 +624,8 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyFocus[!] [dim]` | Toggle Focus. `!` turns it off |
 | `:BartlebySpotlight[!] [mode or coefficient]` | Toggle Spotlight. `!` turns it off |
 | `:BartlebyQuill [detect, off, hard, soft, or toggle]` | Set the Quill wrap mode |
+| `:BartlebyTable` | Insert a table, or reshape the one under the cursor |
+| `:BartlebyTableFormat` | Line up the table under the cursor |
 | `:BartlebySnapshot` | Take a snapshot of the current document |
 | `:BartlebySnapshots` | View or restore snapshots of the current document |
 | `:BartlebyProfile` | Edit your author profile |
@@ -636,6 +657,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `<leader>bd` | `<Plug>(BartlebyDefine)` | Define the word under the cursor or the Visual selection |
 | `<leader>bt` | `<Plug>(BartlebyThesaurus)` | Thesaurus for the word under the cursor or the Visual selection |
 | `gf` | `<Plug>(BartlebyFollowLink)` | Open the document of the link under the cursor, or what `gf` does without Bartleby |
+| `<leader>b<Bar>` | `<Plug>(BartlebyTable)` | Insert a table, or reshape the one under the cursor |
 
 To use other keys, map a `<Plug>` name in your vimrc, as in
 `nmap <F5> <Plug>(BartlebyInspector)`. Bartleby then leaves that
@@ -664,6 +686,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_statusline` | `true` | Add the writing progress to the status line when the `statusline` option is empty |
 | `g:bartleby_airline_section` | `'y'` | The section of vim-airline that shows the writing progress |
 | `g:bartleby_no_mappings` | `false` | Map none of the default keys. The `<Plug>` mappings stay, for keys of your own |
+| `g:bartleby_table_autoformat` | `true` | Line up a table when you leave insert mode in it |
 
 **Focus**
 

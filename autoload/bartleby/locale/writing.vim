@@ -174,3 +174,71 @@ enddef
 export def SpotlightMode(mode: any): string
   return printf(IN.T("Spotlight Mode: %s"), mode)
 enddef
+
+##############################################################################
+# SECTION: table.vim
+##############################################################################
+
+export def Table(): string
+  return IN.T("Table")
+enddef
+
+export def Columns(): string
+  return IN.T("Columns")
+enddef
+
+export def Rows(): string
+  return IN.T("Rows")
+enddef
+
+export def HeaderRow(): string
+  return IN.T("Header row")
+enddef
+
+export def Alignment(): string
+  return IN.T("Alignment")
+enddef
+
+export def Caption(): string
+  return IN.T("Caption")
+enddef
+
+export def Left(): string
+  return IN.T("Left")
+enddef
+
+export def Center(): string
+  return IN.T("Center")
+enddef
+
+export def Right(): string
+  return IN.T("Right")
+enddef
+
+export def AsIs(): string
+  return IN.T("As it is")
+enddef
+
+export def Insert(): string
+  return IN.T("Insert")
+enddef
+
+export def NoTables(): string
+  return IN.T("A screenplay has no tables")
+enddef
+
+export def NoTableHere(): string
+  return IN.T("No table under the cursor")
+enddef
+
+export def ColumnN(n: number): string
+  return printf(IN.T("Column %d"), n)
+enddef
+
+export def BadShape(maxCols: number, maxRows: number): string
+  return printf(IN.T("A table has 1 to %d columns and 1 to %d rows"), maxCols, maxRows)
+enddef
+
+export def DropCells(count: number): string
+  return printf(IN.N("Drop %d cell that has text?", "Drop %d cells that have text?", count), count)
+enddef

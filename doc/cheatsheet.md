@@ -53,6 +53,8 @@ Commands, mappings, and keys of Bartleby, a writing environment for Vim.
 | `:BartlebyFocus[!] [dim]` | Toggle Focus. `!` turns it off |
 | `:BartlebySpotlight[!] [mode]` | Toggle Spotlight. `!` turns it off |
 | `:BartlebyQuill [mode]` | Set the wrap mode: detect, off, hard, soft, or toggle |
+| `:BartlebyTable` | Insert a table, or reshape the one under the cursor |
+| `:BartlebyTableFormat` | Line up the table under the cursor |
 
 ### Goals
 
@@ -98,6 +100,7 @@ Commands, mappings, and keys of Bartleby, a writing environment for Vim.
 | `<leader>bl` | Toggle Spotlight |
 | `<leader>bL` | Pick a Spotlight mode |
 | `<leader>bp` | Toggle Quill |
+| `<leader>b<Bar>` | Insert or reshape a table |
 
 ### Palette and menu
 

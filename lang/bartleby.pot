@@ -354,6 +354,14 @@ msgstr ""
 msgid "Target"
 msgstr ""
 
+#: autoload/bartleby/locale/common.vim:187
+msgid "Yes"
+msgstr ""
+
+#: autoload/bartleby/locale/common.vim:191
+msgid "No"
+msgstr ""
+
 #: autoload/bartleby/locale/common.vim:27
 msgid "no scrive open - run :BartlebyOpen <name> first"
 msgstr ""
@@ -1226,6 +1234,10 @@ msgstr ""
 msgid "Input"
 msgstr ""
 
+#: autoload/bartleby/locale/ui.vim:279
+msgid "Insert Table"
+msgstr ""
+
 #: autoload/bartleby/locale/ui.vim:31
 msgid "Scrive Type"
 msgstr ""
@@ -1497,6 +1509,72 @@ msgstr ""
 #: autoload/bartleby/locale/writing.vim:175
 msgid "Spotlight Mode: %s"
 msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:183
+msgid "Table"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:187
+msgid "Columns"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:191
+msgid "Rows"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:195
+msgid "Header row"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:199
+msgid "Alignment"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:203
+msgid "Caption"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:207
+msgid "Left"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:211
+msgid "Center"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:215
+msgid "Right"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:219
+msgid "As it is"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:223
+msgid "Insert"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:227
+msgid "A screenplay has no tables"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:231
+msgid "No table under the cursor"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:235
+msgid "Column %d"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:239
+msgid "A table has 1 to %d columns and 1 to %d rows"
+msgstr ""
+
+#: autoload/bartleby/locale/writing.vim:243
+msgid "Drop %d cell that has text?"
+msgid_plural "Drop %d cells that have text?"
+msgstr[0] ""
+msgstr[1] ""
 
 #: autoload/bartleby/locale/writing.vim:27
 msgid "auto-save failed for %s: %s"
