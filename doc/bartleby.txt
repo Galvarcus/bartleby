@@ -60,11 +60,11 @@ Requirements                                             *bartleby-requirements*
 - Logger https://github.com/Galvarcus/Logger - a Vim9script logging utility
   that Bartleby uses. Install it the same way as Bartleby.
 - Compile needs Pandoc https://pandoc.org 3.x and a LaTeX distribution with
-  `pdflatex`, `xelatex`, `microtype`, and the sffms https://ctan.org/pkg/sffms
-  class. A Book in a language other than English also needs the LaTeX support
-  for that language, such as `texlive-lang-german`. Without it, words such as
-  Contents stay English. Screenplays need screenplain
-  https://github.com/vilcans/screenplain instead.
+  `pdflatex`, `xelatex`, `microtype`, `ulem`, |bartleby-footnote2| and the
+  sffms https://ctan.org/pkg/sffms class. A Book in a language other than
+  English also needs the LaTeX support for that language, such as
+  `texlive-lang-german`. Without it, words such as Contents stay English.
+  Screenplays need screenplain https://github.com/vilcans/screenplain instead.
 - Dictionary and thesaurus need `curl` and your own free
   Merriam-Webster API keys https://dictionaryapi.com, one for the Collegiate
   Dictionary and one for the Collegiate Thesaurus.
@@ -905,7 +905,7 @@ Focus
 
     `g:bartleby_focus_fullscreen`      `0`                   In the GUI, show Focus in
                                                              fullscreen.
-                                                             |bartleby-footnote2|
+                                                             |bartleby-footnote3|
 
     `g:bartleby_focus_guifont`         `''`                  In the GUI, the font for
                                                              Focus, for example
@@ -1170,6 +1170,16 @@ Linux distributions still package Vim 9.1. Run `vim --version` to check.
 Bartleby does not support Vim 8 or Neovim.
 
                                                             *bartleby-footnote2*
+The sffms class loads `ulem`, so a Manuscript needs it. Full TeX Live and
+MacTeX include it, but some Linux distributions ship it in a package of its
+own: `texlive-plain-generic` on Debian and Ubuntu, `texlive-plaingeneric` on
+Arch, and `texlive-ulem` on Fedora. With BasicTeX, run
+`sudo tlmgr install ulem`. Package names change between releases, so to check:
+`kpsewhich ulem.sty` prints its path when it is installed. To find the package
+that has it, use `apt-file search ulem.sty`, `dnf provides 'tex(ulem.sty)'`,
+or `pacman -F ulem.sty`.
+
+                                                            *bartleby-footnote3*
 MacVim uses its `'fullscreen'` option. The GTK and Windows GUIs use the `s`
 flag in `'guioptions'`. Other GUIs have no fullscreen mode. When Focus ends,
 also by `:q` in the Focus window, Bartleby restores the previous font and
