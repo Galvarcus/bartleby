@@ -15,6 +15,7 @@ Corkboard ................................................. |bartleby-corkboard|
 Outliner ................................................... |bartleby-outliner|
 Scrivenings ............................................. |bartleby-scrivenings|
 Links ......................................................... |bartleby-links|
+Tables ....................................................... |bartleby-tables|
 Goals and progress ............................... |bartleby-goals-and-progress|
 Inspector ................................................. |bartleby-inspector|
 Scrive list ............................................. |bartleby-scrive-list|
@@ -312,6 +313,26 @@ cursor on the link, `gf` opens it, and `CTRL-O` goes back.
 - Compile shows each link as its text. In a screenplay, `[[ ]]` is a Fountain
   note: `gf` follows it, and the compiled script leaves it out.
 - Off a link, `gf` works as it does without Bartleby.
+
+==============================================================================
+Tables                                                         *bartleby-tables*
+
+`<leader>b<Bar>`, or `:BartlebyTable`, opens a form for a pipe table: the
+number of columns and rows, a header row, an alignment for every column, and a
+caption. The table goes below the cursor. On a table, the form shows its
+shape, and changing it adds or drops rows and columns at the end. Bartleby
+asks before it drops cells that hold text, and turning the header off moves
+its text down as the first row.
+
+- A table lines up when you leave insert mode in it, with each column as wide
+  as its widest cell. `:BartlebyTableFormat` does the same, and
+  `g:bartleby_table_autoformat = false` turns the automatic one off.
+- The colons of the separator row set the alignment of each column: `:---`
+  left, `---:` right, and `:---:` center.
+- Quill does not join or break the rows of a table, and `gq` on a table lines
+  it up.
+- A Book or a Manuscript compiles tables to PDF, HTML, EPUB, and Markdown. A
+  screenplay has none.
 
 ==============================================================================
 Goals and progress                                 *bartleby-goals-and-progress*
@@ -705,6 +726,11 @@ Commands                                                     *bartleby-commands*
 
     `:BartlebyQuill [detect, off, hard, soft, or toggle]`   Set the Quill wrap mode
 
+    `:BartlebyTable`                                        Insert a table, or reshape the one
+                                                            under the cursor
+
+    `:BartlebyTableFormat`                                  Line up the table under the cursor
+
     `:BartlebySnapshot`                                     Take a snapshot of the current
                                                             document
 
@@ -786,6 +812,10 @@ Mappings                                                     *bartleby-mappings*
                                                             cursor, or what `gf`
                                                             does without Bartleby
 
+    `<leader>b<Bar>`      `<Plug>(BartlebyTable)`           Insert a table, or
+                                                            reshape the one under
+                                                            the cursor
+
 To use other keys, map a `<Plug>` name in your vimrc, as in
 `nmap <F5> <Plug>(BartlebyInspector)`. Bartleby then leaves that default key
 free. To map none of the default keys, set `g:bartleby_no_mappings = true`.
@@ -849,6 +879,9 @@ General
                                                                  keys. The `<Plug>`
                                                                  mappings stay, for keys
                                                                  of your own
+
+    `g:bartleby_table_autoformat`          `true`                Line up a table when you
+                                                                 leave insert mode in it
 
 Focus
 
