@@ -12,6 +12,10 @@ The text domain is PLUGIN_NAME in lowercase, read from
 import/bartleby/variables/constants.vim, as TEXT_DOMAIN is there. So the
 name is defined once, in that file.
 
+The templates for new documents, in templates/, add their {{t:text}}
+placeholders, and the name of each template, made from its file name as
+doctemplates.vim makes it: character-sheet becomes Character sheet.
+
 The text of a call must be a double-quoted literal in the call itself.
 Any other argument, such as a variable or an interpolated string, is an
 error, because its text cannot be extracted and so never gets
@@ -67,6 +71,37 @@ def scan():
     return entries, errors
 
 
+# The templates for new documents, their translated text, and the
+# separators of the words of a file name, see doctemplates.vim.
+TEMPLATES = "templates"
+TEMPLATE_EXTS = (".md", ".fountain")
+TEMPLATE_TEXT = re.compile(r"\{\{t:([^}]+)\}\}")
+NAME_SEP = re.compile(r"[-_]")
+
+
+def po_text(text):
+    """Text from a file as a msgid, with its backslashes and quotes escaped."""
+    return text.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def template_label(stem):
+    text = NAME_SEP.sub(" ", stem)
+    return text[:1].upper() + text[1:]
+
+
+def scan_templates(entries):
+    """Add the text of the templates, and the name of each, to entries."""
+    for path in sorted(glob.glob(os.path.join(ROOT, TEMPLATES, "**", "*"), recursive=True)):
+        if not path.endswith(TEMPLATE_EXTS):
+            continue
+        rel = os.path.relpath(path, ROOT)
+        stem = os.path.splitext(os.path.basename(path))[0]
+        entries.setdefault((po_text(template_label(stem)),), []).append(rel)
+        for lnum, line in enumerate(open(path, encoding="utf-8"), 1):
+            for m in TEMPLATE_TEXT.finditer(line):
+                entries.setdefault((po_text(m.group(1)),), []).append(f"{rel}:{lnum}")
+
+
 def render(entries):
     out = [HEADER.format(project=domain())]
     for key in sorted(entries, key=lambda k: entries[k][0]):
@@ -83,6 +118,7 @@ def main():
         print(domain())
         return 0
     entries, errors = scan()
+    scan_templates(entries)
     if errors:
         print("\n".join(errors), file=sys.stderr)
         return 1

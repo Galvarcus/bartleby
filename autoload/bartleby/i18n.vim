@@ -40,6 +40,13 @@ export def T(text: string): string
   return gettext(text, CO.TEXT_DOMAIN)
 enddef
 
+# FUNCTION: Return text from a template file, translated into the message
+# language. tools/i18n/extract.py finds this text in the files themselves,
+# so a call of this function needs no literal text.
+export def TFile(text: string): string
+  return gettext(text, CO.TEXT_DOMAIN)
+enddef
+
 # FUNCTION: Return the form of single or plural that count needs in the
 # message language. The caller formats count into it with printf.
 export def N(single: string, plural: string, count: number): string

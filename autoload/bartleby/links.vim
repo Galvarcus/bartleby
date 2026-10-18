@@ -26,6 +26,7 @@ import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/trash.vim' as TR
 import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/locale/binder.vim' as MB
+import autoload 'bartleby/doctemplates.vim' as DT
 
 # A link: [[target]] or [[target|text]]. A target holds no ] and no |, and
 # a text holds no ].
@@ -123,7 +124,7 @@ export def Follow(): void
 enddef
 
 # FUNCTION: Offer to create a document titled title next to the document of
-# the current buffer, and open it. A link outside the documents of the
+# the current buffer, with the first template there, and open it. A link outside the documents of the
 # scrive has no place for one.
 def OfferToCreate(project: PO.Project, title: string): void
   var here: BI.BinderItem = SV.DocHere(project)
@@ -134,7 +135,7 @@ def OfferToCreate(project: PO.Project, title: string): void
   DP.Confirm(MB.CreateLinked(title), () => {
     var row: T.Row = T.FindRowById(T.Flatten(project), here.id)
     if row isnot null_object
-      B.OpenDoc(project, B.AddDocNear(project, row, title))
+      B.OpenDoc(project, B.AddDocNear(project, row, title, DT.FirstLines(project, row, title)))
     endif
   }, true)
 enddef

@@ -25,6 +25,7 @@ Bartleby without losing anything.
 - [Scrivenings](#scrivenings)
 - [Links](#links)
 - [Tables](#tables)
+- [Templates for new documents](#templates-for-new-documents)
 - [Goals and progress](#goals-and-progress)
 - [Screenplays](#screenplays)
 - [Palette and menu](#palette-and-menu)
@@ -411,6 +412,20 @@ in a Book or a Manuscript. A screenplay has no tables.
 A compiled table has lines across it and a bold header. To add a frame
 or lines between the columns, or to change the header to italic, small
 caps, or plain, see the table settings under Compile in the README.
+
+## Templates for new documents
+
+When you add a document to the Characters folder, Bartleby asks for a
+template after the title. Choose Character sheet, and the new document
+holds headings for the role, age, appearance, voice, goal, and more,
+ready to fill in. In Research, choose a Research note or a Place. Choose
+Blank for an empty document.
+
+When a link leads to a document that does not exist yet, as `[[Mara]]`
+in a character sheet, Bartleby makes it from the first template there.
+
+To make your own templates, see Document templates in the README. The
+headings of Bartleby's templates are in the language of its messages.
 
 ## Goals and progress
 

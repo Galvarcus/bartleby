@@ -37,7 +37,11 @@ import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/locale/binder.vim' as MB
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/links.vim' as LK
+import autoload 'bartleby/doctemplates.vim' as DT
 import 'bartleby/variables/constants.vim' as CO
+
+# The choice of no template, which is no path.
+const TMPL_BLANK: string = 'blank'
 
 const ACTION_VIEW: string = 'View'
 const KIND_CHAPTER: string = 'Chapter'
@@ -161,13 +165,16 @@ export def OpenDoc(project: PO.Project, item: BI.BinderItem): void
 enddef
 
 # FUNCTION: Add a document titled title next to the item of row, with its
-# file, and return it.
-export def AddDocNear(project: PO.Project, row: T.Row, title: string): BI.BinderItem
+# file, holding lines, and return it.
+export def AddDocNear(project: PO.Project, row: T.Row, title: string, lines: list<string> = []): BI.BinderItem
   var item: BI.BinderItem = BI.BinderItem.NewDocument(title, '')
   MU.AddNear(project, row, item)
   # Its path follows its place in the tree, see layout.vim.
   LY.Place(project, item)
   TE.Materialize([item], project.BinderRoot())
+  if !empty(lines)
+    writefile(lines, item.AbsPath(project.BinderRoot()))
+  endif
   project.Save()
   RenderIfOpen(project)
   return item
@@ -284,7 +291,24 @@ def FinishAddDoc(ctx: dict<any>, title: string): void
   if title ==# ''
     return
   endif
-  AddDocNear(ctx.project, ctx.row, title)
+  AddDocAsked(ctx.project, ctx.row, title)
+enddef
+
+# FUNCTION: Add a document titled title next to row. Where templates apply,
+# see doctemplates.vim, ask for one first, or for a blank document.
+export def AddDocAsked(project: PO.Project, row: T.Row, title: string): void
+  var found: list<dict<string>> = DT.ForRow(project, row)
+  if empty(found)
+    AddDocNear(project, row, title)
+    return
+  endif
+  var names: dict<string> = {[TMPL_BLANK]: MB.Blank()}
+  for t in found
+    names[t.path] = t.name
+  endfor
+  PI.PickOne(MB.DocTemplate(), found->mapnew((_, t) => t.path) + [TMPL_BLANK], (path: string) => {
+    AddDocNear(project, row, title, path ==# TMPL_BLANK ? [] : DT.Lines(path, project, title))
+  }, found[0].path, names)
 enddef
 
 def AddFolder(): void

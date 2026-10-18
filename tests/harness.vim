@@ -92,6 +92,7 @@ import './test_plugin.vim' as TPL
 import './test_links.vim' as TLK
 import './test_table.vim' as TTB
 import './test_texcheck.vim' as TTX
+import './test_doctemplates.vim' as TDT
 import './test_lexicon.vim' as TL
 import './test_binder_directory.vim' as TBD
 import './test_autosave.vim' as TAU
@@ -136,6 +137,7 @@ var suites: list<func(): void> = [
   TLK.RunAll,
   TTB.RunAll,
   TTX.RunAll,
+  TDT.RunAll,
   TL.RunAll,
   TBD.RunAll,
   TAU.RunAll,

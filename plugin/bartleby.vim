@@ -54,6 +54,9 @@ g:bartleby_airline_section = get(g:, 'bartleby_airline_section', 'y')
 g:bartleby_no_mappings = get(g:, 'bartleby_no_mappings', false)
 # Line up a table when you leave insert mode in it.
 g:bartleby_table_autoformat = get(g:, 'bartleby_table_autoformat', true)
+# Your templates for new documents, which add to those of Bartleby, see
+# autoload/bartleby/doctemplates.vim.
+g:bartleby_doc_templates_dir = get(g:, 'bartleby_doc_templates_dir', '')
 g:bartleby_snapshot_retention = get(g:, 'bartleby_snapshot_retention', 5)
 g:bartleby_binder_show_role_labels = get(g:, 'bartleby_binder_show_role_labels', true)
 g:bartleby_focus_width = get(g:, 'bartleby_focus_width', 80)

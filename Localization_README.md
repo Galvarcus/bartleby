@@ -204,8 +204,13 @@ A text without a translation shows in English.
 `tools/i18n/extract.py` reads the `IN.T` and `IN.N` calls from the source,
 which are in the locale files, and writes the template,
 `lang/bartleby.pot`. It stops with an error at a call whose text is not a
-literal. Run it after every change to a translated text. CI fails when
-the template is not up to date.
+literal. It also reads the templates for new documents, in `templates/`:
+the text of each `{{t:text}}` placeholder, and the name of each template,
+made from its file name, as Character sheet from `character-sheet.md`.
+Bartleby translates them through `IN.TFile`, which takes no literal,
+because the extractor finds their text in the files themselves. Run it
+after every change to a translated text. CI fails when the template is
+not up to date.
 
 ### Add a translation
 
@@ -266,6 +271,9 @@ sh tools/i18n/compile.sh
 translation until a translator checks it and removes the mark.
 
 ## Known limits
+
+Text in a language needs a font that has its letters, in Vim and in a
+compiled PDF. Installing one is up to the user.
 
 Languages written without letter case, such as Chinese and Japanese,
 need more work:

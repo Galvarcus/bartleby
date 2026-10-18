@@ -330,3 +330,15 @@ enddef
 export def LinksUpdated(count: number): string
   return printf(IN.N("%d link updated", "%d links updated", count), count)
 enddef
+
+##############################################################################
+# SECTION: doctemplates.vim
+##############################################################################
+
+export def DocTemplate(): string
+  return IN.T("Template")
+enddef
+
+export def Blank(): string
+  return IN.T("Blank")
+enddef

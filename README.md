@@ -351,6 +351,30 @@ the header off moves its text down as the first row.
   after it. In a Manuscript, italic prints as underlining, as on a
   typewriter.
 
+## Document templates
+
+Adding a document to Characters or Research, or to a folder below
+them, asks for a template after the title: a Character sheet in
+Characters, and a Research note or a Place in Research, or a blank
+document. A link to a missing title makes its document from the first
+template of that folder, without asking.
+
+- A template is a file in a folder named for the Binder folder it is
+  for: `characters`, `research`, `manuscript`, `front-matter`,
+  `back-matter`, `chapter`, `part`, or `custom`. A folder without
+  templates uses those of the folder around it, so a chapter uses those
+  of the Manuscript.
+- Put your own in the folder that `g:bartleby_doc_templates_dir` names,
+  in the same layout. One adds a choice, or replaces Bartleby's of the
+  same name. Its name in the list comes from its file name:
+  `character-sheet.md` is Character sheet.
+- A screenplay uses the `.fountain` file of a template, and other
+  scrives the `.md` file.
+- `{{title}}`, `{{date}}`, `{{author}}`, and `{{scrive}}` are filled in.
+  `{{t:text}}` becomes text in the language of Bartleby's messages when
+  a translation has it, see `Localization_README.md`. Text in a language
+  needs a font with its letters, which you install.
+
 ## Goals and progress
 
 `:BartlebyGoals` sets the writing goals of the scrive. All are optional,
@@ -703,6 +727,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_statusline` | `true` | Add the writing progress to the status line when the `statusline` option is empty |
 | `g:bartleby_airline_section` | `'y'` | The section of vim-airline that shows the writing progress |
 | `g:bartleby_no_mappings` | `false` | Map none of the default keys. The `<Plug>` mappings stay, for keys of your own |
+| `g:bartleby_doc_templates_dir` | `''` | A folder of your own templates for new documents, see Document templates |
 | `g:bartleby_table_autoformat` | `true` | Line up a table when you leave insert mode in it |
 
 **Focus**

@@ -230,6 +230,14 @@ msgid_plural "%d links updated"
 msgstr[0] ""
 msgstr[1] ""
 
+#: autoload/bartleby/locale/binder.vim:339
+msgid "Template"
+msgstr ""
+
+#: autoload/bartleby/locale/binder.vim:343
+msgid "Blank"
+msgstr ""
+
 #: autoload/bartleby/locale/binder.vim:35
 msgid "Folder"
 msgstr ""
@@ -690,7 +698,7 @@ msgstr ""
 msgid "Compile Settings"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:47
+#: autoload/bartleby/locale/compile.vim:47 templates/characters/character-sheet.fountain:23 templates/characters/character-sheet.md:23 templates/research/place.fountain:13 templates/research/place.md:13 templates/research/research-note.fountain:15 templates/research/research-note.md:15
 msgid "Name"
 msgstr ""
 
@@ -1642,4 +1650,112 @@ msgstr ""
 
 #: autoload/bartleby/locale/writing.vim:99
 msgid "Unsupported terminal."
+msgstr ""
+
+#: templates/characters/character-sheet.fountain templates/characters/character-sheet.md
+msgid "Character sheet"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:1 templates/characters/character-sheet.md:1
+msgid "Role in the story"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:11 templates/characters/character-sheet.md:11
+msgid "Background"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:13 templates/characters/character-sheet.md:13
+msgid "Goal"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:15 templates/characters/character-sheet.md:15
+msgid "Motivation"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:17 templates/characters/character-sheet.md:17
+msgid "Conflict"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:19 templates/characters/character-sheet.md:19
+msgid "Arc"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:21 templates/characters/character-sheet.md:21
+msgid "Relationships"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:25 templates/characters/character-sheet.md:25 templates/research/place.fountain:15 templates/research/place.md:15 templates/research/research-note.fountain:17 templates/research/research-note.md:17
+msgid "Notes"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:3 templates/characters/character-sheet.md:3
+msgid "Age"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:5 templates/characters/character-sheet.md:5
+msgid "Appearance"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:7 templates/characters/character-sheet.md:7
+msgid "Personality"
+msgstr ""
+
+#: templates/characters/character-sheet.fountain:9 templates/characters/character-sheet.md:9
+msgid "Voice"
+msgstr ""
+
+#: templates/research/place.fountain templates/research/place.md
+msgid "Place"
+msgstr ""
+
+#: templates/research/place.fountain:1 templates/research/place.md:1
+msgid "Description"
+msgstr ""
+
+#: templates/research/place.fountain:11 templates/research/place.md:11
+msgid "Appears in"
+msgstr ""
+
+#: templates/research/place.fountain:3 templates/research/place.md:3
+msgid "Sight"
+msgstr ""
+
+#: templates/research/place.fountain:5 templates/research/place.md:5
+msgid "Sound"
+msgstr ""
+
+#: templates/research/place.fountain:7 templates/research/place.md:7
+msgid "Smell"
+msgstr ""
+
+#: templates/research/place.fountain:9 templates/research/place.md:9
+msgid "History"
+msgstr ""
+
+#: templates/research/research-note.fountain templates/research/research-note.md
+msgid "Research note"
+msgstr ""
+
+#: templates/research/research-note.fountain:1 templates/research/research-note.md:1
+msgid "Source"
+msgstr ""
+
+#: templates/research/research-note.fountain:11 templates/research/research-note.md:11
+msgid "Key facts"
+msgstr ""
+
+#: templates/research/research-note.fountain:13 templates/research/research-note.md:13
+msgid "Used in"
+msgstr ""
+
+#: templates/research/research-note.fountain:3 templates/research/research-note.md:3
+msgid "Link"
+msgstr ""
+
+#: templates/research/research-note.fountain:5 templates/research/research-note.md:5
+msgid "Accessed"
+msgstr ""
+
+#: templates/research/research-note.fountain:9 templates/research/research-note.md:9
+msgid "Summary"
 msgstr ""
