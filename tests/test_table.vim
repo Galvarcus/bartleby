@@ -247,6 +247,13 @@ def Test_tables_line_up_in_any_buffer_but_a_screenplay(): void
   endfor
 enddef
 
+def Test_has_table_needs_a_row_and_a_separator(): void
+  assert_true(TB.HasTable(['Text.', '', '| A | B |', '| --- | --- |', '| 1 | 2 |']))
+  assert_false(TB.HasTable(['| just | bars |', '| no | separator |']))
+  assert_false(TB.HasTable(['Text.']))
+  assert_false(TB.HasTable([]))
+enddef
+
 export def RunAll(): void
   Test_cells_split_on_bars_that_are_not_escaped()
   Test_format_lines_up_columns_by_their_alignment()
@@ -273,4 +280,5 @@ export def RunAll(): void
   Test_quill_autoformat_leaves_a_table_whole()
   Test_typing_into_a_table_turns_autoformat_off()
   Test_tables_line_up_in_any_buffer_but_a_screenplay()
+  Test_has_table_needs_a_row_and_a_separator()
 enddef

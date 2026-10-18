@@ -14,6 +14,7 @@ import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/binderitem.vim' as BI
 import './fixtures.vim' as FI
 import 'Logger/messages.vim' as LM
+import './test_texcheck.vim' as TTX
 
 # FUNCTION: Build the shared fixture project, add one document each to
 # Front Matter and Back Matter, which the fixture leaves empty, and write
@@ -176,7 +177,41 @@ def Test_a_missing_cover_does_not_stop_a_format_without_one(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+# FUNCTION: Compile a Manuscript PDF with stand-in programs, that kpsewhich
+# finds only the files of found and that the programs of others exist, and
+# return what was logged.
+def CompileWithStubs(found: list<string>, others: list<string>): string
+  var dir: string = TTX.Stubs(found, false, others)
+  var project = FI.BuildProject()
+  var scene = project.ChildAt(1).ChildAt(0).ChildAt(0)
+  var target = C.CompileTarget.FromDict({name: 'TexCheck', kind: 'Manuscript', format: 'PDF',
+    includedIds: [scene.id]})
+  var before: number = len(LM.History())
+  TTX.UsePath(dir)
+  C.Execute(project, target)
+  TTX.RestorePath()
+  FI.CleanupProjectFiles(project)
+  delete(dir, 'rf')
+  return LM.History()[before :]->mapnew((_, m) => join(m.lines, ' '))->join(' ')
+enddef
+
+# FUNCTION: The point of the check: name the missing package before LaTeX
+# runs, instead of a LaTeX error in the failure log.
+def Test_a_missing_tex_package_stops_a_pdf_compile(): void
+  var logged: string = CompileWithStubs(['sffms.cls', 'hyperref.sty'], ['pandoc', 'pdflatex'])
+  assert_match('needs TeX files that are not installed: .*ulem\.sty', logged)
+  assert_notmatch('compiling "TexCheck"', logged)
+enddef
+
+def Test_a_missing_tex_engine_stops_a_pdf_compile(): void
+  var logged: string = CompileWithStubs([], ['pandoc'])
+  assert_match('pdflatex not found', logged)
+  assert_notmatch('compiling "TexCheck"', logged)
+enddef
+
 export def RunAll(): void
+  Test_a_missing_tex_package_stops_a_pdf_compile()
+  Test_a_missing_tex_engine_stops_a_pdf_compile()
   Test_a_cover_path_from_home_is_expanded()
   Test_a_cover_path_is_never_read_as_a_pattern()
   Test_a_missing_cover_image_stops_the_compile()

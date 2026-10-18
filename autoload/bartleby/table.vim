@@ -135,6 +135,17 @@ def IsSep(line: string): bool
   return !empty(cells) && empty(cells->copy()->filter((_, c) => c !~# SEP_CELL_PAT))
 enddef
 
+# FUNCTION: Return true when lines hold a table: a row with a separator row
+# after it.
+export def HasTable(lines: list<string>): bool
+  for i in range(max([len(lines) - 1, 0]))
+    if lines[i] =~# CO.TABLE_ROW_PAT && IsSep(lines[i + 1])
+      return true
+    endif
+  endfor
+  return false
+enddef
+
 # FUNCTION: Return the first and last line of the table around line lnum,
 # or [0, 0]. A table is a run of rows whose second row is a separator row.
 export def Bounds(lnum: number): list<number>

@@ -82,6 +82,8 @@ these files with any editor.
   such as `texlive-lang-german`. Without it, words such as Contents
   stay English. Screenplays need
   [screenplain](https://github.com/vilcans/screenplain) instead.
+  Before a PDF, Bartleby checks that TeX has the engine and every
+  class and package, and names any that is missing.
 - **Dictionary and thesaurus** need `curl` and your own free
   [Merriam-Webster API keys](https://dictionaryapi.com), one for the
   Collegiate Dictionary and one for the Collegiate Thesaurus.

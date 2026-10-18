@@ -30,6 +30,10 @@
 %     The geometry option makes sffms set its own margins through the
 %     geometry package, which also sets the PDF page size to papersize.
 \documentclass[$if(papersize)$$papersize$paper,$endif$geometry,$if(isnovel)$novel,$endif$$if(usecourier)$courier,$endif$smart]{sffms}
+% NEEDS: ulem.sty setspace.sty fancyhdr.sty geometry.sty sffsmart.sty
+%     sffms loads these itself, under the options above. Before a PDF,
+%     Bartleby checks that TeX has them and every class and package of
+%     this file, see autoload/bartleby/texcheck.vim.
 
 % Pandoc always emits \hypertarget/\label for headings, standalone or
 % not - hyperref is what provides those, loaded last per its own

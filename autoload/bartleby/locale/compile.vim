@@ -135,6 +135,14 @@ export def PandocNotFound(bin: any): string
   return printf(IN.T("pandoc not found (%s) - install it or set g:bartleby_compile_pandoc_bin"), bin)
 enddef
 
+export def EngineNotFound(engine: any): string
+  return printf(IN.T("%s not found - a PDF needs a TeX distribution, see Requirements in the README"), engine)
+enddef
+
+export def MissingTex(kind: any, files: any): string
+  return printf(IN.T("a %s PDF needs TeX files that are not installed: %s - see Requirements in the README"), kind, files)
+enddef
+
 export def CoverNotFound(path: any): string
   return printf(IN.T("cover image not found: %s"), path)
 enddef

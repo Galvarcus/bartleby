@@ -43,6 +43,8 @@ import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/compile.vim' as MK
 import autoload 'bartleby/links.vim' as LK
+import autoload 'bartleby/table.vim' as TB
+import autoload 'bartleby/texcheck.vim' as TX
 import 'bartleby/variables/constants.vim' as CO
 
 const FMT_HTML: string = 'HTML'
@@ -67,7 +69,12 @@ const EXT_LOG: string = '.log'
 const FLAG_STANDALONE: string = '--standalone'
 const FLAG_TOC: string = '--toc'
 const ARG_CHAPTERS: string = '--top-level-division=chapter'
-const ARG_XELATEX: string = '--pdf-engine=xelatex'
+# The engines of the templates: Pandoc's default for a Manuscript, and
+# xelatex for a Book. extra_args can name another.
+const ARG_ENGINE: string = '--pdf-engine'
+const PDFLATEX: string = 'pdflatex'
+const XELATEX: string = 'xelatex'
+const ARG_XELATEX: string = $'{ARG_ENGINE}={XELATEX}'
 const A4: string = 'a4'
 const LETTER: string = 'letter'
 const ACTION_EDIT: string = 'Edit'
@@ -859,6 +866,28 @@ def UsesCover(target: CompileTarget): bool
   return target.kind ==# KIND_BOOK && (target.format ==# FMT_PDF || target.format ==# FMT_EPUB)
 enddef
 
+# FUNCTION: Return true when TeX can make the PDF of target: it has the
+# engine, and every class and package that the template needs, see
+# texcheck.vim. Otherwise log what is missing, which LaTeX reports only as
+# an error in its log, and return false. An engine that extra_args names is
+# not checked.
+def TexReady(target: CompileTarget, docLines: list<string>, lang: string): bool
+  var isMs: bool = target.kind ==# KIND_MANUSCRIPT
+  var engine: string = isMs ? PDFLATEX : XELATEX
+  var ownEngine: bool = !empty(extra_args->copy()->filter((_, a) => a =~# '^' .. ARG_ENGINE))
+  if !ownEngine && !executable(engine)
+    log.Error(MK.EngineNotFound(engine))
+    return false
+  endif
+  var tmpl: list<string> = readfile(isMs ? ManuscriptTmplPath() : BookTmplPath())
+  var missing: list<string> = TX.Missing(tmpl, {tables: TB.HasTable(docLines), lang: lang !=# ''})
+  if !empty(missing)
+    log.Error(MK.MissingTex(target.kind, join(missing, ', ')))
+    return false
+  endif
+  return true
+enddef
+
 def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   var cover: string = UsesCover(target) ? CoverPath(target.coverImage) : ''
   # Check before Pandoc runs, which would fail on the missing file with a
@@ -937,6 +966,9 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   endif
   args->add($'--metadata=papersize:{PaperSize()}')
   args += extra_args
+  if target.format ==# FMT_PDF && !TexReady(target, docLines, lang)
+    return
+  endif
   var logBase: string = NewLogBase(project, target)
   args->add($'--log={logBase}.json')
 
