@@ -354,6 +354,7 @@ jobs:
             "$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode"
 
       - name: Run GhostCode
+        id: ghostcode
         run: |
           set +e
 
@@ -416,13 +417,18 @@ jobs:
 
           exit 1
 
-      # Also when GhostCode found something, which is when the log matters.
+      # Only when GhostCode found ghost code or could not run: the log of a
+      # clean run tells nothing.
       - name: Archive GhostCode results
-        if: always()
+        if: failure() && steps.ghostcode.outcome == 'failure'
         uses: actions/upload-artifact@v7.0.2
         with:
-          name: ghostcode-log
-          path: ghostcode*.log
+          name: ghostcode-results
+          # The findings beside the log. Without a results file, when GhostCode
+          # could not run, the log still uploads.
+          path: |
+            ghostcode*.log
+            ghostcode_results.txt
 
   vimdoc:
     name: Generate Vimdoc
