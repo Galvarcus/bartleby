@@ -106,6 +106,8 @@ def Test_adding_where_none_apply_adds_at_once(): void
   B.AddDocAsked(project, RowOf(project, chapter.ChildAt(0)), 'Scene 2')
   assert_equal(before, len(popup_list()))
   assert_equal(['Scene 1', 'Scene 2'], chapter.children->mapnew((_, c) => c.title))
+  assert_equal(chapter.ChildAt(1).AbsPath(project.BinderRoot()), expand('%:p'))
+  silent! :%bwipe!
   Cleanup(project)
 enddef
 
@@ -164,6 +166,22 @@ def Test_a_role_without_templates_falls_back_to_the_one_above(): void
   Cleanup(project)
 enddef
 
+# FUNCTION: Enter takes the template that the picker shows first, and the
+# new document opens in the edit window with it.
+def Test_a_document_from_the_picker_opens_with_its_template(): void
+  var project = FI.BuildProject()
+  var chars = project.ChildAt(3)
+  B.AddDocAsked(project, RowOf(project, chars), 'Mara')
+  feedkeys("\<CR>", 'xt')
+  assert_equal(['Mara'], chars.children->mapnew((_, c) => c.title))
+  if !empty(chars.children)
+    assert_equal(chars.ChildAt(0).AbsPath(project.BinderRoot()), expand('%:p'))
+    assert_equal('## Role in the story', getline(1))
+  endif
+  silent! :%bwipe!
+  Cleanup(project)
+enddef
+
 export def RunAll(): void
   Test_a_name_comes_from_the_file_name()
   Test_bartleby_has_templates_for_characters_and_research()
@@ -177,4 +195,5 @@ export def RunAll(): void
   Test_a_document_from_a_link_gets_the_first_template()
   Test_following_a_link_makes_a_document_from_the_template()
   Test_a_role_without_templates_falls_back_to_the_one_above()
+  Test_a_document_from_the_picker_opens_with_its_template()
 enddef

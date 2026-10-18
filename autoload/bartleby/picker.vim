@@ -15,6 +15,7 @@ var is_loaded: bool = true
 ##############################################################################
 
 import autoload 'bartleby/inputpopup.vim' as IP
+import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Show options as one choice field titled title, and call OnPick
 # with the chosen option. Nothing is called on cancel. current, optional,
@@ -25,7 +26,7 @@ import autoload 'bartleby/inputpopup.vim' as IP
 export def PickOne(title: string, options: list<string>, OnPick: func(string),
     current: string = '', names: dict<string> = {}): void
   var shown: list<string> = options->mapnew((_, o) => get(names, o, o))
-  var fields: list<list<dict<any>>> = [[{name: 'choice', type: 'choice', options: shown}]]
+  var fields: list<list<dict<any>>> = [[{name: 'choice', type: CO.TYPE_CHOICE, options: shown}]]
   var defaults: dict<any> = current ==# '' ? {} : {choice: get(names, current, current)}
   var form: IP.InputPopup = IP.InputPopup.new(fields, defaults, {title: $' {title} ', buttons: []})
   form.OnSubmit((vals: dict<any>) => {

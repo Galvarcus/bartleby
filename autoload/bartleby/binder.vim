@@ -294,12 +294,13 @@ def FinishAddDoc(ctx: dict<any>, title: string): void
   AddDocAsked(ctx.project, ctx.row, title)
 enddef
 
-# FUNCTION: Add a document titled title next to row. Where templates apply,
-# see doctemplates.vim, ask for one first, or for a blank document.
+# FUNCTION: Add a document titled title next to row, and open it in the
+# edit window. Where templates apply, see doctemplates.vim, ask for one
+# first, or for a blank document.
 export def AddDocAsked(project: PO.Project, row: T.Row, title: string): void
   var found: list<dict<string>> = DT.ForRow(project, row)
   if empty(found)
-    AddDocNear(project, row, title)
+    OpenDoc(project, AddDocNear(project, row, title))
     return
   endif
   var names: dict<string> = {[TMPL_BLANK]: MB.Blank()}
@@ -307,7 +308,7 @@ export def AddDocAsked(project: PO.Project, row: T.Row, title: string): void
     names[t.path] = t.name
   endfor
   PI.PickOne(MB.DocTemplate(), found->mapnew((_, t) => t.path) + [TMPL_BLANK], (path: string) => {
-    AddDocNear(project, row, title, path ==# TMPL_BLANK ? [] : DT.Lines(path, project, title))
+    OpenDoc(project, AddDocNear(project, row, title, path ==# TMPL_BLANK ? [] : DT.Lines(path, project, title)))
   }, found[0].path, names)
 enddef
 
