@@ -209,7 +209,29 @@ def Test_a_missing_tex_engine_stops_a_pdf_compile(): void
   assert_notmatch('compiling "TexCheck"', logged)
 enddef
 
+# FUNCTION: An unknown line style is single, an unknown header bold, and
+# small caps bold in a Manuscript, whose typewriter font has none.
+def Test_table_options_fall_back(): void
+  assert_equal({border: 'none', vlines: 'single', header: 'italic'}, C.TableOpts('Book', 'none', 'single', 'italic'))
+  assert_equal({border: 'single', vlines: 'single', header: 'bold'}, C.TableOpts('Book', 'double', 'dotted', 'shouting'))
+  assert_equal('smallcaps', C.TableOpts('Book', 'none', 'none', 'smallcaps').header)
+  assert_equal('bold', C.TableOpts('Manuscript', 'none', 'none', 'smallcaps').header)
+  assert_equal('plain', C.TableOpts('Manuscript', 'none', 'none', 'plain').header)
+enddef
+
+def Test_table_css_draws_only_the_lines_asked_for(): void
+  assert_equal([], C.TableCss({border: 'none', vlines: 'none', header: 'bold'}))
+  var border: list<string> = C.TableCss({border: 'single', vlines: 'none', header: 'bold'})
+  assert_equal(1, len(border))
+  assert_match('^table {', border[0])
+  var both: list<string> = C.TableCss({border: 'single', vlines: 'single', header: 'bold'})
+  assert_equal(2, len(both))
+  assert_match('border-left', both[1])
+enddef
+
 export def RunAll(): void
+  Test_table_options_fall_back()
+  Test_table_css_draws_only_the_lines_asked_for()
   Test_a_missing_tex_package_stops_a_pdf_compile()
   Test_a_missing_tex_engine_stops_a_pdf_compile()
   Test_a_cover_path_from_home_is_expanded()

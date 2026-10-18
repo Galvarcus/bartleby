@@ -408,6 +408,10 @@ To align one column differently, edit the colons in the second row:
 `:---` is left, `---:` is right, and `:---:` is center. Tables compile
 in a Book or a Manuscript. A screenplay has no tables.
 
+A compiled table has lines across it and a bold header. To add a frame
+or lines between the columns, or to change the header to italic, small
+caps, or plain, see the table settings under Compile in the README.
+
 ## Goals and progress
 
 Run `:BartlebyGoals` to set your goals: words for this session, words

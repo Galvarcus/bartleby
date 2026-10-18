@@ -1,5 +1,5 @@
 /* Bartleby book HTML/EPUB stylesheet. Font is set separately via a
-   generated font-override CSS file (see compile.vim) rather than a CSS
+   generated override CSS file (see compile.vim) rather than a CSS
    custom property, since Pandoc doesn't inject metadata into CSS. */
 body {
   font-family: Georgia, serif;
@@ -34,6 +34,16 @@ table {
 th, td {
   padding: 0.25em 0.75em;
   border-bottom: 1px solid #999;
+}
+
+/* Normal weight, so that the header style of Bartleby decides: Pandoc
+   wraps the header text in strong, em, or small caps. */
+th {
+  font-weight: normal;
+}
+
+.smallcaps {
+  font-variant: small-caps;
 }
 
 thead th {

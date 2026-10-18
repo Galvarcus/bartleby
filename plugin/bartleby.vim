@@ -114,6 +114,11 @@ g:bartleby_compile_extra_args = get(g:, 'bartleby_compile_extra_args', [])
 g:bartleby_compile_lang = get(g:, 'bartleby_compile_lang', '')
 g:bartleby_compile_papersize = get(g:, 'bartleby_compile_papersize', '')
 g:bartleby_compile_log_retention = get(g:, 'bartleby_compile_log_retention', 10)
+# Tables: the frame, the lines between columns, none or single, and the
+# style of the header: bold, italic, smallcaps, or plain.
+g:bartleby_compile_table_border = get(g:, 'bartleby_compile_table_border', 'none')
+g:bartleby_compile_table_vlines = get(g:, 'bartleby_compile_table_vlines', 'none')
+g:bartleby_compile_table_header = get(g:, 'bartleby_compile_table_header', 'bold')
 g:bartleby_dictionary_api_key = get(g:, 'bartleby_dictionary_api_key', '')
 g:bartleby_thesaurus_api_key = get(g:, 'bartleby_thesaurus_api_key', '')
 g:bartleby_dictionary_reference = get(g:, 'bartleby_dictionary_reference', '')

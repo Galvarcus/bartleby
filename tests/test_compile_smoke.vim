@@ -22,6 +22,9 @@ import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/project.vim' as PO
 import './fixtures.vim' as FI
 
+# The table filter, for the tests that run it by itself.
+const TABLES_FILTER: string = expand('<sfile>:p:h:h') .. '/tools/pandoc/tables.lua'
+
 const MAX_WAIT_MS: number = 60000
 const POLL_INTERVAL_MS: number = 500
 
@@ -172,11 +175,91 @@ def Test_failure_writes_a_log_and_asks_to_open_it(): void
   FI.CleanupProjectFiles(fx.project)
 enddef
 
+# FUNCTION: Run tools/pandoc/tables.lua on md, to the format to, with the
+# metadata meta, and return what Pandoc writes.
+def Filter(md: list<string>, to: string, meta: list<string>): string
+  var src: string = tempname()
+  writefile(md, src)
+  var out: string = system(join(['pandoc', shellescape(src), '-t', to,
+    '--lua-filter=' .. shellescape(TABLES_FILTER)] + meta->mapnew((_, m) => '-M ' .. shellescape(m))))
+  delete(src)
+  return out
+enddef
+
+# FUNCTION: A real compile passes the table settings on: the header style
+# through the filter, and the lines through the override CSS.
+def Test_book_html_tables_get_the_settings(): void
+  if !executable('pandoc')
+    echom 'SKIP: pandoc not installed'
+    return
+  endif
+  var fx = BuildProjectWithContent()
+  var target = C.CompileTarget.FromDict({
+    name: 'SmokeTables', kind: 'Book', format: 'HTML',
+    includedIds: [fx.scene1.id],
+  })
+  C.Execute(fx.project, target)
+  var outputPath = WaitForOutput(fx.project, '*.html')
+  assert_true(outputPath !=# '', 'Book HTML did not appear within ' .. MAX_WAIT_MS .. 'ms')
+  if outputPath !=# ''
+    var html: string = join(readfile(outputPath), "\n")
+    assert_match('<th[^>]*><em>Name</em></th>', html)
+    var css: string = join(readfile(fnamemodify(outputPath, ':h') .. '/.override.css'), "\n")
+    assert_match('table { border:', css)
+    assert_match('border-left', css)
+  endif
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
+def Test_the_table_filter_draws_lines_only_when_asked(): void
+  if !executable('pandoc')
+    echom 'SKIP: pandoc not installed'
+    return
+  endif
+  var md: list<string> = ['| Name | Age |', '|:--|--:|', '| Mara | 34 |']
+  var both: string = Filter(md, 'latex', ['table-border=single', 'table-vlines=single'])
+  assert_match('\\begin{longtable}\[\]{|l|r|}', both)
+  assert_notmatch('\\toprule', both)
+  assert_match('{@{}l|r@{}}', Filter(md, 'latex', ['table-vlines=single']))
+  var none: string = Filter(md, 'latex', [])
+  assert_match('{@{}lr@{}}', none)
+  assert_match('\\toprule', none)
+enddef
+
+def Test_the_table_filter_styles_the_header(): void
+  if !executable('pandoc')
+    echom 'SKIP: pandoc not installed'
+    return
+  endif
+  var md: list<string> = ['| Name | Age |', '|:--|--:|', '| Mara | 34 |']
+  assert_match('\\textbf{Name}', Filter(md, 'latex', []))
+  assert_match('\\emph{Name}', Filter(md, 'latex', ['table-header=italic']))
+  assert_match('<span class="smallcaps">Name</span>', Filter(md, 'html', ['table-header=smallcaps']))
+  assert_notmatch('<strong>', Filter(md, 'html', ['table-header=plain']))
+enddef
+
+# FUNCTION: The rules take their width from the columns, so that a table of
+# long cells is no wider than the text.
+def Test_the_table_filter_keeps_the_width_with_rules(): void
+  if !executable('pandoc')
+    echom 'SKIP: pandoc not installed'
+    return
+  endif
+  var long: string = repeat('a long note about the voyage north ', 6)
+  var md: list<string> = ['| Name | Notes |', '|:--|:--|', $'| Mara | {long} |']
+  var tex: string = Filter(md, 'latex', ['table-border=single', 'table-vlines=single'])
+  assert_match('\\\%(line\|column\)width - 4\\tabcolsep - 3\\arrayrulewidth', tex)
+enddef
+
 export def RunAll(): void
   Test_manuscript_pdf_compiles_to_a_real_nonempty_file()
   Test_book_pdf_compiles_to_a_real_nonempty_file()
   Test_pandoc_log_per_run_with_retention()
   Test_failure_writes_a_log_and_asks_to_open_it()
+  Test_book_html_tables_get_the_settings()
+  Test_the_table_filter_draws_lines_only_when_asked()
+  Test_the_table_filter_styles_the_header()
+  Test_the_table_filter_keeps_the_width_with_rules()
 enddef
 
 # A private home folder, so that the log test counts only its own logs,
@@ -185,6 +268,12 @@ enddef
 $HOME = tempname()
 mkdir($HOME, 'p')
 g:bartleby_compile_log_retention = 2
+# The table lines and an italic header, so that the PDFs of these tests go
+# through tools/pandoc/tables.lua, the way with more to go wrong. The
+# default way is in the filter tests.
+g:bartleby_compile_table_border = 'single'
+g:bartleby_compile_table_vlines = 'single'
+g:bartleby_compile_table_header = 'italic'
 execute 'source ' .. expand('<sfile>:h') .. '/../plugin/bartleby.vim'
 RunAll()
 if len(v:errors) > 0

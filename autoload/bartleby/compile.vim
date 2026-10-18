@@ -61,6 +61,18 @@ const PATH_COMPILE_OUTPUT: string = '/compile/output'
 const PATH_TOOLS_LATEX_MANUSCRIPT_TEX: string = '/tools/latex/manuscript.tex'
 const PATH_TOOLS_LATEX_BOOK_TEX: string = '/tools/latex/book.tex'
 const PATH_TOOLS_CSS_BOOK_CSS: string = '/tools/css/book.css'
+const PATH_TOOLS_PANDOC_TABLES: string = '/tools/pandoc/tables.lua'
+# The styles of table lines and headers, and their fallbacks, as in
+# tools/pandoc/tables.lua and tools/cheatsheet/build_cheatsheet.py.
+const LINE_NONE: string = 'none'
+const TABLE_LINES: list<string> = [LINE_NONE, 'single']
+const LINE_FALLBACK: string = 'single'
+const HEADER_SMALLCAPS: string = 'smallcaps'
+const TABLE_HEADERS: list<string> = ['bold', 'italic', HEADER_SMALLCAPS, 'plain']
+const HEADER_FALLBACK: string = 'bold'
+# The table lines of HTML and EPUB.
+const CSS_BORDER: string = 'table { border: 1px solid #333; }'
+const CSS_VLINES: string = 'th + th, td + td { border-left: 1px solid #999; }'
 const ARG_NOVEL: string = '--metadata=isnovel:true'
 const COURIER: string = 'courier'
 const ARG_COURIER: string = '--metadata=usecourier:true'
@@ -96,6 +108,9 @@ var indent_paras: bool = g:bartleby_compile_indent_paragraphs
 var book_chapter_style: string = g:bartleby_compile_book_chapter_style
 var book_part_style: string = g:bartleby_compile_book_part_style
 var extra_args: list<string> = g:bartleby_compile_extra_args
+var table_border: string = g:bartleby_compile_table_border
+var table_vlines: string = g:bartleby_compile_table_vlines
+var table_header: string = g:bartleby_compile_table_header
 var log_retention: number = g:bartleby_compile_log_retention
 
 const KIND_MANUSCRIPT: string = 'Manuscript'
@@ -454,9 +469,43 @@ def BookCssPath(): string
   return PluginRoot() .. PATH_TOOLS_CSS_BOOK_CSS
 enddef
 
-def WriteFontOverrideCss(outDir: string, font: string): string
-  var path: string = outDir .. '/.font-override.css'
-  writefile([$'body {{ font-family: {font}, Georgia, serif; }}'], path)
+# FUNCTION: Return the table options of a compile of kind: border, vlines,
+# and header, each the setting, or its fallback where the setting is
+# unknown or kind cannot show it. An unknown line is single, so that none
+# is lost to a misspelled name. An unknown header is bold, and so is small
+# caps in a Manuscript, whose typewriter font has none.
+export def TableOpts(kind: string, border: string, vlines: string, header: string): dict<string>
+  var head: string = index(TABLE_HEADERS, header) >= 0 ? header : HEADER_FALLBACK
+  if head ==# HEADER_SMALLCAPS && kind ==# KIND_MANUSCRIPT
+    head = HEADER_FALLBACK
+  endif
+  return {
+    border: index(TABLE_LINES, border) >= 0 ? border : LINE_FALLBACK,
+    vlines: index(TABLE_LINES, vlines) >= 0 ? vlines : LINE_FALLBACK,
+    header: head,
+  }
+enddef
+
+# FUNCTION: Return the CSS of the table lines in opts, see TableOpts, for
+# HTML and EPUB. Pandoc styles the header, see tools/pandoc/tables.lua.
+export def TableCss(opts: dict<string>): list<string>
+  return (opts.border !=# LINE_NONE ? [CSS_BORDER] : []) + (opts.vlines !=# LINE_NONE ? [CSS_VLINES] : [])
+enddef
+
+# FUNCTION: Return the Pandoc arguments for the tables of target: the
+# filter, and the options in its metadata.
+def TableArgs(opts: dict<string>): list<string>
+  return [$'--lua-filter={PluginRoot()}{PATH_TOOLS_PANDOC_TABLES}',
+    $'--metadata=table-header:{opts.header}',
+    $'--metadata=table-border:{opts.border}',
+    $'--metadata=table-vlines:{opts.vlines}']
+enddef
+
+# FUNCTION: Write the CSS that the settings add to book.css: the font, and
+# the table lines, and return its path.
+def WriteOverrideCss(outDir: string, font: string, opts: dict<string>): string
+  var path: string = outDir .. '/.override.css'
+  writefile([$'body {{ font-family: {font}, Georgia, serif; }}'] + TableCss(opts), path)
   return path
 enddef
 
@@ -918,7 +967,8 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   var docLines: list<string> = BuildDocLines(project, target)
   writefile(docLines, mdPath)
 
-  var args: list<string> = [mdPath, '-o', outputPath] + PandocMetadataArgs(project)
+  var tblOpts: dict<string> = TableOpts(target.kind, table_border, table_vlines, table_header)
+  var args: list<string> = [mdPath, '-o', outputPath] + PandocMetadataArgs(project) + TableArgs(tblOpts)
   if standalone
     args->add(FLAG_STANDALONE)
   endif
@@ -951,7 +1001,7 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
       endif
     else
       args->add($'--css={BookCssPath()}')
-      args->add($'--css={WriteFontOverrideCss(outDir, target.font)}')
+      args->add($'--css={WriteOverrideCss(outDir, target.font, tblOpts)}')
       if target.format ==# FMT_EPUB && cover !=# ''
         args->add($'--epub-cover-image={cover}')
       endif

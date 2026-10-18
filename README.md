@@ -345,6 +345,11 @@ the header off moves its text down as the first row.
   lines it up.
 - A Book or a Manuscript compiles tables to PDF, HTML, EPUB, and
   Markdown. A screenplay has none.
+- Compile draws the lines of a table across, as books do. Settings add
+  a frame, lines between the columns, or both, and set the style of
+  the header, see `g:bartleby_compile_table_border` and the settings
+  after it. In a Manuscript, italic prints as underlining, as on a
+  typewriter.
 
 ## Goals and progress
 
@@ -765,6 +770,9 @@ default, so set only the ones you want to change.
 | `g:bartleby_compile_book_part_style` | `'numeral'` | Book part numbers: `numeral` or `spelled` |
 | `g:bartleby_compile_extra_args` | `[]` | More arguments for every Pandoc run |
 | `g:bartleby_compile_log_retention` | `10` | Compile logs kept per target. `0` keeps all |
+| `g:bartleby_compile_table_border` | `'none'` | The frame around a table: `'none'` or `'single'`. Another value means `'single'` |
+| `g:bartleby_compile_table_vlines` | `'none'` | The lines between the columns of a table: `'none'` or `'single'`. Another value means `'single'` |
+| `g:bartleby_compile_table_header` | `'bold'` | The header text of a table: `'bold'`, `'italic'`, `'smallcaps'`, or `'plain'`. Another value, and small caps in a Manuscript, mean `'bold'` |
 | `g:bartleby_compile_lang` | `''` | Language code for Pandoc, such as `'en-GB'`. Empty uses the code of the language, `en-US` for English |
 | `g:bartleby_compile_papersize` | `''` | Paper size of PDF output, `'letter'` or `'a4'`. Empty uses the paper size of the language, `letter` for English |
 

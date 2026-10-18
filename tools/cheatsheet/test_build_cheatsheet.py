@@ -15,6 +15,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -285,13 +286,34 @@ class LatexTest(unittest.TestCase):
     def test_the_header_is_white_on_black_and_spans_both_columns(self):
         header = re.search(r"\\newcommand\{\\cshead\}.*", B.preamble()).group(0)
         self.assertIn(r"\rowcolor{csheadbg}", header)
-        self.assertIn(r"\multicolumn{2}{l}{\color{csheadfg}", header)
+        self.assertIn(r"\multicolumn{2}{|l|}{\color{csheadfg}\bfseries", header)
 
-    def test_the_rules_are_horizontal_only_and_the_cells_left_aligned(self):
+    def test_a_table_has_a_border_and_a_line_between_its_columns(self):
         spec = B.key_spec()
-        self.assertNotIn("|", spec)
+        self.assertTrue(spec.startswith("|") and spec.endswith("|"))
+        self.assertEqual(3, spec.count("|"))
         self.assertEqual(2, spec.count(r"\raggedright"))
         self.assertTrue(B.row_tex("k", "d", 0).endswith(r"\\\hline"))
+
+    def test_the_border_and_the_inner_lines_are_separate(self):
+        cases = [("none", "single", "", 1), ("single", "none", "|", 2), ("none", "none", "", 0)]
+        for border, vlines, edge, rules in cases:
+            with unittest.mock.patch.multiple(B, TABLE_BORDER=border, TABLE_VLINES=vlines):
+                spec = B.key_spec()
+                self.assertEqual(rules, B.rule_count(), (border, vlines))
+                self.assertEqual(rules, spec.count("|"), (border, vlines))
+                self.assertEqual(edge, spec[:len(edge)], (border, vlines))
+                self.assertIn("\\multicolumn{2}{" + edge + "l" + edge + "}", B.preamble())
+
+    def test_the_columns_give_up_the_width_of_each_rule(self):
+        self.assertIn(r"\csw-4\tabcolsep-3\arrayrulewidth", B.preamble())
+
+    def test_an_unknown_style_falls_back(self):
+        self.assertEqual("single", B.line_style("double"))
+        self.assertEqual("none", B.line_style("none"))
+        self.assertEqual(r"\bfseries", B.header_font("shouting"))
+        self.assertEqual(r"\scshape", B.header_font("smallcaps"))
+        self.assertEqual("", B.header_font("plain"))
 
     def test_the_measures_are_read_from_a_log(self):
         log = "x\nCSM T 40.5pt\nCSM G 553.9pt 236.4pt\nCSM H 0 15.2pt\nCSM R 0 3 11.9pt\nCSM N 2 22.0pt\ny\n"

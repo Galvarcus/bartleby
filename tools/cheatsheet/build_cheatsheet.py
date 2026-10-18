@@ -66,6 +66,22 @@ KEY_FRACTION = 0.50
 HEADER_BACKGROUND = "000000"
 HEADER_TEXT = "FFFFFF"
 ROW_COLORS = ("FFFFFF", "D6EAF5")
+# The lines and header of a table. They mirror the compile settings of
+# Bartleby, g:bartleby_compile_table_border, _vlines, and _header, with the
+# same values and fallbacks. The border is the frame around a table, and
+# the vertical lines are those between its columns, so that each can have
+# a style of its own.
+TABLE_BORDER = "single"
+TABLE_VLINES = "single"
+TABLE_HEADER = "bold"
+# The styles of a line. An unknown style falls back to a single line, so
+# that a line is never lost to a misspelled name.
+TABLE_LINES = ("none", "single")
+LINE_FALLBACK = "single"
+# The styles of a header, as LaTeX font switches. An unknown style falls
+# back to bold.
+TABLE_HEADERS = {"bold": r"\bfseries", "italic": r"\itshape", "smallcaps": r"\scshape", "plain": ""}
+HEADER_FALLBACK = "bold"
 CONTINUED = "(Cont'd)"
 
 # The space between tables, and under the title, in points. EPSILON is
@@ -431,9 +447,35 @@ def layout_flow(items, first_cap, full_cap, balance=True):
 # LaTeX
 ##############################################################################
 
+def line_style(style):
+    """The style of a line, or its fallback when style is unknown."""
+    return style if style in TABLE_LINES else LINE_FALLBACK
+
+
+def header_font(style):
+    """The LaTeX font switch of a header style, or of its fallback."""
+    return TABLE_HEADERS.get(style, TABLE_HEADERS[HEADER_FALLBACK])
+
+
+def border_rule():
+    return "|" if line_style(TABLE_BORDER) != "none" else ""
+
+
+def vline_rule():
+    return "|" if line_style(TABLE_VLINES) != "none" else ""
+
+
+def rule_count():
+    """The vertical rules across a table: two of the border, and one
+    between its two columns. Each takes the width of a rule from the
+    columns, so that the table stays as wide as a column."""
+    return 2 * len(border_rule()) + len(vline_rule())
+
+
 def key_spec():
-    return (r">{\raggedright\arraybackslash}p{\cskey}"
-            r">{\raggedright\arraybackslash}p{\csdesc}")
+    edge = border_rule()
+    return (edge + r">{\raggedright\arraybackslash}p{\cskey}" + vline_rule()
+            + r">{\raggedright\arraybackslash}p{\csdesc}" + edge)
 
 
 def preamble():
@@ -469,11 +511,11 @@ def preamble():
 \newcommand{{\cssize}}{{\fontsize{{{FONT_SIZE}}}{{{LEADING}}}\selectfont}}
 \AtBeginDocument{{%
   \setlength{{\csw}}{{\dimexpr(\textwidth-{COLUMNS - 1}\columnsep)/{COLUMNS}\relax}}%
-  \setlength{{\cskey}}{{\dimexpr{KEY_FRACTION}\dimexpr\csw-4\tabcolsep\relax\relax}}%
-  \setlength{{\csdesc}}{{\dimexpr{1 - KEY_FRACTION:.4f}\dimexpr\csw-4\tabcolsep\relax\relax}}%
+  \setlength{{\cskey}}{{\dimexpr{KEY_FRACTION}\dimexpr\csw-4\tabcolsep-{rule_count()}\arrayrulewidth\relax\relax}}%
+  \setlength{{\csdesc}}{{\dimexpr{1 - KEY_FRACTION:.4f}\dimexpr\csw-4\tabcolsep-{rule_count()}\arrayrulewidth\relax\relax}}%
   \setlength{{\csgap}}{{{TABLE_GAP}pt}}%
   \cssize}}
-\newcommand{{\cshead}}[1]{{\hline\rowcolor{{csheadbg}}\multicolumn{{2}}{{l}}{{\color{{csheadfg}}\bfseries\strut #1}}\\\hline}}
+\newcommand{{\cshead}}[1]{{\hline\rowcolor{{csheadbg}}\multicolumn{{2}}{{{border_rule()}l{border_rule()}}}{{\color{{csheadfg}}{header_font(TABLE_HEADER)}\strut #1}}\\\hline}}
 \newcommand{{\csrows}}[2]{{\begin{{tabular}}{{{key_spec()}}}#1#2\end{{tabular}}}}
 \newcommand{{\cstable}}[2]{{\sbox{{\csbox}}{{\csrows{{\cshead{{#1}}}}{{#2}}}}\nointerlineskip\leavevmode\usebox{{\csbox}}\par}}
 \newcommand{{\csnote}}[1]{{\sbox{{\csbox}}{{\parbox{{\csw}}{{\raggedright\cssize #1}}}}\nointerlineskip\leavevmode\usebox{{\csbox}}\par}}
