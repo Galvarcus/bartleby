@@ -335,6 +335,10 @@ its text down as the first row.
   it up.
 - A Book or a Manuscript compiles tables to PDF, HTML, EPUB, and Markdown. A
   screenplay has none.
+- Compile draws the lines of a table across, as books do. Settings add a
+  frame, lines between the columns, or both, and set the style of the header,
+  see `g:bartleby_compile_table_border` and the settings after it. In a
+  Manuscript, italic prints as underlining, as on a typewriter.
 
 ==============================================================================
 Goals and progress                                 *bartleby-goals-and-progress*
@@ -1071,6 +1075,28 @@ Compile
 
     `g:bartleby_compile_log_retention`              `10`                  Compile logs kept per
                                                                           target. `0` keeps all
+
+    `g:bartleby_compile_table_border`               `'none'`              The frame around a
+                                                                          table: `'none'` or
+                                                                          `'single'`. Another
+                                                                          value means
+                                                                          `'single'`
+
+    `g:bartleby_compile_table_vlines`               `'none'`              The lines between the
+                                                                          columns of a table:
+                                                                          `'none'` or
+                                                                          `'single'`. Another
+                                                                          value means
+                                                                          `'single'`
+
+    `g:bartleby_compile_table_header`               `'bold'`              The header text of a
+                                                                          table: `'bold'`,
+                                                                          `'italic'`,
+                                                                          `'smallcaps'`, or
+                                                                          `'plain'`. Another
+                                                                          value, and small caps
+                                                                          in a Manuscript, mean
+                                                                          `'bold'`
 
     `g:bartleby_compile_lang`                       `''`                  Language code for
                                                                           Pandoc, such as
