@@ -350,6 +350,10 @@ enddef
 # the document before. Nothing is above the first title line, so there Up
 # does not move. Any other Up is the up of MapArrows.
 def KeyUp(): string
+  # A completion menu takes the plain key, which a move would close.
+  if pumvisible()
+    return CO.KEY_UP
+  endif
   if !IsTitleLine(line('.') - 1) || !OnScreenRowOf(1)
     return b:bartleby_scrivening_arrows[0]
   endif
@@ -360,6 +364,9 @@ enddef
 # row of a line above a title line, Down goes past the title line, to the
 # start of the next document. Any other Down is the down of MapArrows.
 def KeyDown(): string
+  if pumvisible()
+    return CO.KEY_DOWN
+  endif
   if !IsTitleLine(line('.') + 1) || !OnScreenRowOf(col([line('.'), '$']))
     return b:bartleby_scrivening_arrows[1]
   endif

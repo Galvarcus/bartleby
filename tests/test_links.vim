@@ -4,18 +4,22 @@ vim9script
 # Plugin_Name: Bartleby
 # tests/test_links.vim: links between documents. Finding the link under the
 # cursor, matching its title, gf, creating a missing document, updating the
-# links when a document is renamed, and how compile shows them.
+# links when a document is renamed, how compile shows them, and the titles
+# offered after [[.
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby.vim' as BA
 import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/links.vim' as LK
+import autoload 'bartleby/quill.vim' as Q
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/trash.vim' as TR
 import autoload 'bartleby/tree.vim' as T
 import './fixtures.vim' as FI
+import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: The fixture project, with a document titled Mara in Characters,
 # and a file on disk for each document.
@@ -178,6 +182,97 @@ def Test_gf_is_mapped_to_follow_a_link(): void
   assert_equal('<Plug>(BartlebyFollowLink)', maparg('gf', 'n'))
 enddef
 
+# FUNCTION: Record the entries of the completion menu as [abbr, menu,
+# word]. A test calls it from insert mode, while the menu is open.
+def g:TLinksCapture(): void
+  g:tlinks_items = complete_info(['items']).items->mapnew((_, i) => [i.abbr, i.menu, i.word])
+enddef
+
+# FUNCTION: Type keys in insert mode at the end of line 1: [[, the offer
+# of the titles, then keys. Return the menu entries and the line.
+def Offer(keys: string): list<any>
+  g:tlinks_items = []
+  feedkeys("A[[\<Cmd>call bartleby#links#CompleteTitles()\<CR>"
+    .. "\<Cmd>call TLinksCapture()\<CR>" .. keys .. "\<Esc>", 'xt')
+  return [g:tlinks_items, getline(1)]
+enddef
+
+# FUNCTION: Two documents titled Scene 1 are both offered, told apart by
+# their folders.
+def Test_double_brackets_offer_the_titles_with_their_folders(): void
+  var project = Project()
+  ST.Set(project)
+  Edit(project, Scene(project, 0), ['See '])
+  var copt: string = &completeopt
+  var offer: list<any> = Offer('')
+  assert_equal([['Scene 1', 'Manuscript / 1', 'Scene 1]]'], ['Scene 1', 'Manuscript / 2', 'Scene 1]]'],
+    ['Mara', 'Characters', 'Mara]]']], offer[0])
+  assert_equal(copt, &completeopt)
+  Cleanup(project)
+enddef
+
+def Test_a_document_in_the_trash_is_not_offered(): void
+  var project = Project()
+  ST.Set(project)
+  var rows = T.Flatten(project)
+  TR.MoveToTrash(project, T.FindRowById(rows, project.ChildAt(3).ChildAt(0).id))
+  Edit(project, Scene(project, 0), ['See '])
+  assert_equal(['Scene 1', 'Scene 1'], Offer('')[0]->mapnew((_, i) => i[0]))
+  Cleanup(project)
+enddef
+
+# FUNCTION: Picking an entry is Vim's own, and the tests run with no
+# popup menu, so check the text that each entry inserts.
+def Test_a_title_ends_the_link_unless_brackets_follow(): void
+  var project = Project()
+  ST.Set(project)
+  Edit(project, Scene(project, 0), ['See '])
+  assert_equal('Mara]]', Offer('')[0][-1][2])
+  setline(1, 'See ]]')
+  cursor(1, 4)
+  g:tlinks_items = []
+  feedkeys("a[[\<Cmd>call bartleby#links#CompleteTitles()\<CR>\<Cmd>call TLinksCapture()\<CR>\<Esc>", 'xt')
+  assert_equal('Mara', g:tlinks_items[-1][2])
+  Cleanup(project)
+enddef
+
+def Test_bracket_is_mapped_only_in_documents_of_a_scrive_in_prose(): void
+  var project = Project()
+  ST.Set(project)
+  Edit(project, Scene(project, 0), ['text'])
+  BA.MapLinkComplete()
+  assert_match('CompleteTitles', maparg('[', 'i'))
+  enew!
+  BA.MapLinkComplete()
+  assert_equal('', maparg('[', 'i'))
+  project.InitNew(project.name, CO.TYPE_SCREENPLAY)
+  execute 'edit! ' .. fnameescape(Scene(project, 1).AbsPath(project.BinderRoot()))
+  BA.MapLinkComplete()
+  assert_equal('', maparg('[', 'i'))
+  Cleanup(project)
+enddef
+
+# FUNCTION: Quill maps the arrow keys and Enter in insert mode. While the
+# title menu shows, they must move in it and pick, so each map gives the
+# plain key then. The tests run with no popup menu, so check the maps,
+# and that Enter still splits the line with no menu.
+def Test_quill_keys_pass_to_the_title_menu(): void
+  enew!
+  setline(1, 'See')
+  # Soft wrap maps the same keys, and leaves autoformat off, which would
+  # join the new line back.
+  Q.Init('soft')
+  for key in ['<Up>', '<Down>', '<CR>']
+    var m: dict<any> = maparg(key, 'i', false, true)
+    assert_true(get(m, 'expr', false), key)
+    assert_match('^pumvisible()', get(m, 'rhs', ''), key)
+  endfor
+  feedkeys("A\<CR>x\<Esc>", 'xt')
+  assert_equal(['See', 'x'], getline(1, '$'))
+  Q.Init('off')
+  silent! :%bwipe!
+enddef
+
 export def RunAll(): void
   Test_a_link_is_found_anywhere_on_its_brackets()
   Test_a_link_with_its_own_text_and_two_links_on_a_line()
@@ -193,4 +288,9 @@ export def RunAll(): void
   Test_counting_links_changes_nothing()
   Test_compile_shows_links_as_their_text_except_in_a_screenplay()
   Test_gf_is_mapped_to_follow_a_link()
+  Test_double_brackets_offer_the_titles_with_their_folders()
+  Test_a_document_in_the_trash_is_not_offered()
+  Test_a_title_ends_the_link_unless_brackets_follow()
+  Test_bracket_is_mapped_only_in_documents_of_a_scrive_in_prose()
+  Test_quill_keys_pass_to_the_title_menu()
 enddef

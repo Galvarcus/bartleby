@@ -315,6 +315,11 @@ Write `[[Mara]]` in a document to link to the document titled Mara.
 With the cursor on the link, `gf` opens it, and `CTRL-O` goes back.
 `[[Mara|the captain]]` links to Mara and reads "the captain".
 
+Typing `[[` in Insert mode opens a menu of the document titles, each
+with its folders. Type to narrow the list, and pick a title to insert
+it with the closing `]]`. A title with a space narrows only up to the
+space. `g:bartleby_link_complete = false` turns the menu off.
+
 - A title matches exactly, or else without regard to case. When
   several documents share the title, a list shows each with its
   folders.
@@ -729,6 +734,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_airline_section` | `'y'` | The section of vim-airline that shows the writing progress |
 | `g:bartleby_no_mappings` | `false` | Map none of the default keys. The `<Plug>` mappings stay, for keys of your own |
 | `g:bartleby_doc_templates_dir` | `''` | A folder of your own templates for new documents, see Document templates |
+| `g:bartleby_link_complete` | `true` | Offer the document titles after `[[` in Insert mode |
 | `g:bartleby_table_autoformat` | `true` | Line up a table when you leave insert mode in it |
 
 **Focus**

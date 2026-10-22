@@ -216,6 +216,7 @@ Commands, mappings, and keys of Bartleby, a writing environment for Vim.
 | Key | Action |
 | --- | --- |
 | `gf` on `[[Title]]` | Open the document with that title |
+| `[[` in Insert mode | Offer the titles of the documents |
 
 ### Dictionary and thesaurus
 

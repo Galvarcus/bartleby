@@ -36,12 +36,14 @@ import autoload 'bartleby/recover.vim' as RC
 import autoload 'bartleby/layout.vim' as LY
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/links.vim' as LK
 import autoload 'bartleby/progress.vim' as PG
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/ui.vim' as MI
 import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
+var link_complete: bool = g:bartleby_link_complete
 
 export def OpenScrive(name: string): void
   var scriveName: string = name ==# '' ? fnamemodify(SS.LastScrive(), ':t:r') : name
@@ -260,6 +262,10 @@ export def StartScriveHooks(): void
     autocmd!
     autocmd BufEnter * Q.AutoApply()
   augroup END
+  augroup bartleby_links_auto
+    autocmd!
+    autocmd BufEnter * MapLinkComplete()
+  augroup END
   # An empty edit window stays when the last one closes beside a pane.
   W.WatchEditWin()
   # Count the words for the goals on pauses and saves, never on each key.
@@ -269,6 +275,21 @@ export def StartScriveHooks(): void
   augroup END
   PG.Refresh()
   SetupStatusline()
+enddef
+# FUNCTION: In a document of the open scrive, map [ in insert mode to
+# offer the titles after [[. In a screenplay, [[ ]] is a Fountain note.
+# Exported for the tests.
+export def MapLinkComplete(): void
+  if !link_complete || exists('b:bartleby_links_mapped') || W.IsChromeBuf(bufnr())
+    return
+  endif
+  var project: PO.Project = ST.Get()
+  if project is null_object || project.DocExt() ==# CO.EXT_FOUNTAIN
+    || SV.DocHere(project) is null_object
+    return
+  endif
+  b:bartleby_links_mapped = true
+  inoremap <buffer> [ [<ScriptCmd>LK.CompleteTitles()<CR>
 enddef
 # FUNCTION: Add the writing progress to the status line, when the status
 # line has no setting of its own and vim-airline does not draw it, as the

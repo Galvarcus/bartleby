@@ -30,6 +30,7 @@ import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/locale/writing.vim' as MW
 import autoload 'bartleby/table.vim' as TB
+import 'bartleby/variables/constants.vim' as CO
 
 const QUILLWRAPMODEDEFAULT_SOFT: string = 'soft'
 const QUILLWRAPMODEDEFAULT_OFF: string = 'off'
@@ -37,6 +38,7 @@ const ATTR_NAME: string = 'name'
 const KEYS_C_O_G_UP: string = "\<C-o>g\<Up>"
 const KEYS_C_O_G_DOWN: string = "\<C-o>g\<Down>"
 const KEY_NAME_CR: string = '<CR>'
+const KEYS_UNDO_CR: string = "\<C-g>u\<CR>"
 const WRAP_ARG_DETECT: string = 'detect'
 const WRAP_ARG_TOGGLE: string = 'toggle'
 const WRAP_ARG_HARD: string = 'hard'
@@ -357,8 +359,9 @@ def SetupNavigationMaps(wrapMode: number): void
     if SV.IsScrivening(bufnr())
       SV.MapArrows(KEYS_C_O_G_UP, KEYS_C_O_G_DOWN)
     else
-      inoremap <buffer> <silent> <Up> <C-o>g<Up>
-      inoremap <buffer> <silent> <Down> <C-o>g<Down>
+      # The plain key while a completion menu shows, which C-o would close.
+      inoremap <buffer> <silent> <expr> <Up> pumvisible() ? CO.KEY_UP : KEYS_C_O_G_UP
+      inoremap <buffer> <silent> <expr> <Down> pumvisible() ? CO.KEY_DOWN : KEYS_C_O_G_DOWN
     endif
   else
     silent! nunmap <buffer> j
@@ -384,7 +387,8 @@ def SetupPunctuationMaps(session: QuillSession): void
     inoremap <buffer> <C-u> <C-g>u<C-u>
     inoremap <buffer> <C-w> <C-g>u<C-w>
     if empty(maparg(KEY_NAME_CR, 'i'))
-      inoremap <buffer> <CR> <C-g>u<CR>
+      # Enter picks from a completion menu, which C-g u would close.
+      inoremap <buffer> <expr> <CR> pumvisible() ? CO.KEY_CR : KEYS_UNDO_CR
       session.SetCrMapped(true)
     else
       session.SetCrMapped(false)

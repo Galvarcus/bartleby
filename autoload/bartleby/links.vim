@@ -33,6 +33,12 @@ import autoload 'bartleby/doctemplates.vim' as DT
 const LINK_PAT: string = '\[\[\([^]|]\+\)\%(|\([^]]*\)\)\?\]\]'
 # Between the folders of a path, in the list of documents with one title.
 const CRUMB_SEP: string = ' / '
+# The text before the cursor that opens a link, and the end of a link.
+const LINK_OPEN_PAT: string = '\[\[$'
+const LINK_CLOSE: string = ']]'
+# The menu shows for one title too, and nothing is inserted until a title
+# is picked. Vim inserts the first one at once otherwise.
+const COMPLETE_OPTS: list<string> = ['menuone', 'noinsert']
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -92,6 +98,48 @@ def Paths(project: PO.Project): dict<string>
     endif
   endfor
   return paths
+enddef
+
+# FUNCTION: After [[ in insert mode, offer the titles of the documents
+# outside the Trash, in tree order, each with its folders. A title ends
+# the link, unless ]] already follows the cursor.
+export def CompleteTitles(): void
+  var col: number = col('.')
+  var line: string = getline('.')
+  var project: PO.Project = ST.Get()
+  if project is null_object || strpart(line, 0, col - 1) !~# LINK_OPEN_PAT
+    return
+  endif
+  var close: string = strpart(line, col - 1, len(LINK_CLOSE)) ==# LINK_CLOSE ? '' : LINK_CLOSE
+  var paths: dict<string> = Paths(project)
+  # dup keeps documents that share a title, which Vim would show once.
+  var items: list<dict<any>> = Docs(project, false)->mapnew((_, d) => ({
+    word: d.title .. close,
+    abbr: d.title,
+    menu: strpart(paths[d.id], 0, len(paths[d.id]) - len(d.title) - len(CRUMB_SEP)),
+    dup: 1,
+  }))
+  if empty(items)
+    return
+  endif
+  SetCompleteOpts()
+  complete(col, items)
+enddef
+
+# FUNCTION: Set the options of the title menu for this buffer, and restore
+# the user's own when the menu closes.
+def SetCompleteOpts(): void
+  b:bartleby_link_completeopt = &l:completeopt
+  &l:completeopt = (split(&completeopt, ',') + COMPLETE_OPTS)->sort()->uniq()->join(',')
+  augroup bartleby_link_complete
+    autocmd! * <buffer>
+    autocmd CompleteDone <buffer> ++once RestoreCompleteOpts()
+  augroup END
+enddef
+
+def RestoreCompleteOpts(): void
+  &l:completeopt = b:bartleby_link_completeopt
+  unlet b:bartleby_link_completeopt
 enddef
 
 # FUNCTION: Open the document of the link under the cursor. Off a link, or
