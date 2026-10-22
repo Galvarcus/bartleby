@@ -52,7 +52,8 @@ For a walkthrough written for authors, see
 [Users_Guide.md](Users_Guide.md). To add support for another language,
 see [Localization_README.md](Localization_README.md). For the commands,
 mappings, and keys on a few pages, see the
-[cheat sheet](cheatsheet.pdf).
+[cheat sheet](cheatsheet.pdf). For how AI assistants took part in the
+project, see [AI_Disclosure.md](AI_Disclosure.md).
 
 <!-- vimdoc-ignore-end -->
 
