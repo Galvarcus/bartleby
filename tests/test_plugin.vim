@@ -79,6 +79,18 @@ def Test_the_native_menu_waits_for_gui_enter(): void
   assert_equal(['false', 'true'], result)
 enddef
 
+# FUNCTION: With the default settings, VimEnter loads only tty.vim, which
+# decides whether a console with few colors gets the color scheme. The
+# status line waits for a scrive, and the session restore for its setting.
+def Test_vim_enter_loads_only_the_color_check(): void
+  var result: list<string> = Fresh([], [
+    'doautocmd VimEnter',
+    'g:result = getscriptinfo()->filter((_, s) => !s.autoload)',
+    '  ->mapnew((_, s) => s.name)->filter((_, n) => n =~# "/autoload/\\|Logger")',
+    '  ->mapnew((_, n) => fnamemodify(n, ":t"))'])
+  assert_equal(['tty.vim'], result)
+enddef
+
 export def RunAll(): void
   Test_default_keys_map_to_plug_names()
   Test_lookup_keys_exist_without_an_api_key()
@@ -86,4 +98,5 @@ export def RunAll(): void
   Test_a_user_mapping_of_a_plug_name_frees_its_default_key()
   Test_loading_the_plugin_loads_no_autoload_script()
   Test_the_native_menu_waits_for_gui_enter()
+  Test_vim_enter_loads_only_the_color_check()
 enddef

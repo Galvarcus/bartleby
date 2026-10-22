@@ -223,12 +223,6 @@ endif
 
 
 
-augroup bartleby_statusline
-  autocmd!
-  autocmd VimEnter * BA.SetupStatusline()
-augroup END
-
-
 # Auto-save for scrive documents, see autoload/bartleby/autosave.vim.
 # Tables line up when you leave insert mode on a row, in any buffer. The
 # row is checked here, so that table.vim loads only for a table.
@@ -247,7 +241,9 @@ augroup bartleby_session
   autocmd!
   autocmd CursorHold * SS.CaptureCurDoc()
   autocmd VimLeavePre * SS.CaptureCurDoc()
-  autocmd VimEnter * BA.AutoRestoreSession()
+  # The setting is checked here, so that bartleby.vim loads at startup
+  # only to restore a scrive.
+  autocmd VimEnter * if g:bartleby_session_auto_restore | BA.AutoRestoreSession() | endif
 augroup END
 
 # The native menu waits for GUIEnter, so that loading the plugin loads

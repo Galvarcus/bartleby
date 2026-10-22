@@ -268,18 +268,20 @@ export def StartScriveHooks(): void
     autocmd CursorHold,CursorHoldI,InsertLeave,BufWritePost,BufEnter * PG.Refresh()
   augroup END
   PG.Refresh()
+  SetupStatusline()
 enddef
 # FUNCTION: Add the writing progress to the status line, when the status
 # line has no setting of its own and vim-airline does not draw it, as the
-# default status line of Vim, with the ruler. See progress.vim.
-export def SetupStatusline(): void
+# default status line of Vim, with the ruler. See progress.vim. It waits
+# for a scrive, so that Vim loads this script only for Bartleby.
+def SetupStatusline(): void
   if !g:bartleby_statusline || exists('g:loaded_airline') || &g:statusline !=# ''
     return
   endif
   &g:statusline = '%<%f %h%m%r%=%( %{bartleby#progress#Status()}  %)%-14.(%l,%c%V%) %P'
 enddef
 export def AutoRestoreSession(): void
-  if g:bartleby_session_auto_restore && SS.LastScrive() !=# ''
+  if SS.LastScrive() !=# ''
     OpenScrive('')
   endif
 enddef

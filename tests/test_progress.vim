@@ -237,29 +237,41 @@ def Test_the_inspector_shows_the_goals(): void
 enddef
 
 # FUNCTION: Run a real Vim with the plugin and the statusline set to
-# statusline, and return the statusline after startup.
-def StatuslineAfterStartup(statusline: string): string
+# statusline, and return the statusline after startup and after a new
+# scrive opens.
+def StatuslineAfterOpen(statusline: string): list<string>
   var log: string = tempname()
   var script: string = tempname()
+  var root: string = tempname()
   var plugin: string = fnamemodify(expand('<script>'), ':p:h:h')
   writefile([
     'vim9script',
+    'import autoload "bartleby.vim" as BA',
+    'import "bartleby/variables/constants.vim" as CO',
+    $'g:bartleby_binder_root = "{root}"',
     $'&g:statusline = {string(statusline)}',
     'runtime plugin/bartleby.vim',
     'doautocmd VimEnter',
-    $'writefile([&g:statusline], "{log}")',
+    'var atStart: string = &g:statusline',
+    'BA.CreateScrive("Status", CO.TYPE_NOVEL)',
+    $'writefile([atStart, &g:statusline], "{log}")',
     'qa!',
   ], script)
   system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={plugin},{plugin}/deps/Logger" -S {script}')
-  var result: string = filereadable(log) ? readfile(log)[0] : 'no result'
+  var result: list<string> = filereadable(log) ? readfile(log) : ['no result', '']
   delete(log)
   delete(script)
+  delete(root, 'rf')
   return result
 enddef
 
+# FUNCTION: The status line waits for a scrive, so that Vim loads
+# bartleby.vim at startup only for Bartleby.
 def Test_the_status_line_is_added_only_when_it_has_no_setting(): void
-  assert_match('bartleby#progress#Status', StatuslineAfterStartup(''))
-  assert_equal('%f mine', StatuslineAfterStartup('%f mine'))
+  var blank: list<string> = StatuslineAfterOpen('')
+  assert_equal('', blank[0])
+  assert_match('bartleby#progress#Status', blank[1])
+  assert_equal(['%f mine', '%f mine'], StatuslineAfterOpen('%f mine'))
 enddef
 
 export def RunAll(): void

@@ -395,8 +395,8 @@ The status line shows the goals that are set, as in `Today 1,180/1,667 ·
 Session 230/500`. With a tracker and no daily goal, today's goal is its
 share of what is left. vim-airline shows it in section `y`, or in the
 section of `g:bartleby_airline_section`. Without airline, Bartleby adds
-it to the status line of Vim when the `statusline` option is empty. To
-place it in a status line of your own, add
+it to the status line of Vim when a scrive opens and the `statusline`
+option is empty. To place it in a status line of your own, add
 `%{bartleby#progress#Status()}`.
 
 `:BartlebyProgress` shows the progress in a popup. With a tracker, it
@@ -725,7 +725,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_autosave` | `1` | Save changed scrive documents automatically |
 | `g:bartleby_autosave_interval` | `30` | Minimum seconds between automatic saves of a document |
 | `g:bartleby_day_starts_at` | `0` | The hour, 0 to 23, at which a writing day starts |
-| `g:bartleby_statusline` | `true` | Add the writing progress to the status line when the `statusline` option is empty |
+| `g:bartleby_statusline` | `true` | Add the writing progress to the status line when a scrive opens and the `statusline` option is empty |
 | `g:bartleby_airline_section` | `'y'` | The section of vim-airline that shows the writing progress |
 | `g:bartleby_no_mappings` | `false` | Map none of the default keys. The `<Plug>` mappings stay, for keys of your own |
 | `g:bartleby_doc_templates_dir` | `''` | A folder of your own templates for new documents, see Document templates |
