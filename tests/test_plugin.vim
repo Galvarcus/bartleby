@@ -91,6 +91,25 @@ def Test_vim_enter_loads_only_the_color_check(): void
   assert_equal(['tty.vim'], result)
 enddef
 
+# FUNCTION: The native menu lists the lookups without lexicon.vim, which
+# would load the logger and the language files at every start of gVim.
+def Test_the_native_menu_loads_no_lexicon(): void
+  if !has('menu')
+    return
+  endif
+  var result: list<string> = Fresh(
+    ['import autoload "bartleby/bartlebymenu.vim" as BM',
+     'import autoload "bartleby/locale/ui.vim" as MI',
+     'import "bartleby/variables/constants.vim" as CO',
+     "$BARTLEBY_MW_DICTIONARY_KEY = ''", "g:bartleby_dictionary_api_key = ''"],
+    ['BM.RegisterNative()',
+     'var path: string = [CO.PLUGIN_NAME, MI.Doc(), MI.DefineWord()]->mapnew((_, p) => escape(p, ". \\"))->join(".")',
+     'var loaded: list<string> = getscriptinfo()->filter((_, s) => !s.autoload)',
+     '  ->mapnew((_, s) => fnamemodify(s.name, ":t"))->filter((_, n) => n =~# "^lexicon\\|^logger")',
+     'g:result = [string(!empty(menu_info(path))), string(loaded)]'])
+  assert_equal(['true', '[]'], result)
+enddef
+
 export def RunAll(): void
   Test_default_keys_map_to_plug_names()
   Test_lookup_keys_exist_without_an_api_key()
@@ -99,4 +118,5 @@ export def RunAll(): void
   Test_loading_the_plugin_loads_no_autoload_script()
   Test_the_native_menu_waits_for_gui_enter()
   Test_vim_enter_loads_only_the_color_check()
+  Test_the_native_menu_loads_no_lexicon()
 enddef

@@ -10,6 +10,9 @@ import 'bartleby/variables/constants.vim' as CO
 const POS_CENTER: string = 'center'
 const COL_CURSOR: string = 'cursor'
 const MENU_ZINDEX: number = 200
+# Below the default of matchaddpos, so that the selection shows over the
+# dimmed look of a disabled entry.
+const DIM_PRIORITY: number = 5
 
 ##############################################################################
 # Plugin_Name: Bartleby
@@ -70,6 +73,8 @@ export class MenuItem
   public var data: any = v:none
   public var enabled: bool = true
   public var separator: bool = false
+  # The path of the native entry, set by RegisterAsVimMenu.
+  public var vimPath: string = ''
   # Child MenuItems. A nonempty list makes this entry a submenu.
   public var items: list<any> = []
 
@@ -281,6 +286,13 @@ export class Menu
       callback: (winid: number, _result: any) => this._OnClose(winid),
     })
     var winid = popup_create(this._Lines(items), opts)
+    # matchaddpos fails on a group that is not defined, as with syntax off.
+    var dim: bool = hlexists(this.disabled_hl)
+    for [i, it] in items(items)
+      if dim && !it.enabled && !it.separator
+        matchaddpos(this.disabled_hl, [i + 1], DIM_PRIORITY, -1, {window: winid})
+      endif
+    endfor
     this._stack->add(winid)
     this._itemsOf[winid] = items
     this._cur[winid] = this._NextSelectable(items, -1, 1)
@@ -458,6 +470,15 @@ export class Menu
     this._BuildVimMenu(r, this.items, priority)
   enddef
 
+  # METHOD: Show in the native entry of item whether item is enabled, after
+  # it changed. An entry that was removed, or never registered, is left.
+  def SyncVimItem(item: MenuItem)
+    if item.vimPath == '' || empty(menu_info(item.vimPath))
+      return
+    endif
+    execute $'amenu {item.enabled ? "enable" : "disable"} {item.vimPath}'
+  enddef
+
   def UnregisterVimMenu(root: string = '')
     var r = root == '' ? this.title : root
     execute $'silent! aunmenu {r}'
@@ -474,6 +495,7 @@ export class Menu
         idSeed += 1
         var id = $'{this.name}#{idSeed}'
         itemRegistry[id] = item
+        item.vimPath = mpath
         execute $'amenu {priority} {mpath} <Cmd>call {AUTOLOAD_PREFIX}MenuInvoke("{id}")<CR>'
         if !item.enabled
           execute $'amenu disable {mpath}'

@@ -5,7 +5,8 @@ vim9script
 # tests/test_menu.vim: the native menu of menu.vim, the one that shows in the
 # menu bar of gVim and MacVim and runs with :emenu. Vim runs a native entry
 # in no script, so the entry must reach MenuInvoke by its autoload name.
-# The popup menu is tested through the commands that use it.
+# The popup menu is tested through the commands that use it, and for the
+# entries that it disables.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -117,6 +118,105 @@ def Test_an_entry_of_the_bartleby_menu_runs_its_command(): void
   execute 'aunmenu ' .. CO.PLUGIN_NAME
 enddef
 
+# FUNCTION: Run the check of the lookups that the native menu waits for.
+# The tests run before VimEnter, so fire it for that check only, then let
+# its timer run.
+def StartedSync(): void
+  if !v:vim_did_enter
+    doautocmd bartleby_menu_sync VimEnter
+  endif
+  sleep 10m
+enddef
+
+# FUNCTION: The lookups are checked at each open of the popup menu, so a
+# key set while Vim runs enables its entry. The native entry follows. The
+# native menu registers the lookups unchecked, and a timer checks them
+# once Vim has started.
+def Test_a_lookup_that_is_off_is_disabled_in_both_menus(): void
+  var savedKey: string = g:bartleby_dictionary_api_key
+  var savedEnv: string = $BARTLEBY_MW_DICTIONARY_KEY
+  g:bartleby_dictionary_api_key = ''
+  $BARTLEBY_MW_DICTIONARY_KEY = ''
+  var native: bool = has('menu')
+  if native
+    BM.RegisterNative()
+    StartedSync()
+  endif
+  BM.Toggle()
+  BM.Toggle()
+  var dict: list<any> = BM.Lookups()->copy()->filter((_, it) => it.data ==# CO.KIND_DICT)
+  assert_equal(1, len(dict))
+  assert_false(dict[0].enabled)
+  if native
+    assert_false(menu_info(dict[0].vimPath, 'n').enabled)
+  endif
+  if executable('curl')
+    g:bartleby_dictionary_api_key = 'test-key'
+    BM.Toggle()
+    BM.Toggle()
+    assert_true(dict[0].enabled)
+    if native
+      assert_true(menu_info(dict[0].vimPath, 'n').enabled)
+    endif
+  endif
+  if native
+    execute 'aunmenu ' .. CO.PLUGIN_NAME
+  endif
+  g:bartleby_dictionary_api_key = savedKey
+  $BARTLEBY_MW_DICTIONARY_KEY = savedEnv
+enddef
+
+# FUNCTION: The native menu checks the lookups after Vim has started, by a
+# timer, never while it registers its entries.
+def Test_the_native_menu_checks_the_lookups_after_start(): void
+  if !has('menu')
+    return
+  endif
+  var savedKey: string = g:bartleby_dictionary_api_key
+  var savedEnv: string = $BARTLEBY_MW_DICTIONARY_KEY
+  g:bartleby_dictionary_api_key = ''
+  $BARTLEBY_MW_DICTIONARY_KEY = ''
+  BM.Toggle()
+  BM.Toggle()
+  BM.Lookups()->foreach((_, it) => {
+    it.enabled = true
+  })
+  BM.RegisterNative()
+  var dict: list<any> = BM.Lookups()->copy()->filter((_, it) => it.data ==# CO.KIND_DICT)
+  var atRegister: bool = menu_info(dict[0].vimPath, 'n').enabled
+  StartedSync()
+  assert_equal([true, false], [atRegister, menu_info(dict[0].vimPath, 'n').enabled])
+  execute 'aunmenu ' .. CO.PLUGIN_NAME
+  g:bartleby_dictionary_api_key = savedKey
+  $BARTLEBY_MW_DICTIONARY_KEY = savedEnv
+enddef
+
+# FUNCTION: A disabled entry of the popup menu shows in the disabled
+# highlight before it is selected.
+def Test_a_disabled_entry_is_dimmed_in_the_popup(): void
+  var menu = M.Menu.new('test_menu_f', 'TestMenuF')
+  var sub = menu.AddItem('Sub')
+  sub.AddItem('On', (it) => {
+    invoked->add('on')
+  })
+  var off = sub.AddItem('Off', (it) => {
+    invoked->add('off')
+  })
+  off.enabled = false
+  highlight TestMenuDim ctermfg=8 guifg=Grey
+  menu.disabled_hl = 'TestMenuDim'
+  menu.Open()
+  if !has('gui_running')
+    feedkeys("\<CR>", 'xt')
+  endif
+  var dimmed: list<any> = popup_list()
+    ->mapnew((_, w) => getmatches(w))
+    ->flattennew()
+    ->filter((_, m) => m.group ==# menu.disabled_hl)
+  menu.Close()
+  assert_equal([[2]], dimmed->mapnew((_, m) => get(m, 'pos1', [])))
+enddef
+
 export def RunAll(): void
   Test_a_native_entry_runs_its_action()
   Test_each_entry_runs_its_own_action()
@@ -124,4 +224,7 @@ export def RunAll(): void
   Test_a_disabled_entry_is_registered_disabled()
   Test_unregistering_removes_the_entries()
   Test_an_entry_of_the_bartleby_menu_runs_its_command()
+  Test_a_lookup_that_is_off_is_disabled_in_both_menus()
+  Test_the_native_menu_checks_the_lookups_after_start()
+  Test_a_disabled_entry_is_dimmed_in_the_popup()
 enddef

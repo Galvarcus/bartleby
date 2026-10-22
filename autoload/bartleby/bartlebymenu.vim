@@ -32,6 +32,9 @@ const CMD_DEFINE: string = 'BartlebyDefine'
 const CMD_THESAURUS: string = 'BartlebyThesaurus'
 
 var menu: M.Menu = null_object
+# The lookup entries, each with its kind as data. SyncLookups sets
+# whether they are on.
+var lookups: list<M.MenuItem> = []
 
 def RunEx(cmd: string): func(M.MenuItem)
   return (_: M.MenuItem) => {
@@ -80,12 +83,13 @@ def BuildMenu(): M.Menu
   doc.AddItem(MI.TakeSnap(), RunEx(CO.CMD_SNAP))
   doc.AddItem(MI.ViewSnaps(), RunEx(CO.CMD_SNAPS))
   doc.AddItem(MI.InsertTable(), RunEx(CO.CMD_TABLE))
-  if LE.IsEnabled(CO.KIND_DICT)
-    doc.AddItem(MI.DefineWord(), RunEx(CMD_DEFINE))
-  endif
-  if LE.IsEnabled(CO.KIND_THESAURUS)
-    doc.AddItem(MI.Thesaurus(), RunEx(CMD_THESAURUS))
-  endif
+  # The native menu is built at startup, before lexicon.vim loads, so the
+  # lookups are always there, and SyncLookups disables the ones that are
+  # off.
+  lookups = [
+    doc.AddItem(MI.DefineWord(), RunEx(CMD_DEFINE), CO.KIND_DICT),
+    doc.AddItem(MI.Thesaurus(), RunEx(CMD_THESAURUS), CO.KIND_THESAURUS),
+  ]
 
   var project: M.MenuItem = m.AddItem(MI.Proj())
   project.AddItem(MI.EditProfile(), RunEx(CO.CMD_PROFILE))
@@ -95,19 +99,46 @@ def BuildMenu(): M.Menu
   return m
 enddef
 
+# FUNCTION: Open or close the popup menu. The lookups are checked at each
+# open, so that a key set while Vim runs counts.
 export def Toggle(): void
   if menu is null_object
     menu = BuildMenu()
   endif
+  SyncLookups()
   menu.Toggle()
+enddef
+
+# FUNCTION: Disable each lookup that is off, in the popup menu and in the
+# native menu.
+export def SyncLookups(): void
+  for item in lookups
+    item.enabled = LE.IsEnabled(item.data)
+    menu.SyncVimItem(item)
+  endfor
+enddef
+
+# FUNCTION: Return the lookup entries of the menu. The tests use it.
+export def Lookups(): list<M.MenuItem>
+  return lookups
 enddef
 
 # FUNCTION: In gVim, also register the menu as :amenu entries, so that it
 # shows in the gVim menu bar and runs with :emenu. The popup menu does
-# not change.
+# not change. The lookups are checked once Vim has started, so that
+# lexicon.vim does not load while gVim starts. A timer started before
+# VimEnter can fire during the start.
 export def RegisterNative(): void
   if menu is null_object
     menu = BuildMenu()
   endif
   menu.RegisterAsVimMenu()
+  if v:vim_did_enter
+    timer_start(0, (_) => SyncLookups())
+  else
+    augroup bartleby_menu_sync
+      autocmd!
+      autocmd VimEnter * ++once timer_start(0, (_) => SyncLookups())
+    augroup END
+  endif
 enddef
