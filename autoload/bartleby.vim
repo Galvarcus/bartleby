@@ -44,6 +44,7 @@ import 'bartleby/variables/constants.vim' as CO
 
 var log = L.New(expand('<sfile>:t'))
 var link_complete: bool = g:bartleby_link_complete
+var link_highlight: bool = g:bartleby_link_highlight
 
 export def OpenScrive(name: string): void
   var scriveName: string = name ==# '' ? fnamemodify(SS.LastScrive(), ':t:r') : name
@@ -264,7 +265,8 @@ export def StartScriveHooks(): void
   augroup END
   augroup bartleby_links_auto
     autocmd!
-    autocmd BufEnter * MapLinkComplete()
+    autocmd BufEnter,WinEnter * EnterLinkDoc()
+    autocmd TextChanged,InsertLeave * RefreshLinks()
   augroup END
   # An empty edit window stays when the last one closes beside a pane.
   W.WatchEditWin()
@@ -276,20 +278,30 @@ export def StartScriveHooks(): void
   PG.Refresh()
   SetupStatusline()
 enddef
-# FUNCTION: In a document of the open scrive, map [ in insert mode to
-# offer the titles after [[. In a screenplay, [[ ]] is a Fountain note.
-# Exported for the tests.
-export def MapLinkComplete(): void
-  if !link_complete || exists('b:bartleby_links_mapped') || W.IsChromeBuf(bufnr())
-    return
-  endif
+# FUNCTION: On entering a buffer that holds documents of the open scrive
+# in prose, where [[ ]] is a link, map [ to offer the titles and
+# highlight the links. In a screenplay, [[ ]] is a Fountain note. The
+# result is kept in b:bartleby_link_doc, so that an edit does not look up
+# the document again. Exported for the tests.
+export def EnterLinkDoc(): void
   var project: PO.Project = ST.Get()
-  if project is null_object || project.DocExt() ==# CO.EXT_FOUNTAIN
-    || SV.DocHere(project) is null_object
+  b:bartleby_link_doc = !W.IsChromeBuf(bufnr()) && project isnot null_object
+    && project.DocExt() !=# CO.EXT_FOUNTAIN && SV.DocHere(project) isnot null_object
+  if !b:bartleby_link_doc
     return
   endif
-  b:bartleby_links_mapped = true
-  inoremap <buffer> [ [<ScriptCmd>LK.CompleteTitles()<CR>
+  if link_complete && !exists('b:bartleby_links_mapped')
+    b:bartleby_links_mapped = true
+    inoremap <buffer> [ [<ScriptCmd>LK.CompleteTitles()<CR>
+  endif
+  RefreshLinks()
+enddef
+
+def RefreshLinks(): void
+  var project: PO.Project = ST.Get()
+  if link_highlight && get(b:, 'bartleby_link_doc', false) && project isnot null_object
+    LK.Highlight(project, bufnr())
+  endif
 enddef
 # FUNCTION: Add the writing progress to the status line, when the status
 # line has no setting of its own and vim-airline does not draw it, as the

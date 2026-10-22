@@ -124,10 +124,30 @@ def Test_link_completion_can_be_turned_off(): void
      'FI.WriteDocContent(project, doc, ["text"])',
      'ST.Set(project)',
      'execute "edit " .. fnameescape(doc.AbsPath(project.BinderRoot()))',
-     'BA.MapLinkComplete()',
+     'BA.EnterLinkDoc()',
      'g:result = [maparg("[", "i")]',
      'FI.CleanupProjectFiles(project)'])
   assert_equal([''], result)
+enddef
+
+# FUNCTION: With g:bartleby_link_highlight off, a document of the scrive
+# gets no link properties.
+def Test_link_highlighting_can_be_turned_off(): void
+  var fixtures: string = $'{PLUGIN}/tests/fixtures.vim'
+  var result: list<string> = Fresh(
+    ['import autoload "bartleby.vim" as BA',
+     'import autoload "bartleby/state.vim" as ST',
+     $'import "{fixtures}" as FI',
+     'g:bartleby_link_highlight = false'],
+    ['var project = FI.BuildProject()',
+     'var doc = project.ChildAt(1).ChildAt(0).ChildAt(0)',
+     'FI.WriteDocContent(project, doc, ["[[Scene 1]]"])',
+     'ST.Set(project)',
+     'execute "edit " .. fnameescape(doc.AbsPath(project.BinderRoot()))',
+     'BA.EnterLinkDoc()',
+     'g:result = [string(prop_list(1))]',
+     'FI.CleanupProjectFiles(project)'])
+  assert_equal(['[]'], result)
 enddef
 
 export def RunAll(): void
@@ -140,4 +160,5 @@ export def RunAll(): void
   Test_vim_enter_loads_only_the_color_check()
   Test_the_native_menu_loads_no_lexicon()
   Test_link_completion_can_be_turned_off()
+  Test_link_highlighting_can_be_turned_off()
 enddef

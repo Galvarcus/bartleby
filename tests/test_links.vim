@@ -5,7 +5,7 @@ vim9script
 # tests/test_links.vim: links between documents. Finding the link under the
 # cursor, matching its title, gf, creating a missing document, updating the
 # links when a document is renamed, how compile shows them, and the titles
-# offered after [[.
+# offered after [[, and the highlighting of good and broken links.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -15,6 +15,7 @@ import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/links.vim' as LK
 import autoload 'bartleby/quill.vim' as Q
+import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/trash.vim' as TR
 import autoload 'bartleby/tree.vim' as T
@@ -240,14 +241,14 @@ def Test_bracket_is_mapped_only_in_documents_of_a_scrive_in_prose(): void
   var project = Project()
   ST.Set(project)
   Edit(project, Scene(project, 0), ['text'])
-  BA.MapLinkComplete()
+  BA.EnterLinkDoc()
   assert_match('CompleteTitles', maparg('[', 'i'))
   enew!
-  BA.MapLinkComplete()
+  BA.EnterLinkDoc()
   assert_equal('', maparg('[', 'i'))
   project.InitNew(project.name, CO.TYPE_SCREENPLAY)
   execute 'edit! ' .. fnameescape(Scene(project, 1).AbsPath(project.BinderRoot()))
-  BA.MapLinkComplete()
+  BA.EnterLinkDoc()
   assert_equal('', maparg('[', 'i'))
   Cleanup(project)
 enddef
@@ -273,6 +274,68 @@ def Test_quill_keys_pass_to_the_title_menu(): void
   silent! :%bwipe!
 enddef
 
+# FUNCTION: Return the link properties of the current buffer, as [lnum,
+# col, length, type].
+def LinkProps(): list<any>
+  if empty(prop_type_get('BartlebyLink'))
+    return []
+  endif
+  return prop_list(1, {end_lnum: -1, types: ['BartlebyLink', 'BartlebyLinkBroken']})
+    ->mapnew((_, p) => [p.lnum, p.col, p.length, p.type])
+enddef
+
+# FUNCTION: A link is good when gf finds its document, exactly or without
+# case. A missing title, or one only in the Trash, is broken.
+def Test_links_are_highlighted_good_or_broken(): void
+  var project = Project()
+  project.ChildAt(4).AddChild(BI.BinderItem.NewDocument('Ghost', 'research/ghost.md'))
+  TR.MoveToTrash(project, T.FindRowById(T.Flatten(project), project.ChildAt(4).ChildAt(0).id))
+  ST.Set(project)
+  Edit(project, Scene(project, 0), ['See [[Mara]] and [[mara|her]].', '[[Nobody]] then [[Ghost]]', 'None here.'])
+  BA.EnterLinkDoc()
+  assert_equal([[1, 5, 8, 'BartlebyLink'], [1, 18, 12, 'BartlebyLink'],
+    [2, 1, 10, 'BartlebyLinkBroken'], [2, 17, 9, 'BartlebyLinkBroken']], LinkProps())
+  assert_equal('SpellBad', hlget('BartlebyLinkBroken')[0].linksto)
+  assert_equal('Underlined', hlget('BartlebyLink')[0].linksto)
+  Cleanup(project)
+enddef
+
+def Test_a_rename_updates_the_link_highlights(): void
+  var project = Project()
+  ST.Set(project)
+  Edit(project, Scene(project, 0), ['See [[Mara]].'])
+  BA.EnterLinkDoc()
+  assert_equal('BartlebyLink', LinkProps()[0][3])
+  project.ChildAt(3).ChildAt(0).Rename('Mara Jones')
+  LK.RefreshWindows(project)
+  assert_equal('BartlebyLinkBroken', LinkProps()[0][3])
+  Cleanup(project)
+enddef
+
+def Test_a_scrivening_keeps_its_title_properties(): void
+  var project = Project()
+  FI.WriteDocContent(project, Scene(project, 1), ['Meet [[Mara]].'])
+  ST.Set(project)
+  SV.Open(project, project.ChildAt(1))
+  var titles: number = len(prop_list(1, {end_lnum: -1}))
+  BA.EnterLinkDoc()
+  assert_equal(1, len(LinkProps()))
+  assert_equal(titles + 1, len(prop_list(1, {end_lnum: -1})))
+  set nomodified
+  SV.Close()
+  Cleanup(project)
+enddef
+
+def Test_a_screenplay_note_is_not_a_link(): void
+  var project = Project()
+  project.InitNew(project.name, CO.TYPE_SCREENPLAY)
+  ST.Set(project)
+  Edit(project, Scene(project, 0), ['[[Mara]]'])
+  BA.EnterLinkDoc()
+  assert_equal([], LinkProps())
+  Cleanup(project)
+enddef
+
 export def RunAll(): void
   Test_a_link_is_found_anywhere_on_its_brackets()
   Test_a_link_with_its_own_text_and_two_links_on_a_line()
@@ -293,4 +356,8 @@ export def RunAll(): void
   Test_a_title_ends_the_link_unless_brackets_follow()
   Test_bracket_is_mapped_only_in_documents_of_a_scrive_in_prose()
   Test_quill_keys_pass_to_the_title_menu()
+  Test_links_are_highlighted_good_or_broken()
+  Test_a_rename_updates_the_link_highlights()
+  Test_a_scrivening_keeps_its_title_properties()
+  Test_a_screenplay_note_is_not_a_link()
 enddef

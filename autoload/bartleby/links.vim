@@ -39,8 +39,15 @@ const LINK_CLOSE: string = ']]'
 # The menu shows for one title too, and nothing is inserted until a title
 # is picked. Vim inserts the first one at once otherwise.
 const COMPLETE_OPTS: list<string> = ['menuone', 'noinsert']
+# The highlight groups of good and broken links, which also name their
+# text property types, and the groups they link to by default.
+const HL_LINK: string = 'BartlebyLink'
+const HL_LINK_BROKEN: string = 'BartlebyLinkBroken'
+const HL_LINK_DEFAULT: string = 'Underlined'
+const HL_LINK_BROKEN_DEFAULT: string = 'SpellBad'
 
 var log = L.New(expand('<sfile>:t'))
+var highlight_on: bool = g:bartleby_link_highlight
 
 # FUNCTION: Return the link that covers byte column col of line, as {target,
 # text}, or an empty dict. text is the target when the link has none of its
@@ -98,6 +105,59 @@ def Paths(project: PO.Project): dict<string>
     endif
   endfor
   return paths
+enddef
+
+# FUNCTION: Define the highlight groups of the links, unless a color
+# scheme or the user did. A default link outlives :colorscheme.
+def DefineHighlights(): void
+  execute $'highlight default link {HL_LINK} {HL_LINK_DEFAULT}'
+  execute $'highlight default link {HL_LINK_BROKEN} {HL_LINK_BROKEN_DEFAULT}'
+enddef
+
+# FUNCTION: Mark each link in buffer bufNr as good or broken, with text
+# properties, which keep the syntax colors below and follow edits. A link
+# is good when gf finds a document outside the Trash. Only the link
+# types are replaced, so the title lines of a Scrivening keep theirs.
+export def Highlight(project: PO.Project, bufNr: number): void
+  if !highlight_on
+    return
+  endif
+  if empty(prop_type_get(HL_LINK))
+    DefineHighlights()
+    prop_type_add(HL_LINK, {highlight: HL_LINK})
+    prop_type_add(HL_LINK_BROKEN, {highlight: HL_LINK_BROKEN})
+  endif
+  prop_remove({types: [HL_LINK, HL_LINK_BROKEN], bufnr: bufNr, all: true})
+  var exact: dict<bool> = {}
+  var lower: dict<bool> = {}
+  for d in Docs(project, false)
+    exact[d.title] = true
+    lower[tolower(d.title)] = true
+  endfor
+  # One search of the whole buffer, and one call per type to add the
+  # properties: a loop over lines took 34 ms for 2,000 links.
+  var spans: dict<list<any>> = {[HL_LINK]: [], [HL_LINK_BROKEN]: []}
+  for m in matchbufline(bufNr, LINK_PAT, 1, '$', {submatches: true})
+    var target: string = trim(m.submatches[0])
+    var good: bool = has_key(exact, target) || has_key(lower, tolower(target))
+    var col: number = m.byteidx + 1
+    spans[good ? HL_LINK : HL_LINK_BROKEN]->add([m.lnum, col, m.lnum, col + len(m.text)])
+  endfor
+  for [type, list] in items(spans)
+    if !empty(list)
+      prop_add_list({type: type, bufnr: bufNr}, list)
+    endif
+  endfor
+enddef
+
+# FUNCTION: Highlight the links again in each window of documents, after a
+# change of titles that no edit of theirs shows, such as a rename.
+export def RefreshWindows(project: PO.Project): void
+  for bufNr in tabpagebuflist()->sort()->uniq()
+    if getbufvar(bufNr, 'bartleby_link_doc', false)
+      Highlight(project, bufNr)
+    endif
+  endfor
 enddef
 
 # FUNCTION: After [[ in insert mode, offer the titles of the documents
@@ -265,5 +325,6 @@ export def OfferRetarget(project: PO.Project, oldTitle: string, newTitle: string
   endif
   DP.Confirm(MB.UpdateLinks(count), () => {
     log.Info(MB.LinksUpdated(Retarget(project, oldTitle, newTitle)))
+    RefreshWindows(project)
   }, true)
 enddef

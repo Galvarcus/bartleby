@@ -320,6 +320,12 @@ with its folders. Type to narrow the list, and pick a title to insert
 it with the closing `]]`. A title with a space narrows only up to the
 space. `g:bartleby_link_complete = false` turns the menu off.
 
+Links are underlined. A link that names no document, or only one in
+the Trash, shows as `SpellBad`. Change the colors with the
+`BartlebyLink` and `BartlebyLinkBroken` highlight groups, or turn the
+highlighting off with `g:bartleby_link_highlight = false`. A link that
+you type is checked when you leave Insert mode.
+
 - A title matches exactly, or else without regard to case. When
   several documents share the title, a list shows each with its
   folders.
@@ -735,6 +741,7 @@ default, so set only the ones you want to change.
 | `g:bartleby_no_mappings` | `false` | Map none of the default keys. The `<Plug>` mappings stay, for keys of your own |
 | `g:bartleby_doc_templates_dir` | `''` | A folder of your own templates for new documents, see Document templates |
 | `g:bartleby_link_complete` | `true` | Offer the document titles after `[[` in Insert mode |
+| `g:bartleby_link_highlight` | `true` | Highlight links, and broken links differently |
 | `g:bartleby_table_autoformat` | `true` | Line up a table when you leave insert mode in it |
 
 **Focus**

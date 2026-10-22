@@ -54,6 +54,8 @@ g:bartleby_airline_section = get(g:, 'bartleby_airline_section', 'y')
 g:bartleby_no_mappings = get(g:, 'bartleby_no_mappings', false)
 # Offer the titles of the documents after [[ in insert mode.
 g:bartleby_link_complete = get(g:, 'bartleby_link_complete', true)
+# Highlight the links, and the broken ones differently.
+g:bartleby_link_highlight = get(g:, 'bartleby_link_highlight', true)
 # Line up a table when you leave insert mode in it.
 g:bartleby_table_autoformat = get(g:, 'bartleby_table_autoformat', true)
 # Your templates for new documents, which add to those of Bartleby, see

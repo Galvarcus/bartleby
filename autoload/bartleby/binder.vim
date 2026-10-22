@@ -542,6 +542,7 @@ def RenameUnderCursor(): void
     MU.Rename(ctx.row, newTitle)
     ctx.project.Save()
     Render(ctx.project)
+    LK.RefreshWindows(ctx.project)
     if ctx.row.item.IsDoc()
       LK.OfferRetarget(ctx.project, oldTitle, newTitle)
     endif
