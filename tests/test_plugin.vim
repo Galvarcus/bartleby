@@ -65,10 +65,25 @@ def Test_loading_the_plugin_loads_no_autoload_script(): void
   assert_equal([], result)
 enddef
 
+# FUNCTION: The native menu waits for GUIEnter. Registered while the plugin
+# loads, it would load its autoload script at every start of gVim.
+def Test_the_native_menu_waits_for_gui_enter(): void
+  if !has('menu')
+    return
+  endif
+  var result: list<string> = Fresh(
+    ['import "bartleby/variables/constants.vim" as CO'],
+    ['var before: bool = !empty(menu_info(CO.PLUGIN_NAME))',
+     'doautocmd GUIEnter',
+     'g:result = [string(before), string(!empty(menu_info(CO.PLUGIN_NAME)))]'])
+  assert_equal(['false', 'true'], result)
+enddef
+
 export def RunAll(): void
   Test_default_keys_map_to_plug_names()
   Test_lookup_keys_exist_without_an_api_key()
   Test_no_mappings_keeps_the_plug_names_without_keys()
   Test_a_user_mapping_of_a_plug_name_frees_its_default_key()
   Test_loading_the_plugin_loads_no_autoload_script()
+  Test_the_native_menu_waits_for_gui_enter()
 enddef

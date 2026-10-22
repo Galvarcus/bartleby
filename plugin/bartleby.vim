@@ -250,6 +250,14 @@ augroup bartleby_session
   autocmd VimEnter * BA.AutoRestoreSession()
 augroup END
 
-if has('gui_running')
+# The native menu waits for GUIEnter, so that loading the plugin loads
+# no autoload script in gVim either. A plugin that loads late has missed
+# GUIEnter.
+if v:vim_did_enter && has('gui_running')
   BM.RegisterNative()
+else
+  augroup bartleby_menu
+    autocmd!
+    autocmd GUIEnter * ++once BM.RegisterNative()
+  augroup END
 endif
