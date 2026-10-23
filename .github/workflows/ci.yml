@@ -9,9 +9,10 @@ name: CI
 # sheet job runs after them, whatever their results, and checks out the
 # branch as they left it, so that its commit does not conflict with theirs.
 #
-# Vim is installed first in each job that needs it. The compile smoke test
-# and the cheat sheet run in the CI image, which holds their TeX packages
-# and pandocs, see .github/docker/Dockerfile and ci-image.yml. Every other
+# Vim is installed first in each job that needs it. The compile smoke test,
+# the cheat sheet converter tests, and the cheat sheet run in the CI image,
+# which holds their TeX packages, tools, and pandocs, see
+# .github/docker/Dockerfile and ci-image.yml. Every other
 # package is installed in the job that needs it, just before the step that
 # does.
 on:
@@ -271,17 +272,22 @@ jobs:
     needs: changes
     if: needs.changes.outputs.cheatsheet == 'true' || needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    # xelatex, the fonts, and the PDF tools of the tests are in the CI
+    # image, see .github/docker/Dockerfile.
+    container:
+      image: ${{ vars.CI_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
 
-      # fonts-texgyre has the text font, and fonts-dejavu-mono the code
-      # font. The tests read the PDF with poppler-utils and look for the
-      # fonts with fontconfig.
-      - name: Install LaTeX, fonts, and PDF tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y texlive-xetex texlive-latex-recommended fonts-texgyre fonts-dejavu-mono poppler-utils fontconfig
+      - name: Check the CI image
+        run: .github/scripts/check-ci-image.sh
 
       - name: Test the converter
         env:

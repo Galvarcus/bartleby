@@ -20,7 +20,9 @@ LABEL org.opencontainers.image.source=https://github.com/Galvarcus/bartleby
 
 # The smoke tests need the first five TeX packages, texlive-xetex and the
 # DejaVu Serif of fonts-dejavu-core for the Book PDF. The cheat sheet
-# needs texlive-latex-recommended, fonts-texgyre, and fonts-dejavu-mono.
+# needs texlive-latex-recommended, fonts-texgyre, and fonts-dejavu-mono,
+# and its tests read the PDF with poppler-utils and look for the fonts
+# with fontconfig.
 # git, curl, jq, and ca-certificates are for the steps: checkout,
 # install-vim, and the commit of the cheat sheet.
 RUN apt-get update \
@@ -28,6 +30,7 @@ RUN apt-get update \
     texlive-latex-extra texlive-fonts-recommended texlive-plain-generic \
     texlive-latex-recommended texlive-xetex \
     fonts-dejavu-core fonts-dejavu-mono fonts-texgyre \
+    poppler-utils fontconfig \
     pandoc python3 git curl jq ca-certificates \
   && rm -rf /var/lib/apt/lists/*
 
