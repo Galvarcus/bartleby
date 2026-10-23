@@ -201,8 +201,11 @@ jobs:
         run: |
           mkdir -p "$APT_ARCHIVES/partial"
           sudo apt-get update
+          # Without the recommended packages, to fetch less. A package that
+          # a test then misses goes in TEX_PACKAGES by name.
           # shellcheck disable=SC2086
-          sudo apt-get install -y -o Dir::Cache::Archives="$APT_ARCHIVES" $TEX_PACKAGES
+          sudo apt-get install -y --no-install-recommends \
+            -o Dir::Cache::Archives="$APT_ARCHIVES" $TEX_PACKAGES
           sudo rm -rf "$APT_ARCHIVES/lock" "$APT_ARCHIVES/partial"
           sudo chown -R "$USER" "$APT_ARCHIVES"
           curl -sSL "https://github.com/jgm/pandoc/releases/download/$PANDOC_RELEASE/pandoc-$PANDOC_RELEASE-linux-amd64.tar.gz" \
