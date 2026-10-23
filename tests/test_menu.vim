@@ -88,6 +88,32 @@ def Test_a_disabled_entry_is_registered_disabled(): void
   menu.UnregisterVimMenu()
 enddef
 
+# FUNCTION: Sync sets an entry with a condition in both menus, and leaves
+# an entry without one as the caller set it.
+def Test_sync_sets_each_entry_from_its_condition(): void
+  if !has('menu')
+    return
+  endif
+  var on: bool = false
+  var menu = M.Menu.new('test_menu_s', 'TestMenuS')
+  var cond = menu.AddItem('Cond', (it) => {
+    invoked->add('ran')
+  })
+  cond.When = () => on
+  var fixed = menu.AddItem('Fixed', (it) => {
+    invoked->add('ran')
+  })
+  fixed.enabled = false
+  menu.RegisterAsVimMenu()
+  menu.Sync()
+  assert_equal([false, false], [cond.enabled, menu_info('TestMenuS.Cond', 'n').enabled])
+  on = true
+  menu.Sync()
+  assert_equal([true, true], [cond.enabled, menu_info('TestMenuS.Cond', 'n').enabled])
+  assert_equal([false, false], [fixed.enabled, menu_info('TestMenuS.Fixed', 'n').enabled])
+  menu.UnregisterVimMenu()
+enddef
+
 def Test_unregistering_removes_the_entries(): void
   if !has('menu')
     return
@@ -118,20 +144,19 @@ def Test_an_entry_of_the_bartleby_menu_runs_its_command(): void
   execute 'aunmenu ' .. CO.PLUGIN_NAME
 enddef
 
-# FUNCTION: Run the check of the lookups that the native menu waits for.
-# The tests run before VimEnter, so fire it for that check only, then let
-# its timer run.
+# FUNCTION: Run the check of the entries that the native menu waits for.
+# The tests run before VimEnter, so fire it for that check only. The check
+# must be done when the event returns, with no wait.
 def StartedSync(): void
   if !v:vim_did_enter
     doautocmd bartleby_menu_sync VimEnter
   endif
-  sleep 10m
 enddef
 
 # FUNCTION: The lookups are checked at each open of the popup menu, so a
 # key set while Vim runs enables its entry. The native entry follows. The
-# native menu registers the lookups unchecked, and a timer checks them
-# once Vim has started.
+# native menu registers the lookups unchecked, and checks them once Vim has
+# started.
 def Test_a_lookup_that_is_off_is_disabled_in_both_menus(): void
   var savedKey: string = g:bartleby_dictionary_api_key
   var savedEnv: string = $BARTLEBY_MW_DICTIONARY_KEY
@@ -166,9 +191,10 @@ def Test_a_lookup_that_is_off_is_disabled_in_both_menus(): void
   $BARTLEBY_MW_DICTIONARY_KEY = savedEnv
 enddef
 
-# FUNCTION: The native menu checks the lookups after Vim has started, by a
-# timer, never while it registers its entries.
-def Test_the_native_menu_checks_the_lookups_after_start(): void
+# FUNCTION: The native menu checks the lookups in VimEnter itself, never
+# while it registers its entries. A timer would run after Vim sent the menu
+# state to the GUI.
+def Test_the_native_menu_checks_the_lookups_at_vim_enter(): void
   if !has('menu')
     return
   endif
@@ -222,9 +248,10 @@ export def RunAll(): void
   Test_each_entry_runs_its_own_action()
   Test_a_label_with_dots_and_spaces_runs()
   Test_a_disabled_entry_is_registered_disabled()
+  Test_sync_sets_each_entry_from_its_condition()
   Test_unregistering_removes_the_entries()
   Test_an_entry_of_the_bartleby_menu_runs_its_command()
   Test_a_lookup_that_is_off_is_disabled_in_both_menus()
-  Test_the_native_menu_checks_the_lookups_after_start()
+  Test_the_native_menu_checks_the_lookups_at_vim_enter()
   Test_a_disabled_entry_is_dimmed_in_the_popup()
 enddef

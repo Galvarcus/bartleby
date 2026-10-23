@@ -72,6 +72,9 @@ export class MenuItem
   public var Action: func = null_function
   public var data: any = v:none
   public var enabled: bool = true
+  # Called as When() at each Sync, to set enabled. Without it, enabled
+  # keeps the value that the caller set.
+  public var When: func(): bool = null_function
   public var separator: bool = false
   # The path of the native entry, set by RegisterAsVimMenu.
   public var vimPath: string = ''
@@ -470,6 +473,14 @@ export class Menu
     this._BuildVimMenu(r, this.items, priority)
   enddef
 
+  # METHOD: Set each item that has When from it, in the popup menu and in
+  # the native menu. Vim sends the native state to the GUI only before it
+  # waits for input, so a call from a timer, which runs inside that wait,
+  # shows in the GUI only after the next key.
+  def Sync()
+    this._SyncItems(this.items)
+  enddef
+
   # METHOD: Show in the native entry of item whether item is enabled, after
   # it changed. An entry that was removed, or never registered, is left.
   def SyncVimItem(item: MenuItem)
@@ -482,6 +493,17 @@ export class Menu
   def UnregisterVimMenu(root: string = '')
     var r = root == '' ? this.title : root
     execute $'silent! aunmenu {r}'
+  enddef
+
+  def _SyncItems(items: list<any>)
+    for item in items
+      if item.IsSubmenu()
+        this._SyncItems(item.items)
+      elseif item.When != null_function
+        item.enabled = item.When()
+        this.SyncVimItem(item)
+      endif
+    endfor
   enddef
 
   def _BuildVimMenu(path: string, items: list<any>, priority: string)
