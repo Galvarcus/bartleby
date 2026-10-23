@@ -891,10 +891,14 @@ msgid "Surname"
 msgstr ""
 
 #: autoload/bartleby/locale/panes.vim:103
+msgid "no scrive open"
+msgstr ""
+
+#: autoload/bartleby/locale/panes.vim:107
 msgid "current buffer is not a document in the open scrive"
 msgstr ""
 
-#: autoload/bartleby/locale/panes.vim:111
+#: autoload/bartleby/locale/panes.vim:115
 msgid "%s works only in the edit window"
 msgstr ""
 
@@ -963,11 +967,11 @@ msgid "Goals"
 msgstr ""
 
 #: autoload/bartleby/locale/panes.vim:95
-msgid "Target word count"
+msgid "Linked from"
 msgstr ""
 
 #: autoload/bartleby/locale/panes.vim:99
-msgid "no scrive open"
+msgid "Target word count"
 msgstr ""
 
 #: autoload/bartleby/locale/progress.vim:103

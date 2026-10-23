@@ -421,8 +421,10 @@ of the last 30 days. `e` edits the goals, and `q` closes it.
 
 `<leader>bi` or `:BartlebyToggleInspector` opens a read-only pane with
 the current document's Title, Label, Status, Target, Keywords, and
-Synopsis. It follows the document in the editor window. When writing
-goals are set, it shows them after the synopsis.
+Synopsis. It follows the document in the editor window. After the
+synopsis, Linked from lists the documents with a link to this one,
+each with its folders, or `-` when there are none. A screenplay has no
+such list. When writing goals are set, the Inspector shows them last.
 
 | Key | Action |
 | --- | --- |
@@ -430,6 +432,7 @@ goals are set, it shows them after the synopsis.
 | `e` on Target or Keywords | Type a value |
 | `e` on Synopsis | Edit the synopsis. `<CR>` adds a line. `<C-s>` saves, or `<Tab>` to the Save button |
 | `e` on a goal | Edit the writing goals |
+| `e` or `<CR>` on a Linked from line | Open that document |
 
 ## Scrive list
 

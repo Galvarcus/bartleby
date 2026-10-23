@@ -91,6 +91,10 @@ export def Goals(): string
   return IN.T("Goals")
 enddef
 
+export def LinkedFrom(): string
+  return IN.T("Linked from")
+enddef
+
 export def TargetWordCount(): string
   return IN.T("Target word count")
 enddef

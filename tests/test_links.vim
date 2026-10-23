@@ -14,6 +14,7 @@ import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/links.vim' as LK
+import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/quill.vim' as Q
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/state.vim' as ST
@@ -336,6 +337,48 @@ def Test_a_screenplay_note_is_not_a_link(): void
   Cleanup(project)
 enddef
 
+# FUNCTION: A scrive reached through a symlink: Vim names a buffer by the
+# resolved path, and AbsPath does not resolve. Unsaved text in an open
+# buffer must still count, for the links to a document and for a rename.
+# The fixture is under /tmp, which is a symlink only on macOS, so this
+# test makes one of its own.
+def Test_open_buffers_count_behind_a_symlink(): void
+  var real: string = tempname()
+  mkdir(real, 'p')
+  var link: string = $'{real}-link'
+  system($'ln -s {shellescape(real)} {shellescape(link)}')
+  var project = PO.Project.new($'{link}/fixture.bartleby')
+  project.InitNew('Linked', CO.TYPE_NOVEL)
+  var manuscript = BI.BinderItem.NewFolder('Manuscript', CO.ROLE_MANUSCRIPT)
+  var chars = BI.BinderItem.NewFolder('Characters', CO.ROLE_CHARS)
+  var mara = BI.BinderItem.NewDocument('Mara', 'characters/mara.md')
+  var scene = BI.BinderItem.NewDocument('Scene', 'manuscript/scene.md')
+  manuscript.AddChild(scene)
+  chars.AddChild(mara)
+  project.SeedTree([manuscript, chars])
+  FI.WriteDocContent(project, mara, ['Mara.'])
+  FI.WriteDocContent(project, scene, ['Nothing yet.'])
+  ST.Set(project)
+  execute 'silent edit ' .. fnameescape(scene.AbsPath(project.BinderRoot()))
+  setline(1, 'See [[Mara]].')
+  assert_equal(['Scene'], LK.LinkedFrom(project, mara)->mapnew((_, d) => d.title))
+  assert_equal(1, LK.Retarget(project, 'Mara', 'Mara Jones', false))
+  set nomodified
+  # A Scrivening saves the open documents it shows, and closes their
+  # buffers.
+  var scenePath: string = scene.AbsPath(project.BinderRoot())
+  setline(1, 'Changed.')
+  SV.Open(project, manuscript)
+  assert_equal(['Changed.'], readfile(scenePath))
+  assert_equal(-1, bufnr(scenePath))
+  set nomodified
+  SV.Close()
+  silent! :%bwipe!
+  ST.Set(null_object)
+  delete(link)
+  delete(real, 'rf')
+enddef
+
 export def RunAll(): void
   Test_a_link_is_found_anywhere_on_its_brackets()
   Test_a_link_with_its_own_text_and_two_links_on_a_line()
@@ -360,4 +403,5 @@ export def RunAll(): void
   Test_a_rename_updates_the_link_highlights()
   Test_a_scrivening_keeps_its_title_properties()
   Test_a_screenplay_note_is_not_a_link()
+  Test_open_buffers_count_behind_a_symlink()
 enddef

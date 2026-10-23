@@ -35,7 +35,11 @@ execute $'syntax match bartlebyInspectorField /^\%({fields}\) /'
 var synopsis: string = escape(labels.synopsis, '\/.*$^~[]')
 execute $'syntax match bartlebyInspectorSynopsisHeader /^{synopsis}$/'
 
+var linked: string = escape(I.LinkedHeader(), '\/.*$^~[]')
+execute $'syntax match bartlebyInspectorLinkedHeader /^{linked}$/'
+
 highlight default link bartlebyInspectorHeader Title
+highlight default link bartlebyInspectorLinkedHeader Keyword
 highlight default link bartlebyInspectorField Keyword
 highlight default link bartlebyInspectorSynopsisHeader Keyword
 

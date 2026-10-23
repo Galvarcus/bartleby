@@ -25,6 +25,7 @@ import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/trash.vim' as TR
 import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/wordcount.vim' as WC
 import autoload 'bartleby/locale/binder.vim' as MB
 import autoload 'bartleby/doctemplates.vim' as DT
 
@@ -48,6 +49,11 @@ const HL_LINK_BROKEN_DEFAULT: string = 'SpellBad'
 
 var log = L.New(expand('<sfile>:t'))
 var highlight_on: bool = g:bartleby_link_highlight
+# The link targets of each document file, by path, as {stamp, targets},
+# so that a file is read again only when it changes. The stamp is the
+# time and the size, because the time counts whole seconds. See
+# LinkedFrom.
+var targets_cache: dict<dict<any>> = {}
 
 # FUNCTION: Return the link that covers byte column col of line, as {target,
 # text}, or an empty dict. text is the target when the link has none of its
@@ -105,6 +111,79 @@ def Paths(project: PO.Project): dict<string>
     endif
   endfor
   return paths
+enddef
+
+# FUNCTION: Return the folders of each document of project, by id, as
+# Paths does without the title. A document at the top has none.
+export def Folders(project: PO.Project): dict<string>
+  var titles: list<string> = []
+  var folders: dict<string> = {}
+  for r in T.Flatten(project)
+    if r.item.IsDoc()
+      folders[r.item.id] = join(slice(titles, 0, r.depth), CRUMB_SEP)
+    endif
+    titles = slice(titles, 0, r.depth) + [r.item.title]
+  endfor
+  return folders
+enddef
+
+# FUNCTION: Return the targets of the links in lines.
+def Targets(lines: list<string>): list<string>
+  var targets: list<string> = []
+  for line in lines
+    var from: number = 0
+    while true
+      var found: list<any> = matchstrpos(line, LINK_PAT, from)
+      if found[1] < 0
+        break
+      endif
+      targets->add(trim(matchlist(found[0], LINK_PAT)[1]))
+      from = found[2]
+    endwhile
+  endfor
+  return targets
+enddef
+
+# FUNCTION: Return the link targets of doc: from its buffer when loaded,
+# so that unsaved text counts, else from its file, through the cache.
+# root is the binder root with symlinks resolved, as the keys of loaded
+# are, so that no path is resolved one at a time.
+def DocTargets(root: string, doc: BI.BinderItem, loaded: dict<number>): list<string>
+  var path: string = doc.AbsPath(root)
+  var bufNr: number = get(loaded, path, -1)
+  if bufNr > 0
+    return Targets(getbufline(bufNr, 1, '$'))
+  endif
+  var time: number = getftime(path)
+  if time < 0
+    return []
+  endif
+  var stamp: string = $'{time} {getfsize(path)}'
+  var cached: dict<any> = get(targets_cache, path, {})
+  if get(cached, 'stamp', '') !=# stamp
+    cached = {stamp: stamp, targets: Targets(readfile(path))}
+    targets_cache[path] = cached
+  endif
+  return cached.targets
+enddef
+
+# FUNCTION: Return the documents outside the Trash, in tree order, that
+# link to item, without item itself. A link counts as gf finds it: by the
+# exact title, or else without case. A document in the Trash has none.
+export def LinkedFrom(project: PO.Project, item: BI.BinderItem): list<BI.BinderItem>
+  var docs: list<BI.BinderItem> = Docs(project, false)
+  if docs->indexof((_, d) => d.id ==# item.id) < 0
+    return []
+  endif
+  var exact: dict<bool> = {}
+  for d in docs
+    exact[d.title] = true
+  endfor
+  var LinksHere = (t: string): bool => t ==# item.title || (!has_key(exact, t) && t ==? item.title)
+  var loaded: dict<number> = WC.LoadedBufs()
+  var root: string = resolve(project.BinderRoot())
+  return docs->filter((_, d) => d.id !=# item.id
+    && DocTargets(root, d, loaded)->indexof((_, t) => LinksHere(t)) >= 0)
 enddef
 
 # FUNCTION: Define the highlight groups of the links, unless a color
@@ -171,12 +250,12 @@ export def CompleteTitles(): void
     return
   endif
   var close: string = strpart(line, col - 1, len(LINK_CLOSE)) ==# LINK_CLOSE ? '' : LINK_CLOSE
-  var paths: dict<string> = Paths(project)
+  var folders: dict<string> = Folders(project)
   # dup keeps documents that share a title, which Vim would show once.
   var items: list<dict<any>> = Docs(project, false)->mapnew((_, d) => ({
     word: d.title .. close,
     abbr: d.title,
-    menu: strpart(paths[d.id], 0, len(paths[d.id]) - len(d.title) - len(CRUMB_SEP)),
+    menu: folders[d.id],
     dup: 1,
   }))
   if empty(items)
@@ -276,16 +355,11 @@ export def Retarget(project: PO.Project, oldTitle: string, newTitle: string, wri
   if write
     SV.SaveIfModified()
   endif
-  var loaded: dict<number> = {}
-  for info in getbufinfo({bufloaded: 1})
-    if info.name !=# ''
-      loaded[fnamemodify(info.name, ':p')] = info.bufnr
-    endif
-  endfor
+  var loaded: dict<number> = WC.LoadedBufs()
   var total: number = 0
   for doc in Docs(project, false) + Docs(project, true)
     var path: string = doc.AbsPath(project.BinderRoot())
-    var bufNr: number = get(loaded, path, -1)
+    var bufNr: number = WC.LoadedBuf(loaded, path)
     var lines: list<string> = bufNr > 0 ? getbufline(bufNr, 1, '$')
       : (filereadable(path) ? readfile(path) : [])
     var [out, count] = Retitle(lines, oldTitle, newTitle)

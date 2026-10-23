@@ -19,6 +19,9 @@ var is_loaded: bool = true
 #                  paragraphs.
 # The title cannot be changed here. Rename with r in the Binder.
 #
+# Linked from lists the documents with a link to this one, see links.vim.
+# e or Enter on one opens it.
+#
 # While it is open, the Inspector follows the document in the editor
 # window. Opening another document, from the Binder, the Corkboard, the
 # Outliner, or with :e, updates it through a BufEnter autocommand that
@@ -26,6 +29,7 @@ var is_loaded: bool = true
 # License: GNU GPL 3.0
 ##############################################################################
 
+import autoload 'bartleby/binder.vim' as B
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/document.vim' as D
 import autoload 'bartleby/project.vim' as PO
@@ -33,6 +37,7 @@ import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/inputpopup.vim' as IP
+import autoload 'bartleby/links.vim' as LK
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/progress.vim' as PG
@@ -43,6 +48,10 @@ import 'bartleby/variables/constants.vim' as CO
 
 const INSPECTOR_PROJ: string = 'bartleby_inspector_project'
 const INSPECTOR_ITEM: string = 'bartleby_inspector_item'
+# The id of the document on each line of Linked from, by line number.
+const INSPECTOR_LINKS: string = 'bartleby_inspector_links'
+# Shown for an empty field or list.
+const NONE_MARK: string = '-'
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -69,14 +78,16 @@ export def FieldLabels(): dict<string>
   }
 enddef
 
-def RenderContent(item: BI.BinderItem, meta: D.DocMeta): list<string>
+# FUNCTION: Return the lines of the Inspector for item, and the id of the
+# document on each line of Linked from, by line number.
+def RenderContent(project: PO.Project, item: BI.BinderItem, meta: D.DocMeta): list<any>
   var labels: dict<string> = FieldLabels()
   var lines: list<string> = [
     $'::{MP.Inspector()}::',
     $'{labels.title} {item.title}',
     $'{labels.label} {D.LabelName(meta.label)}',
     $'{labels.status} {D.StatusName(meta.status)}',
-    $'{labels.target} {meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : "-"}',
+    $'{labels.target} {meta.wordCountTarget > 0 ? string(meta.wordCountTarget) : NONE_MARK}',
     '',
     $'{labels.keywords} {join(meta.keywords, ", ")}',
     '',
@@ -85,11 +96,30 @@ def RenderContent(item: BI.BinderItem, meta: D.DocMeta): list<string>
   if meta.synopsis !=# ''
     lines += split(meta.synopsis, "\n")
   endif
+  var links: dict<string> = {}
+  # In a screenplay, [[ ]] is a Fountain note, not a link.
+  if project.DocExt() !=# CO.EXT_FOUNTAIN
+    lines += ['', LinkedHeader()]
+    var folders: dict<string> = LK.Folders(project)
+    var docs: list<BI.BinderItem> = LK.LinkedFrom(project, item)
+    for d in docs
+      links[string(len(lines) + 1)] = d.id
+      lines->add(folders[d.id] ==# '' ? d.title : $'{d.title}  {folders[d.id]}')
+    endfor
+    if empty(docs)
+      lines->add(NONE_MARK)
+    endif
+  endif
   var goals: list<string> = GoalLines()
   if !empty(goals)
     lines += [''] + goals
   endif
-  return lines
+  return [lines, links]
+enddef
+
+# FUNCTION: Return the header of Linked from.
+export def LinkedHeader(): string
+  return $'::{MP.LinkedFrom()}::'
 enddef
 
 # FUNCTION: Return the lines of the writing goals that are set, under the
@@ -132,11 +162,13 @@ def RefreshFor(project: PO.Project, item: BI.BinderItem): void
   var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
   setbufvar(bufNr, '&modifiable', 1)
   deletebufline(bufNr, 1, '$')
-  setbufline(bufNr, 1, RenderContent(item, meta))
+  var [lines, links] = RenderContent(project, item, meta)
+  setbufline(bufNr, 1, lines)
   setbufvar(bufNr, '&modifiable', 0)
   setbufvar(bufNr, '&modified', 0)
   setbufvar(bufNr, INSPECTOR_PROJ, project)
   setbufvar(bufNr, INSPECTOR_ITEM, item)
+  setbufvar(bufNr, INSPECTOR_LINKS, links)
 enddef
 
 def CurContext(): dict<any>
@@ -154,8 +186,13 @@ def EditUnderCursor(): void
   var project: PO.Project = ctx.project
   var item: BI.BinderItem = ctx.item
   var lnum: number = line('.')
+  var lines: list<string> = getline(1, '$')
+  var goalsIdx: number = index(lines, GoalsHeader())
+  var linkedIdx: number = index(lines, LinkedHeader())
 
-  if lnum == LINE_LABEL
+  if OpenLinked()
+    return
+  elseif lnum == LINE_LABEL
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     PI.PickOne(MC.Label(), CO.LABELS, (choice: string) => {
       var m: D.DocMeta = item.LoadMeta(project.BinderRoot())
@@ -188,9 +225,13 @@ def EditUnderCursor(): void
       m.Save(item.MetaPath(project.BinderRoot()))
       RefreshFor(project, item)
     })
-  elseif index(getline(1, '$'), GoalsHeader()) >= 0 && lnum > index(getline(1, '$'), GoalsHeader())
+  elseif goalsIdx >= 0 && lnum > goalsIdx
     # The goal lines, after the synopsis.
     PV.EditGoals()
+  elseif linkedIdx >= 0 && lnum > linkedIdx
+    # Linked from, after the synopsis, where a line without a document
+    # does nothing.
+    return
   elseif lnum >= LINE_SYNOPSIS_HEADER
     var meta: D.DocMeta = item.LoadMeta(project.BinderRoot())
     IP.PromptMultiline(MC.Synopsis(), meta.synopsis, (text: string) => {
@@ -229,8 +270,22 @@ def FollowEditor(): void
   RefreshFor(project, item)
 enddef
 
+# FUNCTION: Open the document on the line of Linked from under the
+# cursor, and return whether the line has one.
+def OpenLinked(): bool
+  var project: PO.Project = get(b:, INSPECTOR_PROJ, null_object)
+  var id: string = get(get(b:, INSPECTOR_LINKS, {}), string(line('.')), '')
+  var doc: BI.BinderItem = id ==# '' || project is null_object ? null_object : project.FindItem(id)
+  if doc is null_object
+    return false
+  endif
+  B.OpenDoc(project, doc)
+  return true
+enddef
+
 def SetupKeymaps(): void
   nnoremap <buffer> <silent> e <ScriptCmd>EditUnderCursor()<CR>
+  nnoremap <buffer> <silent> <CR> <ScriptCmd>OpenLinked()<CR>
 enddef
 
 # FUNCTION: Open the Inspector for the document in the current window, or

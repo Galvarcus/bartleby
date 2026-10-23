@@ -34,6 +34,7 @@ import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/windows.vim' as W
+import autoload 'bartleby/wordcount.vim' as WC
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/writing.vim' as MW
 import 'bartleby/variables/constants.vim' as CO
@@ -165,11 +166,13 @@ enddef
 # buffers, so that the Scrivening shows them. Returns their buffers.
 def SaveMemberBufs(paths: dict<string>): list<number>
   var found: list<number> = []
-  for info in getbufinfo({bufloaded: 1})
-    var path: string = fnamemodify(info.name, ':p')
-    if info.name ==# '' || !has_key(paths, path)
+  var bufs: dict<number> = WC.LoadedBufs()
+  for path in keys(paths)
+    var bufNr: number = WC.LoadedBuf(bufs, path)
+    if bufNr < 0
       continue
     endif
+    var info: dict<any> = getbufinfo(bufNr)[0]
     if info.changed
       writefile(getbufline(info.bufnr, 1, '$'), path)
       setbufvar(info.bufnr, '&modified', 0)

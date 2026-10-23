@@ -31,15 +31,23 @@ export def Count(lines: list<string>): number
   return len(split(join(lines, ' ')))
 enddef
 
-# FUNCTION: Return the loaded buffers, as full path to buffer number.
-def LoadedBufs(): dict<number>
+# FUNCTION: Return the loaded buffers that have a file, by full path with
+# symlinks resolved. Vim names a buffer by the resolved path, so that one
+# under /tmp on macOS is under /private/tmp, and AbsPath does not
+# resolve. Look a path up with LoadedBuf.
+export def LoadedBufs(): dict<number>
   var bufs: dict<number> = {}
   for info in getbufinfo({bufloaded: 1})
     if info.name !=# ''
-      bufs[fnamemodify(info.name, ':p')] = info.bufnr
+      bufs[resolve(fnamemodify(info.name, ':p'))] = info.bufnr
     endif
   endfor
   return bufs
+enddef
+
+# FUNCTION: Return the buffer of path in bufs, from LoadedBufs, or -1.
+export def LoadedBuf(bufs: dict<number>, path: string): number
+  return get(bufs, resolve(path), -1)
 enddef
 
 # FUNCTION: Return the words of the document at path: from the open
@@ -49,8 +57,9 @@ def DocWords(path: string, bufs: dict<number>, sections: dict<list<string>>): nu
   if has_key(sections, path)
     return Count(sections[path])
   endif
-  if has_key(bufs, path)
-    return Count(getbufline(bufs[path], 1, '$'))
+  var bufNr: number = LoadedBuf(bufs, path)
+  if bufNr > 0
+    return Count(getbufline(bufNr, 1, '$'))
   endif
   if !filereadable(path)
     return 0
