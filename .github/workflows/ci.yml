@@ -147,18 +147,24 @@ jobs:
           cat tests/results.txt
           grep -qx 'All tests passed' tests/results.txt
 
+  # One job runs the smoke tests twice: with the pandoc of the distro, and
+  # with a current release, as Homebrew has. A newer pandoc can need
+  # changes in the templates, see tools/latex. Both use one TeX install,
+  # which is most of the time of the job, and its packages come from the
+  # cache when they can: from the Ubuntu mirror, one run took 12 minutes
+  # to fetch them.
   compile-smoke:
-    name: Compile pipeline smoke test (pandoc ${{ matrix.pandoc }})
+    name: Compile pipeline smoke test
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        # The pandoc of the distro, and a current release, as Homebrew has.
-        # A newer pandoc can need changes in the templates, see
-        # tools/latex.
-        pandoc: [distro, '3.10']
+    env:
+      PANDOC_RELEASE: '3.10'
+      # texlive-xetex and the DejaVu fonts are for the Book PDF test, which
+      # skips itself without xelatex.
+      TEX_PACKAGES: >-
+        texlive-latex-extra texlive-fonts-recommended texlive-plain-generic
+        texlive-xetex fonts-dejavu-core pandoc
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -172,31 +178,45 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
+      # The key changes with the runner image, whose package versions
+      # change with it, and with the package list. APT_ARCHIVES is set
+      # here, because the env of a job cannot read the runner context.
+      - name: Key the package cache
+        id: apt-key
+        run: |
+          echo "APT_ARCHIVES=$RUNNER_TEMP/apt-archives" >> "$GITHUB_ENV"
+          list=$(echo "$TEX_PACKAGES" | sha256sum | cut -c1-16)
+          echo "key=tex-$ImageOS-$ImageVersion-$list" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the TeX packages
+        uses: actions/cache@v6.1.0
+        with:
+          path: ${{ env.APT_ARCHIVES }}
+          key: ${{ steps.apt-key.outputs.key }}
+
+      # apt keeps the packages in APT_ARCHIVES, for the cache. It needs a
+      # partial folder there, and the cache needs the files to be readable
+      # without root, and no lock file.
       - name: Install Pandoc and LaTeX
         run: |
+          mkdir -p "$APT_ARCHIVES/partial"
           sudo apt-get update
-          sudo apt-get install -y texlive-latex-extra texlive-fonts-recommended texlive-plain-generic
-          if [ "${{ matrix.pandoc }}" = distro ]; then
-            sudo apt-get install -y pandoc
-          else
-            curl -sSL -o /tmp/pandoc.deb \
-              "https://github.com/jgm/pandoc/releases/download/${{ matrix.pandoc }}/pandoc-${{ matrix.pandoc }}-1-amd64.deb"
-            sudo apt-get install -y /tmp/pandoc.deb
-          fi
-          pandoc --version | head -1
+          # shellcheck disable=SC2086
+          sudo apt-get install -y -o Dir::Cache::Archives="$APT_ARCHIVES" $TEX_PACKAGES
+          sudo rm -rf "$APT_ARCHIVES/lock" "$APT_ARCHIVES/partial"
+          sudo chown -R "$USER" "$APT_ARCHIVES"
+          curl -sSL "https://github.com/jgm/pandoc/releases/download/$PANDOC_RELEASE/pandoc-$PANDOC_RELEASE-linux-amd64.tar.gz" \
+            | tar -xz -C "$RUNNER_TEMP"
 
-      - name: Run compile smoke test
+      - name: Run compile smoke test (pandoc distro)
+        run: .github/scripts/compile-smoke.sh
+
+      # Also after a failure with the distro pandoc, so that both results
+      # show.
+      - name: Run compile smoke test (pandoc ${{ env.PANDOC_RELEASE }})
+        if: ${{ !cancelled() }}
         run: |
-          vim -es -u NONE -N -V20/tmp/vim.log \
-            -c 'set rtp+=.,deps/Logger' \
-            -c 'source tests/test_compile_smoke.vim' -c 'quit' || true
-          if [ ! -f tests/smoke_results.txt ]; then
-            echo "::error::tests/smoke_results.txt was never created - Vim likely failed before finishing. Verbose log follows:"
-            cat /tmp/vim.log
-            exit 1
-          fi
-          cat tests/smoke_results.txt
-          grep -qx 'All smoke tests passed' tests/smoke_results.txt
+          PATH="$RUNNER_TEMP/pandoc-$PANDOC_RELEASE/bin:$PATH" .github/scripts/compile-smoke.sh
 
   tagger-smoke:
     name: Part-of-speech tagger smoke test
