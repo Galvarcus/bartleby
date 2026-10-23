@@ -181,6 +181,9 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
+      - name: Check the CI image
+        run: .github/scripts/check-ci-image.sh
+
       - name: Run compile smoke test (pandoc distro)
         run: .github/scripts/compile-smoke.sh
 
@@ -551,6 +554,9 @@ jobs:
           # The history gives the PDF the time of the last commit of its
           # source, so that the same source gives the same file.
           fetch-depth: 0
+
+      - name: Check the CI image
+        run: .github/scripts/check-ci-image.sh
 
       # In the container, the workspace belongs to another user, so git
       # refuses it. The build reads the time of the last commit with git,
