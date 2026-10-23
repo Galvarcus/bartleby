@@ -299,6 +299,10 @@ def Test_paragraph_formatting_leaves_the_title_lines(): void
 enddef
 
 def Test_spotlight_dims_in_the_scrivening(): void
+  # Spotlight computes its dim color from Normal. Set here, so that the
+  # test does not depend on one that ran before it.
+  highlight Normal ctermfg=252 ctermbg=235 guifg=#d0d0d0 guibg=#262626
+  set t_Co=256
   var fx = NewProject()
   SV.Open(fx.project, fx.manuscript)
   cursor(5, 1)
