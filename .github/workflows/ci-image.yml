@@ -1,0 +1,73 @@
+name: CI image
+
+# Builds the image of .github/docker/Dockerfile and pushes it to ghcr.io as
+# bartleby-ci, with a tag of the date and the run, and as latest. ci.yml
+# runs its jobs in the tag that the repository variable CI_IMAGE names, so
+# a new image is used only once CI_IMAGE is changed to it. The summary of
+# the run gives the value to set.
+#
+# Monthly, so that the image takes the security updates of Ubuntu.
+
+on:
+  push:
+    branches: [Development, main]
+    paths:
+      - .github/docker/**
+      - .github/workflows/ci-image.yml
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 1 * *'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  image:
+    name: Build and push the CI image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # ghcr.io takes only lowercase names, and the owner has a capital.
+      - name: Name the image
+        id: name
+        run: |
+          image="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/bartleby-ci"
+          tag="$(date -u +%Y.%m.%d).$GITHUB_RUN_NUMBER"
+          {
+            echo "image=$image"
+            echo "tag=$tag"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v4.4.1
+
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v4.6.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The layers are cached in GitHub Actions, so that a build with an
+      # unchanged package list does not fetch the packages again. The
+      # monthly build skips the cache, or it would reuse the old packages.
+      - name: Build and push
+        uses: docker/build-push-action@v7.4.0
+        with:
+          context: .github/docker
+          push: true
+          no-cache: ${{ github.event_name == 'schedule' }}
+          tags: |
+            ${{ steps.name.outputs.image }}:${{ steps.name.outputs.tag }}
+            ${{ steps.name.outputs.image }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Report the value for CI_IMAGE
+        env:
+          IMAGE: ${{ steps.name.outputs.image }}:${{ steps.name.outputs.tag }}
+        run: |
+          echo "Set the repository variable CI_IMAGE to \`$IMAGE\` to use this image." >> "$GITHUB_STEP_SUMMARY"

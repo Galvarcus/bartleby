@@ -64,7 +64,7 @@ Run from the root of the Bartleby repository. Logger must be in `deps/Logger`.
 | Workflows | `actionlint .github/workflows/*.yml` | no findings, with `shellcheck` installed |
 | GhostCode | as the `ghostcode` job in `.github/workflows/ci.yml` runs it | no findings |
 
-- The compile smoke tests need Pandoc, `pdflatex`, `xelatex`, and the `sffms` and `ulem` packages. CI runs them with the distro Pandoc and with Pandoc 3.10.
+- The compile smoke tests need Pandoc, `pdflatex`, `xelatex`, and the `sffms` and `ulem` packages. CI runs them with the distro Pandoc and with Pandoc 3.10, in the image `ghcr.io/galvarcus/bartleby-ci` that the repository variable `CI_IMAGE` names. `.github/docker/Dockerfile` defines it, and `.github/workflows/ci-image.yml` builds it.
 - A new test goes in `tests/test_<area>.vim` and is registered in `tests/harness.vim`.
 - To prove a test guards a change, break the change on purpose and confirm that a named test fails. Earlier sessions did this for every feature.
 - After a change to a translated text, run `python3 tools/i18n/extract.py`.

@@ -9,8 +9,11 @@ name: CI
 # sheet job runs after them, whatever their results, and checks out the
 # branch as they left it, so that its commit does not conflict with theirs.
 #
-# Vim is installed first in each job that needs it. Every other package is
-# installed in the job that needs it, just before the step that does.
+# Vim is installed first in each job that needs it. The compile smoke test
+# and the cheat sheet run in the CI image, which holds their TeX packages
+# and pandocs, see .github/docker/Dockerfile and ci-image.yml. Every other
+# package is installed in the job that needs it, just before the step that
+# does.
 on:
   push:
     branches:
@@ -149,22 +152,22 @@ jobs:
 
   # One job runs the smoke tests twice: with the pandoc of the distro, and
   # with a current release, as Homebrew has. A newer pandoc can need
-  # changes in the templates, see tools/latex. Both use one TeX install,
-  # which is most of the time of the job, and its packages come from the
-  # cache when they can: from the Ubuntu mirror, one run took 12 minutes
-  # to fetch them.
+  # changes in the templates, see tools/latex. Both pandocs and the TeX
+  # packages are in the CI image, see .github/docker/Dockerfile, which
+  # sets PANDOC_RELEASE.
   compile-smoke:
     name: Compile pipeline smoke test
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
-    env:
-      PANDOC_RELEASE: '3.10'
-      # texlive-xetex and the DejaVu fonts are for the Book PDF test, which
-      # skips itself without xelatex.
-      TEX_PACKAGES: >-
-        texlive-latex-extra texlive-fonts-recommended texlive-plain-generic
-        texlive-xetex fonts-dejavu-core pandoc
+    permissions:
+      contents: read
+      packages: read
+    container:
+      image: ${{ vars.CI_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -178,48 +181,15 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
-      # The key changes with the runner image, whose package versions
-      # change with it, and with the package list. APT_ARCHIVES is set
-      # here, because the env of a job cannot read the runner context.
-      - name: Key the package cache
-        id: apt-key
-        run: |
-          echo "APT_ARCHIVES=$RUNNER_TEMP/apt-archives" >> "$GITHUB_ENV"
-          list=$(echo "$TEX_PACKAGES" | sha256sum | cut -c1-16)
-          echo "key=tex-$ImageOS-$ImageVersion-$list" >> "$GITHUB_OUTPUT"
-
-      - name: Restore the TeX packages
-        uses: actions/cache@v6.1.0
-        with:
-          path: ${{ env.APT_ARCHIVES }}
-          key: ${{ steps.apt-key.outputs.key }}
-
-      # apt keeps the packages in APT_ARCHIVES, for the cache. It needs a
-      # partial folder there, and the cache needs the files to be readable
-      # without root, and no lock file.
-      - name: Install Pandoc and LaTeX
-        run: |
-          mkdir -p "$APT_ARCHIVES/partial"
-          sudo apt-get update
-          # Without the recommended packages, to fetch less. A package that
-          # a test then misses goes in TEX_PACKAGES by name.
-          # shellcheck disable=SC2086
-          sudo apt-get install -y --no-install-recommends \
-            -o Dir::Cache::Archives="$APT_ARCHIVES" $TEX_PACKAGES
-          sudo rm -rf "$APT_ARCHIVES/lock" "$APT_ARCHIVES/partial"
-          sudo chown -R "$USER" "$APT_ARCHIVES"
-          curl -sSL "https://github.com/jgm/pandoc/releases/download/$PANDOC_RELEASE/pandoc-$PANDOC_RELEASE-linux-amd64.tar.gz" \
-            | tar -xz -C "$RUNNER_TEMP"
-
       - name: Run compile smoke test (pandoc distro)
         run: .github/scripts/compile-smoke.sh
 
       # Also after a failure with the distro pandoc, so that both results
       # show.
-      - name: Run compile smoke test (pandoc ${{ env.PANDOC_RELEASE }})
+      - name: Run compile smoke test (pandoc release)
         if: ${{ !cancelled() }}
         run: |
-          PATH="$RUNNER_TEMP/pandoc-$PANDOC_RELEASE/bin:$PATH" .github/scripts/compile-smoke.sh
+          PATH="/opt/pandoc-$PANDOC_RELEASE/bin:$PATH" .github/scripts/compile-smoke.sh
 
   tagger-smoke:
     name: Part-of-speech tagger smoke test
@@ -565,6 +535,14 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      packages: read
+    # The engine and the two fonts of the build are in the CI image, see
+    # .github/docker/Dockerfile.
+    container:
+      image: ${{ vars.CI_IMAGE }}
+      credentials:
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -574,12 +552,11 @@ jobs:
           # source, so that the same source gives the same file.
           fetch-depth: 0
 
-      # The build needs the engine and the two fonts. The tests, which ran
-      # before, needed more.
-      - name: Install LaTeX and fonts
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y texlive-xetex texlive-latex-recommended fonts-texgyre fonts-dejavu-mono
+      # In the container, the workspace belongs to another user, so git
+      # refuses it. The build reads the time of the last commit with git,
+      # and without it would give the PDF a new time on every run.
+      - name: Trust the workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
       # The script knows the names of the source and of the PDF.
       - name: Build the PDF
