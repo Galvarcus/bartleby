@@ -307,6 +307,17 @@ Write `[[Mara]]` in a document to link to the document titled Mara. With the
 cursor on the link, `gf` opens it, and `CTRL-O` goes back.
 `[[Mara|the captain]]` links to Mara and reads "the captain".
 
+Typing `[[` in Insert mode opens a menu of the document titles, each with its
+folders. Type to narrow the list, and pick a title to insert it with the
+closing `]]`. A title with a space narrows only up to the space.
+`g:bartleby_link_complete = false` turns the menu off.
+
+Links are underlined. A link that names no document, or only one in the Trash,
+shows as `SpellBad`. Change the colors with the `BartlebyLink` and
+`BartlebyLinkBroken` highlight groups, or turn the highlighting off with
+`g:bartleby_link_highlight = false`. A link that you type is checked when you
+leave Insert mode.
+
 - A title matches exactly, or else without regard to case. When several
   documents share the title, a list shows each with its folders.
 - A link to a title that no document has offers to create that document next
@@ -401,8 +412,10 @@ Inspector                                                   *bartleby-inspector*
 
 `<leader>bi` or `:BartlebyToggleInspector` opens a read-only pane with the
 current document's Title, Label, Status, Target, Keywords, and Synopsis. It
-follows the document in the editor window. When writing goals are set, it
-shows them after the synopsis.
+follows the document in the editor window. After the synopsis, Linked from
+lists the documents with a link to this one, each with its folders, or `-`
+when there are none. A screenplay has no such list. When writing goals are
+set, the Inspector shows them last.
 
     Key                                Action ~
 
@@ -415,6 +428,9 @@ shows them after the synopsis.
                                        the Save button
 
     `e` on a goal                      Edit the writing goals
+
+    `e` or `<CR>` on a Linked from     Open that document
+    line                               
 
 ==============================================================================
 Scrive list                                               *bartleby-scrive-list*
@@ -916,6 +932,13 @@ General
                                                                  templates for new
                                                                  documents, see Document
                                                                  templates
+
+    `g:bartleby_link_complete`             `true`                Offer the document
+                                                                 titles after `[[` in
+                                                                 Insert mode
+
+    `g:bartleby_link_highlight`            `true`                Highlight links, and
+                                                                 broken links differently
 
     `g:bartleby_table_autoformat`          `true`                Line up a table when you
                                                                  leave insert mode in it
