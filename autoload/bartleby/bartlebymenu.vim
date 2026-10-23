@@ -24,12 +24,14 @@ import autoload 'bartleby/menu.vim' as M
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/lexicon.vim' as LE
+import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/ui.vim' as MI
 import 'bartleby/variables/constants.vim' as CO
 
 const CMD_DEFINE: string = 'BartlebyDefine'
 const CMD_THESAURUS: string = 'BartlebyThesaurus'
+const PROJ_GROUP: string = 'bartleby_menu_proj'
 
 var menu: M.Menu = null_object
 # The lookup entries, each with its kind as data. The tests read them.
@@ -51,6 +53,17 @@ def PromptThenEx(title: string, cmd: string): func(M.MenuItem)
   }
 enddef
 
+def HasProj(): bool
+  return ST.Get() isnot null_object
+enddef
+
+# FUNCTION: Dim each of items while no scrive is open.
+def NeedProj(items: list<any>): void
+  for item in items
+    item.When = HasProj
+  endfor
+enddef
+
 def LookupOn(kind: string): func(): bool
   return (): bool => LE.IsEnabled(kind)
 enddef
@@ -62,7 +75,7 @@ def BuildMenu(): M.Menu
   scrive.AddItem(MI.List(), RunEx(CO.CMD_LIST))
   scrive.AddItem(MI.Open(), PromptThenEx(MI.OpenScrive(), CO.CMD_OPEN))
   scrive.AddItem(MI.New(), PromptThenEx(MI.NewScrive(), CO.CMD_NEW_SCRIVE))
-  scrive.AddItem(MC.Close(), RunEx(CO.CMD_CLOSE))
+  NeedProj([scrive.AddItem(MC.Close(), RunEx(CO.CMD_CLOSE))])
 
   var binder: M.MenuItem = m.AddItem(MC.Binder())
   binder.AddItem(MI.Toggle(), RunEx(CO.CMD_TOGGLE_BINDER))
@@ -72,19 +85,26 @@ def BuildMenu(): M.Menu
   binder.AddItem(MI.TidyFiles(), RunEx(CO.CMD_TIDY_FILES))
   binder.AddItem(MC.OpenScrivening(), RunEx(CO.CMD_SCRIVENINGS))
   binder.AddItem(MI.CloseScrivening(), RunEx(CO.CMD_SCRIVENINGS_BANG))
+  NeedProj(binder.items)
 
   var view: M.MenuItem = m.AddItem(MC.View())
-  view.AddItem(MI.ToggleInspector(), RunEx(CO.CMD_TOGGLE_INSPECTOR))
+  var inspector: M.MenuItem = view.AddItem(MI.ToggleInspector(),
+    RunEx(CO.CMD_TOGGLE_INSPECTOR))
   view.AddItem(MI.ToggleFocus(), RunEx(CO.CMD_FOCUS))
-  view.AddItem(MI.WritingProgress(), RunEx(CO.CMD_PROGRESS))
-  view.AddItem(MI.WritingGoals(), RunEx(CO.CMD_GOALS))
+  NeedProj([
+    inspector,
+    view.AddItem(MI.WritingProgress(), RunEx(CO.CMD_PROGRESS)),
+    view.AddItem(MI.WritingGoals(), RunEx(CO.CMD_GOALS)),
+  ])
   view.AddItem(MI.ToggleSpotlight(), RunEx(CO.CMD_SPOTLIGHT))
   view.AddItem(MI.PickSpotlightMode(), (_: M.MenuItem) => SP.PickMode())
   view.AddItem(MI.ToggleQuill(), RunEx(CO.CMD_QUILL))
 
   var doc: M.MenuItem = m.AddItem(MI.Doc())
-  doc.AddItem(MI.TakeSnap(), RunEx(CO.CMD_SNAP))
-  doc.AddItem(MI.ViewSnaps(), RunEx(CO.CMD_SNAPS))
+  NeedProj([
+    doc.AddItem(MI.TakeSnap(), RunEx(CO.CMD_SNAP)),
+    doc.AddItem(MI.ViewSnaps(), RunEx(CO.CMD_SNAPS)),
+  ])
   doc.AddItem(MI.InsertTable(), RunEx(CO.CMD_TABLE))
   # The native menu is built at startup, before lexicon.vim loads, so the
   # lookups are always there, and Sync disables the ones that are off.
@@ -100,6 +120,7 @@ def BuildMenu(): M.Menu
   project.AddItem(MI.EditProfile(), RunEx(CO.CMD_PROFILE))
   project.AddItem(MI.EditInfo(), RunEx(CO.CMD_PROJ_INFO))
   project.AddItem(MC.Compile(), RunEx(CO.CMD_COMPILE))
+  NeedProj(project.items)
 
   return m
 enddef
@@ -134,11 +155,17 @@ enddef
 # after the next key. A timer started before VimEnter can also fire
 # during the start.
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/33
+# The native menu has no event for its own open, so it also syncs when a
+# scrive opens or closes.
 export def RegisterNative(): void
   if menu is null_object
     menu = BuildMenu()
   endif
   menu.RegisterAsVimMenu()
+  execute $'augroup {PROJ_GROUP}'
+  autocmd!
+  execute $'autocmd User {CO.EVENT_PROJ_CHANGED} Sync()'
+  augroup END
   if v:vim_did_enter
     Sync()
   else

@@ -13,6 +13,9 @@ vim9script
 import autoload 'bartleby/bartlebymenu.vim' as BM
 import autoload 'bartleby/menu.vim' as M
 import autoload 'bartleby/state.vim' as ST
+import autoload 'bartleby/project.vim' as PO
+import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/locale/ui.vim' as MI
 import 'Logger/messages.vim' as LM
 import 'bartleby/variables/constants.vim' as CO
 
@@ -253,5 +256,27 @@ export def RunAll(): void
   Test_an_entry_of_the_bartleby_menu_runs_its_command()
   Test_a_lookup_that_is_off_is_disabled_in_both_menus()
   Test_the_native_menu_checks_the_lookups_at_vim_enter()
+  Test_an_entry_that_needs_a_scrive_follows_open_and_close()
   Test_a_disabled_entry_is_dimmed_in_the_popup()
+enddef
+
+# FUNCTION: An entry that needs a scrive is dimmed while none is open, and
+# follows an open and a close at once, with no open of the popup menu.
+def Test_an_entry_that_needs_a_scrive_follows_open_and_close(): void
+  if !has('menu')
+    return
+  endif
+  ST.Set(null_object)
+  BM.RegisterNative()
+  StartedSync()
+  var path: string = [CO.PLUGIN_NAME, MC.Binder(), MI.Toggle()]
+    ->mapnew((_, l) => escape(l, '. \\'))
+    ->join('.')
+  var states: list<bool> = [menu_info(path, 'n').enabled]
+  ST.Set(PO.Project.new(tempname() .. CO.SCRIVE_EXT))
+  states->add(menu_info(path, 'n').enabled)
+  ST.Set(null_object)
+  states->add(menu_info(path, 'n').enabled)
+  assert_equal([false, true, false], states)
+  execute 'aunmenu ' .. CO.PLUGIN_NAME
 enddef

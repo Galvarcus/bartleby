@@ -179,6 +179,8 @@ export const CMD_SPOTLIGHT: string = 'BartlebySpotlight'
 export const CMD_TIDY_FILES: string = 'BartlebyTidyFiles'
 export const CMD_TOGGLE_BINDER: string = 'BartlebyToggleBinder'
 export const CMD_TOGGLE_INSPECTOR: string = 'BartlebyToggleInspector'
+# The User event that state.vim fires when a scrive opens or closes.
+export const EVENT_PROJ_CHANGED: string = 'BartlebyProjectChanged'
 export const FILETYPE_FOUNTAIN: string = 'fountain'
 export const HL_PMENU: string = 'Pmenu'
 export const HL_PMENU_SEL: string = 'PmenuSel'
