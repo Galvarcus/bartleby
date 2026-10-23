@@ -314,14 +314,17 @@ Scrivening they count the title lines too.
 Write `[[Mara]]` in a document to link to the document titled Mara.
 With the cursor on the link, `gf` opens it, and `CTRL-O` goes back.
 `[[Mara|the captain]]` links to Mara and reads "the captain".
+`[[Mara#Backstory]]` links to the heading Backstory in Mara, and `gf`
+opens Mara at that heading.
 
 Typing `[[` in Insert mode opens a menu of the document titles, each
 with its folders. Type to narrow the list, and pick a title to insert
 it with the closing `]]`. A title with a space narrows only up to the
-space. `g:bartleby_link_complete = false` turns the menu off.
+space. Typing `#` after `[[Mara` opens a menu of the headings in
+Mara. `g:bartleby_link_complete = false` turns both menus off.
 
-Links are underlined. A link that names no document, or only one in
-the Trash, shows as `SpellBad`. Change the colors with the
+Links are underlined. A link that names no document, only one in the
+Trash, or a heading that its document lacks, shows as `SpellBad`. Change the colors with the
 `BartlebyLink` and `BartlebyLinkBroken` highlight groups, or turn the
 highlighting off with `g:bartleby_link_highlight = false`. A link that
 you type is checked when you leave Insert mode.
@@ -332,9 +335,17 @@ you type is checked when you leave Insert mode.
 - A link to a title that no document has offers to create that
   document next to the current one. A document in the Trash is not a
   target.
+- A heading is a Markdown heading, `#` to `######`, and matches
+  exactly or else without regard to case. When the heading is
+  missing, `gf` opens the document at its top and says so. A title
+  that contains `#`, such as `[[Chapter #3]]`, still links to its
+  document.
 - Renaming a document offers to update the links to it. A link keeps
-  the text that it shows: `[[Mara]]` becomes `[[Mara Jones|Mara]]`.
-- Compile shows each link as its text. In a screenplay, `[[ ]]` is a
+  the text that it shows: `[[Mara]]` becomes `[[Mara Jones|Mara]]`,
+  and `[[Mara#Backstory]]` becomes `[[Mara Jones#Backstory|Mara]]`.
+  Renaming a heading does not update the links to it.
+- Compile shows each link as its text, and a link to a heading
+  without a text of its own as the title alone. In a screenplay, `[[ ]]` is a
   Fountain note: `gf` follows it, and the compiled script leaves it
   out.
 - Off a link, `gf` works as it does without Bartleby.

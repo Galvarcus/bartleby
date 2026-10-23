@@ -293,6 +293,7 @@ export def EnterLinkDoc(): void
   if link_complete && !exists('b:bartleby_links_mapped')
     b:bartleby_links_mapped = true
     inoremap <buffer> [ [<ScriptCmd>LK.CompleteTitles()<CR>
+    inoremap <buffer> # #<ScriptCmd>LK.CompleteHeadings()<CR>
   endif
   RefreshLinks()
 enddef

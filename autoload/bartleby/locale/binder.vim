@@ -319,6 +319,10 @@ export def NoLinked(title: any): string
   return printf(IN.T("No document is titled \"%s\""), title)
 enddef
 
+export def NoHeading(title: any, heading: any): string
+  return printf(IN.T("\"%s\" has no heading \"%s\""), title, heading)
+enddef
+
 export def CreateLinked(title: any): string
   return printf(IN.T("No document is titled \"%s\". Create it next to this one?"), title)
 enddef

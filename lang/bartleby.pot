@@ -215,26 +215,30 @@ msgid "No document is titled \"%s\""
 msgstr ""
 
 #: autoload/bartleby/locale/binder.vim:323
-msgid "No document is titled \"%s\". Create it next to this one?"
+msgid "\"%s\" has no heading \"%s\""
 msgstr ""
 
 #: autoload/bartleby/locale/binder.vim:327
+msgid "No document is titled \"%s\". Create it next to this one?"
+msgstr ""
+
+#: autoload/bartleby/locale/binder.vim:331
 msgid "Update %d link to the new title?"
 msgid_plural "Update %d links to the new title?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: autoload/bartleby/locale/binder.vim:331
+#: autoload/bartleby/locale/binder.vim:335
 msgid "%d link updated"
 msgid_plural "%d links updated"
 msgstr[0] ""
 msgstr[1] ""
 
-#: autoload/bartleby/locale/binder.vim:339
+#: autoload/bartleby/locale/binder.vim:343
 msgid "Template"
 msgstr ""
 
-#: autoload/bartleby/locale/binder.vim:343
+#: autoload/bartleby/locale/binder.vim:347
 msgid "Blank"
 msgstr ""
 

@@ -211,6 +211,15 @@ def Test_a_changed_file_is_read_again(): void
   CloseLinks(project)
 enddef
 
+def Test_a_heading_link_counts_as_a_link(): void
+  var project = LinkProject()
+  var scene2 = project.ChildAt(1).ChildAt(1).ChildAt(0)
+  writefile(['See [[Mara#Backstory]] there.'], scene2.AbsPath(project.BinderRoot()))
+  assert_equal(['Scene 1', 'Scene 1', 'Notes'],
+    LK.LinkedFrom(project, project.ChildAt(3).ChildAt(0))->mapnew((_, d) => d.title))
+  CloseLinks(project)
+enddef
+
 export def RunAll(): void
   Test_the_follow_hook_goes_when_the_inspector_closes_any_way()
   Test_the_inspector_opens_again_after_it_closes()
@@ -221,4 +230,5 @@ export def RunAll(): void
   Test_no_links_show_a_dash_and_a_screenplay_has_no_section()
   Test_e_and_enter_open_a_linked_document()
   Test_a_changed_file_is_read_again()
+  Test_a_heading_link_counts_as_a_link()
 enddef

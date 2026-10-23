@@ -5,7 +5,8 @@ vim9script
 # tests/test_links.vim: links between documents. Finding the link under the
 # cursor, matching its title, gf, creating a missing document, updating the
 # links when a document is renamed, how compile shows them, and the titles
-# offered after [[, and the highlighting of good and broken links.
+# offered after [[, the highlighting of good and broken links, and links
+# to a heading, as [[Mara#Backstory]].
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -20,6 +21,7 @@ import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/trash.vim' as TR
 import autoload 'bartleby/tree.vim' as T
+import 'Logger/messages.vim' as LM
 import './fixtures.vim' as FI
 import 'bartleby/variables/constants.vim' as CO
 
@@ -244,6 +246,7 @@ def Test_bracket_is_mapped_only_in_documents_of_a_scrive_in_prose(): void
   Edit(project, Scene(project, 0), ['text'])
   BA.EnterLinkDoc()
   assert_match('CompleteTitles', maparg('[', 'i'))
+  assert_match('CompleteHeadings', maparg('#', 'i'))
   enew!
   BA.EnterLinkDoc()
   assert_equal('', maparg('[', 'i'))
@@ -379,6 +382,98 @@ def Test_open_buffers_count_behind_a_symlink(): void
   delete(real, 'rf')
 enddef
 
+# FUNCTION: The fixture project, where Mara has two headings, Departure
+# is Scene 1 of chapter 2 with one, and a document is titled Chapter #3.
+def HeadingProject(): any
+  var project = Project()
+  FI.WriteDocContent(project, project.ChildAt(3).ChildAt(0), ['# Mara', 'Intro.', '', '## Backstory ##', 'Born.'])
+  Scene(project, 1).Rename('Departure')
+  FI.WriteDocContent(project, Scene(project, 1), ['Leaving.', '## Platform', 'Steam.'])
+  var chapter3 = BI.BinderItem.NewDocument('Chapter #3', 'research/chapter-3.md')
+  project.ChildAt(4).AddChild(chapter3)
+  FI.WriteDocContent(project, chapter3, ['Three.'])
+  ST.Set(project)
+  return project
+enddef
+
+def Test_a_target_splits_into_title_and_heading(): void
+  var sets: dict<dict<bool>> = {exact: {'Chapter #3': true}, lower: {'chapter #3': true}}
+  assert_equal(['Mara', 'Backstory'], LK.Split('Mara#Backstory', sets))
+  assert_equal(['Mara', 'Back story'], LK.Split('Mara # Back story', sets))
+  assert_equal(['Mara', ''], LK.Split('Mara', sets))
+  assert_equal(['Chapter #3', ''], LK.Split('Chapter #3', sets))
+  assert_equal(['chapter #3', ''], LK.Split('chapter #3', sets))
+enddef
+
+def Test_gf_on_a_heading_link_goes_to_the_heading(): void
+  var project = HeadingProject()
+  Edit(project, Scene(project, 0), ['See [[Mara#backstory]].'])
+  cursor(1, 8)
+  LK.Follow()
+  assert_match('characters/mara\.md$', expand('%:p'))
+  assert_equal('## Backstory ##', getline('.'))
+  Cleanup(project)
+enddef
+
+def Test_gf_on_a_missing_heading_opens_the_top_and_says_so(): void
+  var project = HeadingProject()
+  Edit(project, Scene(project, 0), ['See [[Mara#Nowhere]].'])
+  cursor(1, 8)
+  LM.Clear()
+  LK.Follow()
+  assert_match('characters/mara\.md$', expand('%:p'))
+  assert_equal(1, line('.'))
+  assert_match('has no heading', LM.History()->mapnew((_, m) => join(m.lines, ' '))->join(' '))
+  Cleanup(project)
+enddef
+
+def Test_gf_on_a_heading_link_in_a_scrivening(): void
+  var project = HeadingProject()
+  FI.WriteDocContent(project, Scene(project, 0), ['See [[Departure#Platform]].'])
+  SV.Open(project, project.ChildAt(1))
+  cursor(search('Departure#Platform', 'w'), 8)
+  LK.Follow()
+  assert_true(SV.IsScrivening(bufnr()), 'left the Scrivening')
+  assert_equal('## Platform', getline('.'))
+  set nomodified
+  SV.Close()
+  Cleanup(project)
+enddef
+
+def Test_a_heading_link_is_broken_without_its_heading(): void
+  var project = HeadingProject()
+  Edit(project, Scene(project, 0), ['[[Mara#Backstory]] [[Mara#Nowhere]] [[Nobody#X]] [[Chapter #3]]'])
+  BA.EnterLinkDoc()
+  assert_equal(['BartlebyLink', 'BartlebyLinkBroken', 'BartlebyLinkBroken', 'BartlebyLink'],
+    LinkProps()->mapnew((_, p) => p[3]))
+  Cleanup(project)
+enddef
+
+def Test_a_rename_keeps_the_heading_and_the_shown_title(): void
+  var [out, count] = LK.Retitle(['[[Mara#Backstory]] [[mara#Backstory|her]] [[Mara]] [[Marat#Backstory]]'],
+    'Mara', 'Mara Jones')
+  assert_equal(['[[Mara Jones#Backstory|Mara]] [[Mara Jones#Backstory|her]] [[Mara Jones|Mara]] [[Marat#Backstory]]'], out)
+  assert_equal(3, count)
+  [out, count] = LK.Retitle(['[[Chapter #3]]'], 'Chapter #3', 'Chapter Three')
+  assert_equal(['[[Chapter Three|Chapter #3]]'], out)
+enddef
+
+def Test_compile_shows_a_heading_link_as_its_title(): void
+  var project = HeadingProject()
+  assert_equal(['See Mara, her past, and Chapter #3.'],
+    LK.Plain(['See [[Mara#Backstory]], [[Mara#Backstory|her past]], and [[Chapter #3]].']))
+  Cleanup(project)
+enddef
+
+def Test_hash_after_a_title_offers_its_headings(): void
+  var project = HeadingProject()
+  Edit(project, Scene(project, 0), ['See '])
+  g:tlinks_items = []
+  feedkeys("A[[Mara#\<Cmd>call bartleby#links#CompleteHeadings()\<CR>\<Cmd>call TLinksCapture()\<CR>\<Esc>", 'xt')
+  assert_equal([['Mara', '', 'Mara]]'], ['Backstory', '', 'Backstory]]']], g:tlinks_items)
+  Cleanup(project)
+enddef
+
 export def RunAll(): void
   Test_a_link_is_found_anywhere_on_its_brackets()
   Test_a_link_with_its_own_text_and_two_links_on_a_line()
@@ -404,4 +499,12 @@ export def RunAll(): void
   Test_a_scrivening_keeps_its_title_properties()
   Test_a_screenplay_note_is_not_a_link()
   Test_open_buffers_count_behind_a_symlink()
+  Test_a_target_splits_into_title_and_heading()
+  Test_gf_on_a_heading_link_goes_to_the_heading()
+  Test_gf_on_a_missing_heading_opens_the_top_and_says_so()
+  Test_gf_on_a_heading_link_in_a_scrivening()
+  Test_a_heading_link_is_broken_without_its_heading()
+  Test_a_rename_keeps_the_heading_and_the_shown_title()
+  Test_compile_shows_a_heading_link_as_its_title()
+  Test_hash_after_a_title_offers_its_headings()
 enddef

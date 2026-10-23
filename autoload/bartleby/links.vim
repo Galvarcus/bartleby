@@ -9,9 +9,11 @@ var is_loaded: bool = true
 # Plugin_Name: Bartleby
 # links.vim: links between the documents of a scrive. [[Mara]] links to the
 # document titled Mara, and [[Mara|the captain]] links to it and reads the
-# captain. gf on a link opens the document, a rename offers to update the
-# links to it, and compile shows each link as its text. In a screenplay,
-# [[ ]] is a Fountain note, which gf follows and compile leaves out.
+# captain. [[Mara#Backstory]] links to the heading Backstory in it, and
+# reads Mara. gf on a link opens the document, a rename offers to update
+# the links to it, and compile shows each link as its text. In a
+# screenplay, [[ ]] is a Fountain note, which gf follows and compile
+# leaves out.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -46,14 +48,20 @@ const HL_LINK: string = 'BartlebyLink'
 const HL_LINK_BROKEN: string = 'BartlebyLinkBroken'
 const HL_LINK_DEFAULT: string = 'Underlined'
 const HL_LINK_BROKEN_DEFAULT: string = 'SpellBad'
+# Between the title and the heading of a link, as in [[Mara#Backstory]].
+const HEADING_SEP: string = '#'
+# A Markdown heading of level 1 to 6, matching its text without the marks.
+const HEADING_PAT: string = '^#\{1,6}\s\+\zs.\{-}\ze\%(\s\+#\+\)\=\s*$'
+# The text before the cursor after [[Title#, with the title as group 1.
+const HEADING_OPEN_PAT: string = '\[\[\([^]|#]\+\)#$'
 
 var log = L.New(expand('<sfile>:t'))
 var highlight_on: bool = g:bartleby_link_highlight
-# The link targets of each document file, by path, as {stamp, targets},
-# so that a file is read again only when it changes. The stamp is the
-# time and the size, because the time counts whole seconds. See
-# LinkedFrom.
-var targets_cache: dict<dict<any>> = {}
+# The link targets and headings of each document file, by path, as
+# {stamp, targets, headings}, so that a file is read again only when it
+# changes. The stamp is the time and the size, because the time counts
+# whole seconds. See DocInfo.
+var doc_cache: dict<dict<any>> = {}
 
 # FUNCTION: Return the link that covers byte column col of line, as {target,
 # text}, or an empty dict. text is the target when the link has none of its
@@ -76,9 +84,56 @@ export def At(line: string, col: number): dict<string>
 enddef
 
 # FUNCTION: Return lines with each link replaced by its text, for compile.
+# A link without a text of its own reads as its title, without a heading.
 export def Plain(lines: list<string>): list<string>
+  var project: PO.Project = ST.Get()
+  var sets: dict<dict<bool>> = TitleSets(project is null_object ? [] : Docs(project, false))
   return lines->mapnew((_, line) => substitute(line, LINK_PAT,
-    (m: list<string>): string => m[2] ==# '' ? trim(m[1]) : m[2], 'g'))
+    (m: list<string>): string => m[2] ==# '' ? Split(trim(m[1]), sets)[0] : m[2], 'g'))
+enddef
+
+# FUNCTION: Return the titles of docs, exactly and in lowercase, as sets
+# for Split and IsTitle.
+def TitleSets(docs: list<BI.BinderItem>): dict<dict<bool>>
+  var sets: dict<dict<bool>> = {exact: {}, lower: {}}
+  for d in docs
+    sets.exact[d.title] = true
+    sets.lower[tolower(d.title)] = true
+  endfor
+  return sets
+enddef
+
+# FUNCTION: Return true when title is in sets, exactly or without case.
+def IsTitle(sets: dict<dict<bool>>, title: string): bool
+  return has_key(sets.exact, title) || has_key(sets.lower, tolower(title))
+enddef
+
+# FUNCTION: Split the target of a link into its title and its heading, the
+# heading empty when it has none. A target that is a title whole, such as
+# Chapter #3, has no heading. Otherwise the first # divides the two.
+export def Split(target: string, sets: dict<dict<bool>>): list<string>
+  var idx: number = stridx(target, HEADING_SEP)
+  if idx < 0 || IsTitle(sets, target)
+    return [target, '']
+  endif
+  return [trim(strpart(target, 0, idx)), trim(strpart(target, idx + 1))]
+enddef
+
+# FUNCTION: Return the texts of the Markdown headings in lines.
+def Headings(lines: list<string>): list<string>
+  return lines->copy()->filter((_, l) => l =~# HEADING_PAT)->mapnew((_, l) => matchstr(l, HEADING_PAT))
+enddef
+
+# FUNCTION: Return the index in texts of heading, exactly or else without
+# case, or -1.
+def HeadingIdx(texts: list<string>, heading: string): number
+  var idx: number = index(texts, heading)
+  return idx >= 0 ? idx : texts->indexof((_, t) => t ==? heading)
+enddef
+
+# FUNCTION: Return the index of the line of heading in lines, or -1.
+def HeadingLine(lines: list<string>, heading: string): number
+  return HeadingIdx(lines->mapnew((_, l) => l =~# HEADING_PAT ? matchstr(l, HEADING_PAT) : ''), heading)
 enddef
 
 # FUNCTION: Return the documents of project titled title, outside the Trash:
@@ -144,46 +199,50 @@ def Targets(lines: list<string>): list<string>
   return targets
 enddef
 
-# FUNCTION: Return the link targets of doc: from its buffer when loaded,
-# so that unsaved text counts, else from its file, through the cache.
-# root is the binder root with symlinks resolved, as the keys of loaded
-# are, so that no path is resolved one at a time.
-def DocTargets(root: string, doc: BI.BinderItem, loaded: dict<number>): list<string>
+# FUNCTION: Return the link targets and the headings of doc, as {targets,
+# headings}: from its buffer when loaded, so that unsaved text counts,
+# else from its file, through the cache. root is the binder root with
+# symlinks resolved, as the keys of loaded are, so that no path is
+# resolved one at a time.
+def DocInfo(root: string, doc: BI.BinderItem, loaded: dict<number>): dict<any>
   var path: string = doc.AbsPath(root)
   var bufNr: number = get(loaded, path, -1)
   if bufNr > 0
-    return Targets(getbufline(bufNr, 1, '$'))
+    var lines: list<string> = getbufline(bufNr, 1, '$')
+    return {targets: Targets(lines), headings: Headings(lines)}
   endif
   var time: number = getftime(path)
   if time < 0
-    return []
+    return {targets: [], headings: []}
   endif
   var stamp: string = $'{time} {getfsize(path)}'
-  var cached: dict<any> = get(targets_cache, path, {})
+  var cached: dict<any> = get(doc_cache, path, {})
   if get(cached, 'stamp', '') !=# stamp
-    cached = {stamp: stamp, targets: Targets(readfile(path))}
-    targets_cache[path] = cached
+    var lines: list<string> = readfile(path)
+    cached = {stamp: stamp, targets: Targets(lines), headings: Headings(lines)}
+    doc_cache[path] = cached
   endif
-  return cached.targets
+  return cached
 enddef
 
 # FUNCTION: Return the documents outside the Trash, in tree order, that
 # link to item, without item itself. A link counts as gf finds it: by the
-# exact title, or else without case. A document in the Trash has none.
+# exact title, or else without case, with a heading or not. A document in
+# the Trash has none.
 export def LinkedFrom(project: PO.Project, item: BI.BinderItem): list<BI.BinderItem>
   var docs: list<BI.BinderItem> = Docs(project, false)
   if docs->indexof((_, d) => d.id ==# item.id) < 0
     return []
   endif
-  var exact: dict<bool> = {}
-  for d in docs
-    exact[d.title] = true
-  endfor
-  var LinksHere = (t: string): bool => t ==# item.title || (!has_key(exact, t) && t ==? item.title)
+  var sets: dict<dict<bool>> = TitleSets(docs)
+  var LinksHere = (t: string): bool => {
+    var title: string = Split(t, sets)[0]
+    return title ==# item.title || (!has_key(sets.exact, title) && title ==? item.title)
+  }
   var loaded: dict<number> = WC.LoadedBufs()
   var root: string = resolve(project.BinderRoot())
   return docs->filter((_, d) => d.id !=# item.id
-    && DocTargets(root, d, loaded)->indexof((_, t) => LinksHere(t)) >= 0)
+    && DocInfo(root, d, loaded).targets->indexof((_, t) => LinksHere(t)) >= 0)
 enddef
 
 # FUNCTION: Define the highlight groups of the links, unless a color
@@ -195,8 +254,9 @@ enddef
 
 # FUNCTION: Mark each link in buffer bufNr as good or broken, with text
 # properties, which keep the syntax colors below and follow edits. A link
-# is good when gf finds a document outside the Trash. Only the link
-# types are replaced, so the title lines of a Scrivening keep theirs.
+# is good when gf finds a document outside the Trash, and its heading in
+# it when it names one. Only the link types are replaced, so the title
+# lines of a Scrivening keep theirs.
 export def Highlight(project: PO.Project, bufNr: number): void
   if !highlight_on
     return
@@ -207,18 +267,17 @@ export def Highlight(project: PO.Project, bufNr: number): void
     prop_type_add(HL_LINK_BROKEN, {highlight: HL_LINK_BROKEN})
   endif
   prop_remove({types: [HL_LINK, HL_LINK_BROKEN], bufnr: bufNr, all: true})
-  var exact: dict<bool> = {}
-  var lower: dict<bool> = {}
-  for d in Docs(project, false)
-    exact[d.title] = true
-    lower[tolower(d.title)] = true
-  endfor
+  var docs: list<BI.BinderItem> = Docs(project, false)
+  var sets: dict<dict<bool>> = TitleSets(docs)
+  var loaded: dict<number> = WC.LoadedBufs()
+  var root: string = resolve(project.BinderRoot())
   # One search of the whole buffer, and one call per type to add the
   # properties: a loop over lines took 34 ms for 2,000 links.
   var spans: dict<list<any>> = {[HL_LINK]: [], [HL_LINK_BROKEN]: []}
   for m in matchbufline(bufNr, LINK_PAT, 1, '$', {submatches: true})
-    var target: string = trim(m.submatches[0])
-    var good: bool = has_key(exact, target) || has_key(lower, tolower(target))
+    var [title, heading] = Split(trim(m.submatches[0]), sets)
+    var good: bool = IsTitle(sets, title) && (heading ==# ''
+      || Match(docs, title)->indexof((_, d) => HeadingIdx(DocInfo(root, d, loaded).headings, heading) >= 0) >= 0)
     var col: number = m.byteidx + 1
     spans[good ? HL_LINK : HL_LINK_BROKEN]->add([m.lnum, col, m.lnum, col + len(m.text)])
   endfor
@@ -265,6 +324,35 @@ export def CompleteTitles(): void
   complete(col, items)
 enddef
 
+# FUNCTION: After [[Title# in insert mode, offer the headings of the
+# documents titled Title, each with its folders when several share the
+# title. A heading ends the link, unless ]] already follows the cursor.
+export def CompleteHeadings(): void
+  var col: number = col('.')
+  var line: string = getline('.')
+  var project: PO.Project = ST.Get()
+  var title: string = trim(get(matchlist(strpart(line, 0, col - 1), HEADING_OPEN_PAT), 1, ''))
+  if project is null_object || title ==# ''
+    return
+  endif
+  var docs: list<BI.BinderItem> = Find(project, title)
+  var close: string = strpart(line, col - 1, len(LINK_CLOSE)) ==# LINK_CLOSE ? '' : LINK_CLOSE
+  var folders: dict<string> = Folders(project)
+  var loaded: dict<number> = WC.LoadedBufs()
+  var root: string = resolve(project.BinderRoot())
+  var items: list<dict<any>> = []
+  for d in docs
+    for h in DocInfo(root, d, loaded).headings
+      items->add({word: h .. close, abbr: h, menu: len(docs) > 1 ? folders[d.id] : '', dup: 1})
+    endfor
+  endfor
+  if empty(items)
+    return
+  endif
+  SetCompleteOpts()
+  complete(col, items)
+enddef
+
 # FUNCTION: Set the options of the title menu for this buffer, and restore
 # the user's own when the menu closes.
 def SetCompleteOpts(): void
@@ -296,17 +384,45 @@ export def Follow(): void
     endtry
     return
   endif
-  var found: list<BI.BinderItem> = Find(project, link.target)
+  var [title, heading] = Split(link.target, TitleSets(Docs(project, false)))
+  var found: list<BI.BinderItem> = Find(project, title)
   if len(found) ==# 1
-    B.OpenDoc(project, found[0])
+    OpenAt(project, found[0], heading)
   elseif len(found) > 1
-    PI.PickOne(MB.PickLinked(link.target), found->mapnew((_, d) => d.id), (id: string) => {
-      B.OpenDoc(project, project.FindItem(id))
+    PI.PickOne(MB.PickLinked(title), found->mapnew((_, d) => d.id), (id: string) => {
+      OpenAt(project, project.FindItem(id), heading)
     }, '', Paths(project))
-  elseif !empty(Match(Docs(project, true), link.target))
-    log.Info(MB.LinkInTrash(link.target))
+  elseif !empty(Match(Docs(project, true), title))
+    log.Info(MB.LinkInTrash(title))
   else
-    OfferToCreate(project, link.target)
+    OfferToCreate(project, title)
+  endif
+enddef
+
+# FUNCTION: Open doc, at heading when one is given. In a Scrivening the
+# heading is looked for in the text of its section, unsaved edits
+# included. A missing heading leaves the cursor at the top, with a
+# message.
+def OpenAt(project: PO.Project, doc: BI.BinderItem, heading: string): void
+  B.OpenDoc(project, doc)
+  if heading ==# ''
+    return
+  endif
+  var path: string = doc.AbsPath(project.BinderRoot())
+  var inScrivening: bool = SV.IsScrivening(bufnr())
+  if !inScrivening && resolve(expand('%:p')) !=# resolve(path)
+    return
+  endif
+  var lines: list<string> = inScrivening ? get(SV.SectionTexts(), path, []) : getline(1, '$')
+  var idx: number = HeadingLine(lines, heading)
+  if idx < 0
+    log.Info(MB.NoHeading(doc.title, heading))
+    idx = 0
+  endif
+  if inScrivening
+    SV.ShowDoc(doc.id, idx)
+  else
+    cursor(idx + 1, 1)
   endif
 enddef
 
@@ -330,18 +446,25 @@ enddef
 # FUNCTION: Return lines with each link to oldTitle pointing to newTitle, and
 # the number of links that changed. A link keeps the text that it shows, so
 # a rename does not change the compiled text: [[Mara]] becomes
-# [[Mara Jones|Mara]]. A target matches oldTitle when it differs only in
-# case, as when the link is followed.
-export def Retitle(lines: list<string>, oldTitle: string, newTitle: string): list<any>
+# [[Mara Jones|Mara]], and [[Mara#Backstory]] becomes
+# [[Mara Jones#Backstory|Mara]]. A target matches oldTitle when it differs
+# only in case, as when the link is followed. sets, from TitleSets, keep a
+# title with # whole. The renamed document is no longer in them, so a
+# target that is oldTitle whole is matched first.
+export def Retitle(lines: list<string>, oldTitle: string, newTitle: string,
+    sets: dict<dict<bool>> = {exact: {}, lower: {}}): list<any>
   var count: number = 0
   var out: list<string> = lines->mapnew((_, line) => substitute(line, LINK_PAT,
     (m: list<string>): string => {
-      if trim(m[1]) !=? oldTitle
+      var target: string = trim(m[1])
+      var [title, heading] = target ==? oldTitle ? [target, ''] : Split(target, sets)
+      if title !=? oldTitle
         return m[0]
       endif
       count += 1
-      var text: string = m[2] ==# '' ? trim(m[1]) : m[2]
-      return text ==# newTitle ? $'[[{newTitle}]]' : $'[[{newTitle}|{text}]]'
+      var dest: string = heading ==# '' ? newTitle : $'{newTitle}{HEADING_SEP}{heading}'
+      var text: string = m[2] ==# '' ? title : m[2]
+      return text ==# newTitle ? $'[[{dest}]]' : $'[[{dest}|{text}]]'
     }, 'g'))
   return [out, count]
 enddef
@@ -356,13 +479,14 @@ export def Retarget(project: PO.Project, oldTitle: string, newTitle: string, wri
     SV.SaveIfModified()
   endif
   var loaded: dict<number> = WC.LoadedBufs()
+  var sets: dict<dict<bool>> = TitleSets(Docs(project, false))
   var total: number = 0
   for doc in Docs(project, false) + Docs(project, true)
     var path: string = doc.AbsPath(project.BinderRoot())
     var bufNr: number = WC.LoadedBuf(loaded, path)
     var lines: list<string> = bufNr > 0 ? getbufline(bufNr, 1, '$')
       : (filereadable(path) ? readfile(path) : [])
-    var [out, count] = Retitle(lines, oldTitle, newTitle)
+    var [out, count] = Retitle(lines, oldTitle, newTitle, sets)
     if count ==# 0
       continue
     endif
