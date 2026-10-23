@@ -40,6 +40,25 @@ Use these skills. Read each one before work that falls under it.
 - In project text, do not name proprietary applications unless asked. FOSS applications are fine.
 - Verify a change before reporting it as done, and say plainly what was not verified.
 
+## Issues
+
+`.github/workflows/issue-triage.yml` runs `.github/scripts/triage.js` on each new or edited issue. An issue must pass it.
+
+- Write the body in the layout of its form in `.github/ISSUE_TEMPLATE/`: each field as `### <label>`, a blank line, then the answer, in form order. Write `_No response_` for an empty optional field. `triage.js` finds the answers by these headings.
+- A bug needs a **Minimal vimrc** that loads Bartleby and Logger. Without one, the workflow adds `needs-repro` and posts a comment. Use the placeholder of the form:
+
+  ```vim
+  set nocompatible
+  set rtp+=/path/to/bartleby,/path/to/Logger
+  filetype plugin on
+  syntax on
+  ```
+
+- Give the **Component** answer exactly as the form lists it. The workflow adds the matching label. A **Where do you run Vim?** answer of gVim, MacVim, or Other GUI Vim adds `gui`.
+- Put no API key in an issue. The workflow adds `needs-redaction`.
+- After you create or edit an issue, wait for its triage run and check its labels and comments.
+- When the forms or `triage.js` change, update this section in the same change.
+
 ## Architecture
 
 - `plugin/bartleby.vim` holds settings, commands, mappings, and autocommands only, and loads no autoload script at startup. A test checks this. Default keys come from the `MAPPINGS` table, each with a `<Plug>` name, and `g:bartleby_no_mappings` turns them off.
