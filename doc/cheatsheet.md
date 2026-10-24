@@ -34,6 +34,7 @@ Commands, mappings, and keys of Bartleby, a writing environment for Vim.
 | --- | --- |
 | `:BartlebyOpen [name]` | Open a scrive by name. Without a name, open the last one |
 | `:BartlebyNewScrive {name}` | Create a scrive. Asks for its type |
+| `:BartlebyNewScriveFrom {path}` | Create a scrive from a file or folder, and import it |
 | `:BartlebyList` | List all scrives and open one |
 | `:BartlebyClose[!]` | Close the scrive and all that is open of Bartleby. With `!`, throw away unsaved changes |
 

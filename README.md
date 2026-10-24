@@ -607,6 +607,12 @@ The import goes next to the item under the Binder cursor, into it when
 that item is a folder, and at the end of the top level when the Binder
 is closed or its cursor is elsewhere. The Trash takes no import.
 
+With no scrive yet, `:BartlebyNewScriveFrom ~/Drafts/Novel` makes one
+from the source: it offers the source name as the scrive name, asks for
+the type, and imports into the Manuscript. The scrive gets no starter
+document, so the imported work stands alone in it. Nothing is created
+when the source holds no file that the type accepts.
+
 ## Session, snapshots, and search
 
 **Session** - Bartleby remembers, for each scrive, the open document,
@@ -725,6 +731,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | --- | --- |
 | `:BartlebyOpen [name]` | Open a scrive by name. `<Tab>` completes the name. Without a name, open the last scrive |
 | `:BartlebyNewScrive {name}` | Create a scrive. Asks for its type |
+| `:BartlebyNewScriveFrom {path}` | Create a scrive from an existing file or folder, and import it. Asks for the name and the type |
 | `:BartlebyList` | List all scrives and open the selected one |
 | `:BartlebyClose[!]` | Close the scrive and all that is open of Bartleby: Focus, Spotlight, a Scrivening, the Binder, the Inspector, and the documents. It saves first and leaves an empty buffer. With `!`, throw away changes that are not saved |
 | `:BartlebyToggleBinder` | Show or hide the Binder |

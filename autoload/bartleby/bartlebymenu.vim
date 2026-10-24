@@ -43,13 +43,13 @@ def RunEx(cmd: string): func(M.MenuItem)
   }
 enddef
 
-def PromptThenEx(title: string, cmd: string): func(M.MenuItem)
+def PromptThenEx(title: string, cmd: string, complete: string = ''): func(M.MenuItem)
   return (_: M.MenuItem) => {
     IP.PromptText(title, '', (name: string) => {
       if name !=# ''
         execute $'{cmd} {name}'
       endif
-    })
+    }, null_function, complete)
   }
 enddef
 
@@ -75,6 +75,8 @@ def BuildMenu(): M.Menu
   scrive.AddItem(MI.List(), RunEx(CO.CMD_LIST))
   scrive.AddItem(MI.Open(), PromptThenEx(MI.OpenScrive(), CO.CMD_OPEN))
   scrive.AddItem(MI.New(), PromptThenEx(MI.NewScrive(), CO.CMD_NEW_SCRIVE))
+  scrive.AddItem(MI.NewFrom(),
+    PromptThenEx(MI.NewScriveFrom(), CO.CMD_NEW_SCRIVE_FROM, CO.COMPLETE_FILE))
   NeedProj([scrive.AddItem(MC.Close(), RunEx(CO.CMD_CLOSE))])
 
   var binder: M.MenuItem = m.AddItem(MC.Binder())

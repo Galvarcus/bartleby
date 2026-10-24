@@ -1131,155 +1131,159 @@ msgid "End"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:103
-msgid "New..."
+msgid "Open..."
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:107
-msgid "New Scrive"
+msgid "Open Scrive"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:111
-msgid "Toggle"
+msgid "New..."
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:115
-msgid "Search"
+msgid "New from files..."
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:119
-msgid "Import..."
+msgid "New Scrive"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:123
-msgid "Empty Trash"
+msgid "New Scrive from Files"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:127
-msgid "Recover Files"
+msgid "Toggle"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:131
-msgid "Tidy Files"
+msgid "Search"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:135
-msgid "Close Scrivening"
+msgid "Import..."
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:139
-msgid "Toggle Inspector"
+msgid "Empty Trash"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:143
-msgid "Toggle Focus"
+msgid "Recover Files"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:147
-msgid "Writing Progress"
+msgid "Tidy Files"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:151
-msgid "Writing Goals"
+msgid "Close Scrivening"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:155
-msgid "Toggle Spotlight"
+msgid "Toggle Inspector"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:159
-msgid "Pick Spotlight Mode"
+msgid "Toggle Focus"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:163
-msgid "Toggle Quill"
+msgid "Writing Progress"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:167
-msgid "Document"
+msgid "Writing Goals"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:171
-msgid "Take Snapshot"
+msgid "Toggle Spotlight"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:175
-msgid "View Snapshots"
+msgid "Pick Spotlight Mode"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:179
-msgid "Define Word"
+msgid "Toggle Quill"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:183
-msgid "Thesaurus"
+msgid "Document"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:187
-msgid "Project"
+msgid "Take Snapshot"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:191
-msgid "Edit Profile"
+msgid "View Snapshots"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:195
-msgid "Edit Info"
+msgid "Define Word"
+msgstr ""
+
+#: autoload/bartleby/locale/ui.vim:199
+msgid "Thesaurus"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:203
-msgid "PopupButtonMenu: buttons list must not be empty"
+msgid "Project"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:207
-msgid "PopupButtonMenu: opts.callback is required"
+msgid "Edit Profile"
 msgstr ""
 
-#: autoload/bartleby/locale/ui.vim:215
-msgid "Command Palette"
+#: autoload/bartleby/locale/ui.vim:211
+msgid "Edit Info"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:219
-msgid "List Scrives"
+msgid "PopupButtonMenu: buttons list must not be empty"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:223
-msgid "Toggle Binder"
-msgstr ""
-
-#: autoload/bartleby/locale/ui.vim:227
-msgid "Search Scrive"
+msgid "PopupButtonMenu: opts.callback is required"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:231
-msgid "Import Files"
+msgid "Command Palette"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:235
-msgid "Edit Project Info"
+msgid "List Scrives"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:239
-msgid "Close Scrive"
+msgid "Toggle Binder"
+msgstr ""
+
+#: autoload/bartleby/locale/ui.vim:243
+msgid "Search Scrive"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:247
-msgid "[Y]es"
+msgid "Import Files"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:251
-msgid "[N]o"
+msgid "Edit Project Info"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:255
-msgid "Confirm"
+msgid "Close Scrive"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:263
-msgid " %s (C-s to save) "
+msgid "[Y]es"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:267
-msgid "Submit"
+msgid "[N]o"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:27
@@ -1287,18 +1291,30 @@ msgid "no scrive name given, and no previously-opened scrive to fall back to - s
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:271
-msgid "InputPopup: fieldRows produced no fields"
-msgstr ""
-
-#: autoload/bartleby/locale/ui.vim:275
-msgid "(no matches)"
+msgid "Confirm"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:279
-msgid "Input"
+msgid " %s (C-s to save) "
+msgstr ""
+
+#: autoload/bartleby/locale/ui.vim:283
+msgid "Submit"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:287
+msgid "InputPopup: fieldRows produced no fields"
+msgstr ""
+
+#: autoload/bartleby/locale/ui.vim:291
+msgid "(no matches)"
+msgstr ""
+
+#: autoload/bartleby/locale/ui.vim:295
+msgid "Input"
+msgstr ""
+
+#: autoload/bartleby/locale/ui.vim:303
 msgid "Insert Table"
 msgstr ""
 
@@ -1311,69 +1327,69 @@ msgid "current buffer is not a document of the open scrive"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:39
-msgid "no scrive open - run :BartlebyRecover <name> for a scrive that does not open"
+msgid "no file or folder at %s"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:43
-msgid "every document on disk is in the Binder"
+msgid "nothing to import from %s, so no scrive was created"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:47
+msgid "no scrive open - run :BartlebyRecover <name> for a scrive that does not open"
+msgstr ""
+
+#: autoload/bartleby/locale/ui.vim:51
+msgid "every document on disk is in the Binder"
+msgstr ""
+
+#: autoload/bartleby/locale/ui.vim:55
 msgid "recovered %d document into the folder Recovered"
 msgid_plural "recovered %d documents into the folder Recovered"
 msgstr[0] ""
 msgstr[1] ""
 
-#: autoload/bartleby/locale/ui.vim:51
+#: autoload/bartleby/locale/ui.vim:59
 msgid "\"%s\" opens. Open it, then run :BartlebyRecover to recover its documents."
 msgstr ""
 
-#: autoload/bartleby/locale/ui.vim:55
+#: autoload/bartleby/locale/ui.vim:63
 msgid "Rebuild the Binder of \"%s\"? The damaged project.json is kept as project.json.damaged, its backup is used if it loads, and every document on disk is recovered."
 msgstr ""
 
-#: autoload/bartleby/locale/ui.vim:59
+#: autoload/bartleby/locale/ui.vim:67
 msgid "the files already follow the Binder"
 msgstr ""
 
-#: autoload/bartleby/locale/ui.vim:63
+#: autoload/bartleby/locale/ui.vim:71
 msgid "Move %d file, so that the folders on disk follow the Binder?"
 msgid_plural "Move %d files, so that the folders on disk follow the Binder?"
 msgstr[0] ""
 msgstr[1] ""
 
-#: autoload/bartleby/locale/ui.vim:67
+#: autoload/bartleby/locale/ui.vim:75
 msgid "moved %d file"
 msgid_plural "moved %d files"
 msgstr[0] ""
 msgstr[1] ""
 
-#: autoload/bartleby/locale/ui.vim:71
+#: autoload/bartleby/locale/ui.vim:79
 msgid "these files did not move, so save any changes and run it again: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/ui.vim:75
+#: autoload/bartleby/locale/ui.vim:83
 msgid "no Scrivening is open"
 msgstr ""
 
-#: autoload/bartleby/locale/ui.vim:79
+#: autoload/bartleby/locale/ui.vim:87
 msgid "the Scrivening stays open, because it could not be saved"
 msgstr ""
 
-#: autoload/bartleby/locale/ui.vim:87
+#: autoload/bartleby/locale/ui.vim:95
 msgid "Scrive"
 msgstr ""
 
-#: autoload/bartleby/locale/ui.vim:91
-msgid "List..."
-msgstr ""
-
-#: autoload/bartleby/locale/ui.vim:95
-msgid "Open..."
-msgstr ""
-
 #: autoload/bartleby/locale/ui.vim:99
-msgid "Open Scrive"
+msgid "List..."
 msgstr ""
 
 #: autoload/bartleby/locale/views.vim:103

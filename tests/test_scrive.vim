@@ -186,6 +186,115 @@ def Test_quills_hook_starts_when_a_scrive_opens(): void
   assert_equal([0, 1], QuillHookBeforeAndAfter())
 enddef
 
+# The facts of one spawned Vim, read once for the tests below.
+var import_facts: dict<any> = {}
+
+# FUNCTION: Return the Logger folder of the runtimepath of this Vim, so
+# that a spawned Vim finds Logger wherever the tests were started from.
+def LoggerDir(): string
+  for dir in split(&runtimepath, ',')
+    if fnamemodify(dir, ':t') ==# 'Logger'
+      return dir
+    endif
+  endfor
+  return ''
+enddef
+
+# FUNCTION: Run a real Vim with a temporary binder root, and report what
+# Create without starters and CreateFrom leave behind: a scrive from a
+# folder of one chapter and one note, a scrive from a folder with nothing
+# to import, and a scrive with no starter documents. scrive.vim reads
+# g:bartleby_binder_root when it loads, so a test cannot redirect it in
+# this Vim, and a scrive of the user is never touched this way.
+def ImportFacts(): dict<any>
+  if !empty(import_facts)
+    return import_facts
+  endif
+  var root: string = tempname()
+  var src: string = tempname() .. '/Novel'
+  var bare: string = tempname() .. '/Images'
+  var log: string = tempname()
+  var script: string = tempname()
+  var plugin: string = fnamemodify(expand('<script>'), ':p:h:h')
+  mkdir(src .. '/Chapter 1', 'p')
+  mkdir(bare, 'p')
+  writefile(['Scene text.'], src .. '/Chapter 1/Arrival.md')
+  writefile(['Notes.'], src .. '/Notes.md')
+  writefile(['Not text.'], bare .. '/Cover.png')
+  writefile([
+    'vim9script',
+    $'g:bartleby_binder_root = "{root}"',
+    'runtime plugin/bartleby.vim',
+    'import autoload "bartleby/scrive.vim" as S',
+    'import autoload "bartleby/project.vim" as PO',
+    'var facts: dict<any> = {}',
+    $'var importer = S.CreateFrom("Imported", "novel", "{src}")',
+    'facts.made = importer isnot null_object ? 1 : 0',
+    'facts.report = importer isnot null_object ? importer.Report() : ""',
+    'var loaded = PO.Project.new(S.ScrivePath("Imported"))',
+    'facts.loads = loaded.Load() ? 1 : 0',
+    'facts.tops = loaded.items->mapnew((_, i) => i.title)',
+    'var manuscript = loaded.ChildAt(1)',
+    'facts.manuscript = manuscript.children->mapnew((_, i) => i.title)',
+    'facts.inner = manuscript.ChildAt(0).children->mapnew((_, i) => i.title)',
+    'var binder = loaded.BinderRoot()',
+    'facts.files = [',
+    '  filereadable(binder .. "/manuscript/chapter-novel/chapter-1/arrival.md"),',
+    '  filereadable(binder .. "/manuscript/chapter-novel/notes.md")]',
+    'facts.starterfile = filereadable(binder .. "/manuscript/chapter-1/scene.md")',
+    $'var nothing = S.CreateFrom("Nothing", "novel", "{bare}")',
+    'facts.nothing_made = nothing isnot null_object ? 1 : 0',
+    'facts.nothing_dir = isdirectory(S.ScrivePath("Nothing"))',
+    'var starters = S.Create("Bare", "novel", false)',
+    'facts.bare_tops = starters.items->mapnew((_, i) => i.title)',
+    'facts.bare_manuscript = starters.ChildAt(1).ChildCount()',
+    'facts.bare_file = filereadable(starters.BinderRoot() .. "/manuscript/chapter-1/scene.md")',
+    $'writefile([json_encode(facts)], "{log}")',
+    'qa!',
+  ], script)
+  system($'timeout 60 {v:progpath} -es -u NONE -N '
+    .. $'--cmd "set rtp+={plugin},{LoggerDir()}" -S {script}')
+  import_facts = filereadable(log) ? json_decode(join(readfile(log), '')) : {}
+  delete(log)
+  delete(script)
+  delete(root, 'rf')
+  delete(fnamemodify(src, ':h'), 'rf')
+  delete(fnamemodify(bare, ':h'), 'rf')
+  return import_facts
+enddef
+
+def Test_a_scrive_from_a_folder_holds_the_import(): void
+  var facts: dict<any> = ImportFacts()
+  assert_equal([1, 1], [get(facts, 'made', 0), get(facts, 'loads', 0)])
+  assert_equal(['Front Matter', 'Manuscript', 'Back Matter', 'Characters', 'Research', 'Trash'],
+    get(facts, 'tops', []))
+  # The imported folder is the only item of the Manuscript, with its own
+  # tree inside it.
+  assert_equal(['Novel'], get(facts, 'manuscript', []))
+  assert_equal(['Chapter 1', 'Notes'], get(facts, 'inner', []))
+  assert_equal([1, 1], get(facts, 'files', []))
+  assert_equal('imported 2 documents, 2 new folders', get(facts, 'report', ''))
+enddef
+
+def Test_a_scrive_from_a_folder_has_no_starter_document(): void
+  assert_equal(0, get(ImportFacts(), 'starterfile', 1))
+enddef
+
+def Test_a_source_with_nothing_to_import_leaves_no_scrive(): void
+  var facts: dict<any> = ImportFacts()
+  assert_equal([0, 0],
+    [get(facts, 'nothing_made', 1), get(facts, 'nothing_dir', 1)])
+enddef
+
+def Test_create_without_starters_leaves_the_manuscript_empty(): void
+  var facts: dict<any> = ImportFacts()
+  # The structural folders are still there, and no starter file is on disk.
+  assert_equal(['Front Matter', 'Manuscript', 'Back Matter', 'Characters', 'Research', 'Trash'],
+    get(facts, 'bare_tops', []))
+  assert_equal(0, get(facts, 'bare_manuscript', -1))
+  assert_equal(0, get(facts, 'bare_file', 1))
+enddef
+
 export def RunAll(): void
   Test_prefix_match_ignores_case_and_is_sorted()
   Test_empty_argument_lists_every_name()
@@ -200,4 +309,8 @@ export def RunAll(): void
   Test_a_sound_project_file_opens_and_saves()
   Test_a_save_keeps_a_backup_that_a_failed_load_names()
   Test_quills_hook_starts_when_a_scrive_opens()
+  Test_a_scrive_from_a_folder_holds_the_import()
+  Test_a_scrive_from_a_folder_has_no_starter_document()
+  Test_a_source_with_nothing_to_import_leaves_no_scrive()
+  Test_create_without_starters_leaves_the_manuscript_empty()
 enddef

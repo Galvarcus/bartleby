@@ -143,6 +143,9 @@ g:bartleby_lexicon_base_url = get(g:, 'bartleby_lexicon_base_url',
 command! -bar -nargs=? -complete=customlist,bartleby#scrive#CompleteNames
   \ BartlebyOpen BA.OpenScrive(<q-args>)
 command! -bar -nargs=1 BartlebyNewScrive BA.NewScrive(<q-args>)
+# The whole argument is the path, so a path with spaces needs no
+# escaping. See NewScriveFrom in autoload/bartleby.vim.
+command! -bar -nargs=1 -complete=file BartlebyNewScriveFrom BA.NewScriveFrom(<q-args>)
 command! -bar BartlebyList SL.Show()
 command! -bar BartlebyTable TB.Edit()
 command! -bar BartlebyTableFormat TB.FormatCmd()

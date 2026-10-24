@@ -75,6 +75,54 @@ export def NewScrive(name: string): void
     CreateScrive(name, projectType)
   }, CO.TYPE_NOVEL, PO.TypeNames())
 enddef
+# FUNCTION: Create a scrive from an existing file or folder: ask for the
+# name, with the name of the source offered, then for the type, as
+# NewScrive does, and import the source into the Manuscript of the new
+# scrive. See CreateFrom in scrive.vim.
+export def NewScriveFrom(path: string): void
+  var src: string = IM.ExpandPaths([path])[0]
+  if !isdirectory(src) && !filereadable(src)
+    log.Error(MI.NoFileFolder(src))
+    return
+  endif
+  IP.PromptText(MI.NewScrive(), SourceName(src), (name: string) => {
+    if name ==# ''
+      return
+    endif
+    PI.PickOne(MI.ScriveType(), CO.TYPES, (projectType: string) => {
+      OpenFromImport(name, projectType, src)
+    }, CO.TYPE_NOVEL, PO.TypeNames())
+  })
+enddef
+# FUNCTION: Return the name to offer for a scrive made from src: the name
+# of the folder, or the name of the file without its extension.
+def SourceName(src: string): string
+  var bare: string = substitute(src, '[/\\]$', '', '')
+  return isdirectory(src) ? fnamemodify(bare, ':t') : fnamemodify(bare, ':t:r')
+enddef
+# FUNCTION: Create the scrive from src, open it, and report what came in.
+def OpenFromImport(name: string, projectType: string, src: string): void
+  var importer: IM.Importer = S.CreateFrom(name, projectType, src)
+  if importer is null_object
+    # Create reports a name that is already a scrive, and leaves that
+    # scrive as it is, so a folder that is still there means that. The
+    # other reason is a source with nothing in it to import.
+    if !isdirectory(S.ScrivePath(name))
+      log.Error(MI.NothingImported(src))
+    endif
+    return
+  endif
+  var project: PO.Project = importer.project
+  ST.Set(project)
+  StartScriveHooks()
+  SS.RememberLastScrive(project.scriveDir)
+  B.Show(project)
+  if empty(importer.skipped)
+    log.Info(importer.Report())
+  else
+    log.Warn(importer.Report())
+  endif
+enddef
 export def CreateScrive(name: string, projectType: string): void
   var project: PO.Project = S.Create(name, projectType)
   if project is null_object

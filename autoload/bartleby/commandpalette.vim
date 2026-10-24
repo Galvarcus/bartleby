@@ -62,6 +62,14 @@ const CMDS: dict<string> = {
 const CMDS_WITH_ARG: dict<string> = {
   'Open Scrive': CO.CMD_OPEN,
   'New Scrive': CO.CMD_NEW_SCRIVE,
+  'New Scrive from Files': CO.CMD_NEW_SCRIVE_FROM,
+}
+
+# The completion type of the argument that an entry asks for, by the name
+# that CMDS_WITH_ARG uses. An entry that asks for a path completes it, and
+# one that asks for a scrive name does not.
+const ARG_COMPLETE: dict<string> = {
+  'New Scrive from Files': CO.COMPLETE_FILE,
 }
 
 # Entries with no Ex command, called through an exported function of
@@ -114,6 +122,7 @@ def CmdNames(): dict<string>
     'Close Scrive': MI.CloseScrive(),
     'Open Scrive': MI.OpenScrive(),
     'New Scrive': MI.NewScrive(),
+    'New Scrive from Files': MI.NewScriveFrom(),
     'Pick Spotlight Mode': MI.PickSpotlightMode(),
     'Define Word': MI.DefineWord(),
     'Thesaurus': MI.Thesaurus(),
@@ -148,7 +157,7 @@ def Run(choice: string): void
       if name !=# ''
         execute $'{cmd} {name}'
       endif
-    })
+    }, null_function, get(ARG_COMPLETE, choice, ''))
     return
   endif
   if choice ==# CHOICE_PICK_SPOTLIGHT_MODE

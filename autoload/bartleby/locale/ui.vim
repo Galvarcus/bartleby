@@ -35,6 +35,14 @@ export def CurBufNot(): string
   return IN.T("current buffer is not a document of the open scrive")
 enddef
 
+export def NoFileFolder(path: any): string
+  return printf(IN.T("no file or folder at %s"), path)
+enddef
+
+export def NothingImported(path: any): string
+  return printf(IN.T("nothing to import from %s, so no scrive was created"), path)
+enddef
+
 export def NoScriveOpen(): string
   return IN.T("no scrive open - run :BartlebyRecover <name> for a scrive that does not open")
 enddef
@@ -103,8 +111,16 @@ export def New(): string
   return IN.T("New...")
 enddef
 
+export def NewFrom(): string
+  return IN.T("New from files...")
+enddef
+
 export def NewScrive(): string
   return IN.T("New Scrive")
+enddef
+
+export def NewScriveFrom(): string
+  return IN.T("New Scrive from Files")
 enddef
 
 export def Toggle(): string

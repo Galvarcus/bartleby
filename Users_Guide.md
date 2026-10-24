@@ -124,6 +124,20 @@ in the Manuscript of a novel with parts a Part, with Chapters inside it.
 At the top level it becomes a Custom folder. Anywhere else it is a plain
 folder.
 
+### A new scrive from your old work
+
+If you have no scrive yet, start from the work itself:
+
+```vim
+:BartlebyNewScriveFrom ~/Drafts/My Novel
+```
+
+Bartleby offers the folder name as the name of the scrive, asks which
+type it is, and imports the work into the Manuscript. The new scrive
+holds no empty starter document, so your own chapters stand alone in it.
+If the folder holds nothing that the type takes, Bartleby creates no
+scrive and tells you why.
+
 ## Binder
 
 The Binder is the tree on the left. It shows every folder and

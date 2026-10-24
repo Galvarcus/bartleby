@@ -16,6 +16,9 @@ var is_loaded: bool = true
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/templates.vim' as TE
+import autoload 'bartleby/import.vim' as IM
+import autoload 'bartleby/mutate.vim' as MU
+import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/locale/binder.vim' as MB
 import autoload 'bartleby/locale/common.vim' as MC
@@ -103,8 +106,11 @@ enddef
 
 # FUNCTION: Create a scrive on disk: the binder folder, a project.json
 # with the starter tree of DefaultTree for projectType, and the empty
-# files of that tree. Return it loaded.
-export def Create(name: string, projectType: string = CO.TYPE_NOVEL): PO.Project
+# files of that tree. Without withStarters, the Manuscript folder starts
+# empty, for a scrive that an import fills, see CreateFrom. Return it
+# loaded.
+export def Create(name: string, projectType: string = CO.TYPE_NOVEL,
+    withStarters: bool = true): PO.Project
   var dir: string = ScrivePath(name)
   if isdirectory(dir)
     log.Error(MB.ScriveAlreadyExists(name, dir))
@@ -114,8 +120,43 @@ export def Create(name: string, projectType: string = CO.TYPE_NOVEL): PO.Project
   var project: PO.Project = PO.Project.new(dir)
   project.InitNew(name, projectType)
   var tree: list<BI.BinderItem> = TE.DefaultTree(projectType, project.DocExt())
+  if !withStarters
+    for folder in tree
+      if folder.structureRole ==# CO.ROLE_MANUSCRIPT
+        folder.SetChildren([])
+      endif
+    endfor
+  endif
   TE.Materialize(tree, project.BinderRoot())
   project.SeedTree(tree)
   project.Save()
   return project
+enddef
+
+# FUNCTION: Create a scrive named name, of projectType, from src, a file
+# or a folder: the scrive has no starter documents, and the import fills
+# its Manuscript folder, see import.vim. Return the importer, which holds
+# the project and what came in. Return null_object, and leave nothing
+# behind, when the scrive cannot be made, or when src holds no document
+# that the scrive type takes: the folder of a scrive with neither starters
+# nor an import would be worse than none.
+export def CreateFrom(name: string, projectType: string, src: string): IM.Importer
+  var project: PO.Project = Create(name, projectType, false)
+  if project is null_object
+    return null_object
+  endif
+  var importer: IM.Importer = IM.Importer.new(project)
+  importer.Plan([src])
+  var manuscript: BI.BinderItem = MU.FindManuscript(project)
+  importer.Apply(manuscript is null_object
+    ? null_object
+    : T.FindRowById(T.Flatten(project), manuscript.id))
+  if empty(importer.added)
+    # The folder was made by the Create above, so nothing of the user is
+    # in it.
+    delete(project.scriveDir, 'rf')
+    return null_object
+  endif
+  project.Save()
+  return importer
 enddef
