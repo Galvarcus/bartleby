@@ -13,6 +13,7 @@ vim9script
 import autoload 'bartleby/scrive.vim' as S
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/persist.vim' as PE
+import './fixtures.vim' as FI
 import 'bartleby/variables/constants.vim' as CO
 
 const NAMES: list<string> = ['Other', 'My Novel', 'My Screenplay']
@@ -174,7 +175,8 @@ def QuillHookBeforeAndAfter(): list<number>
     $'writefile([string(before), string(exists("#bartleby_quill_auto#BufEnter"))], "{log}")',
     'qa!',
   ], script)
-  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={plugin},{plugin}/deps/Logger" -S {script}')
+  system($'timeout 60 {v:progpath} -es -u NONE -N '
+    .. $'--cmd "set rtp+={plugin},{FI.LoggerDir()}" -S {script}')
   var result: list<number> = filereadable(log) ? readfile(log)->mapnew((_, v) => str2nr(v)) : []
   delete(log)
   delete(script)
@@ -188,17 +190,6 @@ enddef
 
 # The facts of one spawned Vim, read once for the tests below.
 var import_facts: dict<any> = {}
-
-# FUNCTION: Return the Logger folder of the runtimepath of this Vim, so
-# that a spawned Vim finds Logger wherever the tests were started from.
-def LoggerDir(): string
-  for dir in split(&runtimepath, ',')
-    if fnamemodify(dir, ':t') ==# 'Logger'
-      return dir
-    endif
-  endfor
-  return ''
-enddef
 
 # FUNCTION: Run a real Vim with a temporary binder root, and report what
 # Create without starters and CreateFrom leave behind: a scrive from a
@@ -253,7 +244,7 @@ def ImportFacts(): dict<any>
     'qa!',
   ], script)
   system($'timeout 60 {v:progpath} -es -u NONE -N '
-    .. $'--cmd "set rtp+={plugin},{LoggerDir()}" -S {script}')
+    .. $'--cmd "set rtp+={plugin},{FI.LoggerDir()}" -S {script}')
   import_facts = filereadable(log) ? json_decode(join(readfile(log), '')) : {}
   delete(log)
   delete(script)

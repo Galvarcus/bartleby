@@ -48,6 +48,22 @@ export def WriteDocContent(project: PO.Project, item: BI.BinderItem, lines: list
   writefile(lines, path)
 enddef
 
+# FUNCTION: Return the Logger folder of the runtimepath of this Vim, for a
+# test that starts a second Vim and must give it Logger. The path is
+# deps/Logger in CI and wherever the developer keeps it otherwise, so a
+# test that names deps/Logger itself fails outside CI.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/41
+export def LoggerDir(): string
+  for dir in split(&runtimepath, ',')
+    if fnamemodify(dir, ':t') ==# 'Logger'
+      # Absolute, because CI puts deps/Logger on the runtimepath as a
+      # relative path and a second Vim need not start in this folder.
+      return substitute(fnamemodify(dir, ':p'), '/$', '', '')
+    endif
+  endfor
+  return ''
+enddef
+
 # FUNCTION: Remove the whole folder of a fixture project on disk, its
 # binder root and everything in it. Call it at the end of every test that
 # used WriteDocContent.

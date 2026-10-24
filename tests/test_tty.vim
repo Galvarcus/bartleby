@@ -17,6 +17,7 @@ vim9script
 import autoload 'bartleby/tty.vim' as TY
 import autoload 'bartleby/lang.vim' as LA
 import autoload 'bartleby/spotlight.vim' as SP
+import './fixtures.vim' as FI
 import 'bartleby/variables/constants.vim' as CO
 
 const NAME: string = tolower(CO.PLUGIN_NAME)
@@ -294,7 +295,7 @@ def StartupState(colors: number, setup: string = ''): string
       .. ' .. " " .. get(g:, "colors_name", "")], "' .. log .. '")',
     'augroup END',
   ], script)
-  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={root},{root}/deps/Logger"'
+  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={root},{FI.LoggerDir()}"'
     .. $' --cmd "set t_Co={colors}" {setup} -c "runtime plugin/bartleby.vim"'
     .. $' -c "BartlebySpotlight Paragraph" -S {script}')
   var result: string = filereadable(log) ? trim(join(readfile(log), ' ')) : 'no result'

@@ -72,7 +72,7 @@ Use these skills. Read each one before work that falls under it.
 
 ## Verification
 
-Run from the root of the Bartleby repository. Logger must be in `deps/Logger`.
+Run from the root of the Bartleby repository, with Logger on the runtimepath, as `deps/Logger` or by its own path. A test that starts a second Vim passes that Logger on, see `LoggerDir` in `tests/fixtures.vim`.
 
 | Check | Command | Passes when |
 | --- | --- | --- |

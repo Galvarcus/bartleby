@@ -257,7 +257,7 @@ def StatuslineAfterOpen(statusline: string): list<string>
     $'writefile([atStart, &g:statusline], "{log}")',
     'qa!',
   ], script)
-  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={plugin},{plugin}/deps/Logger" -S {script}')
+  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={plugin},{FI.LoggerDir()}" -S {script}')
   var result: list<string> = filereadable(log) ? readfile(log) : ['no result', '']
   delete(log)
   delete(script)

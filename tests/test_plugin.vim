@@ -10,6 +10,8 @@ vim9script
 # License: GNU GPL 3.0
 ##############################################################################
 
+import './fixtures.vim' as FI
+
 const PLUGIN: string = fnamemodify(expand('<script>'), ':p:h:h')
 
 # FUNCTION: Start a separate Vim, run the lines before before the plugin
@@ -20,7 +22,7 @@ def Fresh(before: list<string>, after: list<string>): list<string>
   var out: string = tempname()
   writefile(['vim9script'] + before + ['runtime plugin/bartleby.vim'] + after
     + [$'writefile(g:result, "{out}")', 'qa!'], script)
-  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={PLUGIN},{PLUGIN}/deps/Logger" -S {script}')
+  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={PLUGIN},{FI.LoggerDir()}" -S {script}')
   var result: list<string> = filereadable(out) ? readfile(out) : ['(no result)']
   delete(out)
   delete(script)
