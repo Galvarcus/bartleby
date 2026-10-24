@@ -26,6 +26,7 @@ Consoles with 8 or 16 colors ........... |bartleby-consoles-with-8-or-16-colors|
 Fountain ................................................... |bartleby-fountain|
 Palette and menu ................................... |bartleby-palette-and-menu|
 Import ....................................................... |bartleby-import|
+  A project of another application . |bartleby-a-project-of-another-application|
 Session, snapshots, and search ......... |bartleby-session-snapshots-and-search|
 Auto-save ................................................. |bartleby-auto-save|
 Dictionary and thesaurus ................... |bartleby-dictionary-and-thesaurus|
@@ -642,6 +643,32 @@ is a symbolic link, and a folder that holds no accepted file are left out.
 Bartleby says how many documents and folders an import of a folder would add,
 and waits for `y`.
 
+------------------------------------------------------------------------------
+A project of another application     *bartleby-a-project-of-another-application*
+
+A folder that holds the export of a whole project comes in as that project,
+not as a plain tree. Bartleby reads the export of Scrivener 3.5.2 for macOS,
+which writes a `MetaData.txt` file beside every item, and maps it onto the
+scrive:
+
+- The draft folder fills the Manuscript, and its folders become Parts and
+  Chapters by the type of the scrive.
+- Front Matter, Back Matter, and Characters fill the folders of those names.
+  Research takes the research of the project, every folder that the export
+  gives no part of its own, such as Places or Template Sheets, and every
+  document at the top level.
+- The status, the label, the keywords, and the synopsis of each document come
+  with it. A status that Bartleby does not hold becomes None.
+- The notes of a document become a document of their own in a `Document Notes`
+  folder under Research, out of the Manuscript, where no compile reads them.
+- The Trash and the snapshots of the export are left behind, and so is a file
+  of a format that Bartleby cannot read, such as `.rtf` or `.pdf`. The report
+  names those and asks for a new export as text.
+
+`:BartlebyNewScriveFrom` on an export opens the type picker on the type that
+the export needs. An export that Bartleby does not recognize comes in as a
+plain folder.
+
 An imported folder takes a role from where it lands: Custom at the top level,
 Chapter under the Manuscript of a novel or under a Part, Part under the
 Manuscript of a novel with parts, and a plain folder anywhere else, such as
@@ -653,7 +680,8 @@ its cursor is elsewhere. The Trash takes no import.
 
 With no scrive yet, `:BartlebyNewScriveFrom ~/Drafts/Novel` makes one from the
 source: it offers the source name as the scrive name, asks for the type, and
-imports into the Manuscript. The scrive gets no starter document, so the
+imports into the Manuscript, or, from the export of a whole project, into the
+folder of each role, as above. The scrive gets no starter document, so the
 imported work stands alone in it. Nothing is created when the source holds no
 file that the type accepts.
 
