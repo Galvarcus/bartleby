@@ -112,7 +112,7 @@ export def New(): string
 enddef
 
 export def NewFrom(): string
-  return IN.T("New from files...")
+  return IN.T("New from existing work...")
 enddef
 
 export def NewScrive(): string
@@ -120,7 +120,7 @@ export def NewScrive(): string
 enddef
 
 export def NewScriveFrom(): string
-  return IN.T("New Scrive from Files")
+  return IN.T("New Scrive from Existing Work")
 enddef
 
 export def Toggle(): string
@@ -244,7 +244,7 @@ export def SearchScrive(): string
 enddef
 
 export def ImportFiles(): string
-  return IN.T("Import Files")
+  return IN.T("Import Files or Folders")
 enddef
 
 export def EditProjInfo(): string

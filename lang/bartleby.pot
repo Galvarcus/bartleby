@@ -1163,7 +1163,7 @@ msgid "New..."
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:115
-msgid "New from files..."
+msgid "New from existing work..."
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:119
@@ -1171,7 +1171,7 @@ msgid "New Scrive"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:123
-msgid "New Scrive from Files"
+msgid "New Scrive from Existing Work"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:127
@@ -1287,7 +1287,7 @@ msgid "Search Scrive"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:247
-msgid "Import Files"
+msgid "Import Files or Folders"
 msgstr ""
 
 #: autoload/bartleby/locale/ui.vim:251
