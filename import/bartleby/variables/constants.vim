@@ -78,8 +78,16 @@ export const TYPES: list<string> = [TYPE_NOVEL, TYPE_NOVEL_PARTS, TYPE_SHORT_STO
 # values. syntax/bartleby-binder.vim builds its label rule from LABELS.
 ##############################################################################
 
-export const LABELS: list<string> = ['None', 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple']
-export const STATUSES: list<string> = ['To Do', 'First Draft', 'Revised', 'Done']
+# The empty label and the empty status, the first entry of both lists and
+# the default of both, so that a document nobody has marked claims no
+# state, as an unlabeled one claims no color.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/42
+export const NONE: string = 'None'
+export const LABELS: list<string> = [NONE, 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple']
+# In the order of the work, which is the order the pickers of the
+# Inspector and the Outliner show.
+export const STATUSES: list<string> = [NONE, 'To Do', 'Working Draft',
+  'First Draft', 'Revised', 'Final Draft', 'Done']
 
 ##############################################################################
 # SECTION: Dictionary and thesaurus. Each reference names its provider,

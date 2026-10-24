@@ -791,70 +791,78 @@ msgid "compiled: %s"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:103
-msgid "Suffix"
+msgid "Middle"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:107
-msgid "Author Name"
+msgid "Surname"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:111
-msgid "Address"
+msgid "Suffix"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:115
-msgid "City"
+msgid "Author Name"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:119
-msgid "State"
+msgid "Address"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:123
-msgid "Country"
+msgid "City"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:127
-msgid "Zip"
+msgid "State"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:131
-msgid "Phone Number"
+msgid "Country"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:135
-msgid "Email"
+msgid "Zip"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:139
-msgid "Name is required"
+msgid "Phone Number"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:143
-msgid " %s Profile "
+msgid "Email"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:147
-msgid " %s Info "
+msgid "Name is required"
+msgstr ""
+
+#: autoload/bartleby/locale/data.vim:151
+msgid " %s Profile "
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:155
-msgid "Recovered"
+msgid " %s Info "
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:163
-msgid "session: previously active document no longer exists: %s"
+msgid "Recovered"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:171
-msgid "snapshot taken: %s%s"
-msgstr ""
-
-#: autoload/bartleby/locale/data.vim:175
-msgid "before restore"
+msgid "session: previously active document no longer exists: %s"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:179
+msgid "snapshot taken: %s%s"
+msgstr ""
+
+#: autoload/bartleby/locale/data.vim:183
+msgid "before restore"
+msgstr ""
+
+#: autoload/bartleby/locale/data.vim:187
 msgid "restored \"%s\" to snapshot from %s"
 msgstr ""
 
@@ -891,39 +899,39 @@ msgid "To Do"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:59
-msgid "First Draft"
+msgid "Working Draft"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:63
-msgid "Revised"
+msgid "First Draft"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:67
-msgid "Done"
+msgid "Revised"
+msgstr ""
+
+#: autoload/bartleby/locale/data.vim:71
+msgid "Final Draft"
 msgstr ""
 
 #: autoload/bartleby/locale/data.vim:75
+msgid "Done"
+msgstr ""
+
+#: autoload/bartleby/locale/data.vim:83
 msgid "no such file: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/data.vim:79
+#: autoload/bartleby/locale/data.vim:87
 msgid "%s could not be written, so it was not changed: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/data.vim:87
+#: autoload/bartleby/locale/data.vim:95
 msgid "Prefix"
 msgstr ""
 
-#: autoload/bartleby/locale/data.vim:91
-msgid "First"
-msgstr ""
-
-#: autoload/bartleby/locale/data.vim:95
-msgid "Middle"
-msgstr ""
-
 #: autoload/bartleby/locale/data.vim:99
-msgid "Surname"
+msgid "First"
 msgstr ""
 
 #: autoload/bartleby/locale/panes.vim:103

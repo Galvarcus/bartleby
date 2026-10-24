@@ -55,12 +55,20 @@ export def Do(): string
   return IN.T("To Do")
 enddef
 
+export def WorkingDraft(): string
+  return IN.T("Working Draft")
+enddef
+
 export def FirstDraft(): string
   return IN.T("First Draft")
 enddef
 
 export def Revised(): string
   return IN.T("Revised")
+enddef
+
+export def FinalDraft(): string
+  return IN.T("Final Draft")
 enddef
 
 export def Done(): string

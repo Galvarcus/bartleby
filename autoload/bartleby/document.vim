@@ -17,9 +17,7 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/locale/data.vim' as MD
-
-const NO_LABEL: string = 'None'
-const TODO: string = 'To Do'
+import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return each label, as stored in CO.LABELS, to its name in the
 # message language. The stored value stays English, so a scrive keeps its
@@ -27,7 +25,7 @@ const TODO: string = 'To Do'
 # match CO.LABELS.
 export def LabelNames(): dict<string>
   return {
-    None: MD.None(),
+    [CO.NONE]: MD.None(),
     Red: MD.Red(),
     Orange: MD.Orange(),
     Yellow: MD.Yellow(),
@@ -41,9 +39,12 @@ enddef
 # the message language, as LabelNames does for labels.
 export def StatusNames(): dict<string>
   return {
+    [CO.NONE]: MD.None(),
     'To Do': MD.Do(),
+    'Working Draft': MD.WorkingDraft(),
     'First Draft': MD.FirstDraft(),
     Revised: MD.Revised(),
+    'Final Draft': MD.FinalDraft(),
     Done: MD.Done(),
   }
 enddef
@@ -58,8 +59,8 @@ export def StatusName(status: string): string
 enddef
 
 export class DocMeta
-  var label: string = 'None'
-  var status: string = 'To Do'
+  var label: string = CO.NONE
+  var status: string = CO.NONE
   var synopsis: string = ''
   var keywords: list<string> = []
   var wordCountTarget: number = 0
@@ -69,8 +70,8 @@ export class DocMeta
   # defaults, so older or partial files still load.
   static def FromDict(src: dict<any>): DocMeta
     var meta: DocMeta = DocMeta.new()
-    meta.label = get(src, 'label', NO_LABEL)
-    meta.status = get(src, 'status', TODO)
+    meta.label = get(src, 'label', CO.NONE)
+    meta.status = get(src, 'status', CO.NONE)
     meta.synopsis = get(src, 'synopsis', '')
     meta.keywords = get(src, 'keywords', [])
     meta.wordCountTarget = get(src, 'wordCountTarget', 0)

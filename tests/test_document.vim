@@ -14,7 +14,9 @@ import 'bartleby/variables/constants.vim' as CO
 def Test_new_docmeta_has_sensible_defaults(): void
   var meta = D.DocMeta.new()
   assert_equal('None', meta.label)
-  assert_equal('To Do', meta.status)
+  # A document that nobody has marked has no status, as it has no label.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/42
+  assert_equal('None', meta.status)
   assert_equal('', meta.synopsis)
   assert_equal([], meta.keywords)
   assert_equal(0, meta.wordCountTarget)
@@ -38,7 +40,7 @@ def Test_from_dict_tolerates_missing_keys(): void
   # An older or partial metadata file with only a label.
   var meta = D.DocMeta.FromDict({label: 'Blue'})
   assert_equal('Blue', meta.label)
-  assert_equal('To Do', meta.status)
+  assert_equal('None', meta.status)
   assert_equal([], meta.keywords)
 enddef
 
@@ -62,7 +64,7 @@ def Test_setters_mutate_only_their_own_field(): void
   meta.SetLabel('Purple')
   assert_equal('Purple', meta.label)
   # Not changed.
-  assert_equal('To Do', meta.status)
+  assert_equal('None', meta.status)
 enddef
 
 def Test_load_of_a_missing_sidecar_yields_plain_defaults(): void
@@ -94,6 +96,17 @@ def Test_display_names_cover_the_stored_values(): void
   assert_equal('Unknown', D.LabelName('Unknown'))
 enddef
 
+# FUNCTION: The two steps that an import needs and that the list had no
+# room for before: text that is not a draft yet, and a draft that is
+# finished but not released.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/42
+def Test_the_status_list_holds_every_step_in_order(): void
+  assert_equal(['None', 'To Do', 'Working Draft', 'First Draft', 'Revised',
+    'Final Draft', 'Done'], CO.STATUSES)
+  assert_equal('Working Draft', D.StatusName('Working Draft'))
+  assert_equal('Final Draft', D.StatusName('Final Draft'))
+enddef
+
 export def RunAll(): void
   Test_new_docmeta_has_sensible_defaults()
   Test_from_dict_reads_every_field()
@@ -103,4 +116,5 @@ export def RunAll(): void
   Test_load_of_a_missing_sidecar_yields_plain_defaults()
   Test_save_then_load_round_trips_to_disk()
   Test_display_names_cover_the_stored_values()
+  Test_the_status_list_holds_every_step_in_order()
 enddef

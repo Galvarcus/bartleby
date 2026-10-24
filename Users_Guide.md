@@ -360,8 +360,9 @@ Binder:
 - **Label** - a color: Red, Orange, Yellow, Green, Blue, or Purple.
   You decide what each color means, for example "needs a rewrite".
   Press `l` to set it. The Binder shows it after the title.
-- **Status** - a state such as To Do, Draft, or Done. Press `s` to set
-  it.
+- **Status** - how far the document has come: None, To Do, Working
+  Draft, First Draft, Revised, Final Draft, or Done. A new document has
+  no status, as it has no label. Press `s` to set it.
 
 The **Inspector** shows all the details of the open document. Press
 `<leader>bi` to open it. It follows you when you open another
