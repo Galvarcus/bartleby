@@ -78,7 +78,6 @@ Run from the root of the Bartleby repository. Logger must be in `deps/Logger`.
 | --- | --- | --- |
 | Unit tests | `vim -es -u NONE -N -c 'set rtp+=.,deps/Logger' -c 'source tests/harness.vim' -c 'quit'` | `tests/results.txt` reads `All tests passed` |
 | Compile smoke tests | the same, with `source tests/test_compile_smoke.vim` | `tests/smoke_results.txt` reads `All smoke tests passed` |
-| Message template | `python3 tools/i18n/extract.py --check` | it reports no change |
 | Cheat sheet | `python3 tools/cheatsheet/build_cheatsheet.py --check` | it reports the file valid |
 | Cheat sheet tests | `python3 -m unittest discover -s tools/cheatsheet -p 'test_*.py'` | all tests pass |
 | Workflows | `actionlint .github/workflows/*.yml` | no findings, with `shellcheck` installed |
@@ -87,4 +86,4 @@ Run from the root of the Bartleby repository. Logger must be in `deps/Logger`.
 - The compile smoke tests need Pandoc, `pdflatex`, `xelatex`, and the `sffms` and `ulem` packages. CI runs them with the distro Pandoc and with Pandoc 3.10, in the image `ghcr.io/galvarcus/bartleby-ci` that the repository variable `CI_IMAGE` names. `.github/docker/Dockerfile` defines it, and `.github/workflows/ci-image.yml` builds it.
 - A new test goes in `tests/test_<area>.vim` and is registered in `tests/harness.vim`.
 - To prove a test guards a change, break the change on purpose and confirm that a named test fails. Earlier sessions did this for every feature.
-- After a change to a translated text, run `python3 tools/i18n/extract.py`.
+- Never run `python3 tools/i18n/extract.py`. The pre-commit hook runs it after a change to a translated text and stages `lang/bartleby.pot`. CI checks the template with `--check`.
