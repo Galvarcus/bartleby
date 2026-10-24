@@ -186,6 +186,9 @@ export const CMD_SPOTLIGHT: string = 'BartlebySpotlight'
 export const CMD_TIDY_FILES: string = 'BartlebyTidyFiles'
 export const CMD_TOGGLE_BINDER: string = 'BartlebyToggleBinder'
 export const CMD_TOGGLE_INSPECTOR: string = 'BartlebyToggleInspector'
+# The completion type of a popup field that holds a path, as
+# getcompletion takes it. See the complete option in inputpopup.vim.
+export const COMPLETE_FILE: string = 'file'
 # The User event that state.vim fires when a scrive opens or closes.
 export const EVENT_PROJ_CHANGED: string = 'BartlebyProjectChanged'
 export const FILETYPE_FOUNTAIN: string = 'fountain'

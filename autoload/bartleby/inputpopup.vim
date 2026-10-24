@@ -47,6 +47,10 @@ var is_loaded: bool = true
 #                               field name. Typing stops there. A longer
 #                               starting value is kept. The field is at
 #                               least one column wider, for the cursor.
+#   complete      dict<string>  Completion type per text field, by field
+#                               name, as getcompletion takes it, such as
+#                               {path: 'file'}. Without one, a field
+#                               completes nothing.
 #   labels        dict<string>  Label per field, by field name. Default:
 #                               the field name.
 #   submit_label  string        Text of the Submit button.
@@ -56,11 +60,13 @@ var is_loaded: bool = true
 #   title, line, col, zindex    Passed to popup_create unchanged.
 #
 # Keys: Tab and S-Tab, or C-n and C-p, move between the fields and the
-# buttons. In a text field, Left, Right, Home, and End move the cursor,
-# C-u clears it, and Enter moves to the next field. In a choice field,
-# Left and Right change the option, without wrapping, and Enter moves
-# on. C-s submits and Esc or C-c cancels from anywhere. The mouse can
-# click buttons, text fields, and options.
+# buttons. In a text field that completes and holds text, Tab takes the
+# next match instead, and S-Tab the one before, so C-n and C-p move on
+# from such a field. In a text field, Left, Right, Home, and End move
+# the cursor, C-u clears it, and Enter moves to the next field. In a
+# choice field, Left and Right change the option, without wrapping, and
+# Enter moves on. C-s submits and Esc or C-c cancels from anywhere. The
+# mouse can click buttons, text fields, and options.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -112,15 +118,20 @@ enddef
 
 # FUNCTION: Show one text field, titled title and filled with default.
 # Call OnSubmit with the text, or OnCancel, which does nothing by
-# default, on cancel. One Enter submits, like input in a box.
+# default, on cancel. One Enter submits, like input in a box. With
+# complete, a completion type that getcompletion takes, Tab completes the
+# text, as for a file path.
 export def PromptText(title: string, default: string, OnSubmit: func(string),
-    OnCancel: func() = Noop): void
+    OnCancel: func() = Noop, complete: string = ''): void
   var fields: list<list<dict<any>>> = [[{name: 'value', type: 'text'}]]
-  var form: InputPopup = InputPopup.new(fields, {value: default}, {title: $' {title} '})
+  var form: InputPopup = InputPopup.new(fields, {value: default},
+    {title: $' {title} ', complete: {value: complete}})
   form.OnSubmit((vals: dict<any>) => {
     OnSubmit(vals.value)
   })
-  form.OnCancel(OnCancel)
+  # A caller that wants no cancel handler but does want completion, which
+  # comes after it, passes null_function. Calling that would fail.
+  form.OnCancel(OnCancel == null_function ? Noop : OnCancel)
   form.Open()
 enddef
 
@@ -261,6 +272,9 @@ export class InputPopup
           # One column more than the maximum, for the cursor after the last
           # character. Without it the field scrolls and hides the text.
           field.width = max([get(widths, name, defaultWidth), field.maxLength + 1])
+          field.complete = get(get(this.opts, 'complete', {}), name, '')
+          field.matches = []
+          field.matchIdx = -1
         endif
         add(this.fields, field)
       endfor
@@ -545,7 +559,12 @@ export class InputPopup
       endif
       return true
     endif
-    var result: string = this.CommonKey(winid, key)
+    # A field that completes takes Tab for its matches, before CommonKey
+    # moves the focus with it.
+    var completing: dict<any> = this.CompletingField()
+    var result: string = !empty(completing) && (key == CO.KEY_TAB || key == CO.KEY_S_TAB)
+      ? this.CompleteKey(completing, key)
+      : this.CommonKey(winid, key)
     if result ==# KEY_UNHANDLED
       if type ==# TYPE_BTN
         result = this.BtnKey(winid, key)
@@ -556,6 +575,11 @@ export class InputPopup
       else
         result = this.TextKey(winid, key)
       endif
+    endif
+    # The matches belong to the text as it was, so a change drops them.
+    if result ==# KEY_CHANGED && !empty(completing)
+      completing.matches = []
+      completing.matchIdx = -1
     endif
     if result !=# KEY_CLOSED
       this.Render()
@@ -663,6 +687,43 @@ export class InputPopup
       endif
       this.Focus(this.currentIdx < len(this.fields) - 1 ? this.currentIdx + 1 : len(this.fields))
     endif
+    return KEY_HANDLED
+  enddef
+
+  # METHOD: Return the focused field when it completes and holds text,
+  # else an empty dict. An empty field keeps Tab for moving on, where
+  # there is nothing to complete anyway.
+  def CompletingField(): dict<any>
+    if this.IsBtnIdx(this.currentIdx)
+      return {}
+    endif
+    var f: dict<any> = this.fields[this.currentIdx]
+    return get(f, 'complete', '') ==# '' || f.value ==# '' ? {} : f
+  enddef
+
+  # METHOD: Put the next match in f, or with Shift-Tab the one before.
+  # The first Tab after a change looks the matches up. With one match,
+  # which the text now is, they are looked up again, so that Tab after a
+  # completed folder offers what is in it. No match leaves the text as it
+  # is, as the command line of Vim does.
+  def CompleteKey(f: dict<any>, key: string): string
+    if empty(f.matches) || (len(f.matches) == 1 && f.matches[0] ==# f.value)
+      f.matches = getcompletion(f.value, f.complete)
+      f.matchIdx = -1
+    endif
+    if empty(f.matches)
+      return KEY_HANDLED
+    endif
+    if f.matchIdx < 0
+      f.matchIdx = key == CO.KEY_TAB ? 0 : len(f.matches) - 1
+    else
+      var step: number = key == CO.KEY_TAB ? 1 : len(f.matches) - 1
+      f.matchIdx = (f.matchIdx + step) % len(f.matches)
+    endif
+    f.value = f.matches[f.matchIdx]
+    # Render scrolls the field from the cursor, so the end of a long path
+    # shows.
+    f.cursor = strchars(f.value)
     return KEY_HANDLED
   enddef
 

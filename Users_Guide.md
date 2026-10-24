@@ -90,8 +90,10 @@ To open a scrive later:
 
 Writing that you started elsewhere can come into a scrive. Put the
 cursor in the Binder where you want it, press `i`, and type the path of
-the file. Bartleby copies the file into the scrive and adds a document
-for it, titled from the file name. Your original file stays where it is.
+the file. `Tab` completes the path, and each `Tab` after it takes the
+next match, as on the command line. Bartleby copies the file into the
+scrive and adds a document for it, titled from the file name. Your
+original file stays where it is.
 
 The command takes one or more paths, and completes them with `Tab`:
 
@@ -571,7 +573,8 @@ change your documents.
      standard screenplay format.
 3. **Choose a format and the settings** for that kind, such as line
    spacing or a cover image. A cover image is a path to an image file,
-   and can start with `~/` for your home folder.
+   and can start with `~/` for your home folder. Press `Tab` to
+   complete the path.
 4. **Name the target.** Bartleby saves your answers. Next time, run
    `:BartlebyCompile`, pick the name, and choose Run. Choose Edit to
    change the settings, or Delete to remove the target.

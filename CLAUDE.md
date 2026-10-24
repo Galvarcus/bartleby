@@ -67,6 +67,7 @@ Use these skills. Read each one before work that falls under it.
 - Messages live in `autoload/bartleby/locale/*.vim`, one file per area, with the aliases `MB` (binder), `MC` (common), `MK` (compile), `MW` (writing), `MI` (ui), `MP` (panes), `MV` (views), `MG` (progress), and `MD` (data).
 - `IN.T` and `IN.N` take only literal text, so that `tools/i18n/extract.py` can collect it. Text from template files goes through `IN.TFile`. The extractor collects that text from `templates/` itself.
 - Binder folders carry roles such as `characters`, `research`, and `manuscript`. Code finds folders by role, not by title.
+- Popups come from `InputPopup` in `inputpopup.vim`. A text field whose value is something that Vim can complete, such as a file or folder path, names its completion type in the `complete` option, as the import prompt and the compile cover image do, so that `Tab` completes it as on the command line. Every new field of that kind does the same.
 - Compile runs Pandoc with the templates in `tools/latex/`, `tools/css/book.css`, and the Lua filter `tools/pandoc/tables.lua`. Before a PDF, `texcheck.vim` checks for the engine and every class and package that the template names. A `% NEEDS:` line in a template lists what its class loads.
 
 ## Verification

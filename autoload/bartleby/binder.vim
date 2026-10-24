@@ -346,14 +346,14 @@ export def ImportPaths(project: PO.Project, row: T.Row, paths: list<string>): vo
   endif
 enddef
 
-# FUNCTION: Ask for one file and import it next to row. Several files come
-# in through :BartlebyImport, which completes each path.
+# FUNCTION: Ask for one file and import it next to row, with Tab to
+# complete the path. Several files come in through :BartlebyImport.
 export def ImportPrompt(project: PO.Project, row: T.Row): void
   IP.PromptText(MB.FileToImport(), '', (path: string) => {
     if path !=# ''
       ImportPaths(project, row, IM.ExpandPaths([path]))
     endif
-  })
+  }, null_function, CO.COMPLETE_FILE)
 enddef
 
 def ImportUnderCursor(): void

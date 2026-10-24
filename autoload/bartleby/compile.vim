@@ -385,7 +385,8 @@ def FinishWizard(project: PO.Project, kind: string, format: string,
   var form: IP.InputPopup = IP.InputPopup.new(IP.TextFields(fields), defaults,
     {title: printf(CO.TITLE_FMT, MK.CompileSettings()), labels: {
       name: MK.Name(), font: MK.Font(), coverimage: MK.CoverImg(),
-      separator: MK.Sep()}})
+      separator: MK.Sep()},
+      complete: {coverimage: CO.COMPLETE_FILE}})
   form.OnSubmit((vals: dict<any>) => {
     var name: string = get(vals, 'name', '')
     if name ==# ''

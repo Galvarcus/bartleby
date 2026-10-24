@@ -2,7 +2,8 @@ vim9script
 ##############################################################################
 # Plugin_Name: Bartleby
 # tests/test_inputpopup.vim: the key handling of InputPopup, for the
-# multiline and filter fields, and the width rules. InputPopup is
+# multiline and filter fields, the completion of a text field against
+# real files, and the width rules. InputPopup is
 # exported, so the tests call its methods directly instead of using
 # feedkeys. Open must run first, so that bufnr and winid exist for Filter
 # to draw into, although no real key reaches the popup.
@@ -362,6 +363,108 @@ def Test_the_cancel_button_of_a_synopsis_saves_nothing(): void
   assert_equal([], popup_list())
 enddef
 
+# The folder that the completion tests complete against, made once.
+var complete_dir: string = ''
+
+# FUNCTION: Return that folder: two files whose names share a start, a
+# subfolder with one file, and a name with a space, which completion must
+# return unescaped.
+def CompleteDir(): string
+  if complete_dir ==# ''
+    complete_dir = tempname() .. '/paths'
+    mkdir(complete_dir .. '/sub', 'p')
+    for name in ['alpha.md', 'alto.md', 'sub/inner.md', 'with space.md']
+      writefile(['Text.'], $'{complete_dir}/{name}')
+    endfor
+  endif
+  return complete_dir
+enddef
+
+# FUNCTION: Return an open popup of one path field that completes files,
+# filled with start.
+def NewPathPopup(start: string): IP.InputPopup
+  var popup = IP.InputPopup.new([[{name: 'path', type: 'text'}]],
+    {path: start}, {complete: {path: 'file'}, widths: {path: 60}})
+  popup.Open()
+  return popup
+enddef
+
+def Test_tab_completes_a_path_and_cycles_through_the_matches(): void
+  var dir: string = CompleteDir()
+  var popup = NewPathPopup($'{dir}/al')
+  Keys(popup, ["\<Tab>"])
+  assert_equal($'{dir}/alpha.md', popup.Vals().path)
+  Keys(popup, ["\<Tab>"])
+  assert_equal($'{dir}/alto.md', popup.Vals().path)
+  # The cycle wraps, and Shift-Tab goes back.
+  Keys(popup, ["\<Tab>"])
+  assert_equal($'{dir}/alpha.md', popup.Vals().path)
+  Keys(popup, ["\<S-Tab>"])
+  assert_equal($'{dir}/alto.md', popup.Vals().path)
+  popup.Close()
+enddef
+
+def Test_shift_tab_completes_the_last_match_first(): void
+  var dir: string = CompleteDir()
+  var popup = NewPathPopup($'{dir}/al')
+  Keys(popup, ["\<S-Tab>"])
+  assert_equal($'{dir}/alto.md', popup.Vals().path)
+  popup.Close()
+enddef
+
+def Test_a_changed_text_finds_the_matches_again(): void
+  var dir: string = CompleteDir()
+  var popup = NewPathPopup($'{dir}/al')
+  Keys(popup, ["\<Tab>", "\<BS>"])
+  assert_equal($'{dir}/alpha.m', popup.Vals().path)
+  Keys(popup, ["\<Tab>"])
+  assert_equal($'{dir}/alpha.md', popup.Vals().path)
+  popup.Close()
+enddef
+
+def Test_tab_after_a_completed_folder_offers_what_is_in_it(): void
+  var dir: string = CompleteDir()
+  var popup = NewPathPopup($'{dir}/s')
+  Keys(popup, ["\<Tab>"])
+  assert_equal($'{dir}/sub/', popup.Vals().path)
+  Keys(popup, ["\<Tab>"])
+  assert_equal($'{dir}/sub/inner.md', popup.Vals().path)
+  popup.Close()
+enddef
+
+def Test_a_completed_name_with_a_space_is_not_escaped(): void
+  var dir: string = CompleteDir()
+  var popup = NewPathPopup($'{dir}/with')
+  Keys(popup, ["\<Tab>"])
+  assert_equal($'{dir}/with space.md', popup.Vals().path)
+  popup.Close()
+enddef
+
+def Test_a_path_that_matches_nothing_stays_as_it_is(): void
+  var dir: string = CompleteDir()
+  var popup = NewPathPopup($'{dir}/zz')
+  Keys(popup, ["\<Tab>"])
+  assert_equal($'{dir}/zz', popup.Vals().path)
+  assert_equal(0, popup.currentIdx)
+  popup.Close()
+enddef
+
+def Test_tab_moves_on_from_an_empty_field_that_completes(): void
+  var popup = NewPathPopup('')
+  Keys(popup, ["\<Tab>"])
+  assert_equal(1, popup.currentIdx)
+  popup.Close()
+enddef
+
+def Test_the_cursor_follows_a_long_completed_path(): void
+  var dir: string = CompleteDir()
+  var popup = NewPathPopup($'{dir}/al')
+  Keys(popup, ["\<Tab>"])
+  var f: dict<any> = popup.fields[0]
+  assert_equal(strchars(f.value), f.cursor)
+  popup.Close()
+enddef
+
 export def RunAll(): void
   Test_enter_inserts_a_newline_rather_than_submitting()
   Test_typed_text_is_inserted_at_the_cursor()
@@ -383,4 +486,15 @@ export def RunAll(): void
   Test_the_cursor_shows_at_the_end_of_the_text()
   Test_the_synopsis_saves_with_its_button()
   Test_the_cancel_button_of_a_synopsis_saves_nothing()
+  Test_tab_completes_a_path_and_cycles_through_the_matches()
+  Test_shift_tab_completes_the_last_match_first()
+  Test_a_changed_text_finds_the_matches_again()
+  Test_tab_after_a_completed_folder_offers_what_is_in_it()
+  Test_a_completed_name_with_a_space_is_not_escaped()
+  Test_a_path_that_matches_nothing_stays_as_it_is()
+  Test_tab_moves_on_from_an_empty_field_that_completes()
+  Test_the_cursor_follows_a_long_completed_path()
+  # The completion tests share one folder of sources, so it goes once
+  # they have all run.
+  delete(fnamemodify(CompleteDir(), ':h'), 'rf')
 enddef

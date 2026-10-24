@@ -254,6 +254,7 @@ Commands, mappings, and keys of Bartleby, a writing environment for Vim.
 | `<Left>` / `<Right>` | Choose an option, or move between buttons |
 | `<C-a>` / `<C-e>` | Go to the start or end of the text |
 | `<C-u>` | Clear the field |
+| `<Tab>` in a path field | Complete the path. Again takes the next match |
 
 ### Lists and palette
 
