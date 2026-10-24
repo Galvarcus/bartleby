@@ -651,6 +651,12 @@ The import goes next to the item under the Binder cursor, into it when that
 item is a folder, and at the end of the top level when the Binder is closed or
 its cursor is elsewhere. The Trash takes no import.
 
+With no scrive yet, `:BartlebyNewScriveFrom ~/Drafts/Novel` makes one from the
+source: it offers the source name as the scrive name, asks for the type, and
+imports into the Manuscript. The scrive gets no starter document, so the
+imported work stands alone in it. Nothing is created when the source holds no
+file that the type accepts.
+
 ==============================================================================
 Session, snapshots, and search           *bartleby-session-snapshots-and-search*
 
@@ -801,6 +807,10 @@ Commands                                                     *bartleby-commands*
                                                             name, open the last scrive
 
     `:BartlebyNewScrive {name}`                             Create a scrive. Asks for its type
+
+    `:BartlebyNewScriveFrom {path}`                         Create a scrive from an existing
+                                                            file or folder, and import it.
+                                                            Asks for the name and the type
 
     `:BartlebyList`                                         List all scrives and open the
                                                             selected one
