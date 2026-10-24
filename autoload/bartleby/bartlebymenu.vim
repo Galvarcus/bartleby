@@ -80,6 +80,7 @@ def BuildMenu(): M.Menu
   var binder: M.MenuItem = m.AddItem(MC.Binder())
   binder.AddItem(MI.Toggle(), RunEx(CO.CMD_TOGGLE_BINDER))
   binder.AddItem(MI.Search(), RunEx(CO.CMD_SEARCH))
+  binder.AddItem(MI.Import(), RunEx(CO.CMD_IMPORT))
   binder.AddItem(MI.EmptyTrash(), RunEx(CO.CMD_EMPTY_TRASH))
   binder.AddItem(MI.RecoverFiles(), RunEx(CO.CMD_RECOVER))
   binder.AddItem(MI.TidyFiles(), RunEx(CO.CMD_TIDY_FILES))

@@ -115,6 +115,10 @@ export def Search(): string
   return IN.T("Search")
 enddef
 
+export def Import(): string
+  return IN.T("Import...")
+enddef
+
 export def EmptyTrash(): string
   return IN.T("Empty Trash")
 enddef
@@ -221,6 +225,10 @@ enddef
 
 export def SearchScrive(): string
   return IN.T("Search Scrive")
+enddef
+
+export def ImportFiles(): string
+  return IN.T("Import Files")
 enddef
 
 export def EditProjInfo(): string

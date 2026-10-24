@@ -135,6 +135,12 @@ export const FOUNTAIN_SCENE_HEADING_PAT: string =
 export const EXT_FOUNTAIN: string = '.fountain'
 export const PATH_BINDER: string = '/binder'
 
+# The extensions that an import accepts, lowercase, by scrive type. The
+# copy of an imported file takes the document extension of its scrive,
+# see import.vim.
+export const IMPORT_EXTS_TEXT: list<string> = ['.md', '.markdown', '.txt']
+export const IMPORT_EXTS_SCREENPLAY: list<string> = IMPORT_EXTS_TEXT + [EXT_FOUNTAIN]
+
 ##############################################################################
 # SECTION: Keys that more than one script uses.
 ##############################################################################
@@ -162,6 +168,7 @@ export const CMD_COMPILE: string = 'BartlebyCompile'
 export const CMD_EMPTY_TRASH: string = 'BartlebyEmptyTrash'
 export const CMD_FOCUS: string = 'BartlebyFocus'
 export const CMD_GOALS: string = 'BartlebyGoals'
+export const CMD_IMPORT: string = 'BartlebyImport'
 export const CMD_LIST: string = 'BartlebyList'
 export const CMD_NEW_SCRIVE: string = 'BartlebyNewScrive'
 export const CMD_OPEN: string = 'BartlebyOpen'

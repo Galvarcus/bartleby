@@ -221,6 +221,7 @@ label color after its title. Long titles wrap.
 | `<Tab>` | Expand or collapse the folder |
 | `a` | Add a document |
 | `A` | Add a folder: Chapter or Part where the scrive type allows |
+| `i` | Import a file into the scrive, next to the item |
 | `dd` | Move the item to the Trash. On a structural folder, move its contents there, after a confirmation. In the Trash, delete for good, after a confirmation |
 | `u` | Restore the item from the Trash to where it was |
 | `r` | Rename the item |
@@ -566,6 +567,33 @@ character cues and scene headings in them.
 all Bartleby commands. `:BartlebyMenu` or `<leader>bm` shows the same
 commands in groups: Scrive, Binder, View, Document, and Project.
 
+## Import
+
+`i` in the Binder, `:BartlebyImport`, or Import in the menu and the
+palette brings existing files into the open scrive. A copy of each file
+goes into the binder folder, and a document for it joins the Binder,
+titled from the file name without its extension. The source file stays
+where it is.
+
+```vim
+:BartlebyImport ~/Drafts/Arrival.md
+:BartlebyImport ~/Drafts/*.md
+```
+
+With no path, the command asks for one. The copy follows the layout of
+the Binder, as a new document does, so `:BartlebyTidyFiles` has nothing
+to move afterwards.
+
+A novel, a novel with parts, and a short story accept `.md`,
+`.markdown`, and `.txt`. A screenplay also accepts `.fountain`. The copy
+takes the document extension of the scrive, and its text is unchanged. A
+file of another extension, a file that cannot be read, and a file that
+is already in the scrive are skipped, and the report names each one.
+
+The import goes next to the item under the Binder cursor, into it when
+that item is a folder, and at the end of the top level when the Binder
+is closed or its cursor is elsewhere. The Trash takes no import.
+
 ## Session, snapshots, and search
 
 **Session** - Bartleby remembers, for each scrive, the open document,
@@ -700,6 +728,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyCompile` | Compile the scrive |
 | `:BartlebyEmptyTrash` | Delete everything in the Trash for good, after a confirmation |
 | `:BartlebyScrivenings[!]` | Open a Scrivening of the folder of the current document. With `!`, save and close the open Scrivening |
+| `:BartlebyImport [path] ...` | Import files into the scrive. With no path, ask for one. A path may hold `~` and wildcards |
 | `:BartlebyTidyFiles` | Move the files of the scrive, so that the folders on disk follow the Binder |
 | `:BartlebyRecover [name]` | Add documents on disk that the Binder does not list to Recovered. With a name, rebuild the Binder of a scrive that does not open |
 | `:BartlebyGoals` | Set the session goal, the daily goal, and the tracker |

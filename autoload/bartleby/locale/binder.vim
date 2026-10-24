@@ -27,6 +27,10 @@ export def NewDocTitle(): string
   return IN.T("New document title")
 enddef
 
+export def FileToImport(): string
+  return IN.T("File to import")
+enddef
+
 export def AddFolder(): string
   return IN.T("Add Folder")
 enddef
@@ -161,6 +165,10 @@ enddef
 
 export def NewFolderChapter(): string
   return IN.T("New folder (Chapter/Part when applicable)")
+enddef
+
+export def ImportFile(): string
+  return IN.T("Import a file")
 enddef
 
 export def MoveItemTrash(): string
@@ -333,6 +341,18 @@ enddef
 
 export def LinksUpdated(count: number): string
   return printf(IN.N("%d link updated", "%d links updated", count), count)
+enddef
+
+##############################################################################
+# SECTION: import.vim
+##############################################################################
+
+export def ImportedDoc(count: number): string
+  return printf(IN.N("imported %d document", "imported %d documents", count), count)
+enddef
+
+export def SkippedFile(count: number, names: any): string
+  return printf(IN.N("skipped %d file: %s", "skipped %d files: %s", count), count, names)
 enddef
 
 ##############################################################################

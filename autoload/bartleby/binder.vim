@@ -38,6 +38,7 @@ import autoload 'bartleby/locale/binder.vim' as MB
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/links.vim' as LK
 import autoload 'bartleby/doctemplates.vim' as DT
+import autoload 'bartleby/import.vim' as IM
 import 'bartleby/variables/constants.vim' as CO
 
 # The choice of no template, which is no path.
@@ -310,6 +311,57 @@ export def AddDocAsked(project: PO.Project, row: T.Row, title: string): void
   PI.PickOne(MB.DocTemplate(), found->mapnew((_, t) => t.path) + [TMPL_BLANK], (path: string) => {
     OpenDoc(project, AddDocNear(project, row, title, path ==# TMPL_BLANK ? [] : DT.Lines(path, project, title)))
   }, found[0].path, names)
+enddef
+
+# FUNCTION: Return the row under the cursor when the current window shows
+# the Binder of project, else null_object, where an import goes at the end
+# of the top level. :BartlebyImport uses it, so that an import run from the
+# Binder goes next to the item at the cursor.
+export def CursorRow(project: PO.Project): T.Row
+  if bufname() !=# CO.BINDER_BUF
+    return null_object
+  endif
+  var ctx: dict<any> = CursorContext()
+  return ctx.project is project ? ctx.row : null_object
+enddef
+
+# FUNCTION: Import paths next to row, save the project, draw the Binder
+# again, and report what came in and what was skipped. The i key and
+# :BartlebyImport both end here. See import.vim.
+export def ImportPaths(project: PO.Project, row: T.Row, paths: list<string>): void
+  if row isnot null_object && TR.RowInTrash(row)
+    log.Info(MB.TrashRestoresMoves())
+    return
+  endif
+  var importer: IM.Importer = IM.Importer.new(project)
+  importer.Files(row, paths)
+  if !empty(importer.added)
+    project.Save()
+    RenderIfOpen(project)
+  endif
+  if empty(importer.skipped)
+    log.Info(importer.Report())
+  else
+    log.Warn(importer.Report())
+  endif
+enddef
+
+# FUNCTION: Ask for one file and import it next to row. Several files come
+# in through :BartlebyImport, which completes each path.
+export def ImportPrompt(project: PO.Project, row: T.Row): void
+  IP.PromptText(MB.FileToImport(), '', (path: string) => {
+    if path !=# ''
+      ImportPaths(project, row, IM.ExpandPaths([path]))
+    endif
+  })
+enddef
+
+def ImportUnderCursor(): void
+  var ctx: dict<any> = CursorContext()
+  if RefusedInTrash(ctx) || ctx.project is null_object
+    return
+  endif
+  ImportPrompt(ctx.project, ctx.row)
 enddef
 
 def AddFolder(): void
@@ -724,6 +776,7 @@ def ShowHelp(): void
     ['<Tab>', MB.ToggleFolderCollapse()],
     ['a', MB.NewDoc()],
     ['A', MB.NewFolderChapter()],
+    ['i', MB.ImportFile()],
     ['dd', MB.MoveItemTrash()],
     ['u', MB.RestoreItemTrash()],
     ['r', MB.RenameItemUnder()],
@@ -767,6 +820,7 @@ def SetupKeymaps(): void
   nnoremap <buffer> <silent> <Tab> <ScriptCmd>ToggleCollapse()<CR>
   nnoremap <buffer> <silent> a <ScriptCmd>AddDoc()<CR>
   nnoremap <buffer> <silent> A <ScriptCmd>AddFolder()<CR>
+  nnoremap <buffer> <silent> i <ScriptCmd>ImportUnderCursor()<CR>
   nnoremap <buffer> <silent> dd <ScriptCmd>DeleteUnderCursor()<CR>
   nnoremap <buffer> <silent> u <ScriptCmd>RestoreUnderCursor()<CR>
   nnoremap <buffer> <silent> r <ScriptCmd>RenameUnderCursor()<CR>

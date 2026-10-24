@@ -38,6 +38,7 @@ import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/links.vim' as LK
 import autoload 'bartleby/progress.vim' as PG
+import autoload 'bartleby/import.vim' as IM
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/ui.vim' as MI
 import 'bartleby/variables/constants.vim' as CO
@@ -225,6 +226,23 @@ export def TidyFiles(): void
         join(failed, ', ')))
     endif
   })
+enddef
+# FUNCTION: Import files into the open scrive, next to the item under the
+# Binder cursor when the Binder is the current window, else at the end of
+# the top level. With no path, ask for one. A path may hold ~ and
+# wildcards. See import.vim.
+export def Import(paths: list<string>): void
+  var project: PO.Project = ST.Get()
+  if project is null_object
+    log.Warn(MC.NoScriveOpen())
+    return
+  endif
+  var row: T.Row = B.CursorRow(project)
+  if empty(paths)
+    B.ImportPrompt(project, row)
+    return
+  endif
+  B.ImportPaths(project, row, IM.ExpandPaths(paths))
 enddef
 # FUNCTION: Open a Scrivening: from the Binder, of the folder under its
 # cursor, and from a document, of the folder that holds it, at the line of

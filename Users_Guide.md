@@ -13,6 +13,7 @@ Bartleby without losing anything.
 
 - [Vim modes](#vim-modes)
 - [New scrive](#new-scrive)
+- [Import](#import)
 - [Binder](#binder)
 - [Writing](#writing)
 - [Spotlight modes](#spotlight-modes)
@@ -85,6 +86,30 @@ To open a scrive later:
   press `<Enter>` to open one. If you have no scrives, it asks for a
   name and creates one.
 
+## Import
+
+Writing that you started elsewhere can come into a scrive. Put the
+cursor in the Binder where you want it, press `i`, and type the path of
+the file. Bartleby copies the file into the scrive and adds a document
+for it, titled from the file name. Your original file stays where it is.
+
+The command takes one or more paths, and completes them with `Tab`:
+
+```vim
+:BartlebyImport ~/Drafts/Arrival.md
+:BartlebyImport ~/Drafts/*.md
+```
+
+The document goes next to the item under the Binder cursor, or inside it
+when it is a folder. With the Binder closed, it goes to the end of the
+tree, above the Trash. Import is in the menu and the palette as well.
+
+A novel, a novel with parts, and a short story take Markdown and plain
+text: `.md`, `.markdown`, and `.txt`. A screenplay also takes
+`.fountain`. Bartleby gives the copy the extension that your scrive
+uses, and leaves the text as it is. A file of any other kind is skipped,
+and Bartleby tells you which files it skipped.
+
 ## Binder
 
 The Binder is the tree on the left. It shows every folder and
@@ -100,6 +125,7 @@ Move with the arrow keys or `j` and `k`. Then:
 | `<Tab>` | Open or close the folder |
 | `a` | Add a document |
 | `A` | Add a folder. You can choose Chapter, Part, or a plain folder, depending on the scrive type |
+| `i` | Import a file into the scrive, next to the item under the cursor |
 | `r` | Rename |
 | `dd` | Move to the Trash. In the Trash, delete for good, after a confirmation |
 | `u` | In the Trash, put the item back where it was |
