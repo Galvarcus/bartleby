@@ -249,6 +249,187 @@ def Test_expand_paths_takes_wildcards_and_keeps_an_unmatched_path(): void
   CleanupSources()
 enddef
 
+# FUNCTION: Return a Novel with Parts whose Manuscript is its first item,
+# for the role of a folder imported into it.
+def PartsProject(): any
+  var project = PO.Project.new(tempname() .. '/Parts.bartleby')
+  project.InitNew('Parts', CO.TYPE_NOVEL_PARTS)
+  project.SeedTree([BI.BinderItem.NewFolder('Manuscript', CO.ROLE_MANUSCRIPT)])
+  return project
+enddef
+
+def StoryProject(): any
+  var project = PO.Project.new(tempname() .. '/Story.bartleby')
+  project.InitNew('Story', CO.TYPE_SHORT_STORY)
+  project.SeedTree([BI.BinderItem.NewFolder('Manuscript', CO.ROLE_MANUSCRIPT)])
+  return project
+enddef
+
+# FUNCTION: Return the last child of folder, the item that an import
+# added at its end.
+def LastChild(folder: any): any
+  return folder.ChildAt(folder.ChildCount() - 1)
+enddef
+
+def Test_a_folder_import_keeps_its_tree(): void
+  var project = NovelProject()
+  var manuscript = project.ChildAt(1)
+  Source('Novel/Notes.md')
+  Source('Novel/Act One/Scene A.md', ['A.'])
+  Source('Novel/Act One/Scene B.md')
+  var importer = IM.Importer.new(project)
+  importer.Files(RowOf(project, manuscript.id), [$'{sources}/Novel'])
+
+  var root = LastChild(manuscript)
+  assert_equal('Novel', root.title)
+  assert_equal(['Act One', 'Notes'], Titles(root))
+  assert_equal(['Scene A', 'Scene B'], Titles(root.ChildAt(0)))
+  assert_equal(['manuscript/chapter-novel/act-one/scene-a.md',
+    'manuscript/chapter-novel/act-one/scene-b.md',
+    'manuscript/chapter-novel/notes.md'],
+    importer.added->mapnew((_, d) => d.relPath))
+  assert_equal(['A.'], readfile(importer.added[0].AbsPath(project.BinderRoot())))
+  CleanupSources()
+  FI.CleanupProjectFiles(project)
+enddef
+
+def Test_folder_names_sort_naturally(): void
+  var project = NovelProject()
+  for name in ['Chapter 10.md', 'Chapter 2.md', 'Chapter 1.md']
+    Source($'Book/{name}')
+  endfor
+  var importer = IM.Importer.new(project)
+  importer.Files(RowOf(project, project.ChildAt(1).id), [$'{sources}/Book'])
+
+  assert_equal(['Chapter 1', 'Chapter 2', 'Chapter 10'],
+    importer.added->mapnew((_, d) => d.title))
+  CleanupSources()
+  FI.CleanupProjectFiles(project)
+enddef
+
+def Test_a_folder_leaves_out_what_it_cannot_take(): void
+  var project = NovelProject()
+  Source('Mixed/Keep.md')
+  var image: string = Source('Mixed/Cover.png')
+  Source('Mixed/.hidden.md')
+  Source('Mixed/.cache/inside.md')
+  Source('Other/Far.md')
+  # A folder that is a symbolic link could lead back into the tree.
+  var linked: string = $'{sources}/Mixed/elsewhere'
+  call system($'ln -s {shellescape(sources .. "/Other")} {shellescape(linked)}')
+
+  var importer = IM.Importer.new(project)
+  importer.Files(RowOf(project, project.ChildAt(1).id), [$'{sources}/Mixed'])
+  assert_equal(['Keep'], Titles(LastChild(project.ChildAt(1))))
+  assert_true(index(importer.skipped, image) >= 0)
+  if getftype(linked) ==# 'link'
+    assert_true(index(importer.skipped, linked) >= 0)
+  endif
+  CleanupSources()
+  FI.CleanupProjectFiles(project)
+enddef
+
+def Test_an_imported_folder_takes_its_role_from_its_parent(): void
+  Source('Tree/Inner/One.md')
+  var dir: string = $'{sources}/Tree'
+
+  # A novel: Chapter under the Manuscript, and a plain folder below it.
+  var novel = NovelProject()
+  var novelImporter = IM.Importer.new(novel)
+  novelImporter.Files(RowOf(novel, novel.ChildAt(1).id), [dir])
+  var root = LastChild(novel.ChildAt(1))
+  assert_equal([CO.ROLE_CHAPTER, CO.ROLE_NONE],
+    [root.structureRole, root.ChildAt(0).structureRole])
+  FI.CleanupProjectFiles(novel)
+
+  # A novel with parts: Part under the Manuscript, Chapter inside it.
+  var parts = PartsProject()
+  var partsImporter = IM.Importer.new(parts)
+  partsImporter.Files(RowOf(parts, parts.ChildAt(0).id), [dir])
+  root = LastChild(parts.ChildAt(0))
+  assert_equal([CO.ROLE_PART, CO.ROLE_CHAPTER],
+    [root.structureRole, root.ChildAt(0).structureRole])
+  FI.CleanupProjectFiles(parts)
+
+  # A short story has no chapters, so its Manuscript takes plain folders.
+  var story = StoryProject()
+  var storyImporter = IM.Importer.new(story)
+  storyImporter.Files(RowOf(story, story.ChildAt(0).id), [dir])
+  assert_equal(CO.ROLE_NONE, LastChild(story.ChildAt(0)).structureRole)
+  FI.CleanupProjectFiles(story)
+
+  # At the top level, where only a Custom folder may go.
+  var top = NovelProject()
+  var topImporter = IM.Importer.new(top)
+  topImporter.Files(null_object, [dir])
+  assert_equal(CO.ROLE_CUSTOM, top.ChildAt(top.ChildCount() - 2).structureRole)
+  CleanupSources()
+  FI.CleanupProjectFiles(top)
+enddef
+
+def Test_a_folder_with_no_document_is_skipped(): void
+  var project = NovelProject()
+  var image: string = Source('Images/Cover.png')
+  var importer = IM.Importer.new(project)
+  var manuscript = project.ChildAt(1)
+  var before: number = manuscript.ChildCount()
+  importer.Files(RowOf(project, manuscript.id), [$'{sources}/Images'])
+
+  assert_equal([], importer.added)
+  assert_equal(0, importer.folders)
+  assert_equal(before, manuscript.ChildCount())
+  # The file and the folder that holds nothing are both named.
+  assert_equal([image, $'{sources}/Images'], importer.skipped)
+  CleanupSources()
+  FI.CleanupProjectFiles(project)
+enddef
+
+def Test_a_trailing_slash_keeps_the_folder_name(): void
+  var project = NovelProject()
+  Source('Slash/One.md')
+  var importer = IM.Importer.new(project)
+  importer.Files(RowOf(project, project.ChildAt(1).id), [$'{sources}/Slash/'])
+
+  assert_equal('Slash', LastChild(project.ChildAt(1)).title)
+  CleanupSources()
+  FI.CleanupProjectFiles(project)
+enddef
+
+def Test_the_plan_counts_before_anything_changes(): void
+  var project = NovelProject()
+  var manuscript = project.ChildAt(1)
+  Source('Novel/Act One/Scene A.md')
+  Source('Novel/Notes.md')
+  var loose: string = Source('Loose.md')
+  var before: number = manuscript.ChildCount()
+
+  var importer = IM.Importer.new(project)
+  importer.Plan([$'{sources}/Novel', loose])
+  assert_equal([3, 2], [importer.docs, importer.folders])
+  # Nothing is added until Apply.
+  assert_equal(before, manuscript.ChildCount())
+  assert_equal([], importer.added)
+
+  importer.Apply(RowOf(project, manuscript.id))
+  assert_equal(3, len(importer.added))
+  assert_equal('imported 3 documents, 2 new folders', importer.Report())
+  CleanupSources()
+  FI.CleanupProjectFiles(project)
+enddef
+
+def Test_a_file_and_a_folder_keep_their_order(): void
+  var project = NovelProject()
+  var manuscript = project.ChildAt(1)
+  var loose: string = Source('Loose.md')
+  Source('Novel/One.md')
+  var importer = IM.Importer.new(project)
+  importer.Files(RowOf(project, manuscript.id), [loose, $'{sources}/Novel'])
+
+  assert_equal(['Loose', 'Novel'], Titles(manuscript)[-2 : ])
+  CleanupSources()
+  FI.CleanupProjectFiles(project)
+enddef
+
 export def RunAll(): void
   Test_import_titles_a_document_from_the_file_name()
   Test_import_keeps_the_order_of_the_paths()
@@ -261,4 +442,12 @@ export def RunAll(): void
   Test_two_sources_of_one_name_get_their_own_files()
   Test_the_report_counts_what_came_in_and_what_was_skipped()
   Test_expand_paths_takes_wildcards_and_keeps_an_unmatched_path()
+  Test_a_folder_import_keeps_its_tree()
+  Test_folder_names_sort_naturally()
+  Test_a_folder_leaves_out_what_it_cannot_take()
+  Test_an_imported_folder_takes_its_role_from_its_parent()
+  Test_a_folder_with_no_document_is_skipped()
+  Test_a_trailing_slash_keeps_the_folder_name()
+  Test_the_plan_counts_before_anything_changes()
+  Test_a_file_and_a_folder_keep_their_order()
 enddef

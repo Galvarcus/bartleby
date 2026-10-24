@@ -75,7 +75,7 @@ msgid "New folder (Chapter/Part when applicable)"
 msgstr ""
 
 #: autoload/bartleby/locale/binder.vim:171
-msgid "Import a file"
+msgid "Import a file or folder"
 msgstr ""
 
 #: autoload/bartleby/locale/binder.vim:175
@@ -203,7 +203,7 @@ msgid "Research"
 msgstr ""
 
 #: autoload/bartleby/locale/binder.vim:31
-msgid "File to import"
+msgid "File or folder to import"
 msgstr ""
 
 #: autoload/bartleby/locale/binder.vim:311
@@ -258,11 +258,23 @@ msgid_plural "skipped %d files: %s"
 msgstr[0] ""
 msgstr[1] ""
 
+#: autoload/bartleby/locale/binder.vim:359
+msgid "Import %d document and %s?"
+msgid_plural "Import %d documents and %s?"
+msgstr[0] ""
+msgstr[1] ""
+
 #: autoload/bartleby/locale/binder.vim:363
+msgid "%d new folder"
+msgid_plural "%d new folders"
+msgstr[0] ""
+msgstr[1] ""
+
+#: autoload/bartleby/locale/binder.vim:371
 msgid "Template"
 msgstr ""
 
-#: autoload/bartleby/locale/binder.vim:367
+#: autoload/bartleby/locale/binder.vim:375
 msgid "Blank"
 msgstr ""
 

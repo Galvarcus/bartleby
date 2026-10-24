@@ -110,6 +110,13 @@ export class BinderItem implements ItemContainer
     this.relPath = newRelPath
   enddef
 
+  # METHOD: Set the role of a folder, for import.vim, which learns the
+  # role of an imported folder only once the folder has its place in the
+  # tree. A var field can be written only inside its class.
+  def SetRole(newRole: string): void
+    this.structureRole = newRole
+  enddef
+
   # METHOD: Forget where the item came from, once it leaves the Trash.
   def ClearTrashOrigin(): void
     this.trashOrigin = ''

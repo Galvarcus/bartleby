@@ -112,6 +112,18 @@ text: `.md`, `.markdown`, and `.txt`. A screenplay also takes
 uses, and leaves the text as it is. A file of any other kind is skipped,
 and Bartleby tells you which files it skipped.
 
+A whole folder can come in as well. Give its path, and Bartleby rebuilds
+the tree: a folder for every folder, and a document for every file it
+takes, in the order of their names, where `Chapter 2` comes before
+`Chapter 10`. It leaves out hidden names, a folder that is a symbolic
+link, and a folder with nothing in it to import. First it asks how many
+documents and folders you are about to add. Press `y` to go ahead.
+
+A folder that lands in the Manuscript of a novel becomes a Chapter, and
+in the Manuscript of a novel with parts a Part, with Chapters inside it.
+At the top level it becomes a Custom folder. Anywhere else it is a plain
+folder.
+
 ## Binder
 
 The Binder is the tree on the left. It shows every folder and
@@ -127,7 +139,7 @@ Move with the arrow keys or `j` and `k`. Then:
 | `<Tab>` | Open or close the folder |
 | `a` | Add a document |
 | `A` | Add a folder. You can choose Chapter, Part, or a plain folder, depending on the scrive type |
-| `i` | Import a file into the scrive, next to the item under the cursor |
+| `i` | Import a file or folder into the scrive, next to the item under the cursor |
 | `r` | Rename |
 | `dd` | Move to the Trash. In the Trash, delete for good, after a confirmation |
 | `u` | In the Trash, put the item back where it was |

@@ -221,7 +221,7 @@ label color after its title. Long titles wrap.
 | `<Tab>` | Expand or collapse the folder |
 | `a` | Add a document |
 | `A` | Add a folder: Chapter or Part where the scrive type allows |
-| `i` | Import a file into the scrive, next to the item |
+| `i` | Import a file or folder into the scrive, next to the item |
 | `dd` | Move the item to the Trash. On a structural folder, move its contents there, after a confirmation. In the Trash, delete for good, after a confirmation |
 | `u` | Restore the item from the Trash to where it was |
 | `r` | Rename the item |
@@ -591,6 +591,18 @@ takes the document extension of the scrive, and its text is unchanged. A
 file of another extension, a file that cannot be read, and a file that
 is already in the scrive are skipped, and the report names each one.
 
+A folder comes in with its structure: each folder below it becomes a
+Binder folder, and each accepted file a document. Names are taken in
+their natural order, so `Chapter 2` comes before `Chapter 10`. A hidden
+name, a folder that is a symbolic link, and a folder that holds no
+accepted file are left out. Bartleby says how many documents and folders
+an import of a folder would add, and waits for `y`.
+
+An imported folder takes a role from where it lands: Custom at the top
+level, Chapter under the Manuscript of a novel or under a Part, Part
+under the Manuscript of a novel with parts, and a plain folder anywhere
+else, such as inside a chapter or in the Manuscript of a short story.
+
 The import goes next to the item under the Binder cursor, into it when
 that item is a folder, and at the end of the top level when the Binder
 is closed or its cursor is elsewhere. The Trash takes no import.
@@ -730,7 +742,7 @@ it. `<Enter>` opens it in a new tab. Bartleby keeps the newest
 | `:BartlebyCompile` | Compile the scrive |
 | `:BartlebyEmptyTrash` | Delete everything in the Trash for good, after a confirmation |
 | `:BartlebyScrivenings[!]` | Open a Scrivening of the folder of the current document. With `!`, save and close the open Scrivening |
-| `:BartlebyImport [path] ...` | Import files into the scrive. With no path, ask for one. A path may hold `~` and wildcards |
+| `:BartlebyImport [path] ...` | Import files or folders into the scrive. With no path, ask for one. A path may hold `~` and wildcards |
 | `:BartlebyTidyFiles` | Move the files of the scrive, so that the folders on disk follow the Binder |
 | `:BartlebyRecover [name]` | Add documents on disk that the Binder does not list to Recovered. With a name, rebuild the Binder of a scrive that does not open |
 | `:BartlebyGoals` | Set the session goal, the daily goal, and the tracker |

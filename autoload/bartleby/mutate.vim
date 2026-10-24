@@ -112,8 +112,9 @@ enddef
 # where null_object means the top level. ROLE_PART and ROLE_CHAPTER may
 # be only under a ROLE_MANUSCRIPT folder, directly or inside a Part.
 # ROLE_CUSTOM may be only at the top level. Other roles and all documents
-# may be anywhere.
-def RoleAllowedUnder(role: string, parent: BI.BinderItem): bool
+# may be anywhere. Exported for import.vim, which gives an imported
+# folder its role.
+export def RoleAllowedUnder(role: string, parent: BI.BinderItem): bool
   if role ==# CO.ROLE_PART || role ==# CO.ROLE_CHAPTER
     return parent isnot null_object
       && (parent.structureRole ==# CO.ROLE_MANUSCRIPT || parent.structureRole ==# CO.ROLE_PART)

@@ -327,14 +327,28 @@ enddef
 
 # FUNCTION: Import paths next to row, save the project, draw the Binder
 # again, and report what came in and what was skipped. The i key and
-# :BartlebyImport both end here. See import.vim.
+# :BartlebyImport both end here. A folder brings a tree of documents, so
+# an import that holds one asks first, as a tidy does. See import.vim.
 export def ImportPaths(project: PO.Project, row: T.Row, paths: list<string>): void
   if row isnot null_object && TR.RowInTrash(row)
     log.Info(MB.TrashRestoresMoves())
     return
   endif
   var importer: IM.Importer = IM.Importer.new(project)
-  importer.Files(row, paths)
+  importer.Plan(paths)
+  if importer.folders == 0
+    FinishImport(project, importer, row)
+    return
+  endif
+  DP.Confirm(MB.ImportDocFolder(importer.docs, MB.FolderAdded(importer.folders)), () => {
+    FinishImport(project, importer, row)
+  })
+enddef
+
+# FUNCTION: Add what the import planned, save, draw the Binder again, and
+# report. A skip makes the report a warning.
+def FinishImport(project: PO.Project, importer: IM.Importer, row: T.Row): void
+  importer.Apply(row)
   if !empty(importer.added)
     project.Save()
     RenderIfOpen(project)

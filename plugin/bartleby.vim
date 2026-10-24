@@ -175,8 +175,9 @@ command! -bar -nargs=? -complete=customlist,bartleby#scrive#CompleteNames
 command! -bar BartlebyTidyFiles BA.TidyFiles()
 
 
-# With no path, the command asks for one. A path may hold ~ and wildcards,
-# which Vim does not expand in a command argument, so import.vim does.
+# A path is a file or a folder. With no path, the command asks for one. A
+# path may hold ~ and wildcards, which Vim does not expand in a command
+# argument, so import.vim does.
 command! -bar -nargs=* -complete=file BartlebyImport BA.Import([<f-args>])
 
 

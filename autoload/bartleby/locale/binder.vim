@@ -28,7 +28,7 @@ export def NewDocTitle(): string
 enddef
 
 export def FileToImport(): string
-  return IN.T("File to import")
+  return IN.T("File or folder to import")
 enddef
 
 export def AddFolder(): string
@@ -168,7 +168,7 @@ export def NewFolderChapter(): string
 enddef
 
 export def ImportFile(): string
-  return IN.T("Import a file")
+  return IN.T("Import a file or folder")
 enddef
 
 export def MoveItemTrash(): string
@@ -353,6 +353,14 @@ enddef
 
 export def SkippedFile(count: number, names: any): string
   return printf(IN.N("skipped %d file: %s", "skipped %d files: %s", count), count, names)
+enddef
+
+export def ImportDocFolder(docs: number, folders: any): string
+  return printf(IN.N("Import %d document and %s?", "Import %d documents and %s?", docs), docs, folders)
+enddef
+
+export def FolderAdded(count: number): string
+  return printf(IN.N("%d new folder", "%d new folders", count), count)
 enddef
 
 ##############################################################################

@@ -75,7 +75,7 @@ Commands, mappings, and keys of Bartleby, a writing environment for Vim.
 | Command | Action |
 | --- | --- |
 | `:BartlebyCompile` | Compile the scrive |
-| `:BartlebyImport [path] ...` | Import files. With no path, ask for one |
+| `:BartlebyImport [path] ...` | Import files or folders. With no path, ask for one |
 | `:BartlebyTidyFiles` | Move the files so that the folders follow the Binder |
 | `:BartlebyRecover [name]` | Add documents that the Binder does not list. With a name, rebuild a Binder that does not open |
 | `:BartlebyEmptyTrash` | Delete everything in the Trash for good |
@@ -129,7 +129,7 @@ Commands, mappings, and keys of Bartleby, a writing environment for Vim.
 | `<Tab>` | Expand or collapse the folder |
 | `a` | Add a document |
 | `A` | Add a folder: Chapter or Part where the type allows |
-| `i` | Import a file next to the item |
+| `i` | Import a file or folder next to the item |
 | `r` | Rename the item |
 
 ### Binder: move and remove
