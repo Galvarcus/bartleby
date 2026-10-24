@@ -34,21 +34,28 @@ export def FindAncestorWithRole(rows: list<T.Row>, row: T.Row, role: string): BI
   return null_object
 enddef
 
-# FUNCTION: Return the one top-level Manuscript folder of the scrive, or
+# FUNCTION: Return the one top-level folder of the scrive with role, or
 # null_object when it is missing, as in a project older than roles.
-export def FindManuscript(project: PO.Project): BI.BinderItem
+export def FindTopWithRole(project: PO.Project, role: string): BI.BinderItem
   for i in range(project.ChildCount())
-    if project.ChildAt(i).structureRole ==# CO.ROLE_MANUSCRIPT
+    if project.ChildAt(i).structureRole ==# role
       return project.ChildAt(i)
     endif
   endfor
   return null_object
 enddef
 
+# FUNCTION: Return the one top-level Manuscript folder of the scrive, or
+# null_object when it is missing.
+export def FindManuscript(project: PO.Project): BI.BinderItem
+  return FindTopWithRole(project, CO.ROLE_MANUSCRIPT)
+enddef
+
 # FUNCTION: Return the next unused number title, 1, 2, and so on, among
 # the siblings with role. templates.vim numbers the same way, so an empty
-# title gives the same result as in a new scrive.
-def NextRoleNum(siblings: list<BI.BinderItem>, role: string): string
+# title gives the same result as in a new scrive, and an import numbers a
+# Part or a Chapter whose title repeats a sibling's.
+export def NextRoleNum(siblings: list<BI.BinderItem>, role: string): string
   var n: number = 0
   for item in siblings
     if item.structureRole ==# role && item.title =~# '^\d\+$'

@@ -70,6 +70,7 @@ import './test_trash.vim' as TTR
 import './test_persist.vim' as TPE
 import './test_recover.vim' as TRC
 import './test_import.vim' as TIM
+import './test_import_map.vim' as TIMM
 import './test_wordcount.vim' as TWC
 import './test_session.vim' as TSE
 import './test_inspector.vim' as TIS
@@ -116,6 +117,7 @@ var suites: list<func(): void> = [
   TPE.RunAll,
   TRC.RunAll,
   TIM.RunAll,
+  TIMM.RunAll,
   TWC.RunAll,
   TSE.RunAll,
   TIS.RunAll,

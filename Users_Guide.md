@@ -124,6 +124,33 @@ in the Manuscript of a novel with parts a Part, with Chapters inside it.
 At the top level it becomes a Custom folder. Anywhere else it is a plain
 folder.
 
+### A project you exported from another application
+
+If you are moving a whole project, export it as files and folders and
+give Bartleby the folder. Bartleby reads the export of Scrivener 3.5.2
+for macOS and puts each part of your project where it belongs instead of
+rebuilding the folders as they are:
+
+- Your draft fills the Manuscript, and the folders in it become Parts
+  and Chapters, by the type of your scrive.
+- Front Matter, Back Matter, and Characters fill the folders of the same
+  name. Research takes your research, your loose folders such as Places
+  and Template Sheets, and any document that sat at the top.
+- Each document keeps its status, its label, its keywords, and its
+  synopsis. Bartleby has four fewer statuses than you may have used, so
+  In Progress becomes Working Draft and Revised Draft becomes Revised. A
+  status of your own becomes None.
+- The notes of a document become a document in a `Document Notes` folder
+  under Research. Bartleby has no notes field, and a note left in the
+  Manuscript would end up in a compile.
+- Your Trash stays behind, and so do snapshots. A file that Bartleby
+  cannot read, such as `.rtf`, is skipped and named, so export those
+  again as Markdown, plain text, or Fountain.
+
+Export in Markdown where you can. An export in the default rich text
+format gives Bartleby nothing to read, and it says so and makes no
+scrive.
+
 ### A new scrive from your old work
 
 If you have no scrive yet, start from the work itself:
@@ -133,7 +160,9 @@ If you have no scrive yet, start from the work itself:
 ```
 
 Bartleby offers the folder name as the name of the scrive, asks which
-type it is, and imports the work into the Manuscript. The new scrive
+type it is, and imports the work into the Manuscript. From a whole
+project that you exported, it fills every folder instead, and the type
+it asks about is the one your project needs. The new scrive
 holds no empty starter document, so your own chapters stand alone in it.
 If the folder holds nothing that the type takes, Bartleby creates no
 scrive and tells you why.

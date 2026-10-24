@@ -40,12 +40,12 @@ enddef
 export def StatusNames(): dict<string>
   return {
     [CO.NONE]: MD.None(),
-    'To Do': MD.Do(),
-    'Working Draft': MD.WorkingDraft(),
-    'First Draft': MD.FirstDraft(),
-    Revised: MD.Revised(),
-    'Final Draft': MD.FinalDraft(),
-    Done: MD.Done(),
+    [CO.STATUS_TODO]: MD.Do(),
+    [CO.STATUS_WORKING]: MD.WorkingDraft(),
+    [CO.STATUS_FIRST]: MD.FirstDraft(),
+    [CO.STATUS_REVISED]: MD.Revised(),
+    [CO.STATUS_FINAL]: MD.FinalDraft(),
+    [CO.STATUS_DONE]: MD.Done(),
   }
 enddef
 

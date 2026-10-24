@@ -270,11 +270,23 @@ msgid_plural "%d new folders"
 msgstr[0] ""
 msgstr[1] ""
 
+#: autoload/bartleby/locale/binder.vim:367
+msgid "read the folder as a project export"
+msgstr ""
+
 #: autoload/bartleby/locale/binder.vim:371
+msgid "export those again as Markdown, plain text, or Fountain"
+msgstr ""
+
+#: autoload/bartleby/locale/binder.vim:377
+msgid "Document Notes"
+msgstr ""
+
+#: autoload/bartleby/locale/binder.vim:385
 msgid "Template"
 msgstr ""
 
-#: autoload/bartleby/locale/binder.vim:375
+#: autoload/bartleby/locale/binder.vim:389
 msgid "Blank"
 msgstr ""
 

@@ -363,6 +363,20 @@ export def FolderAdded(count: number): string
   return printf(IN.N("%d new folder", "%d new folders", count), count)
 enddef
 
+export def ReadAsProject(): string
+  return IN.T("read the folder as a project export")
+enddef
+
+export def ExportAsText(): string
+  return IN.T("export those again as Markdown, plain text, or Fountain")
+enddef
+
+# FUNCTION: The title of the Research folder that takes the notes of each
+# document of a project export, which Bartleby has no field for.
+export def DocNotes(): string
+  return IN.T("Document Notes")
+enddef
+
 ##############################################################################
 # SECTION: doctemplates.vim
 ##############################################################################

@@ -232,7 +232,11 @@ def Test_the_report_counts_what_came_in_and_what_was_skipped(): void
   var second = IM.Importer.new(project)
   var image: string = Source('Cover.png')
   second.Files(row, [Source('Two.md'), Source('Three.md'), image])
-  assert_equal($'imported 2 documents, skipped 1 file: {image}', second.Report())
+  # The name, not the path: a report of a whole project export that was
+  # skipped must stay readable.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/38
+  assert_equal('imported 2 documents, skipped 1 file: Cover.png',
+    second.Report())
   CleanupSources()
   FI.CleanupProjectFiles(project)
 enddef

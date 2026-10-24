@@ -84,10 +84,16 @@ export const TYPES: list<string> = [TYPE_NOVEL, TYPE_NOVEL_PARTS, TYPE_SHORT_STO
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/42
 export const NONE: string = 'None'
 export const LABELS: list<string> = [NONE, 'Red', 'Orange', 'Yellow', 'Green', 'Blue', 'Purple']
+export const STATUS_TODO: string = 'To Do'
+export const STATUS_WORKING: string = 'Working Draft'
+export const STATUS_FIRST: string = 'First Draft'
+export const STATUS_REVISED: string = 'Revised'
+export const STATUS_FINAL: string = 'Final Draft'
+export const STATUS_DONE: string = 'Done'
 # In the order of the work, which is the order the pickers of the
 # Inspector and the Outliner show.
-export const STATUSES: list<string> = [NONE, 'To Do', 'Working Draft',
-  'First Draft', 'Revised', 'Final Draft', 'Done']
+export const STATUSES: list<string> = [NONE, STATUS_TODO, STATUS_WORKING,
+  STATUS_FIRST, STATUS_REVISED, STATUS_FINAL, STATUS_DONE]
 
 ##############################################################################
 # SECTION: Dictionary and thesaurus. Each reference names its provider,

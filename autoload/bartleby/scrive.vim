@@ -135,11 +135,14 @@ enddef
 
 # FUNCTION: Create a scrive named name, of projectType, from src, a file
 # or a folder: the scrive has no starter documents, and the import fills
-# its Manuscript folder, see import.vim. Return the importer, which holds
-# the project and what came in. Return null_object, and leave nothing
-# behind, when the scrive cannot be made, or when src holds no document
-# that the scrive type takes: the folder of a scrive with neither starters
-# nor an import would be worse than none.
+# its Manuscript folder, see import.vim. A folder that holds the export of
+# a project of another writing application fills every folder of the
+# scrive instead, and then the Manuscript row below is not used, because
+# the import knows where each part of the export belongs. Return the
+# importer, which holds the project and what came in. Return null_object,
+# and leave nothing behind, when the scrive cannot be made, or when src
+# holds no document that the scrive type takes: the folder of a scrive
+# with neither starters nor an import would be worse than none.
 export def CreateFrom(name: string, projectType: string, src: string): IM.Importer
   var project: PO.Project = Create(name, projectType, false)
   if project is null_object
@@ -152,6 +155,12 @@ export def CreateFrom(name: string, projectType: string, src: string): IM.Import
     ? null_object
     : T.FindRowById(T.Flatten(project), manuscript.id))
   if empty(importer.added)
+    # The report goes out here, because the scrive that would carry it is
+    # about to go: it names every source that was left and tells the writer
+    # to export a format that Bartleby cannot read again as text.
+    if !empty(importer.skipped)
+      log.Warn(importer.Report())
+    endif
     # The folder was made by the Create above, so nothing of the user is
     # in it.
     delete(project.scriveDir, 'rf')

@@ -39,6 +39,7 @@ import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/links.vim' as LK
 import autoload 'bartleby/progress.vim' as PG
 import autoload 'bartleby/import.vim' as IM
+import autoload 'bartleby/import_map.vim' as IMM
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/ui.vim' as MI
 import 'bartleby/variables/constants.vim' as CO
@@ -89,9 +90,12 @@ export def NewScriveFrom(path: string): void
     if name ==# ''
       return
     endif
+    # The export of a project says which type it needs, so the picker opens
+    # on that one and the writer only confirms it.
+    var detected: string = IMM.ProjectType(src)
     PI.PickOne(MI.ScriveType(), CO.TYPES, (projectType: string) => {
       OpenFromImport(name, projectType, src)
-    }, CO.TYPE_NOVEL, PO.TypeNames())
+    }, detected ==# '' ? CO.TYPE_NOVEL : detected, PO.TypeNames())
   })
 enddef
 # FUNCTION: Return the name to offer for a scrive made from src: the name
