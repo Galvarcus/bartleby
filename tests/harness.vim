@@ -71,6 +71,7 @@ import './test_tty.vim' as TTY
 import './test_trash.vim' as TTR
 import './test_persist.vim' as TPE
 import './test_path.vim' as TPA
+import './test_project.vim' as TPJ
 import './test_recover.vim' as TRC
 import './test_import.vim' as TIM
 import './test_import_map.vim' as TIMM
@@ -119,6 +120,7 @@ var suites: list<func(): void> = [
   TTR.RunAll,
   TPE.RunAll,
   TPA.RunAll,
+  TPJ.RunAll,
   TRC.RunAll,
   TIM.RunAll,
   TIMM.RunAll,

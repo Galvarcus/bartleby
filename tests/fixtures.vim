@@ -122,6 +122,8 @@ enddef
 # FUNCTION: Make link a symbolic link to target, and return true when the
 # system allowed it: Windows has no ln, and its mklink needs a privilege
 # that the user may not hold, so a test skips itself when this fails.
+# target must exist, because getftype answers nothing for a link whose
+# target does not, and this would report no link at all.
 export def MakeLink(target: string, link: string): bool
   if has('win32')
     system($'mklink{isdirectory(target) ? " /D" : ""} {shellescape(link)} {shellescape(target)}')

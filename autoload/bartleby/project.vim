@@ -18,6 +18,7 @@ import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/locale/binder.vim' as MB
 import autoload 'bartleby/locale/common.vim' as MC
+import autoload 'bartleby/path.vim' as PA
 import 'bartleby/variables/constants.vim' as CO
 
 const EXT_MD: string = '.md'
@@ -231,7 +232,7 @@ export class Project implements BI.ItemContainer
     var binderRoot: string = this.BinderRoot()
     def Walk(list: list<BI.BinderItem>): BI.BinderItem
       for item in list
-        if item.IsDoc() && item.AbsPath(binderRoot) ==# path
+        if item.IsDoc() && PA.Same(item.AbsPath(binderRoot), path)
           return item
         endif
         if item.IsFolder()
