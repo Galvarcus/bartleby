@@ -50,6 +50,7 @@ jobs:
       triage: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.triage }}
       texcheck: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.texcheck }}
       compile: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.compile }}
+      windows: ${{ steps.legs.outputs.legs }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -116,6 +117,29 @@ jobs:
               - .github/workflows/ci.yml
               - .github/actions/**
 
+      # One job runs the Windows legs, and a job has one condition for all
+      # of them, so the legs that their own filters choose are named here.
+      # A workflow_dispatch runs every leg, as it sets every filter.
+      - name: Choose the Windows legs
+        id: legs
+        shell: bash
+        env:
+          CODE: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.code }}
+          TEXCHECK: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.texcheck }}
+          COMPILE: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.compile }}
+        run: |
+          legs=''
+          if [ "$CODE" = true ]; then
+            legs="$legs\"unit\","
+          fi
+          if [ "$TEXCHECK" = true ]; then
+            legs="$legs\"texcheck\","
+          fi
+          if [ "$COMPILE" = true ]; then
+            legs="$legs\"compile\","
+          fi
+          echo "legs=[${legs%,}]" >> "$GITHUB_OUTPUT"
+
   ##########################################################################
   # The tests. Each installs only what it needs.
   ##########################################################################
@@ -178,64 +202,6 @@ jobs:
           cat tests/results.txt
           grep -qx 'All tests passed' tests/results.txt
 
-  # The same tests on Windows, where the paths, the shell, and
-  # executable() all differ. Without the steps of the translations, which
-  # nothing in the system changes, so the unit job runs them once.
-  unit-windows:
-    name: Unit and buffer tests (Windows)
-    needs: changes
-    if: needs.changes.outputs.code == 'true'
-    runs-on: windows-latest
-    # Windows has no timeout to stop a second Vim that hangs, see Limit in
-    # tests/fixtures.vim, so the job has one of its own.
-    timeout-minutes: 20
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.1
-
-      - name: Install Vim
-        uses: ./.github/actions/install-vim
-
-      - name: Checkout Logger dependency
-        uses: actions/checkout@v7.0.1
-        with:
-          repository: Galvarcus/Logger
-          path: deps/Logger
-
-      # Bash, as the unit job, in the Git Bash of the runner, and VIM_EXE,
-      # because the Git Bash holds a Vim of its own that comes first, see
-      # the install-vim action.
-      #
-      # The verbose log has a name of its own, with no folder, because a
-      # path of Windows does not survive the shell, and it is level 2, the
-      # files that Vim sources, not the 20 of the unit job: level 20 logs
-      # every Ex command of every file, and the colour tests apply a scheme
-      # again and again, so on Windows the log grew faster than the tests
-      # ran and the suite of tty.vim alone passed ten minutes. The suite
-      # that a run reached comes from tests/progress.log instead.
-      - name: Run tests
-        shell: bash
-        run: |
-          # A watchdog of its own, because a job that runs into its
-          # timeout-minutes prints nothing, and the suite that a hanging
-          # run reached is the only clue to the cause.
-          "$VIM_EXE" -es -u NONE -N -V2vim.log \
-            -c 'set rtp+=.,deps/Logger' \
-            -c 'source tests/harness.vim' -c 'quit' &
-          vim_pid=$!
-          ( sleep 600; kill -9 "$vim_pid" 2>/dev/null ) &
-          dog=$!
-          wait "$vim_pid" || true
-          kill "$dog" 2>/dev/null || true
-          if [ ! -f tests/results.txt ]; then
-            echo "::error::tests/results.txt was never created. The suite that the run reached and the last of the verbose log follow:"
-            tail -n 3 tests/progress.log || true
-            tail -n 200 vim.log
-            exit 1
-          fi
-          cat tests/results.txt
-          grep -qx 'All tests passed' tests/results.txt
-
   # The smoke tests run with the pandoc of the distro and with a current
   # release, as Homebrew has, in a job for each, so that both results come
   # in the time of one. A newer pandoc can need changes in the templates,
@@ -285,19 +251,27 @@ jobs:
           fi
           .github/scripts/compile-smoke.sh
 
-  # The same tests on Windows, beside the two pandoc jobs and not after
-  # them, because a fault of the compile pipeline there is a fault of the
-  # plugin. One pandoc, because the pair above answers what a newer pandoc
-  # asks of the templates, which is not a question of Windows. A filter of
-  # its own, as the MiKTeX job has, because the install takes minutes. No
-  # watchdog, because each compile has 60 seconds of its own and says so
-  # when it runs out, see MAX_WAIT_MS in tests/test_compile_smoke.vim.
-  compile-smoke-windows:
-    name: Compile pipeline smoke test (Windows)
+  ##########################################################################
+  # The Windows legs, in one job with a leg for each. The runner differs in
+  # its paths, its shell, and in what executable() answers, and a fault
+  # there is a fault of the plugin, so a break holds the Tests gate.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/43
+  #
+  # fail-fast stays off, so that one leg does not cancel the others, as the
+  # three jobs before it did not. Every leg takes the longer timeout:
+  # Windows has no timeout to stop a second Vim that hangs, see Limit in
+  # tests/fixtures.vim.
+  ##########################################################################
+  windows:
+    name: Windows (${{ matrix.leg }})
     needs: changes
-    if: needs.changes.outputs.compile == 'true'
+    if: needs.changes.outputs.windows != '[]'
     runs-on: windows-latest
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        leg: ${{ fromJSON(needs.changes.outputs.windows) }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -312,6 +286,7 @@ jobs:
           path: deps/Logger
 
       - name: Install MiKTeX
+        if: matrix.leg != 'unit'
         uses: ./.github/actions/install-miktex
 
       # MiKTeX brings the engines. The runner has neither pandoc nor the
@@ -320,55 +295,61 @@ jobs:
       # package cannot stand in for it, because XeTeX reads the fonts of
       # the system.
       - name: Install pandoc and the DejaVu fonts
+        if: matrix.leg == 'compile'
         shell: pwsh
         run: choco install pandoc dejavufonts --no-progress --yes
 
       # Before the fetch, so that a missing program fails in seconds rather
       # than after it.
       - name: Check that Vim finds the tools
+        if: matrix.leg == 'compile'
         shell: bash
         run: .github/scripts/check-windows-tools.sh
 
       - name: Fetch what the templates need
+        if: matrix.leg == 'compile'
         shell: bash
         run: .github/scripts/warm-miktex.sh
 
-      - name: Run compile smoke test
+      # Bash, as the unit job, in the Git Bash of the runner, and VIM_EXE,
+      # because the Git Bash holds a Vim of its own that comes first, see
+      # the install-vim action.
+      #
+      # The verbose log has a name of its own, with no folder, because a
+      # path of Windows does not survive the shell, and it is level 2, the
+      # files that Vim sources, not the 20 of the unit job: level 20 logs
+      # every Ex command of every file, and the colour tests apply a scheme
+      # again and again, so on Windows the log grew faster than the tests
+      # ran and the suite of tty.vim alone passed ten minutes. The suite
+      # that a run reached comes from tests/progress.log instead.
+      - name: Run tests
+        if: matrix.leg == 'unit'
         shell: bash
-        env:
-          VIM_LOG: vim.log
-          VIM_VERBOSE: 2
-        run: .github/scripts/compile-smoke.sh
+        run: |
+          # A watchdog of its own, because a job that runs into its
+          # timeout-minutes prints nothing, and the suite that a hanging
+          # run reached is the only clue to the cause.
+          "$VIM_EXE" -es -u NONE -N -V2vim.log \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/harness.vim' -c 'quit' &
+          vim_pid=$!
+          ( sleep 600; kill -9 "$vim_pid" 2>/dev/null ) &
+          dog=$!
+          wait "$vim_pid" || true
+          kill "$dog" 2>/dev/null || true
+          if [ ! -f tests/results.txt ]; then
+            echo "::error::tests/results.txt was never created. The suite that the run reached and the last of the verbose log follow:"
+            tail -n 3 tests/progress.log || true
+            tail -n 200 vim.log
+            exit 1
+          fi
+          cat tests/results.txt
+          grep -qx 'All tests passed' tests/results.txt
 
-  # What the stand-in programs of tests/test_texcheck.vim cannot prove: a
-  # real MiKTeX, where Bartleby checks no class or package. Its own filter,
-  # not the code one, because the MiKTeX install takes minutes and only the
-  # TeX check, the compile, and the templates can break this.
-  miktex:
-    name: TeX check on MiKTeX
-    needs: changes
-    if: needs.changes.outputs.texcheck == 'true'
-    runs-on: windows-latest
-    timeout-minutes: 30
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v7.0.1
-
-      - name: Install Vim
-        uses: ./.github/actions/install-vim
-
-      - name: Checkout Logger dependency
-        uses: actions/checkout@v7.0.1
-        with:
-          repository: Galvarcus/Logger
-          path: deps/Logger
-
-      - name: Install MiKTeX
-        uses: ./.github/actions/install-miktex
-
-      # Bash, VIM_EXE, and the log of the unit job on Windows, for the
-      # same reasons.
+      # What the stand-in programs of tests/test_texcheck.vim cannot prove:
+      # a real MiKTeX, where Bartleby checks no class or package.
       - name: Run the TeX check
+        if: matrix.leg == 'texcheck'
         shell: bash
         run: |
           "$VIM_EXE" -es -u NONE -N -V2vim.log \
@@ -381,6 +362,14 @@ jobs:
           fi
           cat tests/miktex_results.txt
           grep -qx 'All MiKTeX tests passed' tests/miktex_results.txt
+
+      - name: Run compile smoke test
+        if: matrix.leg == 'compile'
+        shell: bash
+        env:
+          VIM_LOG: vim.log
+          VIM_VERBOSE: 2
+        run: .github/scripts/compile-smoke.sh
 
   tagger-smoke:
     name: Part-of-speech tagger smoke test
@@ -488,10 +477,8 @@ jobs:
     needs:
       - changes
       - unit
-      - unit-windows
       - compile-smoke
-      - compile-smoke-windows
-      - miktex
+      - windows
       - tagger-smoke
       - wiki-tool
       - cheatsheet-tool
