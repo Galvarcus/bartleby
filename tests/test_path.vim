@@ -6,8 +6,9 @@ vim9script
 # buffer, answers whether a document belongs to a scrive, and cuts a
 # relative path out of an absolute one. The traps are a path that is
 # relative, one that ends in a separator, a folder whose name begins with
-# the name of another, and, on Windows alone, a separator of its own and a
-# name that two spellings share.
+# the name of another, a name that two spellings share wherever
+# fileignorecase is on, and a separator of its own where a backslash
+# separates a path.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -31,8 +32,15 @@ def Test_same_holds_for_two_spellings_of_one_file(): void
   # An empty path names no file, so it matches nothing, itself included.
   assert_false(PA.Same('', ''))
   assert_false(PA.Same('', 'tests/fixtures.vim'))
-  if has('win32')
-    assert_true(PA.Same(DIR .. '/One.md', toupper(DIR .. '/One.md')))
+  # Case is the file system's question, not the platform's, so the option
+  # decides and the test runs either way. Only the tail changes case, so
+  # that no parent of it can be a link whose own case resolve answers for.
+  if &fileignorecase
+    assert_true(PA.Same($'{DIR}/One.md', $'{DIR}/ONE.MD'))
+  else
+    assert_false(PA.Same($'{DIR}/One.md', $'{DIR}/ONE.MD'))
+  endif
+  if exists('+shellslash')
     assert_true(PA.Same(DIR .. '/One.md', substitute(DIR .. '/One.md', '/', '\', 'g')))
   endif
 enddef
@@ -61,6 +69,9 @@ def Test_under_takes_the_root_itself_and_what_lies_in_it(): void
   assert_false(PA.Under($'{DIR}/binder', $'{DIR}/other/scene.md'))
   assert_false(PA.Under('', $'{DIR}/binder/scene.md'))
   assert_false(PA.Under($'{DIR}/binder', ''))
+  if &fileignorecase
+    assert_true(PA.Under($'{DIR}/binder', $'{DIR}/BINDER/scene.md'))
+  endif
 enddef
 
 def Test_rel_cuts_the_part_below_the_root(): void
@@ -73,6 +84,10 @@ def Test_rel_cuts_the_part_below_the_root(): void
   assert_equal('', PA.Rel($'{DIR}/binder', $'{DIR}/binderly/scene.md'))
   assert_equal('', PA.Rel($'{DIR}/binder', $'{DIR}/other/scene.md'))
   assert_equal('', PA.Rel('', $'{DIR}/binder/scene.md'))
+  # The root reaches Rel in whatever case its own source spelled it.
+  if &fileignorecase
+    assert_equal('Chapter-1/Scene-01.md', PA.Rel($'{DIR}/BINDER', $'{DIR}/binder/Chapter-1/Scene-01.md'))
+  endif
 enddef
 
 export def RunAll(): void

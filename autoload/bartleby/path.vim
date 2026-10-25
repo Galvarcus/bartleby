@@ -17,9 +17,10 @@ var is_loaded: bool = true
 # those compared text, so one file was two files.
 #
 # Canon is for a key and for a comparison, never for what a user reads or
-# what goes in a file, because it folds case on Windows, where the file
-# system does the same. Rel keeps the case of the path it is given, so what
-# a scrive stores stays as it was.
+# what goes in a file, because it folds case wherever Vim says the file
+# system folds it, which fileignorecase answers and which covers macOS as
+# well as Windows. Rel keeps the case of the path it is given, so what a
+# scrive stores stays as it was.
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/48
 # License: GNU GPL 3.0
 ##############################################################################
@@ -28,6 +29,10 @@ const SEP: string = '/'
 # One backslash, as a pattern.
 const BACKSLASH_PAT: string = '\\'
 const TRAIL_PAT: string = '/\+$'
+# Whether a backslash separates a path here. options.txt gives this as the
+# test for it under shellslash. Elsewhere a backslash is a character of a
+# name, and turning it around would name another file.
+const BACKSLASH_IS_SEP: bool = exists('+shellslash') != 0
 
 # FUNCTION: Return path as one absolute path, with forward slashes, no
 # trailing slash, and its symbolic links resolved, keeping its case. Empty
@@ -38,19 +43,19 @@ def Full(path: string): string
     return ''
   endif
   var abs: string = resolve(fnamemodify(path, ':p'))
-  # Only Windows separates with a backslash. On Unix a backslash is a
-  # character of a name like any other, and turning it around would name
-  # another file.
-  if has('win32')
+  if BACKSLASH_IS_SEP
     abs = substitute(abs, BACKSLASH_PAT, SEP, 'g')
   endif
   return substitute(abs, TRAIL_PAT, '', '')
 enddef
 
 # FUNCTION: Return text with its case folded where the file system folds
-# it. Only Windows does.
+# it. Vim answers that with fileignorecase, which options.txt gives as on
+# by default where case in file names is normally ignored, naming
+# MS-Windows and macOS. It is read on each call because the writer may set
+# it at any time.
 def Folded(text: string): string
-  return has('win32') ? tolower(text) : text
+  return &fileignorecase ? tolower(text) : text
 enddef
 
 # FUNCTION: Return true when p, already a Full path, lies under r, also a
