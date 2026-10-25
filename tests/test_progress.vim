@@ -240,10 +240,10 @@ enddef
 # statusline, and return the statusline after startup and after a new
 # scrive opens.
 def StatuslineAfterOpen(statusline: string): list<string>
-  var log: string = tempname()
-  var script: string = tempname()
-  var root: string = tempname()
-  var plugin: string = fnamemodify(expand('<script>'), ':p:h:h')
+  var log: string = FI.Slashed(tempname())
+  var script: string = FI.Slashed(tempname())
+  var root: string = FI.Slashed(tempname())
+  var plugin: string = FI.Slashed(fnamemodify(expand('<script>'), ':p:h:h'))
   writefile([
     'vim9script',
     'import autoload "bartleby.vim" as BA',
@@ -257,7 +257,7 @@ def StatuslineAfterOpen(statusline: string): list<string>
     $'writefile([atStart, &g:statusline], "{log}")',
     'qa!',
   ], script)
-  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={plugin},{FI.LoggerDir()}" -S {script}')
+  system($'{FI.Limit()}{v:progpath} -es -u NONE -N --cmd "set rtp+={plugin},{FI.LoggerDir()}" -S {script}')
   var result: list<string> = filereadable(log) ? readfile(log) : ['no result', '']
   delete(log)
   delete(script)

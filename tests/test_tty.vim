@@ -285,9 +285,9 @@ enddef
 # scheme inside VimEnter, so its ColorScheme event only fires when the hook
 # is nested. If it does not, Spotlight keeps no dim color.
 def StartupState(colors: number, setup: string = ''): string
-  var root: string = LA.PluginRoot()
-  var script: string = tempname()
-  var log: string = tempname()
+  var root: string = FI.Slashed(LA.PluginRoot())
+  var script: string = FI.Slashed(tempname())
+  var log: string = FI.Slashed(tempname())
   writefile([
     'vim9script',
     'augroup probe',
@@ -295,7 +295,7 @@ def StartupState(colors: number, setup: string = ''): string
       .. ' .. " " .. get(g:, "colors_name", "")], "' .. log .. '")',
     'augroup END',
   ], script)
-  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={root},{FI.LoggerDir()}"'
+  system($'{FI.Limit()}{v:progpath} -es -u NONE -N --cmd "set rtp+={root},{FI.LoggerDir()}"'
     .. $' --cmd "set t_Co={colors}" {setup} -c "runtime plugin/bartleby.vim"'
     .. $' -c "BartlebySpotlight Paragraph" -S {script}')
   var result: string = filereadable(log) ? trim(join(readfile(log), ' ')) : 'no result'

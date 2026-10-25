@@ -320,7 +320,7 @@ def Test_a_folder_leaves_out_what_it_cannot_take(): void
   Source('Other/Far.md')
   # A folder that is a symbolic link could lead back into the tree.
   var linked: string = $'{sources}/Mixed/elsewhere'
-  call system($'ln -s {shellescape(sources .. "/Other")} {shellescape(linked)}')
+  FI.MakeLink($'{sources}/Other', linked)
 
   var importer = IM.Importer.new(project)
   importer.Files(RowOf(project, project.ChildAt(1).id), [$'{sources}/Mixed'])

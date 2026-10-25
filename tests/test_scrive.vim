@@ -161,10 +161,10 @@ enddef
 # hook on entering a buffer exists before any scrive opens, and after one
 # opens. A plugin that loads at startup must not run it for every buffer.
 def QuillHookBeforeAndAfter(): list<number>
-  var root: string = tempname()
-  var log: string = tempname()
-  var script: string = tempname()
-  var plugin: string = fnamemodify(expand('<script>'), ':p:h:h')
+  var root: string = FI.Slashed(tempname())
+  var log: string = FI.Slashed(tempname())
+  var script: string = FI.Slashed(tempname())
+  var plugin: string = FI.Slashed(fnamemodify(expand('<script>'), ':p:h:h'))
   writefile([
     'vim9script',
     $'g:bartleby_binder_root = "{root}"',
@@ -175,7 +175,7 @@ def QuillHookBeforeAndAfter(): list<number>
     $'writefile([string(before), string(exists("#bartleby_quill_auto#BufEnter"))], "{log}")',
     'qa!',
   ], script)
-  system($'timeout 60 {v:progpath} -es -u NONE -N '
+  system($'{FI.Limit()}{v:progpath} -es -u NONE -N '
     .. $'--cmd "set rtp+={plugin},{FI.LoggerDir()}" -S {script}')
   var result: list<number> = filereadable(log) ? readfile(log)->mapnew((_, v) => str2nr(v)) : []
   delete(log)
@@ -201,12 +201,12 @@ def ImportFacts(): dict<any>
   if !empty(import_facts)
     return import_facts
   endif
-  var root: string = tempname()
-  var src: string = tempname() .. '/Novel'
-  var bare: string = tempname() .. '/Images'
-  var log: string = tempname()
-  var script: string = tempname()
-  var plugin: string = fnamemodify(expand('<script>'), ':p:h:h')
+  var root: string = FI.Slashed(tempname())
+  var src: string = FI.Slashed(tempname()) .. '/Novel'
+  var bare: string = FI.Slashed(tempname()) .. '/Images'
+  var log: string = FI.Slashed(tempname())
+  var script: string = FI.Slashed(tempname())
+  var plugin: string = FI.Slashed(fnamemodify(expand('<script>'), ':p:h:h'))
   mkdir(src .. '/Chapter 1', 'p')
   mkdir(bare, 'p')
   writefile(['Scene text.'], src .. '/Chapter 1/Arrival.md')
@@ -243,7 +243,7 @@ def ImportFacts(): dict<any>
     $'writefile([json_encode(facts)], "{log}")',
     'qa!',
   ], script)
-  system($'timeout 60 {v:progpath} -es -u NONE -N '
+  system($'{FI.Limit()}{v:progpath} -es -u NONE -N '
     .. $'--cmd "set rtp+={plugin},{FI.LoggerDir()}" -S {script}')
   import_facts = filereadable(log) ? json_decode(join(readfile(log), '')) : {}
   delete(log)

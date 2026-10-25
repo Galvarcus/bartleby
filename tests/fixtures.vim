@@ -48,6 +48,31 @@ export def WriteDocContent(project: PO.Project, item: BI.BinderItem, lines: list
   writefile(lines, path)
 enddef
 
+# FUNCTION: Return path with forward slashes, which Vim takes on every
+# system. A backslash of Windows is an escape in a string and in the set
+# command, and a test that starts a second Vim passes paths through both.
+export def Slashed(path: string): string
+  return substitute(path, '\\', '/', 'g')
+enddef
+
+# FUNCTION: Return the prefix that stops a second Vim that hangs, for the
+# tests that start one. Empty on Windows, whose timeout only waits.
+export def Limit(): string
+  return has('win32') ? '' : 'timeout 60 '
+enddef
+
+# FUNCTION: Make link a symbolic link to target, and return true when the
+# system allowed it: Windows has no ln, and its mklink needs a privilege
+# that the user may not hold, so a test skips itself when this fails.
+export def MakeLink(target: string, link: string): bool
+  if has('win32')
+    system($'mklink{isdirectory(target) ? " /D" : ""} {shellescape(link)} {shellescape(target)}')
+  else
+    system($'ln -s {shellescape(target)} {shellescape(link)}')
+  endif
+  return getftype(link) ==# 'link'
+enddef
+
 # FUNCTION: Return the Logger folder of the runtimepath of this Vim, for a
 # test that starts a second Vim and must give it Logger. The path is
 # deps/Logger in CI and wherever the developer keeps it otherwise, so a
@@ -58,7 +83,7 @@ export def LoggerDir(): string
     if fnamemodify(dir, ':t') ==# 'Logger'
       # Absolute, because CI puts deps/Logger on the runtimepath as a
       # relative path and a second Vim need not start in this folder.
-      return substitute(fnamemodify(dir, ':p'), '/$', '', '')
+      return substitute(Slashed(fnamemodify(dir, ':p')), '/$', '', '')
     endif
   endfor
   return ''

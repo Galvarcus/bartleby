@@ -349,7 +349,11 @@ def Test_open_buffers_count_behind_a_symlink(): void
   var real: string = tempname()
   mkdir(real, 'p')
   var link: string = $'{real}-link'
-  system($'ln -s {shellescape(real)} {shellescape(link)}')
+  if !FI.MakeLink(real, link)
+    echomsg 'SKIP: the system made no symbolic link'
+    delete(real, 'rf')
+    return
+  endif
   var project = PO.Project.new($'{link}/fixture.bartleby')
   project.InitNew('Linked', CO.TYPE_NOVEL)
   var manuscript = BI.BinderItem.NewFolder('Manuscript', CO.ROLE_MANUSCRIPT)

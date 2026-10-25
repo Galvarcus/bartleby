@@ -12,17 +12,17 @@ vim9script
 
 import './fixtures.vim' as FI
 
-const PLUGIN: string = fnamemodify(expand('<script>'), ':p:h:h')
+const PLUGIN: string = FI.Slashed(fnamemodify(expand('<script>'), ':p:h:h'))
 
 # FUNCTION: Start a separate Vim, run the lines before before the plugin
 # loads and the lines after after it, and return g:result, which the lines
 # after set.
 def Fresh(before: list<string>, after: list<string>): list<string>
-  var script: string = tempname()
-  var out: string = tempname()
+  var script: string = FI.Slashed(tempname())
+  var out: string = FI.Slashed(tempname())
   writefile(['vim9script'] + before + ['runtime plugin/bartleby.vim'] + after
     + [$'writefile(g:result, "{out}")', 'qa!'], script)
-  system($'timeout 60 {v:progpath} -es -u NONE -N --cmd "set rtp+={PLUGIN},{FI.LoggerDir()}" -S {script}')
+  system($'{FI.Limit()}{v:progpath} -es -u NONE -N --cmd "set rtp+={PLUGIN},{FI.LoggerDir()}" -S {script}')
   var result: list<string> = filereadable(out) ? readfile(out) : ['(no result)']
   delete(out)
   delete(script)

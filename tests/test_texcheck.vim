@@ -4,7 +4,9 @@ vim9script
 # Plugin_Name: Bartleby
 # tests/test_texcheck.vim: what the LaTeX templates need, and finding what
 # TeX lacks of it, with a stand-in kpsewhich so that the tests decide which
-# files exist.
+# files exist. A stand-in is a shell script, and a batch file on Windows,
+# where a file with no extension is never executable. The TeX check against
+# a real MiKTeX is in tests/test_texcheck_miktex.vim.
 # License: GNU GPL 3.0
 ##############################################################################
 
@@ -17,25 +19,40 @@ const LATEX: string = fnamemodify(expand('<script>'), ':p:h:h') .. '/tools/latex
 export def Stubs(found: list<string>, miktex: bool = false, others: list<string> = []): string
   var dir: string = tempname()
   mkdir(dir, 'p')
-  var kpse: list<string> = ['#!/bin/sh', 'for n in "$@"; do', '  case "$n" in']
-    + found->mapnew((_, f) => $'    {f}) echo /tex/{f} ;;') + ['  esac', 'done']
-  writefile(kpse, dir .. '/kpsewhich')
+  var win: bool = has('win32')
+  var ext: string = win ? '.cmd' : ''
+  var kpse: list<string>
+  if win
+    # Each argument in turn, because a batch file has no case.
+    kpse = ['@echo off', ':next', 'if "%~1"=="" exit /b 0']
+      + found->mapnew((_, f) => $'if "%~1"=="{f}" echo /tex/{f}')
+      + ['shift', 'goto next']
+  else
+    kpse = ['#!/bin/sh', 'for n in "$@"; do', '  case "$n" in']
+      + found->mapnew((_, f) => $'    {f}) echo /tex/{f} ;;') + ['  esac', 'done']
+  endif
+  writefile(kpse, $'{dir}/kpsewhich{ext}')
   for name in others + (miktex ? ['initexmf'] : [])
-    writefile(['#!/bin/sh'], $'{dir}/{name}')
+    writefile([win ? '@echo off' : '#!/bin/sh'], $'{dir}/{name}{ext}')
   endfor
-  for name in readdir(dir)
-    setfperm($'{dir}/{name}', 'rwxr-xr-x')
-  endfor
+  if !win
+    for name in readdir(dir)
+      setfperm($'{dir}/{name}', 'rwxr-xr-x')
+    endfor
+  endif
   return dir
 enddef
 
 var saved: dict<string> = {}
 
 # FUNCTION: Use only dir to find programs. The shell has a full path, so
-# that system() still runs.
+# that system() still runs. The shell of Windows already has one, and it
+# is the one that runs a batch file.
 export def UsePath(dir: string): void
   saved = {path: $PATH, shell: &shell}
-  &shell = '/bin/sh'
+  if !has('win32')
+    &shell = '/bin/sh'
+  endif
   $PATH = dir
 enddef
 

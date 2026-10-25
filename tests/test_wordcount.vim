@@ -25,10 +25,19 @@ def ProjectWithScenes(): dict<any>
     scene1: chapter1.ChildAt(0), scene2: chapter2.ChildAt(0)}
 enddef
 
-# FUNCTION: Set the time of the file at path to seconds since 1970.
-def SetFileTime(path: string, seconds: number): void
-  system(printf('python3 -c "import os,sys; os.utime(sys.argv[1], (%d, %d))" %s',
-    seconds, seconds, shellescape(path)))
+# FUNCTION: Set the time of the file at path to seconds since 1970, and
+# return true when the system had a way to do it. Vim cannot set a file
+# time itself, so this needs a program: python3, or PowerShell on a
+# Windows without one.
+def SetFileTime(path: string, seconds: number): bool
+  if executable('python3')
+    system(printf('python3 -c "import os,sys; os.utime(sys.argv[1], (%d, %d))" %s',
+      seconds, seconds, shellescape(path)))
+  elseif has('win32')
+    system(printf('powershell -NoProfile -Command "(Get-Item -LiteralPath ''%s'').LastWriteTimeUtc'
+      .. ' = [DateTimeOffset]::FromUnixTimeSeconds(%d).UtcDateTime"', path, seconds))
+  endif
+  return getftime(path) == seconds
 enddef
 
 def Test_folders_add_up_the_words_inside_them(): void
@@ -69,7 +78,11 @@ def Test_an_unchanged_file_is_read_once(): void
   WC.ClearCache()
   var fx = ProjectWithScenes()
   var path: string = fx.scene2.AbsPath(fx.project.BinderRoot())
-  SetFileTime(path, 1000000000)
+  if !SetFileTime(path, 1000000000)
+    echomsg 'SKIP: no way to set a file time'
+    FI.CleanupProjectFiles(fx.project)
+    return
+  endif
   assert_equal(2, WC.Totals([fx.scene2], fx.project.BinderRoot())[fx.scene2.id])
   # Same size and time, other words: the count comes from the cache.
   writefile(['Sixxxxxxx'], path)

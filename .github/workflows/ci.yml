@@ -164,6 +164,45 @@ jobs:
           cat tests/results.txt
           grep -qx 'All tests passed' tests/results.txt
 
+  # The same tests on Windows, where the paths, the shell, and
+  # executable() all differ. Without the steps of the translations, which
+  # nothing in the system changes, so the unit job runs them once.
+  unit-windows:
+    name: Unit and buffer tests (Windows)
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      # Bash, as the unit job, in the Git Bash of the runner. cygpath gives
+      # Vim a path of Windows for its log, which it cannot write under a
+      # path of the shell.
+      - name: Run tests
+        shell: bash
+        run: |
+          log="$(cygpath -m "$RUNNER_TEMP")/vim.log"
+          vim -es -u NONE -N -V20"$log" \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/harness.vim' -c 'quit' || true
+          if [ ! -f tests/results.txt ]; then
+            echo "::error::tests/results.txt was never created - Vim likely failed before finishing. Verbose log follows:"
+            cat "$log"
+            exit 1
+          fi
+          cat tests/results.txt
+          grep -qx 'All tests passed' tests/results.txt
+
   # The smoke tests run with the pandoc of the distro and with a current
   # release, as Homebrew has, in a job for each, so that both results come
   # in the time of one. A newer pandoc can need changes in the templates,
@@ -362,6 +401,7 @@ jobs:
     needs:
       - changes
       - unit
+      - unit-windows
       - compile-smoke
       - miktex
       - tagger-smoke
