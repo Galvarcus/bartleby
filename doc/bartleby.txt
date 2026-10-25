@@ -69,7 +69,9 @@ Requirements                                             *bartleby-requirements*
   `texlive-lang-german`. Without it, words such as Contents stay English.
   Screenplays need screenplain https://github.com/vilcans/screenplain instead.
   Before a PDF, Bartleby checks that TeX has the engine and every class and
-  package, and names any that is missing.
+  package, and names any that is missing. With MiKTeX it checks the engine
+  alone, |bartleby-footnote3| because MiKTeX installs a missing package while
+  it compiles.
 - Dictionary and thesaurus need `curl` and your own free
   Merriam-Webster API keys https://dictionaryapi.com, one for the Collegiate
   Dictionary and one for the Collegiate Thesaurus.
@@ -1061,7 +1063,7 @@ Focus
 
     `g:bartleby_focus_fullscreen`      `0`                   In the GUI, show Focus in
                                                              fullscreen.
-                                                             |bartleby-footnote3|
+                                                             |bartleby-footnote4|
 
     `g:bartleby_focus_guifont`         `''`                  In the GUI, the font for
                                                              Focus, for example
@@ -1358,6 +1360,11 @@ that has it, use `apt-file search ulem.sty`, `dnf provides 'tex(ulem.sty)'`,
 or `pacman -F ulem.sty`.
 
                                                             *bartleby-footnote3*
+MiKTeX asks before it installs a package. To compile without a prompt, set it
+to install one always: in the MiKTeX Console, under Settings, or with
+`initexmf --set-config-value=[MPM]AutoInstall=1`.
+
+                                                            *bartleby-footnote4*
 MacVim uses its `'fullscreen'` option. The GTK and Windows GUIs use the `s`
 flag in `'guioptions'`. Other GUIs have no fullscreen mode. When Focus ends,
 also by `:q` in the Focus window, Bartleby restores the previous font and
