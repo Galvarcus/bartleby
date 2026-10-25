@@ -175,7 +175,7 @@ def QuillHookBeforeAndAfter(): list<number>
     $'writefile([string(before), string(exists("#bartleby_quill_auto#BufEnter"))], "{log}")',
     'qa!',
   ], script)
-  system($'{FI.Limit()}{v:progpath} -es -u NONE -N '
+  FI.Spawn($'{v:progpath} -es -u NONE -N '
     .. $'--cmd "set rtp+={plugin},{FI.LoggerDir()}" -S {script}')
   var result: list<number> = filereadable(log) ? readfile(log)->mapnew((_, v) => str2nr(v)) : []
   delete(log)
@@ -243,7 +243,7 @@ def ImportFacts(): dict<any>
     $'writefile([json_encode(facts)], "{log}")',
     'qa!',
   ], script)
-  system($'{FI.Limit()}{v:progpath} -es -u NONE -N '
+  FI.Spawn($'{v:progpath} -es -u NONE -N '
     .. $'--cmd "set rtp+={plugin},{FI.LoggerDir()}" -S {script}')
   import_facts = filereadable(log) ? json_decode(join(readfile(log), '')) : {}
   delete(log)

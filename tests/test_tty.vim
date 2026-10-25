@@ -295,7 +295,7 @@ def StartupState(colors: number, setup: string = ''): string
       .. ' .. " " .. get(g:, "colors_name", "")], "' .. log .. '")',
     'augroup END',
   ], script)
-  system($'{FI.Limit()}{v:progpath} -es -u NONE -N --cmd "set rtp+={root},{FI.LoggerDir()}"'
+  FI.Spawn($'{v:progpath} -es -u NONE -N --cmd "set rtp+={root},{FI.LoggerDir()}"'
     .. $' --cmd "set t_Co={colors}" {setup} -c "runtime plugin/bartleby.vim"'
     .. $' -c "BartlebySpotlight Paragraph" -S {script}')
   var result: string = filereadable(log) ? trim(join(readfile(log), ' ')) : 'no result'

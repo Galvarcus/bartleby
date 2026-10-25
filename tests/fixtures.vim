@@ -55,10 +55,18 @@ export def Slashed(path: string): string
   return substitute(path, '\\', '/', 'g')
 enddef
 
-# FUNCTION: Return the prefix that stops a second Vim that hangs, for the
-# tests that start one. Empty on Windows, whose timeout only waits.
-export def Limit(): string
-  return has('win32') ? '' : 'timeout 60 '
+# FUNCTION: Run cmd, which starts a second Vim, and return what it wrote.
+# Its input comes from the empty device, because a Vim in silent ex mode
+# reads its input to the end, and the console that Windows gives a job
+# never ends, so the second Vim would never return and the job would run
+# until its own limit. The timeout stops a Vim that hangs for another
+# reason; it is a program of POSIX, and the timeout of Windows only waits,
+# so there the limit of the job is the only one.
+export def Spawn(cmd: string): string
+  if has('win32')
+    return system($'{cmd} < NUL')
+  endif
+  return system($'timeout 60 {cmd} < /dev/null')
 enddef
 
 # FUNCTION: Make link a symbolic link to target, and return true when the

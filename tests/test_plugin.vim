@@ -22,7 +22,7 @@ def Fresh(before: list<string>, after: list<string>): list<string>
   var out: string = FI.Slashed(tempname())
   writefile(['vim9script'] + before + ['runtime plugin/bartleby.vim'] + after
     + [$'writefile(g:result, "{out}")', 'qa!'], script)
-  system($'{FI.Limit()}{v:progpath} -es -u NONE -N --cmd "set rtp+={PLUGIN},{FI.LoggerDir()}" -S {script}')
+  FI.Spawn($'{v:progpath} -es -u NONE -N --cmd "set rtp+={PLUGIN},{FI.LoggerDir()}" -S {script}')
   var result: list<string> = filereadable(out) ? readfile(out) : ['(no result)']
   delete(out)
   delete(script)

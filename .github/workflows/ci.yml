@@ -197,11 +197,20 @@ jobs:
       - name: Run tests
         shell: bash
         run: |
+          # A watchdog of its own, because a job that runs into its
+          # timeout-minutes prints nothing, and the suite that a hanging
+          # run reached is the only clue to the cause.
           "$VIM_EXE" -es -u NONE -N -V20vim.log \
             -c 'set rtp+=.,deps/Logger' \
-            -c 'source tests/harness.vim' -c 'quit' || true
+            -c 'source tests/harness.vim' -c 'quit' &
+          vim_pid=$!
+          ( sleep 600; kill -9 "$vim_pid" 2>/dev/null ) &
+          dog=$!
+          wait "$vim_pid" || true
+          kill "$dog" 2>/dev/null || true
           if [ ! -f tests/results.txt ]; then
-            echo "::error::tests/results.txt was never created - Vim likely failed before finishing. The last of the verbose log follows:"
+            echo "::error::tests/results.txt was never created. The suite that the run reached and the last of the verbose log follow:"
+            tail -n 3 tests/progress.log || true
             tail -n 200 vim.log
             exit 1
           fi

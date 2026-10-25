@@ -148,7 +148,14 @@ var suites: list<func(): void> = [
   TAU.RunAll,
 ]
 
+# The number of each suite as it starts, in the order of the imports
+# above. It goes to a file because a message reaches nothing in silent ex
+# mode, and a suite that hangs leaves its number as the last line, which
+# is the only clue that such a run gives.
+var at: number = 0
 for RunSuite in suites
+  at += 1
+  writefile([$'suite {at} of {len(suites)}'], 'tests/progress.log', at == 1 ? '' : 'a')
   RunSuite()
 endfor
 
