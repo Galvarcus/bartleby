@@ -12,6 +12,7 @@ vim9script
 
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/path.vim' as PA
+import './fixtures.vim' as FI
 
 def NewMultilinePopup(default: string): IP.InputPopup
   var fields: list<list<dict<any>>> = [[{name: 'text', type: 'multiline', rows: 5}]]
@@ -372,7 +373,7 @@ var complete_dir: string = ''
 # return unescaped.
 def CompleteDir(): string
   if complete_dir ==# ''
-    complete_dir = tempname() .. '/paths'
+    complete_dir = FI.TempPath() .. '/paths'
     mkdir(complete_dir .. '/sub', 'p')
     for name in ['alpha.md', 'alto.md', 'sub/inner.md', 'with space.md']
       writefile(['Text.'], $'{complete_dir}/{name}')

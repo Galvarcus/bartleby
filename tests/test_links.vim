@@ -131,7 +131,7 @@ enddef
 # FUNCTION: Off a link, gf does what it does without Bartleby: it opens the
 # file named under the cursor.
 def Test_gf_off_a_link_opens_the_file_under_the_cursor(): void
-  var file: string = tempname()
+  var file: string = FI.TempPath()
   writefile(['x'], file)
   enew!
   setline(1, file)
@@ -346,7 +346,7 @@ enddef
 # The fixture is under /tmp, which is a symlink only on macOS, so this
 # test makes one of its own.
 def Test_open_buffers_count_behind_a_symlink(): void
-  var real: string = tempname()
+  var real: string = FI.TempPath()
   mkdir(real, 'p')
   var link: string = $'{real}-link'
   if !FI.MakeLink(real, link)

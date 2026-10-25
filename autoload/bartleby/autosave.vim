@@ -33,6 +33,7 @@ import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/locale/writing.vim' as MW
+import autoload 'bartleby/path.vim' as PA
 import 'bartleby/variables/constants.vim' as CO
 
 const AUTOSAVE_PENDING: string = 'bartleby_autosave_pending'
@@ -52,7 +53,7 @@ export def IsScriveDoc(): bool
   if project is null_object
     return false
   endif
-  return stridx(expand('%:p'), project.BinderRoot() .. '/') == 0
+  return PA.Under(project.BinderRoot(), expand('%:p'))
 enddef
 
 # FUNCTION: Save the current buffer if it is a changed scrive document.

@@ -123,7 +123,7 @@ def Test_a_hidden_scrivening_is_saved_in_its_documents(): void
   var fx = NewProject()
   SV.Open(fx.project, fx.manuscript)
   setline(4, 'Hidden text.')
-  var other: string = tempname() .. '.txt'
+  var other: string = FI.TempPath() .. '.txt'
   writefile(['Other.'], other)
   # Leaving the Scrivening would let auto-save write it.
   var autosave: bool = g:bartleby_autosave
@@ -175,7 +175,7 @@ enddef
 def Test_windows_of_other_files_stay(): void
   var fx = NewProject()
   Layout(fx, true, true)
-  var other: string = tempname() .. '.txt'
+  var other: string = FI.TempPath() .. '.txt'
   writefile(['Not Bartleby.'], other)
   execute 'botright split ' .. fnameescape(other)
   win_gotoid(win_findbuf(bufnr(fx.path1))[0])
@@ -199,7 +199,7 @@ def Test_the_empty_buffer_has_none_of_the_window_options_of_bartleby(): void
 enddef
 
 def Test_nothing_open_is_not_an_error(): void
-  var file: string = tempname() .. '.txt'
+  var file: string = FI.TempPath() .. '.txt'
   writefile(['Plain.'], file)
   silent! only
   silent! :%bwipe!

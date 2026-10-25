@@ -31,6 +31,7 @@ import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/locale/panes.vim' as MP
+import autoload 'bartleby/path.vim' as PA
 import 'bartleby/variables/constants.vim' as CO
 
 const FOCUS_SESSION: string = 'bartleby_focus_session'
@@ -47,7 +48,7 @@ const WIN_OPTIONS: list<string> = [
 # FUNCTION: Return true when path is a file of the Binder of project.
 def InScrive(project: PO.Project, path: string): bool
   return project isnot null_object && path !=# ''
-    && stridx(fnamemodify(path, ':p'), project.BinderRoot() .. '/') == 0
+    && PA.Under(project.BinderRoot(), path)
 enddef
 
 # FUNCTION: Return the buffers of the documents of project, and the one of a

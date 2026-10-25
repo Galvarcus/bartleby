@@ -8,6 +8,7 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/scrivelist.vim' as SL
+import './fixtures.vim' as FI
 
 def MakeScrive(root: string, folder: string, json: string): void
   var dir: string = root .. '/' .. folder .. '.bartleby'
@@ -18,7 +19,7 @@ def MakeScrive(root: string, folder: string, json: string): void
 enddef
 
 def BuildRoot(): string
-  var root: string = tempname()
+  var root: string = FI.TempPath()
   mkdir(root, 'p')
   MakeScrive(root, 'Alpha', '{"name":"alpha novel","projectType":"novel","items":[]}')
   MakeScrive(root, 'zeta', '{"name":"Zeta Script","projectType":"screenplay","items":[]}')

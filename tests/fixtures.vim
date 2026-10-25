@@ -59,6 +59,16 @@ const PROGRESS: string = 'tests/progress.log'
 # the two must be spelled alike.
 const FIXTURE_DIR: string = substitute(fnamemodify(tempname(), ':p'), '\\', '/', 'g')
 
+# FUNCTION: Return a temporary path, as tempname does, in the spelling
+# that Vim gives back: absolute, with forward slashes, and the long name,
+# where tempname on Windows answers with the 8.3 short one. A test that
+# compares a path it built against one from Vim needs the two alike, and
+# a short name holds a tilde, which a pattern reads as the last
+# substitution.
+export def TempPath(): string
+  return substitute(fnamemodify(tempname(), ':p'), '\\', '/', 'g')
+enddef
+
 # FUNCTION: Record that a run reached what, with the time. It is the only
 # way to tell where a run stopped when it writes no result: a message
 # reaches nothing in silent ex mode, and a run that is killed, by a

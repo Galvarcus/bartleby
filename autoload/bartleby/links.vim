@@ -30,6 +30,7 @@ import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/wordcount.vim' as WC
 import autoload 'bartleby/locale/binder.vim' as MB
 import autoload 'bartleby/doctemplates.vim' as DT
+import autoload 'bartleby/path.vim' as PA
 
 # A link: [[target]] or [[target|text]]. A target holds no ] and no |, and
 # a text holds no ].
@@ -206,7 +207,7 @@ enddef
 # resolved one at a time.
 def DocInfo(root: string, doc: BI.BinderItem, loaded: dict<number>): dict<any>
   var path: string = doc.AbsPath(root)
-  var bufNr: number = get(loaded, path, -1)
+  var bufNr: number = WC.LoadedBuf(loaded, path)
   if bufNr > 0
     var lines: list<string> = getbufline(bufNr, 1, '$')
     return {targets: Targets(lines), headings: Headings(lines)}
@@ -410,7 +411,7 @@ def OpenAt(project: PO.Project, doc: BI.BinderItem, heading: string): void
   endif
   var path: string = doc.AbsPath(project.BinderRoot())
   var inScrivening: bool = SV.IsScrivening(bufnr())
-  if !inScrivening && resolve(expand('%:p')) !=# resolve(path)
+  if !inScrivening && !PA.Same(expand('%:p'), path)
     return
   endif
   var lines: list<string> = inScrivening ? get(SV.SectionTexts(), path, []) : getline(1, '$')

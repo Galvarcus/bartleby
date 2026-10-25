@@ -11,6 +11,7 @@ vim9script
 
 import autoload 'bartleby/templates.vim' as TE
 import 'bartleby/variables/constants.vim' as CO
+import './fixtures.vim' as FI
 
 # FUNCTION: Return the documents inside items, at any depth.
 def Documents(items: list<any>): list<any>
@@ -65,7 +66,7 @@ def Test_an_unknown_type_gets_nothing(): void
 enddef
 
 def Test_materialize_makes_missing_files_and_keeps_written_ones(): void
-  var root: string = tempname()
+  var root: string = FI.TempPath()
   var items = TE.DefaultTree(CO.TYPE_NOVEL, '.md')
   var docs = Documents(items)
   var kept: string = docs[0].AbsPath(root)

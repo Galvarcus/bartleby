@@ -41,6 +41,7 @@ import autoload 'bartleby/mutate.vim' as MU
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/locale/binder.vim' as MB
+import autoload 'bartleby/path.vim' as PA
 import 'bartleby/variables/constants.vim' as CO
 
 # Between the parts of a report, and between the skipped names in it.
@@ -53,13 +54,6 @@ const NUM_FMT: string = '%020d'
 # which a project export of a format that Bartleby cannot read needs.
 const MAX_NAMES: number = 5
 const MORE: string = '...'
-
-# FUNCTION: Return path absolute, with forward slashes and without a
-# trailing one, so that two paths compare as strings on any system.
-def Normalized(path: string): string
-  return substitute(fnamemodify(path, ':p'), '\\', '/', 'g')
-    ->substitute('/$', '', '')
-enddef
 
 # FUNCTION: Return the name of the folder at dir, without the trailing
 # slash that ExpandPaths leaves on a folder.
@@ -634,6 +628,6 @@ export class Importer
   # METHOD: Return true when path is already in the binder folder of this
   # scrive, where an import would copy a document onto itself.
   def _Inside(path: string): bool
-    return stridx(Normalized(path), Normalized(this.project.BinderRoot()) .. '/') == 0
+    return PA.Under(this.project.BinderRoot(), path)
   enddef
 endclass

@@ -11,9 +11,10 @@ import autoload 'bartleby/autosave.vim' as A
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/state.vim' as ST
 import 'bartleby/variables/constants.vim' as CO
+import './fixtures.vim' as FI
 
 def Setup(): dict<any>
-  var root: string = tempname()
+  var root: string = FI.TempPath()
   var project = PO.Project.new(root .. '/Test.bartleby')
   project.InitNew('Test', CO.TYPE_NOVEL)
   ST.Set(project)
