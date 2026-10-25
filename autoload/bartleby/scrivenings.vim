@@ -37,6 +37,7 @@ import autoload 'bartleby/windows.vim' as W
 import autoload 'bartleby/wordcount.vim' as WC
 import autoload 'bartleby/locale/common.vim' as MC
 import autoload 'bartleby/locale/writing.vim' as MW
+import autoload 'bartleby/path.vim' as PA
 import 'bartleby/variables/constants.vim' as CO
 
 const COMMENT_FLAGS: string = 'b:'
@@ -497,7 +498,13 @@ def Redirect(): void
   if empty(current)
     return
   endif
-  var i: number = index(current.paths, expand('%:p'))
+  # By the one spelling of a path, see path.vim: current.paths holds what
+  # the scrive stores, with forward slashes, while Vim answers with the
+  # separator of its own system, so on Windows no document of the
+  # Scrivening was ever recognised and none was redirected into it.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/50
+  var here: string = PA.Canon(expand('%:p'))
+  var i: number = current.paths->indexof((_, p) => PA.Canon(p) ==# here)
   if i < 0
     return
   endif
