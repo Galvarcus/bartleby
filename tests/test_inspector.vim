@@ -17,6 +17,7 @@ import autoload 'bartleby/links.vim' as LK
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/trash.vim' as TR
 import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/path.vim' as PA
 import './fixtures.vim' as FI
 import 'bartleby/variables/constants.vim' as CO
 
@@ -193,7 +194,7 @@ def Test_e_and_enter_open_a_linked_document(): void
     win_gotoid(bufwinid(CO.INSPECTOR_BUF))
     cursor(index(getline(1, '$'), 'Notes  Research') + 1, 1)
     feedkeys(key, 'xt')
-    assert_equal(notes.AbsPath(project.BinderRoot()), expand('%:p'), strtrans(key))
+    assert_equal(PA.Canon(notes.AbsPath(project.BinderRoot())), PA.Canon(expand('%:p')), strtrans(key))
     I.Toggle()
   endfor
   CloseLinks(project)

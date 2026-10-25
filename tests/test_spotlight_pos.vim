@@ -248,6 +248,12 @@ export def RunAll(): void
   # Spotlight computes its dim color from Normal.
   highlight Normal ctermfg=252 ctermbg=235 guifg=#d0d0d0 guibg=#262626
   set t_Co=256
+  # Spotlight needs a color model for its dim color, and 256 colors is the
+  # one these tests set up, see Dim in spotlight.vim. A system that keeps
+  # its own count sends Dim to its last branch, which throws, and then
+  # every assertion below fails for a reason of its own, so the premise
+  # says so itself.
+  assert_equal('256', &t_Co, 'the system kept its own color count')
   Test_tagger_modes_hidden_without_a_tagger()
   Test_word_list_modes_light_their_words()
   Test_an_edited_line_is_lit_from_its_new_text()

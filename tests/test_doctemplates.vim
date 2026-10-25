@@ -176,7 +176,7 @@ def Test_a_document_from_the_picker_opens_with_its_template(): void
   feedkeys("\<CR>", 'xt')
   assert_equal(['Mara'], chars.children->mapnew((_, c) => c.title))
   if !empty(chars.children)
-    assert_equal(chars.ChildAt(0).AbsPath(project.BinderRoot()), expand('%:p'))
+    assert_equal(PA.Canon(chars.ChildAt(0).AbsPath(project.BinderRoot())), PA.Canon(expand('%:p')))
     assert_equal('## Role in the story', getline(1))
   endif
   silent! :%bwipe!

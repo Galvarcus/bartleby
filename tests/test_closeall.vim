@@ -158,6 +158,12 @@ enddef
 def Test_focus_and_spotlight_are_left(): void
   highlight Normal ctermfg=252 ctermbg=235 guifg=#d0d0d0 guibg=#262626
   set t_Co=256
+  # Spotlight needs a color model for its dim color, and 256 colors is the
+  # one these tests set up, see Dim in spotlight.vim. A system that keeps
+  # its own count sends Dim to its last branch, which throws, and then
+  # every assertion below fails for a reason of its own, so the premise
+  # says so itself.
+  assert_equal('256', &t_Co, 'the system kept its own color count')
   var fx = NewProject()
   Layout(fx, false, false)
   F.Execute(false, '')
