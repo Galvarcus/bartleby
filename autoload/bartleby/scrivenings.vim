@@ -127,20 +127,27 @@ export def Open(project: PO.Project, folder: BI.BinderItem, docId: string = '', 
     return false
   endif
   var root: string = project.BinderRoot()
-  var paths: dict<string> = {}
+  # The files as the scrive names them, because they are written by that
+  # name, and the ids by the one spelling of a path, because the name that
+  # Vim answers for the current buffer carries the separator of its own
+  # system, see path.vim.
+  var paths: list<string> = []
+  var idByPath: dict<string> = {}
   for [doc, _] in docs
-    paths[doc.AbsPath(root)] = doc.id
+    var path: string = doc.AbsPath(root)
+    paths->add(path)
+    idByPath[PA.Canon(path)] = doc.id
   endfor
   # The document of the current buffer gives the place of the cursor.
   var cursorId: string = docId
   var cursorOffset: number = offset
-  var here: string = expand('%:p')
-  if cursorId ==# '' && has_key(paths, here)
-    cursorId = paths[here]
+  var here: string = PA.Canon(expand('%:p'))
+  if cursorId ==# '' && has_key(idByPath, here)
+    cursorId = idByPath[here]
     cursorOffset = line('.') - 1
   endif
   var members: list<number> = SaveMemberBufs(paths)
-  if !has_key(paths, here)
+  if !has_key(idByPath, here)
     W.GoToEditorWin()
   endif
   hide enew
@@ -165,10 +172,10 @@ enddef
 
 # FUNCTION: Save the changes of the documents in paths that are open in
 # buffers, so that the Scrivening shows them. Returns their buffers.
-def SaveMemberBufs(paths: dict<string>): list<number>
+def SaveMemberBufs(paths: list<string>): list<number>
   var found: list<number> = []
   var bufs: dict<number> = WC.LoadedBufs()
-  for path in keys(paths)
+  for path in paths
     var bufNr: number = WC.LoadedBuf(bufs, path)
     if bufNr < 0
       continue
