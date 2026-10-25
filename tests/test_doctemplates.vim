@@ -107,7 +107,7 @@ def Test_adding_where_none_apply_adds_at_once(): void
   B.AddDocAsked(project, RowOf(project, chapter.ChildAt(0)), 'Scene 2')
   assert_equal(before, len(popup_list()))
   assert_equal(['Scene 1', 'Scene 2'], chapter.children->mapnew((_, c) => c.title))
-  assert_equal(chapter.ChildAt(1).AbsPath(project.BinderRoot()), expand('%:p'))
+  assert_equal(PA.Canon(chapter.ChildAt(1).AbsPath(project.BinderRoot())), PA.Canon(expand('%:p')))
   silent! :%bwipe!
   Cleanup(project)
 enddef

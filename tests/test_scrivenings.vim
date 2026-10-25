@@ -25,6 +25,7 @@ import autoload 'bartleby/snapshot.vim' as SN
 import autoload 'bartleby/state.vim' as ST
 import './fixtures.vim' as FI
 import 'bartleby/variables/constants.vim' as CO
+import autoload 'bartleby/path.vim' as PA
 
 # FUNCTION: Return the fixture project, current, with its two scenes on
 # disk, the second titled Departure.
@@ -339,11 +340,11 @@ def Test_the_bang_saves_and_closes_at_the_document_under_the_cursor(): void
   assert_equal(-1, bufnr(CO.SCRIVENINGS_BUF))
   assert_equal(['The train came in.', 'It was very late.'], LinesOf(fx.arrivalPath))
   assert_equal(window, win_getid())
-  assert_equal([fnamemodify(fx.arrivalPath, ':p'), 2], [expand('%:p'), line('.')])
+  assert_equal([PA.Canon(fx.arrivalPath), 2], [PA.Canon(expand('%:p')), line('.')])
   # No Scrivening takes the document back.
   doautocmd BufEnter
   sleep 50m
-  assert_equal(fnamemodify(fx.arrivalPath, ':p'), expand('%:p'))
+  assert_equal(PA.Canon(fx.arrivalPath), PA.Canon(expand('%:p')))
   Close(fx)
 enddef
 
@@ -364,7 +365,7 @@ def Test_bdelete_closes_the_scrivening(): void
   execute 'silent edit ' .. fnameescape(fx.departurePath)
   doautocmd BufEnter
   sleep 50m
-  assert_equal([fnamemodify(fx.departurePath, ':p'), ['Not saved yet.']], [expand('%:p'), getline(1, '$')])
+  assert_equal([PA.Canon(fx.departurePath), ['Not saved yet.']], [PA.Canon(expand('%:p')), getline(1, '$')])
   Close(fx)
 enddef
 
