@@ -49,6 +49,7 @@ jobs:
       cheatsheet: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.cheatsheet }}
       triage: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.triage }}
       texcheck: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.texcheck }}
+      compile: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.compile }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -99,6 +100,19 @@ jobs:
               - autoload/bartleby/compile.vim
               - tools/latex/**
               - tests/test_texcheck_miktex.vim
+              - .github/workflows/ci.yml
+              - .github/actions/**
+            compile:
+              - autoload/bartleby/compile.vim
+              - autoload/bartleby/texcheck.vim
+              - tools/latex/**
+              - tools/pandoc/**
+              - tools/css/**
+              - tests/test_compile_smoke.vim
+              - .github/scripts/compile-smoke.sh
+              - .github/scripts/check-windows-tools.sh
+              - .github/scripts/warm-miktex.sh
+              - .github/scripts/latex-needs.vim
               - .github/workflows/ci.yml
               - .github/actions/**
 
@@ -271,6 +285,61 @@ jobs:
           fi
           .github/scripts/compile-smoke.sh
 
+  # The same tests on Windows, beside the two pandoc jobs and not after
+  # them, because a fault of the compile pipeline there is a fault of the
+  # plugin. One pandoc, because the pair above answers what a newer pandoc
+  # asks of the templates, which is not a question of Windows. A filter of
+  # its own, as the MiKTeX job has, because the install takes minutes. No
+  # watchdog, because each compile has 60 seconds of its own and says so
+  # when it runs out, see MAX_WAIT_MS in tests/test_compile_smoke.vim.
+  compile-smoke-windows:
+    name: Compile pipeline smoke test (Windows)
+    needs: changes
+    if: needs.changes.outputs.compile == 'true'
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      - name: Install MiKTeX
+        uses: ./.github/actions/install-miktex
+
+      # MiKTeX brings the engines. The runner has neither pandoc nor the
+      # DejaVu Serif that the Book PDF asks of fontspec, which the CI image
+      # takes from fonts-dejavu-core, see .github/docker/Dockerfile. A TeX
+      # package cannot stand in for it, because XeTeX reads the fonts of
+      # the system.
+      - name: Install pandoc and the DejaVu fonts
+        shell: pwsh
+        run: choco install pandoc dejavufonts --no-progress --yes
+
+      # Before the fetch, so that a missing program fails in seconds rather
+      # than after it.
+      - name: Check that Vim finds the tools
+        shell: bash
+        run: .github/scripts/check-windows-tools.sh
+
+      - name: Fetch what the templates need
+        shell: bash
+        run: .github/scripts/warm-miktex.sh
+
+      - name: Run compile smoke test
+        shell: bash
+        env:
+          VIM_LOG: vim.log
+          VIM_VERBOSE: 2
+        run: .github/scripts/compile-smoke.sh
+
   # What the stand-in programs of tests/test_texcheck.vim cannot prove: a
   # real MiKTeX, where Bartleby checks no class or package. Its own filter,
   # not the code one, because the MiKTeX install takes minutes and only the
@@ -421,6 +490,7 @@ jobs:
       - unit
       - unit-windows
       - compile-smoke
+      - compile-smoke-windows
       - miktex
       - tagger-smoke
       - wiki-tool
