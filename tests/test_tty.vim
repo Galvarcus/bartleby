@@ -321,6 +321,16 @@ def Test_setting_for_dimmed_text_wins_on_a_console(): void
 enddef
 
 export def RunAll(): void
+  # Nothing here applies to Windows. The suite sets t_Co to 8 or 16 and
+  # measures the colors against the palette of the Linux console, and the
+  # console of Windows has no such mode: Vim reports its own count there,
+  # so tty#Apply is a path that no user of Windows reaches. Left in, the
+  # suite never returned in CI, where each scheme that it applies sources
+  # the color files again.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/44
+  if has('win32')
+    return
+  endif
   Test_only_8_and_16_colors_count_as_a_console()
   Test_scheme_uses_only_the_basic_colors()
   Test_bright_text_follows_the_number_of_colors()

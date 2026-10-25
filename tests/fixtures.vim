@@ -48,6 +48,18 @@ export def WriteDocContent(project: PO.Project, item: BI.BinderItem, lines: list
   writefile(lines, path)
 enddef
 
+# The file that Step appends to, under the folder that a run starts in.
+const PROGRESS: string = 'tests/progress.log'
+
+# FUNCTION: Record that a run reached what, with the time. It is the only
+# way to tell where a run stopped when it writes no result: a message
+# reaches nothing in silent ex mode, and a run that is killed, by a
+# watchdog or by the limit of a job, prints nothing of its own. Call Step
+# with 'start' first, which begins the file again.
+export def Step(what: string): void
+  writefile([$'{strftime("%H:%M:%S")} {what}'], PROGRESS, what ==# 'start' ? '' : 'a')
+enddef
+
 # FUNCTION: Return path with forward slashes, which Vim takes on every
 # system. A backslash of Windows is an escape in a string and in the set
 # command, and a test that starts a second Vim passes paths through both.

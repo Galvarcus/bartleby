@@ -54,6 +54,7 @@ endif
 # files directly must do this itself.
 execute 'source ' .. expand('<sfile>:h:h') .. '/plugin/bartleby.vim'
 
+import './fixtures.vim' as FI
 import './test_tree.vim' as TT
 import './test_mutate.vim' as TM
 import './test_document.vim' as TD
@@ -149,13 +150,12 @@ var suites: list<func(): void> = [
 ]
 
 # The number of each suite as it starts, in the order of the imports
-# above. It goes to a file because a message reaches nothing in silent ex
-# mode, and a suite that hangs leaves its number as the last line, which
-# is the only clue that such a run gives.
+# above, see Step in fixtures.vim for why a file.
 var at: number = 0
+FI.Step('start')
 for RunSuite in suites
   at += 1
-  writefile([$'suite {at} of {len(suites)}'], 'tests/progress.log', at == 1 ? '' : 'a')
+  FI.Step($'suite {at} of {len(suites)}')
   RunSuite()
 endfor
 
