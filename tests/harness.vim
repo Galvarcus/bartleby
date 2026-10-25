@@ -156,7 +156,15 @@ FI.Step('start')
 for RunSuite in suites
   at += 1
   FI.Step($'suite {at} of {len(suites)}')
-  RunSuite()
+  # A suite that throws, rather than failing an assertion, would end the
+  # whole run and leave no result file at all, so the error becomes a
+  # failure of its own and the suites after it still run. An assertion
+  # never throws, so a run with nothing to report is unchanged.
+  try
+    RunSuite()
+  catch
+    v:errors->add($'suite {at} threw {v:exception} at {v:throwpoint}')
+  endtry
 endfor
 
 if len(v:errors) > 0
