@@ -22,6 +22,7 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/scrivenings.vim' as SV
+import autoload 'bartleby/path.vim' as PA
 
 # The words of each file read: path to size, time, and count.
 var cache: dict<list<number>> = {}
@@ -31,15 +32,16 @@ export def Count(lines: list<string>): number
   return len(split(join(lines, ' ')))
 enddef
 
-# FUNCTION: Return the loaded buffers that have a file, by full path with
-# symlinks resolved. Vim names a buffer by the resolved path, so that one
-# under /tmp on macOS is under /private/tmp, and AbsPath does not
-# resolve. Look a path up with LoadedBuf.
+# FUNCTION: Return the loaded buffers that have a file, by the one
+# spelling of their path, see path.vim. Vim names a buffer by the resolved
+# path, so that one under /tmp on macOS is under /private/tmp, and on
+# Windows by the long name with backslashes, while AbsPath neither
+# resolves nor turns a slash around. Look a path up with LoadedBuf.
 export def LoadedBufs(): dict<number>
   var bufs: dict<number> = {}
   for info in getbufinfo({bufloaded: 1})
     if info.name !=# ''
-      bufs[resolve(fnamemodify(info.name, ':p'))] = info.bufnr
+      bufs[PA.Canon(info.name)] = info.bufnr
     endif
   endfor
   return bufs
@@ -47,7 +49,7 @@ enddef
 
 # FUNCTION: Return the buffer of path in bufs, from LoadedBufs, or -1.
 export def LoadedBuf(bufs: dict<number>, path: string): number
-  return get(bufs, resolve(path), -1)
+  return get(bufs, PA.Canon(path), -1)
 enddef
 
 # FUNCTION: Return the words of the document at path: from the open

@@ -27,6 +27,7 @@ import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/templates.vim' as TE
 import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/path.vim' as PA
 import autoload 'bartleby/locale/data.vim' as MD
 import 'bartleby/variables/constants.vim' as CO
 
@@ -46,10 +47,12 @@ export def UnlistedFiles(project: PO.Project): list<string>
   endfor
   var found: list<string> = []
   for path in globpath(root, '**/*' .. project.DocExt(), true, true)
-    var relPath: string = substitute(path[len(root) + 1 :], '\\', '/', 'g')
+    var relPath: string = PA.Rel(root, path)
     # Names that start with a dot are hidden. globpath leaves them out on
-    # Unix, but not on every system, so they are skipped here as well.
-    if relPath =~# '\(^\|/\)\.' || has_key(listed, relPath) || !filereadable(path)
+    # Unix, but not on every system, so they are skipped here as well. An
+    # empty answer means globpath gave a path outside the root, which is
+    # nothing of this scrive.
+    if relPath ==# '' || relPath =~# '\(^\|/\)\.' || has_key(listed, relPath) || !filereadable(path)
       continue
     endif
     found->add(relPath)

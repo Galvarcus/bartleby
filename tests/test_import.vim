@@ -13,6 +13,7 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/import.vim' as IM
+import autoload 'bartleby/path.vim' as PA
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/tree.vim' as T
@@ -241,12 +242,18 @@ def Test_the_report_counts_what_came_in_and_what_was_skipped(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+# FUNCTION: The paths by the one spelling of path.vim, because a glob
+# answers with the separator and the long name of its own system.
+def Canons(paths: list<string>): list<string>
+  return paths->mapnew((_, p) => PA.Canon(p))
+enddef
+
 def Test_expand_paths_takes_wildcards_and_keeps_an_unmatched_path(): void
   var first: string = Source('globbed/One.md')
   var second: string = Source('globbed/Two.md')
   var missing: string = $'{sources}/globbed/Gone.md'
-  assert_equal([first, second], IM.ExpandPaths([$'{sources}/globbed/*.md']))
-  assert_equal([missing], IM.ExpandPaths([missing]))
+  assert_equal(Canons([first, second]), Canons(IM.ExpandPaths([$'{sources}/globbed/*.md'])))
+  assert_equal(Canons([missing]), Canons(IM.ExpandPaths([missing])))
   # A relative path becomes absolute, so that the import finds it from any
   # working directory.
   assert_equal([fnamemodify('rel.md', ':p')], IM.ExpandPaths(['rel.md']))

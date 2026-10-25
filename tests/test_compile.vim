@@ -11,6 +11,7 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/compile.vim' as C
+import autoload 'bartleby/path.vim' as PA
 import autoload 'bartleby/binderitem.vim' as BI
 import './fixtures.vim' as FI
 import 'Logger/messages.vim' as LM
@@ -145,7 +146,9 @@ def Test_a_cover_path_is_never_read_as_a_pattern(): void
   var got: string = C.CoverPath('cover[1].png')
   execute 'cd ' .. fnameescape(cwd)
   delete(dir, 'rf')
-  assert_equal(dir .. '/cover[1].png', got)
+  # Through Canon, because Vim answers with the separator and the long
+  # name of its own system, and the name is what this test is about.
+  assert_equal(PA.Canon(dir .. '/cover[1].png'), PA.Canon(got))
 enddef
 
 # FUNCTION: A Book with a cover image that does not exist stops with an
@@ -158,7 +161,10 @@ def Test_a_missing_cover_image_stops_the_compile(): void
   var before: number = len(LM.History())
   C.Execute(project, target)
   var logged: string = LM.History()[before :]->mapnew((_, m) => join(m.lines, ' '))->join(' ')
-  assert_match('cover image not found: /no/such/folder/cover.png', logged)
+  # CoverPath makes the path absolute, and on Windows that means a drive
+  # and backslashes, so the pattern comes from the path itself.
+  assert_match($'cover image not found: {escape(C.CoverPath("/no/such/folder/cover.png"), "\\.*$^~[]")}',
+    logged)
   assert_notmatch('compiling "NoCover"', logged)
   FI.CleanupProjectFiles(project)
 enddef

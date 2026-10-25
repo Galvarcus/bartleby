@@ -13,6 +13,7 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/closeall.vim' as CA
+import autoload 'bartleby/path.vim' as PA
 import autoload 'bartleby/focus.vim' as F
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/scrivenings.vim' as SV
@@ -180,7 +181,7 @@ def Test_windows_of_other_files_stay(): void
   win_gotoid(win_findbuf(bufnr(fx.path1))[0])
   assert_true(CA.All())
   assert_equal(1, winnr('$'))
-  assert_equal(other, expand('%:p'))
+  assert_equal(PA.Canon(other), PA.Canon(expand('%:p')))
   assert_equal(['Not Bartleby.'], getline(1, '$'))
   assert_equal([-1, -1, -1], [bufnr(CO.BINDER_BUF), bufnr(CO.INSPECTOR_BUF), bufnr(fx.path1)])
   delete(other)
@@ -205,7 +206,7 @@ def Test_nothing_open_is_not_an_error(): void
   execute 'silent edit ' .. fnameescape(file)
   ST.Set(null_object)
   assert_true(CA.All())
-  assert_equal([file, ['Plain.']], [expand('%:p'), getline(1, '$')])
+  assert_equal([PA.Canon(file), ['Plain.']], [PA.Canon(expand('%:p')), getline(1, '$')])
   silent! :%bwipe!
   delete(file)
 enddef

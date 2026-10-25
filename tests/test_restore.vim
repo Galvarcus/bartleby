@@ -11,6 +11,7 @@ vim9script
 
 import autoload 'bartleby/restore.vim' as R
 import autoload 'bartleby/binder.vim' as B
+import autoload 'bartleby/path.vim' as PA
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/session.vim' as SS
 import autoload 'bartleby/state.vim' as ST
@@ -42,7 +43,7 @@ def Test_restore_opens_the_document_at_its_cursor(): void
   var fx = ProjectWithSession({activeDocRelPath: 'chapter-1/scene-01.md',
     cursorLine: 3, cursorCol: 7, binderOpen: true, collapsedIds: []})
   R.Restore(fx.project)
-  assert_equal(fx.scene.AbsPath(fx.project.BinderRoot()), expand('%:p'))
+  assert_equal(PA.Canon(fx.scene.AbsPath(fx.project.BinderRoot())), PA.Canon(expand('%:p')))
   assert_equal([3, 7], [line('.'), col('.')])
   assert_true(B.IsOpen())
   Close(fx)

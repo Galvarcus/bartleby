@@ -17,7 +17,7 @@ import 'bartleby/variables/constants.vim' as CO
 # a Manuscript with 2 chapters of 1 scene each: enough to test nesting,
 # owners, and sibling order, and no larger.
 export def BuildProject(): PO.Project
-  var project = PO.Project.new('/tmp/bartleby-test-fixture.bartleby')
+  var project = PO.Project.new($'{FIXTURE_DIR}/bartleby-test-fixture.bartleby')
   project.InitNew('Fixture Project', CO.TYPE_NOVEL)
 
   var frontMatter = BI.BinderItem.NewFolder('Front Matter', CO.ROLE_FRONT_MATTER)
@@ -50,6 +50,14 @@ enddef
 
 # The file that Step appends to, under the folder that a run starts in.
 const PROGRESS: string = 'tests/progress.log'
+
+# The folder that holds every fixture project of a run. Under the
+# temporary folder of this Vim, which it removes when it ends, and not
+# under /tmp, which Windows reads as a folder of the current drive. It is
+# absolute, with forward slashes and the long name of Windows, because a
+# test compares a path that it builds against one that Vim gives back, and
+# the two must be spelled alike.
+const FIXTURE_DIR: string = substitute(fnamemodify(tempname(), ':p'), '\\', '/', 'g')
 
 # FUNCTION: Record that a run reached what, with the time. It is the only
 # way to tell where a run stopped when it writes no result: a message

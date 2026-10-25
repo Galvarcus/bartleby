@@ -31,7 +31,7 @@ import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/scrivenings.vim' as SV
-import 'bartleby/variables/constants.vim' as CO
+import autoload 'bartleby/path.vim' as PA
 
 const PATH_SESSION_JSON: string = '/session.json'
 const SCRIVE_DIR: string = 'scriveDir'
@@ -125,7 +125,7 @@ enddef
 ##############################################################################
 
 def IsProjDoc(project: PO.Project, path: string): bool
-  return path !=# '' && path =~# CO.PAT_NOMAGIC_BOL .. escape(project.BinderRoot(), '\')
+  return PA.Under(project.BinderRoot(), path)
 enddef
 
 # FUNCTION: Save the document and cursor of the current window. Runs on
@@ -151,7 +151,7 @@ export def CaptureCurDoc(): void
     return
   endif
   var v: dict<any> = Cur(project)
-  v.activeDocRelPath = path[len(project.BinderRoot()) + 1 : ]
+  v.activeDocRelPath = PA.Rel(project.BinderRoot(), path)
   v.cursorLine = lnum
   v.cursorCol = col('.')
   Save(project, SessionState.FromDict(v))

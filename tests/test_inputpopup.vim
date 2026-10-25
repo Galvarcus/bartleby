@@ -11,6 +11,7 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/inputpopup.vim' as IP
+import autoload 'bartleby/path.vim' as PA
 
 def NewMultilinePopup(default: string): IP.InputPopup
   var fields: list<list<dict<any>>> = [[{name: 'text', type: 'multiline', rows: 5}]]
@@ -393,14 +394,14 @@ def Test_tab_completes_a_path_and_cycles_through_the_matches(): void
   var dir: string = CompleteDir()
   var popup = NewPathPopup($'{dir}/al')
   Keys(popup, ["\<Tab>"])
-  assert_equal($'{dir}/alpha.md', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/alpha.md'), PA.Canon(popup.Vals().path))
   Keys(popup, ["\<Tab>"])
-  assert_equal($'{dir}/alto.md', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/alto.md'), PA.Canon(popup.Vals().path))
   # The cycle wraps, and Shift-Tab goes back.
   Keys(popup, ["\<Tab>"])
-  assert_equal($'{dir}/alpha.md', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/alpha.md'), PA.Canon(popup.Vals().path))
   Keys(popup, ["\<S-Tab>"])
-  assert_equal($'{dir}/alto.md', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/alto.md'), PA.Canon(popup.Vals().path))
   popup.Close()
 enddef
 
@@ -408,7 +409,7 @@ def Test_shift_tab_completes_the_last_match_first(): void
   var dir: string = CompleteDir()
   var popup = NewPathPopup($'{dir}/al')
   Keys(popup, ["\<S-Tab>"])
-  assert_equal($'{dir}/alto.md', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/alto.md'), PA.Canon(popup.Vals().path))
   popup.Close()
 enddef
 
@@ -418,7 +419,7 @@ def Test_a_changed_text_finds_the_matches_again(): void
   Keys(popup, ["\<Tab>", "\<BS>"])
   assert_equal($'{dir}/alpha.m', popup.Vals().path)
   Keys(popup, ["\<Tab>"])
-  assert_equal($'{dir}/alpha.md', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/alpha.md'), PA.Canon(popup.Vals().path))
   popup.Close()
 enddef
 

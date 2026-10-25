@@ -12,6 +12,7 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/binder.vim' as B
+import autoload 'bartleby/path.vim' as PA
 import './fixtures.vim' as FI
 import 'bartleby/variables/constants.vim' as CO
 
@@ -67,7 +68,7 @@ def Test_cr_on_a_scene_line_opens_the_correct_file(): void
   cursor(lnum, 1)
   feedkeys("\<CR>", 'xt')
   assert_equal('scene-01.md', expand('%:t'))
-  assert_equal(fx.scene1.AbsPath(fx.project.BinderRoot()), expand('%:p'))
+  assert_equal(PA.Canon(fx.scene1.AbsPath(fx.project.BinderRoot())), PA.Canon(expand('%:p')))
   CloseBinderAndCleanup(fx)
 enddef
 
