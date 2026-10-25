@@ -10,7 +10,8 @@ name: CI image
 
 on:
   push:
-    branches: [Development, main]
+    branches: 
+      - main
     paths:
       - .github/docker/**
       - .github/workflows/ci-image.yml
