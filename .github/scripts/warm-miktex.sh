@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 
-# Ask MiKTeX for every class and package that the compile templates name,
-# so that it installs them before the tests run. Each test allows 60
-# seconds for a compile, see MAX_WAIT_MS in tests/test_compile_smoke.vim,
-# and an install inside that time would fail the test as though the
-# compile itself were broken. A lookup is enough to trigger the install,
-# because MiKTeX fetches a missing file during a plain kpsewhich.
+# Make MiKTeX ready before the tests run. Each test allows 60 seconds for
+# a compile, see MAX_WAIT_MS in tests/test_compile_smoke.vim, and work
+# inside that time fails the test as though the compile itself were
+# broken.
 #
-# A lookup that fails is not an error here. The install is an optimisation,
-# and AutoInstall stays on to catch whatever this misses, see
+# Two costs, and both are paid here. A missing file, which MiKTeX fetches
+# during a plain kpsewhich. And the format of an engine, which MiKTeX
+# builds when that engine first runs: a lookup never runs one, so the
+# first real compile paid for it and came within ten seconds of the limit,
+# then over it.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/45
+#
+# A failure here is not an error. The work is an optimisation, and
+# AutoInstall stays on to catch whatever this misses, see
 # .github/actions/install-miktex.
 
 set -u
@@ -33,4 +38,23 @@ while IFS= read -r name; do
   [ -z "$name" ] && continue
   echo "Looking for $name"
   kpsewhich "$name" || true
+done < "$report"
+
+# Run each engine on each class the templates use, so that the format is
+# built and the class loads whatever it loads. The class comes from the
+# same list, so nothing here repeats what the templates already say.
+warm=$(mktemp -d)
+trap 'rm -rf "$warm"' EXIT
+
+while IFS= read -r name; do
+  case "$name" in
+    *.cls) ;;
+    *) continue ;;
+  esac
+  printf '\\documentclass{%s}\n\\begin{document}x\\end{document}\n' \
+    "${name%.cls}" > "$warm/warm.tex"
+  for engine in pdflatex xelatex; do
+    echo "Warming $engine on ${name%.cls}"
+    ( cd "$warm" && "$engine" -interaction=nonstopmode warm.tex >/dev/null 2>&1 ) || true
+  done
 done < "$report"
