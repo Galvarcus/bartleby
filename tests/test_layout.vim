@@ -18,6 +18,7 @@ import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/trash.vim' as TR
 import autoload 'bartleby/tree.vim' as T
 import './fixtures.vim' as FI
+import autoload 'bartleby/path.vim' as PA
 import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return the documents inside items, at any depth.
@@ -183,7 +184,7 @@ def Test_an_open_document_opens_again_at_its_new_path(): void
   assert_equal([], TidyAll(fx.project))
   assert_equal(windows, winnr('$'), 'a window closed')
   assert_true(win_gotoid(editor), 'the window of the document closed')
-  assert_equal(fnamemodify(fx.root .. '/manuscript/chapter-1/scene-1.md', ':p'), expand('%:p'))
+  assert_equal(PA.Canon(fx.root .. '/manuscript/chapter-1/scene-1.md'), PA.Canon(expand('%:p')))
   assert_equal([3, 6], [line('.'), col('.')])
   silent! only
   silent! :%bwipe!

@@ -14,6 +14,7 @@ import autoload 'bartleby/doctemplates.vim' as DT
 import autoload 'bartleby/links.vim' as LK
 import autoload 'bartleby/state.vim' as ST
 import autoload 'bartleby/tree.vim' as T
+import autoload 'bartleby/path.vim' as PA
 import './fixtures.vim' as FI
 
 const BUILTIN: string = fnamemodify(expand('<script>'), ':p:h:h') .. '/templates'
@@ -46,14 +47,14 @@ def Test_bartleby_has_templates_for_characters_and_research(): void
 enddef
 
 def Test_your_templates_add_to_and_replace_bartlebys(): void
-  var dir: string = tempname()
+  var dir: string = FI.TempPath()
   mkdir(dir .. '/characters', 'p')
   writefile(['mine'], dir .. '/characters/character-sheet.md')
   writefile(['villain'], dir .. '/characters/villain.md')
   var found: list<dict<string>> = DT.List('characters', '.md', [BUILTIN, dir])
   delete(dir, 'rf')
   assert_equal(['Character sheet', 'Villain'], Names(found))
-  assert_match('^' .. dir, found[0].path)
+  assert_match('^' .. PA.Canon(dir), PA.Canon(found[0].path))
 enddef
 
 def Test_placeholders_are_filled_and_unknown_ones_stay(): void
@@ -155,7 +156,7 @@ enddef
 # FUNCTION: A chapter has no templates of its own, so a scene in it gets
 # those of the Manuscript around it.
 def Test_a_role_without_templates_falls_back_to_the_one_above(): void
-  var dir: string = tempname()
+  var dir: string = FI.TempPath()
   mkdir(dir .. '/manuscript', 'p')
   writefile(['## Goal'], dir .. '/manuscript/scene.md')
   var project = FI.BuildProject()

@@ -418,7 +418,7 @@ def Test_a_changed_text_finds_the_matches_again(): void
   var dir: string = CompleteDir()
   var popup = NewPathPopup($'{dir}/al')
   Keys(popup, ["\<Tab>", "\<BS>"])
-  assert_equal($'{dir}/alpha.m', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/alpha.m'), PA.Canon(popup.Vals().path))
   Keys(popup, ["\<Tab>"])
   assert_equal(PA.Canon($'{dir}/alpha.md'), PA.Canon(popup.Vals().path))
   popup.Close()
@@ -428,9 +428,9 @@ def Test_tab_after_a_completed_folder_offers_what_is_in_it(): void
   var dir: string = CompleteDir()
   var popup = NewPathPopup($'{dir}/s')
   Keys(popup, ["\<Tab>"])
-  assert_equal($'{dir}/sub/', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/sub/'), PA.Canon(popup.Vals().path))
   Keys(popup, ["\<Tab>"])
-  assert_equal($'{dir}/sub/inner.md', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/sub/inner.md'), PA.Canon(popup.Vals().path))
   popup.Close()
 enddef
 
@@ -438,7 +438,7 @@ def Test_a_completed_name_with_a_space_is_not_escaped(): void
   var dir: string = CompleteDir()
   var popup = NewPathPopup($'{dir}/with')
   Keys(popup, ["\<Tab>"])
-  assert_equal($'{dir}/with space.md', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/with space.md'), PA.Canon(popup.Vals().path))
   popup.Close()
 enddef
 
@@ -446,7 +446,7 @@ def Test_a_path_that_matches_nothing_stays_as_it_is(): void
   var dir: string = CompleteDir()
   var popup = NewPathPopup($'{dir}/zz')
   Keys(popup, ["\<Tab>"])
-  assert_equal($'{dir}/zz', popup.Vals().path)
+  assert_equal(PA.Canon($'{dir}/zz'), PA.Canon(popup.Vals().path))
   assert_equal(0, popup.currentIdx)
   popup.Close()
 enddef

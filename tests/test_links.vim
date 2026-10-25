@@ -23,6 +23,7 @@ import autoload 'bartleby/trash.vim' as TR
 import autoload 'bartleby/tree.vim' as T
 import 'Logger/messages.vim' as LM
 import './fixtures.vim' as FI
+import autoload 'bartleby/path.vim' as PA
 import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: The fixture project, with a document titled Mara in Characters,
@@ -93,7 +94,7 @@ def Test_gf_on_a_link_opens_its_document(): void
   Edit(project, Scene(project, 0), ['She met [[Mara]] at dawn.'])
   cursor(1, 12)
   LK.Follow()
-  assert_match('characters/mara\.md$', expand('%:p'))
+  assert_match('characters/mara\.md$', PA.Canon(expand('%:p')))
   Cleanup(project)
 enddef
 
@@ -139,7 +140,7 @@ def Test_gf_off_a_link_opens_the_file_under_the_cursor(): void
   setlocal nomodified
   cursor(1, 2)
   LK.Follow()
-  assert_equal(file, expand('%:p'))
+  assert_equal(PA.Canon(file), PA.Canon(expand('%:p')))
   silent! :%bwipe!
   delete(file)
 enddef
@@ -414,7 +415,7 @@ def Test_gf_on_a_heading_link_goes_to_the_heading(): void
   Edit(project, Scene(project, 0), ['See [[Mara#backstory]].'])
   cursor(1, 8)
   LK.Follow()
-  assert_match('characters/mara\.md$', expand('%:p'))
+  assert_match('characters/mara\.md$', PA.Canon(expand('%:p')))
   assert_equal('## Backstory ##', getline('.'))
   Cleanup(project)
 enddef
@@ -425,7 +426,7 @@ def Test_gf_on_a_missing_heading_opens_the_top_and_says_so(): void
   cursor(1, 8)
   LM.Clear()
   LK.Follow()
-  assert_match('characters/mara\.md$', expand('%:p'))
+  assert_match('characters/mara\.md$', PA.Canon(expand('%:p')))
   assert_equal(1, line('.'))
   assert_match('has no heading', LM.History()->mapnew((_, m) => join(m.lines, ' '))->join(' '))
   Cleanup(project)

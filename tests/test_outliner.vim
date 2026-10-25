@@ -13,6 +13,7 @@ vim9script
 
 import autoload 'bartleby/outliner.vim' as O
 import './fixtures.vim' as FI
+import autoload 'bartleby/path.vim' as PA
 
 def OpenOutlinerWithContent(): dict<any>
   var project = FI.BuildProject()
@@ -45,7 +46,7 @@ def Test_cr_opens_the_correct_document_in_a_fresh_session(): void
   feedkeys("j", 'xt')
   feedkeys("\<CR>", 'xt')
   assert_equal('scene-01.md', expand('%:t'))
-  assert_equal(fx.scene1.AbsPath(fx.project.BinderRoot()), expand('%:p'))
+  assert_equal(PA.Canon(fx.scene1.AbsPath(fx.project.BinderRoot())), PA.Canon(expand('%:p')))
   bwipe!
   ClosePopupsAndCleanup(fx)
 enddef
@@ -65,7 +66,7 @@ def Test_j_then_j_reaches_the_second_chapters_scene(): void
   # Chapter 2.
   feedkeys("jjj", 'xt')
   feedkeys("\<CR>", 'xt')
-  assert_equal(fx.scene2.AbsPath(fx.project.BinderRoot()), expand('%:p'))
+  assert_equal(PA.Canon(fx.scene2.AbsPath(fx.project.BinderRoot())), PA.Canon(expand('%:p')))
   bwipe!
   ClosePopupsAndCleanup(fx)
 enddef

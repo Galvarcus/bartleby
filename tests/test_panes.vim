@@ -16,6 +16,8 @@ import autoload 'bartleby/quill.vim' as Q
 import autoload 'bartleby/spotlight.vim' as SP
 import autoload 'bartleby/windows.vim' as W
 import 'bartleby/variables/constants.vim' as CO
+import autoload 'bartleby/path.vim' as PA
+import './fixtures.vim' as FI
 
 const BINDER_WIDTH: number = 30
 const INSPECTOR_WIDTH: number = 24
@@ -38,7 +40,7 @@ enddef
 def Layout(binder: bool, inspector: bool): dict<any>
   silent! only
   silent! :%bwipe!
-  var file: string = tempname() .. '.md'
+  var file: string = FI.TempPath() .. '.md'
   writefile(['One one.', '', 'Two two.'], file)
   execute 'silent edit ' .. fnameescape(file)
   # The window that :only kept may be a pane of an earlier test, and a pane
@@ -212,7 +214,7 @@ def Test_another_edit_window_means_nothing_is_added(): void
   sleep 50m
   assert_equal(windows - 1, winnr('$'))
   assert_equal(1, len(EditWindows()))
-  assert_equal(ids.file, expand('%:p')->fnamemodify(':p'))
+  assert_equal(PA.Canon(ids.file), PA.Canon(expand('%:p')))
   Close(ids)
 enddef
 

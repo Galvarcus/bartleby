@@ -137,7 +137,7 @@ enddef
 # FUNCTION: expand() would read cover[1].png as a pattern and return
 # cover1.png, a different file, when both exist.
 def Test_a_cover_path_is_never_read_as_a_pattern(): void
-  var dir: string = tempname()
+  var dir: string = FI.TempPath()
   mkdir(dir, 'p')
   writefile([], dir .. '/cover1.png')
   writefile([], dir .. '/cover[1].png')
