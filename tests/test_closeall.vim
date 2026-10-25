@@ -169,7 +169,7 @@ def Test_focus_and_spotlight_are_left(): void
   F.Execute(false, '')
   assert_true(exists('t:bartleby_focus_session'), 'Focus did not start')
   SP.Execute(false, '')
-  assert_true(SP.IsOn(), 'Spotlight did not start')
+  assert_true(SP.IsOn(), $'Spotlight did not start: {FI.LastLog()}')
   assert_true(CA.All())
   assert_equal(1, tabpagenr('$'))
   assert_false(exists('t:bartleby_focus_session'))

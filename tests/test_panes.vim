@@ -102,7 +102,7 @@ def Test_spotlight_dims_the_edit_window_and_never_a_pane(): void
   PrepareSpotlight()
   var ids = Layout(false, true)
   SP.Execute(false, '')
-  assert_true(SP.IsOn(), 'Spotlight did not start in the edit window')
+  assert_true(SP.IsOn(), $'Spotlight did not start in the edit window: {FI.LastLog()}')
   cursor(1, 1)
   doautocmd CursorMoved
   assert_false(empty(DimMatches()), 'the edit window was not dimmed')

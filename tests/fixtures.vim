@@ -11,6 +11,7 @@ vim9script
 
 import autoload 'bartleby/binderitem.vim' as BI
 import autoload 'bartleby/project.vim' as PO
+import 'Logger/messages.vim' as LM
 import 'bartleby/variables/constants.vim' as CO
 
 # FUNCTION: Return a Novel project with the five structural folders, and
@@ -80,6 +81,15 @@ enddef
 # Once, as this file loads, while no test is running and no window of a
 # test can mind the lcd above.
 const TEMP_DIR: string = LongTempDir()
+
+# FUNCTION: Return the last message that Bartleby logged, for an
+# assertion about a feature that refused to start: the refusal says why in
+# the log and nowhere else, and a message reaches nothing in silent ex
+# mode. Empty when nothing is logged.
+export def LastLog(): string
+  var history: list<any> = LM.History()
+  return empty(history) ? '' : join(history[-1].lines, ' ')
+enddef
 
 # FUNCTION: Return a temporary path, as tempname does, under TEMP_DIR, so
 # that a test which compares a path it built against one from Vim compares

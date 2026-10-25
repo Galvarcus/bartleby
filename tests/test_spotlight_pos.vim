@@ -266,4 +266,14 @@ export def RunAll(): void
   Test_mock_tagger_modes()
   Test_failing_tagger_turns_spotlight_off_and_hides_modes()
   Test_mode_names_cover_every_mode()
+  # The mode of Spotlight is one setting of the whole Vim and outlives this
+  # suite, and these tests leave it on a mode of the tagger. A later suite
+  # that asks for Spotlight without naming a mode would then ask for that
+  # one, which refuses without a tagger, and say only that Spotlight did
+  # not start. So the suite leaves the mode as it found it, off and on
+  # Paragraph. test_tty.vim used to do this by accident, until it stopped
+  # running on Windows.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/50
+  SP.Execute(false, 'Paragraph')
+  SP.Execute(true, '')
 enddef
