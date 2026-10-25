@@ -61,6 +61,37 @@ Use these skills. Read each one before work that falls under it.
 - After you create or edit an issue, wait for its triage run and check its labels and comments.
 - When the forms or `triage.js` change, update this section in the same change.
 
+## Commits
+
+A commit message states the problem the commit fixes, in the format that Vim uses:
+
+```text
+subject states the problem
+
+Problem:  Full sentence restating the subject.
+Solution: Short description of the fix, ending with the author's name in
+          parentheses.
+
+Prose for a longer account of the problem and the fix. No bullet points.
+
+fixes:   #NNNN
+related: #NNNN
+
+Assisted-by: Claude Opus 5
+```
+
+- **The subject states the problem, not the fix.** `Fold a path's case` is wrong. `two spellings of one path compare unequal on macOS` is right. Keep it to 72 characters, in lower case, with no trailing period.
+- **The `Problem:` line repeats the subject as a full sentence**, with a period. Name a reporter in parentheses after it when someone else found the fault.
+- **The `Solution:` line ends with the author's name in parentheses**, then a period.
+- Wrap the prose at 78 columns, as comments wrap. Write no bullet points in it.
+- **`fixes:` names the issue the commit fixes, and `related:` names an issue that bears on it**, including one that caused it. Align the values and end them without a period. Both may appear more than once.
+- **`fixes:` closes its issue.** GitHub reads the keyword even with the colon and closes the issue when the commit reaches `main`, so post the evidence comment on the issue before merging `Development`.
+- Write no `closes:` line. It names a pull request, and this repository takes none.
+- **`Assisted-by: Claude Opus 5` is required when Claude wrote any of the change.** It replaces the `Co-Authored-By:` trailer. `Co-authored-by:` names a human instead.
+- Commit one change at a time, because the pre-commit hook regenerates `lang/bartleby.pot` from the whole working tree.
+- The `commit-msg` hook appends `Bartleby-POT: i18n updated` when `lang/bartleby.pot` is staged. Leave it last in the trailer block.
+- A commit that a workflow makes is exempt. Those keep their own subject, such as `docs: regenerate Vimdoc`.
+
 ## Architecture
 
 - `plugin/bartleby.vim` holds settings, commands, mappings, and autocommands only, and loads no autoload script at startup. A test checks this. Default keys come from the `MAPPINGS` table, each with a `<Plug>` name, and `g:bartleby_no_mappings` turns them off.
