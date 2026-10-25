@@ -30,6 +30,7 @@ import autoload 'bartleby/project.vim' as PO
 import autoload 'bartleby/slug.vim' as SU
 import autoload 'bartleby/tree.vim' as T
 import autoload 'bartleby/scrivenings.vim' as SV
+import autoload 'bartleby/path.vim' as PA
 import 'bartleby/variables/constants.vim' as CO
 
 const CHAPTER_PREFIX: string = 'chapter-'
@@ -207,14 +208,19 @@ enddef
 
 # FUNCTION: Return the loaded buffers of the documents that moves move, as
 # full path to buffer number.
+# The keys are the one spelling of a path, see path.vim: a scrive stores
+# forward slashes while Vim names a buffer with the separator of its own
+# system, so a buffer went unfound and a tidy moved a document that the
+# writer had not saved.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/50
 def BufsOf(root: string, moves: list<dict<any>>): dict<number>
   var paths: dict<bool> = {}
   for move in moves
-    paths[fnamemodify(root .. '/' .. move.from, ':p')] = true
+    paths[PA.Canon($'{root}/{move.from}')] = true
   endfor
   var found: dict<number> = {}
   for info in getbufinfo({bufloaded: 1})
-    var path: string = fnamemodify(info.name, ':p')
+    var path: string = PA.Canon(info.name)
     if info.name !=# '' && has_key(paths, path)
       found[path] = info.bufnr
     endif
@@ -267,7 +273,7 @@ export def Tidy(project: PO.Project, moves: list<dict<any>>): list<string>
   # Where each open document shows, to open it again there after the move.
   var views: list<dict<any>> = []
   for move in moves
-    var path: string = fnamemodify(root .. '/' .. move.from, ':p')
+    var path: string = PA.Canon($'{root}/{move.from}')
     if has_key(bufs, path)
       for winid in win_findbuf(bufs[path])
         var pos: list<number> = getcurpos(winid)
