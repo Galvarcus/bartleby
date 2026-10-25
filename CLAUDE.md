@@ -4,9 +4,11 @@ Bartleby is a writing environment for Vim, written in Vim9script. Work in this r
 
 ## Repositories
 
-All repositories are under `/Users/joe/Development`.
+Bartleby works alongside the repositories below, each a separate checkout. The
+table gives the folder name of each, not a location: set your own paths where a
+command needs one.
 
-| Repository | Path | Notes |
+| Repository | Folder | Notes |
 | --- | --- | --- |
 | Bartleby | `bartleby` | `github.com/Galvarcus/bartleby`, branch `Development` |
 | Bartleby wiki | `bartleby.wiki` | Clone of the GitHub wiki |
