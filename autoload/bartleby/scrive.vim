@@ -81,10 +81,15 @@ enddef
 # the last word, so a completed name can keep a first word in the case
 # that was typed, as in my Novel for My Novel.
 export def ResolveName(name: string): string
-  if isdirectory(ScrivePath(name))
+  # The folders themselves, not isdirectory, which answers for another
+  # case on a file system that folds it, as macOS and Windows do: it said
+  # yes for my novel and the name of the scrive, My Novel, was lost.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/50
+  var scrives: list<string> = ListScrives()
+  if index(scrives, name) >= 0
     return name
   endif
-  var matches: list<string> = ListScrives()->filter((_, n) => n ==? name)
+  var matches: list<string> = scrives->copy()->filter((_, n) => n ==? name)
   return len(matches) == 1 ? matches[0] : name
 enddef
 

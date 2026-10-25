@@ -88,7 +88,11 @@ def Test_vim_enter_loads_only_the_color_check(): void
   var result: list<string> = Fresh([], [
     'doautocmd VimEnter',
     'g:result = getscriptinfo()->filter((_, s) => !s.autoload)',
-    '  ->mapnew((_, s) => s.name)->filter((_, n) => n =~# "/autoload/\\|Logger")',
+    # Forward slashes first: Windows names a script with its own
+    # separator, so a pattern of /autoload/ matched nothing there and the
+    # test read that the color check had not loaded at all.
+    '  ->mapnew((_, s) => substitute(s.name, "\\\\", "/", "g"))',
+    '  ->filter((_, n) => n =~# "/autoload/\\|Logger")',
     '  ->mapnew((_, n) => fnamemodify(n, ":t"))'])
   assert_equal(['tty.vim'], result)
 enddef
