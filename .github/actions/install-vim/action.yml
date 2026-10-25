@@ -5,6 +5,11 @@ description: >-
   vim-win32-installer releases. The Vim of the runner is too old for the
   Vim9 features that Bartleby uses, and the runner of Windows has none.
   tests/harness.vim checks the patch level.
+
+  The action sets VIM_EXE to the Vim that it installed, and a job must use
+  it instead of the name vim: the Git Bash of the Windows runner holds a
+  Vim of its own, in its /usr/bin, which comes first and is both older and
+  a build for Unix, where has('win32') is false.
 runs:
   using: composite
   steps:
@@ -29,6 +34,7 @@ runs:
         cd /tmp && ./vim.appimage --appimage-extract > /dev/null
         ln -s /tmp/squashfs-root/AppRun /tmp/squashfs-root/vim
         echo "/tmp/squashfs-root" >> "$GITHUB_PATH"
+        echo "VIM_EXE=/tmp/squashfs-root/vim" >> "$GITHUB_ENV"
 
     # PowerShell, because the runner of Windows has neither jq nor unzip of
     # its own, and Invoke-RestMethod reads the release by itself.
@@ -61,7 +67,10 @@ runs:
           exit 1
         }
         Add-Content -Path $env:GITHUB_PATH -Value $exe.DirectoryName
+        # Forward slashes, so that the Git Bash of a job can run it.
+        Add-Content -Path $env:GITHUB_ENV -Value "VIM_EXE=$($exe.FullName -replace '\\', '/')"
 
     - name: Vim version
       shell: bash
-      run: vim --version
+      run: |
+        "$VIM_EXE" --version

@@ -187,12 +187,13 @@ jobs:
 
       # Bash, as the unit job, in the Git Bash of the runner. cygpath gives
       # Vim a path of Windows for its log, which it cannot write under a
-      # path of the shell.
+      # path of the shell. VIM_EXE, because the Git Bash has a Vim of its
+      # own that comes first, see the install-vim action.
       - name: Run tests
         shell: bash
         run: |
           log="$(cygpath -m "$RUNNER_TEMP")/vim.log"
-          vim -es -u NONE -N -V20"$log" \
+          "$VIM_EXE" -es -u NONE -N -V20"$log" \
             -c 'set rtp+=.,deps/Logger' \
             -c 'source tests/harness.vim' -c 'quit' || true
           if [ ! -f tests/results.txt ]; then
@@ -279,12 +280,13 @@ jobs:
 
       # Bash, as every other test step, in the Git Bash of the runner.
       # cygpath gives Vim a path of Windows for its log, which it cannot
-      # write under a path of the shell.
+      # write under a path of the shell. VIM_EXE, because the Git Bash has
+      # a Vim of its own that comes first, see the install-vim action.
       - name: Run the TeX check
         shell: bash
         run: |
           log="$(cygpath -m "$RUNNER_TEMP")/vim.log"
-          vim -es -u NONE -N -V20"$log" \
+          "$VIM_EXE" -es -u NONE -N -V20"$log" \
             -c 'set rtp+=.,deps/Logger' \
             -c 'source tests/test_texcheck_miktex.vim' -c 'quit' || true
           if [ ! -f tests/miktex_results.txt ]; then

@@ -41,7 +41,8 @@ if !has('patch-9.2.1172')
   var running: string = printf('%d.%d.%d', v:versionlong / 1000000,
     v:versionlong / 10000 % 100, v:versionlong % 10000)
   writefile([$'The tests need Vim 9.2.1172 or later, and this is Vim {running}. '
-    .. 'Use the latest vim-appimage, as .github/actions/install-vim does.'],
+    .. 'Use the latest vim-appimage, or vim-win32-installer on Windows, as '
+    .. '.github/actions/install-vim does.'],
     'tests/results.txt')
   cquit 1
 endif
