@@ -84,7 +84,9 @@ these files with any editor.
   stay English. Screenplays need
   [screenplain](https://github.com/vilcans/screenplain) instead.
   Before a PDF, Bartleby checks that TeX has the engine and every
-  class and package, and names any that is missing.
+  class and package, and names any that is missing. With MiKTeX it
+  checks the engine alone,[^miktex] because MiKTeX installs a missing
+  package while it compiles.
 - **Dictionary and thesaurus** need `curl` and your own free
   [Merriam-Webster API keys](https://dictionaryapi.com), one for the
   Collegiate Dictionary and one for the Collegiate Thesaurus.
@@ -104,6 +106,11 @@ the only features with other requirements.
     its path when it is installed. To find the package that has it, use
     `apt-file search ulem.sty`, `dnf provides 'tex(ulem.sty)'`, or
     `pacman -F ulem.sty`.
+
+[^miktex]: MiKTeX asks before it installs a package. To compile
+    without a prompt, set it to install one always: in the MiKTeX
+    Console, under Settings, or with `initexmf
+    --set-config-value=[MPM]AutoInstall=1`.
 
 [^fullscreen]: MacVim uses its `'fullscreen'` option. The GTK and
     Windows GUIs use the `s` flag in `'guioptions'`. Other GUIs have no

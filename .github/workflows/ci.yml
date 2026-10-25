@@ -9,6 +9,11 @@ name: CI
 # sheet job runs after them, whatever their results, and checks out the
 # branch as they left it, so that its commit does not conflict with theirs.
 #
+# The TeX check on MiKTeX runs on Windows, because MiKTeX is the one
+# distribution that installs a missing package while it compiles, and no
+# Linux job can prove what Bartleby does with it. That job installs MiKTeX
+# itself, see .github/actions/install-miktex.
+#
 # Vim is installed first in each job that needs it. The compile smoke test,
 # the cheat sheet converter tests, and the cheat sheet run in the CI image,
 # which holds their TeX packages, tools, and pandocs, see
@@ -43,6 +48,7 @@ jobs:
       vimdoc: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.vimdoc }}
       cheatsheet: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.cheatsheet }}
       triage: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.triage }}
+      texcheck: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.texcheck }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -88,6 +94,13 @@ jobs:
               - .github/ISSUE_TEMPLATE/**
               - .github/workflows/issue-triage.yml
               - .github/workflows/ci.yml
+            texcheck:
+              - autoload/bartleby/texcheck.vim
+              - autoload/bartleby/compile.vim
+              - tools/latex/**
+              - tests/test_texcheck_miktex.vim
+              - .github/workflows/ci.yml
+              - .github/actions/**
 
   ##########################################################################
   # The tests. Each installs only what it needs.
@@ -200,6 +213,49 @@ jobs:
           fi
           .github/scripts/compile-smoke.sh
 
+  # What the stand-in programs of tests/test_texcheck.vim cannot prove: a
+  # real MiKTeX, where Bartleby checks no class or package. Its own filter,
+  # not the code one, because the MiKTeX install takes minutes and only the
+  # TeX check, the compile, and the templates can break this.
+  miktex:
+    name: TeX check on MiKTeX
+    needs: changes
+    if: needs.changes.outputs.texcheck == 'true'
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      - name: Install MiKTeX
+        uses: ./.github/actions/install-miktex
+
+      # Bash, as every other test step, in the Git Bash of the runner.
+      # cygpath gives Vim a path of Windows for its log, which it cannot
+      # write under a path of the shell.
+      - name: Run the TeX check
+        shell: bash
+        run: |
+          log="$(cygpath -m "$RUNNER_TEMP")/vim.log"
+          vim -es -u NONE -N -V20"$log" \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/test_texcheck_miktex.vim' -c 'quit' || true
+          if [ ! -f tests/miktex_results.txt ]; then
+            echo "::error::tests/miktex_results.txt was never created - Vim likely failed before finishing. Verbose log follows:"
+            cat "$log"
+            exit 1
+          fi
+          cat tests/miktex_results.txt
+          grep -qx 'All MiKTeX tests passed' tests/miktex_results.txt
+
   tagger-smoke:
     name: Part-of-speech tagger smoke test
     needs: changes
@@ -307,6 +363,7 @@ jobs:
       - changes
       - unit
       - compile-smoke
+      - miktex
       - tagger-smoke
       - wiki-tool
       - cheatsheet-tool

@@ -1,12 +1,15 @@
 name: Install Vim
 description: >-
-  Install the latest Vim from the vim-appimage releases, unpacked, so that
-  Vim is on the PATH. The Vim of the runner is too old for the Vim9 features
-  that Bartleby uses. tests/harness.vim checks the patch level.
+  Install the latest Vim, so that Vim is on the PATH: on Linux from the
+  vim-appimage releases, unpacked, and on Windows from the
+  vim-win32-installer releases. The Vim of the runner is too old for the
+  Vim9 features that Bartleby uses, and the runner of Windows has none.
+  tests/harness.vim checks the patch level.
 runs:
   using: composite
   steps:
     - name: Download and unpack the AppImage
+      if: runner.os != 'Windows'
       shell: bash
       env:
         GITHUB_TOKEN: ${{ github.token }}
@@ -26,6 +29,38 @@ runs:
         cd /tmp && ./vim.appimage --appimage-extract > /dev/null
         ln -s /tmp/squashfs-root/AppRun /tmp/squashfs-root/vim
         echo "/tmp/squashfs-root" >> "$GITHUB_PATH"
+
+    # PowerShell, because the runner of Windows has neither jq nor unzip of
+    # its own, and Invoke-RestMethod reads the release by itself.
+    - name: Download and unpack the Windows build
+      if: runner.os == 'Windows'
+      shell: pwsh
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $headers = @{Authorization = "Bearer $env:GITHUB_TOKEN"}
+        $release = Invoke-RestMethod -Headers $headers `
+          -Uri 'https://api.github.com/repos/vim/vim-win32-installer/releases/latest'
+        $asset = $release.assets |
+          Where-Object {$_.name -match '^gvim_[0-9.]+_x64\.zip$'} |
+          Select-Object -First 1
+        if (-not $asset) {
+          Write-Output '::error::The latest vim-win32-installer release has no x64 zip.'
+          exit 1
+        }
+        $zip = Join-Path $env:RUNNER_TEMP 'vim.zip'
+        $dir = Join-Path $env:RUNNER_TEMP 'vim'
+        Invoke-WebRequest -Headers $headers -Uri $asset.browser_download_url -OutFile $zip
+        Expand-Archive -Path $zip -DestinationPath $dir
+        # The zip holds vim.exe in a folder of its version, such as
+        # vim/vim92, which the next release renames.
+        $exe = Get-ChildItem -Path $dir -Recurse -Filter 'vim.exe' | Select-Object -First 1
+        if (-not $exe) {
+          Write-Output '::error::The Vim zip holds no vim.exe.'
+          exit 1
+        }
+        Add-Content -Path $env:GITHUB_PATH -Value $exe.DirectoryName
 
     - name: Vim version
       shell: bash
