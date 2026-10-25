@@ -134,7 +134,12 @@ export def Restore(project: PO.Project, doc: BI.BinderItem, snap: Snap): void
   var path: string = doc.AbsPath(project.BinderRoot())
   writefile(snap.lines, path)
   SV.SyncWithTree(project, true)
-  var winId: number = bufwinid(bufnr(path))
+  # bufexists answers for the file itself. A path handed to bufnr answers
+  # for that file too when a buffer holds it, but otherwise falls back to
+  # reading the path as a pattern, which names any buffer whose own name
+  # merely contains it, see bufname in builtin.txt. Reloading that one
+  # would throw away text the writer had not saved.
+  var winId: number = bufexists(path) ? bufwinid(bufnr(path)) : -1
   if winId != -1
     win_execute(winId, 'edit!')
   endif
