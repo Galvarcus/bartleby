@@ -4,3 +4,6 @@ Snippets
 handoff.md
 TODO.md
 *.log
+
+# Logger, checked out here by CI and by the verification commands.
+deps/
