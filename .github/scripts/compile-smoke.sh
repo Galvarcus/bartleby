@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 # Run the compile smoke tests with the pandoc that is first on PATH, and
-# fail unless all of them pass. CI runs it once for each pandoc, so the
-# results of one run are removed before the next.
+# fail unless all of them pass. CI runs it in a job for each pandoc, and
+# it clears the results of an earlier run first.
 
 set -u
 

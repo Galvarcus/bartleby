@@ -151,16 +151,22 @@ jobs:
           cat tests/results.txt
           grep -qx 'All tests passed' tests/results.txt
 
-  # One job runs the smoke tests twice: with the pandoc of the distro, and
-  # with a current release, as Homebrew has. A newer pandoc can need
-  # changes in the templates, see tools/latex. Both pandocs and the TeX
-  # packages are in the CI image, see .github/docker/Dockerfile, which
-  # sets PANDOC_RELEASE.
+  # The smoke tests run with the pandoc of the distro and with a current
+  # release, as Homebrew has, in a job for each, so that both results come
+  # in the time of one. A newer pandoc can need changes in the templates,
+  # see tools/latex. Both pandocs and the TeX packages are in the CI image,
+  # see .github/docker/Dockerfile, which sets PANDOC_RELEASE.
   compile-smoke:
-    name: Compile pipeline smoke test
+    name: Compile pipeline smoke test (pandoc ${{ matrix.pandoc }})
     needs: changes
     if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
+    # Both jobs run to the end, so that a failure with one pandoc still
+    # gives the result of the other.
+    strategy:
+      fail-fast: false
+      matrix:
+        pandoc: [distro, release]
     permissions:
       contents: read
       packages: read
@@ -185,15 +191,14 @@ jobs:
       - name: Check the CI image
         run: .github/scripts/check-ci-image.sh
 
-      - name: Run compile smoke test (pandoc distro)
-        run: .github/scripts/compile-smoke.sh
-
-      # Also after a failure with the distro pandoc, so that both results
-      # show.
-      - name: Run compile smoke test (pandoc release)
-        if: ${{ !cancelled() }}
+      # The release pandoc is in a folder of its own, so only its job puts
+      # it first on PATH.
+      - name: Run compile smoke test
         run: |
-          PATH="/opt/pandoc-$PANDOC_RELEASE/bin:$PATH" .github/scripts/compile-smoke.sh
+          if [ "${{ matrix.pandoc }}" = release ]; then
+            PATH="/opt/pandoc-$PANDOC_RELEASE/bin:$PATH"
+          fi
+          .github/scripts/compile-smoke.sh
 
   tagger-smoke:
     name: Part-of-speech tagger smoke test
