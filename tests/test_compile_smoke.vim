@@ -127,7 +127,9 @@ def Test_pandoc_log_per_run_with_retention(): void
     var newLog: string = WaitForNewLog(logDir, before)
     assert_true(newLog !=# '', $'run {run + 1} wrote no log within {MAX_WAIT_MS}ms')
     if newLog !=# ''
-      assert_match('/bartleby-test-fixture_smoke-log_\d\{8}-\d\{6}\.json$', newLog)
+      # Either separator, because the path of a Windows runner holds the
+      # backslash and fnamemodify splits only the one of its own platform.
+      assert_match('[\/]bartleby-test-fixture_smoke-log_\d\{8}-\d\{6}\.json$', newLog)
       assert_equal(v:t_list, type(json_decode(join(readfile(newLog), "\n"))))
     endif
     # Log names show the time to the second.
