@@ -17,7 +17,7 @@ import 'bartleby/variables/constants.vim' as CO
 # a Manuscript with 2 chapters of 1 scene each: enough to test nesting,
 # owners, and sibling order, and no larger.
 export def BuildProject(): PO.Project
-  var project = PO.Project.new($'{FIXTURE_DIR}/bartleby-test-fixture.bartleby')
+  var project = PO.Project.new($'{TEMP_DIR}/bartleby-test-fixture.bartleby')
   project.InitNew('Fixture Project', CO.TYPE_NOVEL)
 
   var frontMatter = BI.BinderItem.NewFolder('Front Matter', CO.ROLE_FRONT_MATTER)
@@ -51,22 +51,42 @@ enddef
 # The file that Step appends to, under the folder that a run starts in.
 const PROGRESS: string = 'tests/progress.log'
 
-# The folder that holds every fixture project of a run. Under the
+# The folder that holds every fixture project of a run, under the
 # temporary folder of this Vim, which it removes when it ends, and not
-# under /tmp, which Windows reads as a folder of the current drive. It is
-# absolute, with forward slashes and the long name of Windows, because a
-# test compares a path that it builds against one that Vim gives back, and
-# the two must be spelled alike.
-const FIXTURE_DIR: string = substitute(fnamemodify(tempname(), ':p'), '\\', '/', 'g')
+# under /tmp, which Windows reads as a folder of the current drive. See
+# TempPath for why the spelling matters.
 
-# FUNCTION: Return a temporary path, as tempname does, in the spelling
-# that Vim gives back: absolute, with forward slashes, and the long name,
-# where tempname on Windows answers with the 8.3 short one. A test that
-# compares a path it built against one from Vim needs the two alike, and
-# a short name holds a tilde, which a pattern reads as the last
-# substitution.
+# FUNCTION: Return the temporary folder of this Vim, spelled as Vim
+# answers elsewhere. tempname gives the 8.3 short name on Windows, such as
+# C:\Users\RUNNER~1\AppData\Local\Temp, while a buffer name and getcwd
+# give the long one, and fnamemodify(':p') leaves a short name short, so a
+# path built from tempname never matched one that Vim gave back. Only the
+# folder itself can answer: getcwd inside it is the long name. On Unix the
+# same trouble is a symbolic link, /var/folders for /private/var/folders,
+# which resolve answers.
+def LongTempDir(): string
+  var dir: string = fnamemodify(tempname(), ':h')
+  mkdir(dir, 'p')
+  if !has('win32')
+    return resolve(dir)
+  endif
+  var cwd: string = getcwd()
+  noautocmd execute 'lcd ' .. fnameescape(dir)
+  var long: string = substitute(getcwd(), '\\', '/', 'g')
+  noautocmd execute 'lcd ' .. fnameescape(cwd)
+  return long
+enddef
+
+# Once, as this file loads, while no test is running and no window of a
+# test can mind the lcd above.
+const TEMP_DIR: string = LongTempDir()
+
+# FUNCTION: Return a temporary path, as tempname does, under TEMP_DIR, so
+# that a test which compares a path it built against one from Vim compares
+# one spelling. A short name also holds a tilde, which a pattern reads as
+# the last substitution, and that threw E33 in the templates.
 export def TempPath(): string
-  return substitute(fnamemodify(tempname(), ':p'), '\\', '/', 'g')
+  return $'{TEMP_DIR}/{fnamemodify(tempname(), ":t")}'
 enddef
 
 # FUNCTION: Record that a run reached what, with the time. It is the only
