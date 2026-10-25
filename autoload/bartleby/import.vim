@@ -512,7 +512,14 @@ export class Importer
         continue
       endif
       if isdirectory(path)
-        if getftype(path) ==# 'link'
+        # A folder that is a link could lead back into the tree. getftype
+        # answers link for one on Unix, and Windows makes a reparse point
+        # that it does not always name that way, so a resolve that moves
+        # the last part of the path is a link as well. The parent is
+        # resolved too, because a link above the source, as /tmp is on
+        # macOS, must not make every folder under it look like one.
+        # REFERENCE: https://github.com/Galvarcus/bartleby/issues/50
+        if getftype(path) ==# 'link' || resolve(path) !=# $'{resolve(dir)}/{name}'
           this.skipped->add(path)
           continue
         endif
