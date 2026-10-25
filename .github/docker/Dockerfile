@@ -6,7 +6,7 @@
 
 # The Ubuntu of ubuntu-latest, so that the distro pandoc is the one that
 # users of that Ubuntu have.
-FROM ubuntu:24.04
+FROM ubuntu:latest
 
 # The pandoc release that the smoke tests run besides the distro one, as
 # Homebrew has. ENV keeps it in the image, so that ci.yml finds its
