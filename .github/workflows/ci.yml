@@ -190,17 +190,22 @@ jobs:
 
       # Bash, as the unit job, in the Git Bash of the runner, and VIM_EXE,
       # because the Git Bash holds a Vim of its own that comes first, see
-      # the install-vim action. The verbose log has a name of its own, with
-      # no folder: a path of Windows does not survive the shell, and Vim
-      # that cannot open the log writes every file that it looks for to the
-      # output instead, which takes the job from minutes into hours.
+      # the install-vim action.
+      #
+      # The verbose log has a name of its own, with no folder, because a
+      # path of Windows does not survive the shell, and it is level 2, the
+      # files that Vim sources, not the 20 of the unit job: level 20 logs
+      # every Ex command of every file, and the colour tests apply a scheme
+      # again and again, so on Windows the log grew faster than the tests
+      # ran and the suite of tty.vim alone passed ten minutes. The suite
+      # that a run reached comes from tests/progress.log instead.
       - name: Run tests
         shell: bash
         run: |
           # A watchdog of its own, because a job that runs into its
           # timeout-minutes prints nothing, and the suite that a hanging
           # run reached is the only clue to the cause.
-          "$VIM_EXE" -es -u NONE -N -V20vim.log \
+          "$VIM_EXE" -es -u NONE -N -V2vim.log \
             -c 'set rtp+=.,deps/Logger' \
             -c 'source tests/harness.vim' -c 'quit' &
           vim_pid=$!
@@ -292,12 +297,12 @@ jobs:
       - name: Install MiKTeX
         uses: ./.github/actions/install-miktex
 
-      # Bash, VIM_EXE, and the log of the unit job on Windows, for the same
-      # reasons.
+      # Bash, VIM_EXE, and the log of the unit job on Windows, for the
+      # same reasons.
       - name: Run the TeX check
         shell: bash
         run: |
-          "$VIM_EXE" -es -u NONE -N -V20vim.log \
+          "$VIM_EXE" -es -u NONE -N -V2vim.log \
             -c 'set rtp+=.,deps/Logger' \
             -c 'source tests/test_texcheck_miktex.vim' -c 'quit' || true
           if [ ! -f tests/miktex_results.txt ]; then
