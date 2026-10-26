@@ -1,0 +1,92 @@
+name: Windows TeX cache
+
+##############################################################################
+# The packages and the format files that a compile on Windows needs take
+# over a hundred seconds to make, and every compile job paid for them. This
+# workflow makes them once and saves them as a cache entry that the Windows
+# compile leg of ci.yml restores.
+#
+# A cache entry that a run on the default branch writes is readable from
+# every branch, so the push and the schedule both aim at main. An entry that
+# nothing reads for seven days falls out, which is why the schedule runs
+# twice a week rather than weekly. A run started by hand writes an entry for
+# its own branch, which is how to seed a change to the install or the
+# templates before it reaches main.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
+##############################################################################
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/actions/install-miktex/action.yml
+      - .github/actions/miktex-cache-key/action.yml
+      - .github/scripts/warm-miktex.sh
+      - .github/scripts/latex-needs.vim
+      - autoload/bartleby/texcheck.vim
+      - tools/latex/**
+      - .github/workflows/windows-cache.yml
+  schedule:
+    - cron: '0 5 * * 1,4'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cache:
+    name: Make the Windows TeX cache
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      # The warm-up asks texcheck.vim which files the templates name, so it
+      # needs a Vim with Logger on the runtimepath.
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      - name: Install MiKTeX
+        uses: ./.github/actions/install-miktex
+
+      - name: Build the cache key
+        id: key
+        uses: ./.github/actions/miktex-cache-key
+
+      # A save over an entry that exists is refused, so look first and do
+      # the work only when there is nothing to find.
+      - name: Look for the entry
+        id: found
+        uses: actions/cache/restore@v6.1.0
+        with:
+          key: ${{ steps.key.outputs.key }}
+          path: ${{ steps.key.outputs.paths }}
+          lookup-only: true
+
+      - name: Say what was found
+        shell: bash
+        run: |
+          if [ "${{ steps.found.outputs.cache-hit }}" = true ]; then
+            echo "${{ steps.key.outputs.key }} is already saved. Nothing to do."
+          else
+            echo "${{ steps.key.outputs.key }} is not saved. Making it."
+          fi
+
+      - name: Fetch what the templates need
+        if: steps.found.outputs.cache-hit != 'true'
+        shell: bash
+        run: .github/scripts/warm-miktex.sh
+
+      - name: Save the entry
+        if: steps.found.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6.1.0
+        with:
+          key: ${{ steps.key.outputs.key }}
+          path: ${{ steps.key.outputs.paths }}
