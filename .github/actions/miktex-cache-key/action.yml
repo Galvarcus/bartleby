@@ -1,0 +1,55 @@
+name: MiKTeX cache key
+description: >-
+  Answer with the key and the folders of the cache that holds what MiKTeX
+  needs for a compile, so that the workflow which writes the entry and the
+  jobs which read it cannot disagree about either.
+
+outputs:
+  key:
+    description: The key of the cache entry.
+    value: ${{ steps.key.outputs.key }}
+  paths:
+    description: The folders that the entry holds, one to a line.
+    value: ${{ steps.key.outputs.paths }}
+
+runs:
+  using: composite
+  steps:
+    # The version of MiKTeX names the key, because a format file is built
+    # against one build of it. Without the version a newer MiKTeX would
+    # read a stale format rather than miss the entry, and fail in a way
+    # that looks nothing like the cause.
+    #
+    # The files of the warm-up name it as well: the packages it fetches
+    # come from the templates, read by texcheck.vim, so a new class or
+    # package has to make a new entry.
+    - name: Build the key and the folders
+      id: key
+      shell: bash
+      env:
+        PREFIX: windows-tex-v1
+      run: |
+        version=$(initexmf --report 2>/dev/null | sed -n 's/^CurrentVersion: //p')
+        if [ -z "$version" ]; then
+          echo "::error::initexmf reported no CurrentVersion, so the key can name no MiKTeX version. Is MiKTeX installed before this action?"
+          exit 1
+        fi
+        digest=$(cat \
+          .github/scripts/warm-miktex.sh \
+          .github/scripts/latex-needs.vim \
+          autoload/bartleby/texcheck.vim \
+          tools/latex/*.tex | sha256sum | cut -c1-16)
+        echo "key=$PREFIX-$version-$digest" >> "$GITHUB_OUTPUT"
+
+        # The two trees that hold what the warm-up makes: the packages it
+        # fetches, under Roaming, and the format files the engines build,
+        # under Local. Not Program Files, which is the install itself at
+        # 469MB and 19000 files, where a restore can cost more than the
+        # install it would replace.
+        home=${USERPROFILE//\\//}
+        {
+          echo 'paths<<PATHS'
+          echo "$home/AppData/Local/MiKTeX"
+          echo "$home/AppData/Roaming/MiKTeX"
+          echo 'PATHS'
+        } >> "$GITHUB_OUTPUT"
