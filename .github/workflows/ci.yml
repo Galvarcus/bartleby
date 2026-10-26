@@ -318,23 +318,6 @@ jobs:
           path: ${{ steps.texkey.outputs.paths }}
           fail-on-cache-miss: true
 
-      # The restore puts the files back but not the index that MiKTeX keeps
-      # of them, so a compile can look for one the database does not list
-      # and do again what the warm-up already did. The smoke tests took 47
-      # seconds when they warmed and 62 when they restored, and this is the
-      # documented command for the difference. A failure here is a warning,
-      # because the compile works either way.
-      # REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
-      - name: Refresh the MiKTeX file name database
-        if: matrix.leg == 'compile'
-        shell: bash
-        run: |
-          if miktex fndb refresh; then
-            echo 'The file name database was refreshed.'
-          else
-            echo "::warning::miktex fndb refresh failed, so the database still lists only what the install put there."
-          fi
-
       # Bash, as the unit job, in the Git Bash of the runner, and VIM_EXE,
       # because the Git Bash holds a Vim of its own that comes first, see
       # the install-vim action.
