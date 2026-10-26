@@ -48,7 +48,6 @@ jobs:
       vimdoc: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.vimdoc }}
       cheatsheet: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.cheatsheet }}
       triage: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.triage }}
-      texcheck: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.texcheck }}
       compile: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.compile }}
       windows: ${{ steps.legs.outputs.legs }}
     steps:
@@ -96,13 +95,6 @@ jobs:
               - .github/ISSUE_TEMPLATE/**
               - .github/workflows/issue-triage.yml
               - .github/workflows/ci.yml
-            texcheck:
-              - autoload/bartleby/texcheck.vim
-              - autoload/bartleby/compile.vim
-              - tools/latex/**
-              - tests/test_texcheck_miktex.vim
-              - .github/workflows/ci.yml
-              - .github/actions/**
             compile:
               - autoload/bartleby/compile.vim
               - autoload/bartleby/texcheck.vim
@@ -110,6 +102,7 @@ jobs:
               - tools/pandoc/**
               - tools/css/**
               - tests/test_compile_smoke.vim
+              - tests/test_texcheck_miktex.vim
               - .github/scripts/compile-smoke.sh
               - .github/scripts/check-windows-tools.sh
               - .github/scripts/warm-miktex.sh
@@ -125,15 +118,11 @@ jobs:
         shell: bash
         env:
           CODE: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.code }}
-          TEXCHECK: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.texcheck }}
           COMPILE: ${{ github.event_name == 'workflow_dispatch' && 'true' || steps.filter.outputs.compile }}
         run: |
           legs=''
           if [ "$CODE" = true ]; then
             legs="$legs\"unit\","
-          fi
-          if [ "$TEXCHECK" = true ]; then
-            legs="$legs\"texcheck\","
           fi
           if [ "$COMPILE" = true ]; then
             legs="$legs\"compile\","
@@ -257,8 +246,12 @@ jobs:
   # there is a fault of the plugin, so a break holds the Tests gate.
   # REFERENCE: https://github.com/Galvarcus/bartleby/issues/43
   #
-  # fail-fast stays off, so that one leg does not cancel the others, as the
-  # three jobs before it did not. Every leg takes the longer timeout:
+  # The TeX check shares the compile leg, because a leg of its own spent
+  # over a hundred seconds installing MiKTeX a second time for a check that
+  # takes none.
+  #
+  # fail-fast stays off, so that one leg does not cancel the other, as the
+  # jobs before them did not. Every leg takes the longer timeout:
   # Windows has no timeout to stop a second Vim that hangs, see Limit in
   # tests/fixtures.vim.
   ##########################################################################
@@ -286,7 +279,7 @@ jobs:
           path: deps/Logger
 
       - name: Install MiKTeX
-        if: matrix.leg != 'unit'
+        if: matrix.leg == 'compile'
         uses: ./.github/actions/install-miktex
 
       # MiKTeX brings the engines. The runner has neither pandoc nor the
@@ -361,9 +354,12 @@ jobs:
           grep -qx 'All tests passed' tests/results.txt
 
       # What the stand-in programs of tests/test_texcheck.vim cannot prove:
-      # a real MiKTeX, where Bartleby checks no class or package.
+      # a real MiKTeX, where Bartleby checks no class or package. It runs
+      # in this leg because a leg of its own installed MiKTeX a second
+      # time, which costs more than the check does, and it runs before the
+      # compile so that a MiKTeX that cannot answer fails in seconds.
       - name: Run the TeX check
-        if: matrix.leg == 'texcheck'
+        if: matrix.leg == 'compile'
         shell: bash
         run: |
           "$VIM_EXE" -es -u NONE -N -V2vim.log \
