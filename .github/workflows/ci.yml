@@ -306,34 +306,24 @@ jobs:
         shell: bash
         run: .github/scripts/check-windows-tools.sh
 
-      - name: Fetch what the templates need
+      # The packages and the format files come from the entry that
+      # .github/workflows/windows-cache.yml writes, because making them
+      # takes over a hundred seconds in a job that spends three hundred.
+      # A miss fails the leg rather than quietly making them again: run
+      # that workflow by hand to seed this branch, or let its push on main
+      # seed every branch.
+      - name: Build the cache key
         if: matrix.leg == 'compile'
-        shell: bash
-        run: .github/scripts/warm-miktex.sh
+        id: texkey
+        uses: ./.github/actions/miktex-cache-key
 
-      # TODO: remove this with the cache of #46. It runs once, to learn
-      # which folders hold the state that a cache has to carry and how
-      # large they are, because a restore that costs more than the install
-      # it replaces is no saving.
-      # REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
-      - name: Report the MiKTeX roots
+      - name: Restore what the templates need
         if: matrix.leg == 'compile'
-        shell: bash
-        run: |
-          initexmf --report || true
-          echo '--- where the formats and the variable files go ---'
-          for var in TEXMFVAR TEXMFCONFIG TEXMFHOME TEXMFLOCAL; do
-            echo "$var=$(kpsewhich "-var-value=$var" 2>/dev/null)"
-          done
-          echo '--- size and file count of each candidate root ---'
-          for dir in "$PROGRAMFILES/MiKTeX" "$LOCALAPPDATA/MiKTeX" \
-            "$LOCALAPPDATA/Programs/MiKTeX" "$APPDATA/MiKTeX"; do
-            if [ -d "$dir" ]; then
-              echo "$(du -sm "$dir" 2>/dev/null | cut -f1)MB  $(find "$dir" -type f 2>/dev/null | wc -l) files  $dir"
-            else
-              echo "absent  $dir"
-            fi
-          done
+        uses: actions/cache/restore@v6.1.0
+        with:
+          key: ${{ steps.texkey.outputs.key }}
+          path: ${{ steps.texkey.outputs.paths }}
+          fail-on-cache-miss: true
 
       # Bash, as the unit job, in the Git Bash of the runner, and VIM_EXE,
       # because the Git Bash holds a Vim of its own that comes first, see
