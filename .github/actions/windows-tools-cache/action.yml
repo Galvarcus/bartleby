@@ -35,7 +35,7 @@ runs:
       id: answer
       shell: bash
       env:
-        EPOCH: v2
+        EPOCH: v3
       run: |
         digest=$(cat \
           .github/actions/install-miktex/action.yml \
@@ -50,9 +50,28 @@ runs:
         # it fetches under Roaming. Pandoc is one folder of its own. The
         # DejaVu fonts are not here: a font is usable because it is
         # registered, and a cache carries files and not registry values.
-        prog=${PROGRAMFILES//\\//}
-        data=${PROGRAMDATA//\\//}
-        home=${USERPROFILE//\\//}
+        # Windows names these with mixed case and the Git Bash does not
+        # offer every one of them in upper case: PROGRAMDATA came through
+        # empty and left a root of /MiKTeX, so the shared configuration of
+        # MiKTeX was never in the entry at all. Each one is checked for a
+        # drive letter, because a root that is silently wrong costs a run
+        # to find.
+        prog=${PROGRAMFILES:-${ProgramFiles:-}}
+        data=${PROGRAMDATA:-${ProgramData:-}}
+        home=${USERPROFILE:-${UserProfile:-}}
+        for name in prog data home; do
+          eval "value=\$$name"
+          case "$value" in
+            ?:*) ;;
+            *)
+              echo "::error::$name came out as '$value', which names no folder of Windows. The entry would hold the wrong roots."
+              exit 1
+              ;;
+          esac
+        done
+        prog=${prog//\\//}
+        data=${data//\\//}
+        home=${home//\\//}
         {
           echo 'paths<<PATHS'
           echo "$prog/MiKTeX"
