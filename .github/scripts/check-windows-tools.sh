@@ -41,10 +41,16 @@ if [ -n "${missing// /}" ]; then
   exit 1
 fi
 
+# The version comes from the standard output alone, because MiKTeX writes
+# a warning about elevated privileges to the error output on every call and
+# that would stand in for the version and read as a fault. The error output
+# is what a failing program is asked for.
 for tool in $tools; do
-  if ! said=$("$tool" --version 2>&1); then
+  if said=$("$tool" --version 2>/dev/null); then
+    printf '%s runs: %s\n' "$tool" "$(printf '%s\n' "$said" | head -1)"
+  else
+    said=$("$tool" --version 2>&1 || true)
     echo "::error::$tool is on the PATH and does not run. It answered: $(printf '%s' "$said" | tr '\n' ' ' | cut -c1-300)"
     exit 1
   fi
-  printf '%s runs: %s\n' "$tool" "$(printf '%s\n' "$said" | head -1)"
 done
