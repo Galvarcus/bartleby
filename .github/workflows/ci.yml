@@ -359,6 +359,35 @@ jobs:
           miktex --admin packages update-package-database \
             || echo '::warning::update-package-database failed'
 
+      # TODO: remove when the entry can compile. The smoke tests report
+      # only that no PDF appeared within a minute, and what the engine
+      # said goes to a log that nothing reads, so this says where MiKTeX
+      # thinks its files are and what a compile of two lines answers.
+      # REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
+      - name: Report what MiKTeX can see
+        if: matrix.leg == 'compile'
+        shell: bash
+        run: |
+          data=${PROGRAMDATA:-${ProgramData:-}}
+          home=${USERPROFILE:-${UserProfile:-}}
+          initexmf --report || true
+          echo '--- where MiKTeX puts what it writes ---'
+          for var in TEXMFVAR TEXMFCONFIG TEXMFHOME; do
+            echo "$var=$(kpsewhich "-var-value=$var" 2>/dev/null)"
+          done
+          echo '--- the package database and the formats, wherever they are ---'
+          find "$data/MiKTeX" "$home/AppData/Roaming/MiKTeX" \
+            "$home/AppData/Local/MiKTeX" \
+            \( -name 'packages.ini' -o -name '*.fmt' -o -name 'miktex-*.fndb' \) \
+            2>/dev/null | head -20
+          echo '--- a compile of two lines ---'
+          work=$(mktemp -d)
+          printf '\\documentclass{article}\n\\begin{document}x\\end{document}\n' \
+            > "$work/t.tex"
+          ( cd "$work" && pdflatex -interaction=nonstopmode t.tex ) \
+            || echo "pdflatex exited $?"
+          ls -l "$work/t.pdf" 2>/dev/null || echo 'no PDF was written'
+
       # The one tool the entry cannot hold. The Book PDF asks fontspec for
       # DejaVu Serif, which the CI image takes from fonts-dejavu-core, see
       # .github/docker/Dockerfile, and a font is usable because it is
