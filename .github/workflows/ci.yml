@@ -11,9 +11,8 @@ name: CI
 #
 # The TeX check on MiKTeX runs on Windows, because MiKTeX is the one
 # distribution that installs a missing package while it compiles, and no
-# Linux job can prove what Bartleby does with it. It shares the compile
-# leg, which restores MiKTeX and Pandoc from the cache that
-# .github/workflows/windows-cache.yml writes.
+# Linux job can prove what Bartleby does with it. That job installs MiKTeX
+# itself, see .github/actions/install-miktex.
 #
 # Vim is installed first in each job that needs it. The compile smoke test,
 # the cheat sheet converter tests, and the cheat sheet run in the CI image,
@@ -279,131 +278,45 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
-      # MiKTeX, Pandoc, the packages and the format files all come from
-      # the entry that .github/workflows/windows-cache.yml writes, because
-      # installing and making them took over two hundred seconds of a job
-      # that spent three hundred, and about twenty of those came from
-      # api2.miktex.org, which has timed out once already.
-      #
-      # A miss fails the leg rather than quietly installing it all again:
-      # run that workflow by hand to seed this branch, or let its push on
-      # main seed every branch.
-      - name: Build the cache key
+      - name: Install MiKTeX
         if: matrix.leg == 'compile'
-        id: tools
-        uses: ./.github/actions/windows-tools-cache
+        uses: ./.github/actions/install-miktex
 
-      - name: Restore the Windows tools
-        if: matrix.leg == 'compile'
-        uses: actions/cache/restore@v6.1.0
-        with:
-          key: ${{ steps.tools.outputs.key }}
-          path: ${{ steps.tools.outputs.paths }}
-          fail-on-cache-miss: true
-
-      - name: Put the restored tools on the PATH
-        if: matrix.leg == 'compile'
-        shell: bash
-        env:
-          BINS: ${{ steps.tools.outputs.bins }}
-        run: echo "$BINS" >> "$GITHUB_PATH"
-
-      # MiKTeX will not run from a tree it was merely copied into: asked
-      # for its version alone it stops and says that this seems to be a
-      # fresh installation whose setup must be finished. The programs that
-      # finish it are in the tree, so this costs no call to Chocolatey or
-      # to the MiKTeX service, which is the whole point of the entry.
-      #
-      # MiKTeX publishes no one command for it, so this is the documented
-      # pieces: the roots registered on this machine, the file name
-      # database rebuilt, and the package database updated, which answers
-      # the second thing it complained of. None of them fails the step,
-      # because the check below is the judge of whether they worked.
-      # REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
-      - name: Finish the MiKTeX setup
-        if: matrix.leg == 'compile'
-        shell: bash
-        env:
-          ROOTS: ${{ steps.tools.outputs.roots }}
-        run: |
-          # A root of MiKTeX is a folder holding a folder named miktex.
-          # Under ProgramData the root is a version below the folder the
-          # report names, as C:\ProgramData\MiKTeX\2.9, and initexmf
-          # refuses a parent of a root. Finding the marker registers the
-          # right one without naming a version that will change.
-          Register() {
-            if initexmf --admin --register-root="$1"; then
-              echo "registered $1"
-            else
-              echo "::warning::initexmf could not register $1"
-            fi
-          }
-          while IFS= read -r root; do
-            [ -z "$root" ] && continue
-            if [ -d "$root/miktex" ]; then
-              Register "$root"
-              continue
-            fi
-            found=no
-            for sub in "$root"/*/; do
-              if [ -d "${sub}miktex" ]; then
-                Register "${sub%/}"
-                found=yes
-              fi
-            done
-            if [ "$found" = no ]; then
-              echo "::warning::$root holds no folder named miktex, so it is no root of MiKTeX."
-            fi
-          done <<< "$ROOTS"
-          miktex --admin fndb refresh || echo '::warning::fndb refresh failed'
-          miktex --admin packages update-package-database \
-            || echo '::warning::update-package-database failed'
-
-      # TODO: remove when the entry can compile. The smoke tests report
-      # only that no PDF appeared within a minute, and what the engine
-      # said goes to a log that nothing reads, so this says where MiKTeX
-      # thinks its files are and what a compile of two lines answers.
-      # REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
-      - name: Report what MiKTeX can see
-        if: matrix.leg == 'compile'
-        shell: bash
-        run: |
-          data=${PROGRAMDATA:-${ProgramData:-}}
-          home=${USERPROFILE:-${UserProfile:-}}
-          initexmf --report || true
-          echo '--- where MiKTeX puts what it writes ---'
-          for var in TEXMFVAR TEXMFCONFIG TEXMFHOME; do
-            echo "$var=$(kpsewhich "-var-value=$var" 2>/dev/null)"
-          done
-          echo '--- the package database and the formats, wherever they are ---'
-          find "$data/MiKTeX" "$home/AppData/Roaming/MiKTeX" \
-            "$home/AppData/Local/MiKTeX" \
-            \( -name 'packages.ini' -o -name '*.fmt' -o -name 'miktex-*.fndb' \) \
-            2>/dev/null | head -20
-          echo '--- a compile of two lines ---'
-          work=$(mktemp -d)
-          printf '\\documentclass{article}\n\\begin{document}x\\end{document}\n' \
-            > "$work/t.tex"
-          ( cd "$work" && pdflatex -interaction=nonstopmode t.tex ) \
-            || echo "pdflatex exited $?"
-          ls -l "$work/t.pdf" 2>/dev/null || echo 'no PDF was written'
-
-      # The one tool the entry cannot hold. The Book PDF asks fontspec for
-      # DejaVu Serif, which the CI image takes from fonts-dejavu-core, see
-      # .github/docker/Dockerfile, and a font is usable because it is
-      # registered rather than because its file is present.
-      - name: Install the DejaVu fonts
+      # MiKTeX brings the engines. The runner has neither pandoc nor the
+      # DejaVu Serif that the Book PDF asks of fontspec, which the CI image
+      # takes from fonts-dejavu-core, see .github/docker/Dockerfile. A TeX
+      # package cannot stand in for it, because XeTeX reads the fonts of
+      # the system.
+      - name: Install pandoc and the DejaVu fonts
         if: matrix.leg == 'compile'
         shell: pwsh
-        run: choco install dejavufonts --no-progress --yes
+        run: choco install pandoc dejavufonts --no-progress --yes
 
-      # After the restore, where it answers the question the restore
-      # raises: whether a MiKTeX that was copied back rather than installed
-      # can still be found and run.
+      # Before the fetch, so that a missing program fails in seconds rather
+      # than after it.
       - name: Check that Vim finds the tools
         if: matrix.leg == 'compile'
         shell: bash
         run: .github/scripts/check-windows-tools.sh
+
+      # The packages and the format files come from the entry that
+      # .github/workflows/windows-cache.yml writes, because making them
+      # takes over a hundred seconds in a job that spends three hundred.
+      # A miss fails the leg rather than quietly making them again: run
+      # that workflow by hand to seed this branch, or let its push on main
+      # seed every branch.
+      - name: Build the cache key
+        if: matrix.leg == 'compile'
+        id: texkey
+        uses: ./.github/actions/miktex-cache-key
+
+      - name: Restore what the templates need
+        if: matrix.leg == 'compile'
+        uses: actions/cache/restore@v6.1.0
+        with:
+          key: ${{ steps.texkey.outputs.key }}
+          path: ${{ steps.texkey.outputs.paths }}
+          fail-on-cache-miss: true
 
       # Bash, as the unit job, in the Git Bash of the runner, and VIM_EXE,
       # because the Git Bash holds a Vim of its own that comes first, see
@@ -467,34 +380,6 @@ jobs:
           VIM_LOG: vim.log
           VIM_VERBOSE: 2
         run: .github/scripts/compile-smoke.sh
-
-      # What the compiles themselves said. compile.vim writes the error
-      # output of a failed run beside the log of a good one, see RunJob,
-      # and no job has ever printed either, so a test reporting that no PDF
-      # appeared within a minute has never said why.
-      - name: Report what the compiles said
-        if: failure() && matrix.leg == 'compile'
-        shell: bash
-        run: |
-          found=no
-          for dir in "${USERPROFILE:-}/.bartleby/logs" "$HOME/.bartleby/logs"; do
-            dir=${dir//\\//}
-            [ -d "$dir" ] || continue
-            found=yes
-            newest=$(find "$dir" -maxdepth 1 -type f -printf '%T@ %p\n' \
-              | sort -rn | head -4 | cut -d' ' -f2-)
-            echo "=== $dir holds $(find "$dir" -maxdepth 1 -type f | wc -l) files, newest first ==="
-            while IFS= read -r path; do
-              [ -z "$path" ] && continue
-              echo "--- ${path##*/} ---"
-              head -c 4000 "$path"
-              echo
-            done <<< "$newest"
-            break
-          done
-          if [ "$found" = no ]; then
-            echo '::warning::No folder of logs was found, so no compile got as far as writing one.'
-          fi
 
   tagger-smoke:
     name: Part-of-speech tagger smoke test
