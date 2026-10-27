@@ -1,13 +1,22 @@
 #!/usr/bin/env bash
 
-# Fail unless Vim itself finds the programs that the compile smoke tests
-# need. Every test of tests/test_compile_smoke.vim returns early when a
-# program is missing, and the results file still reads that all of them
-# passed, so a runner without the programs gives a green job that proved
-# nothing. The Linux jobs have check-ci-image.sh for the same reason.
+# Fail unless Vim can find the programs that the compile smoke tests need,
+# and unless each of them runs. Every test of tests/test_compile_smoke.vim
+# returns early when a program is missing, and the results file still reads
+# that all of them passed, so a runner without the programs gives a green
+# job that proved nothing. The Linux jobs have check-ci-image.sh for the
+# same reason.
 #
-# Vim answers, not the shell, because the PATH of the Git Bash and the PATH
-# of Vim have already differed in this workflow, see the install-vim action.
+# Vim answers the first question, not the shell, because the PATH of the
+# Git Bash and the PATH of Vim have already differed in this workflow, see
+# the install-vim action.
+#
+# The second question is the one a cache raises. A MiKTeX restored from a
+# cache entry was found by every lookup and could not compile, and the
+# first sign of it was two tests timing out after a minute each with
+# nothing said about why. A program that answers for its version is a
+# program that runs.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
 
 set -u
 
@@ -32,4 +41,10 @@ if [ -n "${missing// /}" ]; then
   exit 1
 fi
 
-echo "Vim finds every program that the compile smoke tests need: $tools"
+for tool in $tools; do
+  if ! said=$("$tool" --version 2>&1); then
+    echo "::error::$tool is on the PATH and does not run. It answered: $(printf '%s' "$said" | tr '\n' ' ' | cut -c1-300)"
+    exit 1
+  fi
+  printf '%s runs: %s\n' "$tool" "$(printf '%s\n' "$said" | head -1)"
+done
