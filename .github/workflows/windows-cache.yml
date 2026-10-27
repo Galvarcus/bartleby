@@ -1,10 +1,15 @@
-name: Windows TeX cache
+name: Windows tools cache
 
 ##############################################################################
-# The packages and the format files that a compile on Windows needs take
-# over a hundred seconds to make, and every compile job paid for them. This
-# workflow makes them once and saves them as a cache entry that the Windows
-# compile leg of ci.yml restores.
+# Installing MiKTeX takes between 86 and 156 seconds, Pandoc another 12,
+# and the packages and format files that a compile needs over a hundred
+# more. Every compile job paid for all of it. This workflow does it once
+# and saves it as a cache entry that the Windows compile leg of ci.yml
+# restores.
+#
+# The entry freezes the version of MiKTeX, which the Chocolatey package
+# otherwise picks for itself on every run. Bump EPOCH in
+# .github/actions/windows-tools-cache to take a newer one.
 #
 # A cache entry that a run on the default branch writes is readable from
 # every branch, so the push and the schedule both aim at main. An entry that
@@ -20,7 +25,7 @@ on:
     branches: [main]
     paths:
       - .github/actions/install-miktex/action.yml
-      - .github/actions/miktex-cache-key/action.yml
+      - .github/actions/windows-tools-cache/action.yml
       - .github/scripts/warm-miktex.sh
       - .github/scripts/latex-needs.vim
       - autoload/bartleby/texcheck.vim
@@ -35,7 +40,7 @@ permissions:
 
 jobs:
   cache:
-    name: Make the Windows TeX cache
+    name: Make the Windows tools cache
     runs-on: windows-latest
     timeout-minutes: 30
     steps:
@@ -53,15 +58,12 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
-      - name: Install MiKTeX
-        uses: ./.github/actions/install-miktex
-
       - name: Build the cache key
         id: key
-        uses: ./.github/actions/miktex-cache-key
+        uses: ./.github/actions/windows-tools-cache
 
-      # A save over an entry that exists is refused, so look first and do
-      # the work only when there is nothing to find.
+      # Look before installing anything: a save over an entry that exists
+      # is refused, so there is nothing to do when one is already there.
       - name: Look for the entry
         id: found
         uses: actions/cache/restore@v6.1.0
@@ -72,12 +74,27 @@ jobs:
 
       - name: Say what was found
         shell: bash
+        env:
+          KEY: ${{ steps.key.outputs.key }}
+          HIT: ${{ steps.found.outputs.cache-hit }}
         run: |
-          if [ "${{ steps.found.outputs.cache-hit }}" = true ]; then
-            echo "${{ steps.key.outputs.key }} is already saved. Nothing to do."
+          if [ "$HIT" = true ]; then
+            echo "$KEY is already saved. Nothing to do."
           else
-            echo "${{ steps.key.outputs.key }} is not saved. Making it."
+            echo "$KEY is not saved. Making it."
           fi
+
+      - name: Install MiKTeX
+        if: steps.found.outputs.cache-hit != 'true'
+        uses: ./.github/actions/install-miktex
+
+      # Pandoc goes in the entry as well. The DejaVu fonts do not, because
+      # a font is usable when it is registered and a cache holds no
+      # registry values, so the compile leg installs those itself.
+      - name: Install pandoc
+        if: steps.found.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: choco install pandoc --no-progress --yes
 
       - name: Fetch what the templates need
         if: steps.found.outputs.cache-hit != 'true'
