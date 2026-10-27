@@ -49,8 +49,12 @@ for tool in $tools; do
   if said=$("$tool" --version 2>/dev/null); then
     printf '%s runs: %s\n' "$tool" "$(printf '%s\n' "$said" | head -1)"
   else
-    said=$("$tool" --version 2>&1 || true)
-    echo "::error::$tool is on the PATH and does not run. It answered: $(printf '%s' "$said" | tr '\n' ' ' | cut -c1-300)"
+    status=$?
+    # The whole output on its own lines, because an annotation holds one
+    # line and MiKTeX writes a preamble of its own before it says what
+    # went wrong.
+    echo "::error::$tool is on the PATH and exited $status. Everything it said follows."
+    "$tool" --version 2>&1 || true
     exit 1
   fi
 done
