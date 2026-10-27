@@ -11,8 +11,9 @@ name: CI
 #
 # The TeX check on MiKTeX runs on Windows, because MiKTeX is the one
 # distribution that installs a missing package while it compiles, and no
-# Linux job can prove what Bartleby does with it. That job installs MiKTeX
-# itself, see .github/actions/install-miktex.
+# Linux job can prove what Bartleby does with it. It shares the compile
+# leg, which restores MiKTeX and Pandoc from the cache that
+# .github/workflows/windows-cache.yml writes.
 #
 # Vim is installed first in each job that needs it. The compile smoke test,
 # the cheat sheet converter tests, and the cheat sheet run in the CI image,
@@ -278,45 +279,81 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
-      - name: Install MiKTeX
+      # MiKTeX, Pandoc, the packages and the format files all come from
+      # the entry that .github/workflows/windows-cache.yml writes, because
+      # installing and making them took over two hundred seconds of a job
+      # that spent three hundred, and about twenty of those came from
+      # api2.miktex.org, which has timed out once already.
+      #
+      # A miss fails the leg rather than quietly installing it all again:
+      # run that workflow by hand to seed this branch, or let its push on
+      # main seed every branch.
+      - name: Build the cache key
         if: matrix.leg == 'compile'
-        uses: ./.github/actions/install-miktex
+        id: tools
+        uses: ./.github/actions/windows-tools-cache
 
-      # MiKTeX brings the engines. The runner has neither pandoc nor the
-      # DejaVu Serif that the Book PDF asks of fontspec, which the CI image
-      # takes from fonts-dejavu-core, see .github/docker/Dockerfile. A TeX
-      # package cannot stand in for it, because XeTeX reads the fonts of
-      # the system.
-      - name: Install pandoc and the DejaVu fonts
+      - name: Restore the Windows tools
+        if: matrix.leg == 'compile'
+        uses: actions/cache/restore@v6.1.0
+        with:
+          key: ${{ steps.tools.outputs.key }}
+          path: ${{ steps.tools.outputs.paths }}
+          fail-on-cache-miss: true
+
+      - name: Put the restored tools on the PATH
+        if: matrix.leg == 'compile'
+        shell: bash
+        env:
+          BINS: ${{ steps.tools.outputs.bins }}
+        run: echo "$BINS" >> "$GITHUB_PATH"
+
+      # MiKTeX will not run from a tree it was merely copied into: asked
+      # for its version alone it stops and says that this seems to be a
+      # fresh installation whose setup must be finished. The programs that
+      # finish it are in the tree, so this costs no call to Chocolatey or
+      # to the MiKTeX service, which is the whole point of the entry.
+      #
+      # MiKTeX publishes no one command for it, so this is the documented
+      # pieces: the roots registered on this machine, the file name
+      # database rebuilt, and the package database updated, which answers
+      # the second thing it complained of. None of them fails the step,
+      # because the check below is the judge of whether they worked.
+      # REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
+      - name: Finish the MiKTeX setup
+        if: matrix.leg == 'compile'
+        shell: bash
+        env:
+          ROOTS: ${{ steps.tools.outputs.roots }}
+        run: |
+          while IFS= read -r root; do
+            [ -z "$root" ] && continue
+            if initexmf --admin --register-root="$root"; then
+              echo "registered $root"
+            else
+              echo "::warning::initexmf could not register $root"
+            fi
+          done <<< "$ROOTS"
+          miktex --admin fndb refresh || echo '::warning::fndb refresh failed'
+          miktex --admin packages update-package-database \
+            || echo '::warning::update-package-database failed'
+
+      # The one tool the entry cannot hold. The Book PDF asks fontspec for
+      # DejaVu Serif, which the CI image takes from fonts-dejavu-core, see
+      # .github/docker/Dockerfile, and a font is usable because it is
+      # registered rather than because its file is present.
+      - name: Install the DejaVu fonts
         if: matrix.leg == 'compile'
         shell: pwsh
-        run: choco install pandoc dejavufonts --no-progress --yes
+        run: choco install dejavufonts --no-progress --yes
 
-      # Before the fetch, so that a missing program fails in seconds rather
-      # than after it.
+      # After the restore, where it answers the question the restore
+      # raises: whether a MiKTeX that was copied back rather than installed
+      # can still be found and run.
       - name: Check that Vim finds the tools
         if: matrix.leg == 'compile'
         shell: bash
         run: .github/scripts/check-windows-tools.sh
-
-      # The packages and the format files come from the entry that
-      # .github/workflows/windows-cache.yml writes, because making them
-      # takes over a hundred seconds in a job that spends three hundred.
-      # A miss fails the leg rather than quietly making them again: run
-      # that workflow by hand to seed this branch, or let its push on main
-      # seed every branch.
-      - name: Build the cache key
-        if: matrix.leg == 'compile'
-        id: texkey
-        uses: ./.github/actions/miktex-cache-key
-
-      - name: Restore what the templates need
-        if: matrix.leg == 'compile'
-        uses: actions/cache/restore@v6.1.0
-        with:
-          key: ${{ steps.texkey.outputs.key }}
-          path: ${{ steps.texkey.outputs.paths }}
-          fail-on-cache-miss: true
 
       # Bash, as the unit job, in the Git Bash of the runner, and VIM_EXE,
       # because the Git Bash holds a Vim of its own that comes first, see
