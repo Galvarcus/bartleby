@@ -326,12 +326,33 @@ jobs:
         env:
           ROOTS: ${{ steps.tools.outputs.roots }}
         run: |
+          # A root of MiKTeX is a folder holding a folder named miktex.
+          # Under ProgramData the root is a version below the folder the
+          # report names, as C:\ProgramData\MiKTeX\2.9, and initexmf
+          # refuses a parent of a root. Finding the marker registers the
+          # right one without naming a version that will change.
+          Register() {
+            if initexmf --admin --register-root="$1"; then
+              echo "registered $1"
+            else
+              echo "::warning::initexmf could not register $1"
+            fi
+          }
           while IFS= read -r root; do
             [ -z "$root" ] && continue
-            if initexmf --admin --register-root="$root"; then
-              echo "registered $root"
-            else
-              echo "::warning::initexmf could not register $root"
+            if [ -d "$root/miktex" ]; then
+              Register "$root"
+              continue
+            fi
+            found=no
+            for sub in "$root"/*/; do
+              if [ -d "${sub}miktex" ]; then
+                Register "${sub%/}"
+                found=yes
+              fi
+            done
+            if [ "$found" = no ]; then
+              echo "::warning::$root holds no folder named miktex, so it is no root of MiKTeX."
             fi
           done <<< "$ROOTS"
           miktex --admin fndb refresh || echo '::warning::fndb refresh failed'
