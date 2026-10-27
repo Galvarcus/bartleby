@@ -468,6 +468,34 @@ jobs:
           VIM_VERBOSE: 2
         run: .github/scripts/compile-smoke.sh
 
+      # What the compiles themselves said. compile.vim writes the error
+      # output of a failed run beside the log of a good one, see RunJob,
+      # and no job has ever printed either, so a test reporting that no PDF
+      # appeared within a minute has never said why.
+      - name: Report what the compiles said
+        if: failure() && matrix.leg == 'compile'
+        shell: bash
+        run: |
+          found=no
+          for dir in "${USERPROFILE:-}/.bartleby/logs" "$HOME/.bartleby/logs"; do
+            dir=${dir//\\//}
+            [ -d "$dir" ] || continue
+            found=yes
+            newest=$(find "$dir" -maxdepth 1 -type f -printf '%T@ %p\n' \
+              | sort -rn | head -4 | cut -d' ' -f2-)
+            echo "=== $dir holds $(find "$dir" -maxdepth 1 -type f | wc -l) files, newest first ==="
+            while IFS= read -r path; do
+              [ -z "$path" ] && continue
+              echo "--- ${path##*/} ---"
+              head -c 4000 "$path"
+              echo
+            done <<< "$newest"
+            break
+          done
+          if [ "$found" = no ]; then
+            echo '::warning::No folder of logs was found, so no compile got as far as writing one.'
+          fi
+
   tagger-smoke:
     name: Part-of-speech tagger smoke test
     needs: changes
