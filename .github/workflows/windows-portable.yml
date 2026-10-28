@@ -1,0 +1,98 @@
+name: Windows portable MiKTeX trial
+
+##############################################################################
+# A trial, started by hand, and nothing else reads it. The compile leg spends
+# 108 seconds installing MiKTeX, and a cache cannot replace that install
+# because a restored shared install needs state of the host that no entry
+# carries: that attempt is reverted twice, in bd65bf0 and ba5be70. The
+# portable edition keeps its configuration in its own tree, by its own page,
+# so an entry could carry a whole working MiKTeX.
+#
+# Two questions decide it and neither is documented: whether the setup runs
+# unattended, and whether the engines run from the tree with nothing of the
+# host set up for them. This workflow answers both and then runs the compile
+# smoke tests against the tree, so one run says whether the design is worth
+# building. Delete this workflow once it has answered.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
+##############################################################################
+
+on:
+  workflow_dispatch:
+    inputs:
+      set:
+        description: The package set to set the tree up from.
+        type: choice
+        default: basic
+        options: [essential, basic, complete]
+
+permissions:
+  contents: read
+
+jobs:
+  trial:
+    name: Compile with a portable MiKTeX
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      PORTABLE_DIR: C:/miktex-portable
+      PORTABLE_SET_DIR: C:/miktex-package-set
+      PORTABLE_SET: ${{ inputs.set }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      # No install-miktex action here. Whether this step can stand in its
+      # place is the question.
+      - name: Set up a portable MiKTeX
+        shell: bash
+        run: .github/scripts/make-portable-miktex.sh
+
+      - name: Install pandoc and the DejaVu fonts
+        shell: pwsh
+        run: choco install pandoc dejavufonts --no-progress --yes
+
+      - name: Check that Vim finds the tools
+        shell: bash
+        run: .github/scripts/check-windows-tools.sh
+
+      # As the seeding workflow fills the shared install, so that the
+      # trial compiles with the packages and the formats in place.
+      - name: Fetch what the templates need
+        shell: bash
+        run: .github/scripts/warm-miktex.sh
+
+      # The size after the warm-up is what an entry would carry, and it
+      # decides whether a restore beats the install it would replace.
+      - name: Say what the tree takes
+        shell: bash
+        run: du -sh "$PORTABLE_DIR"
+
+      - name: Run the TeX check
+        shell: bash
+        run: |
+          "$VIM_EXE" -es -u NONE -N -V2vim.log \
+            -c 'set rtp+=.,deps/Logger' \
+            -c 'source tests/test_texcheck_miktex.vim' -c 'quit' || true
+          if [ ! -f tests/miktex_results.txt ]; then
+            echo "::error::tests/miktex_results.txt was never created. The last of the verbose log follows:"
+            tail -n 200 vim.log
+            exit 1
+          fi
+          cat tests/miktex_results.txt
+          grep -qx 'All MiKTeX tests passed' tests/miktex_results.txt
+
+      - name: Run compile smoke test
+        shell: bash
+        env:
+          VIM_LOG: vim.log
+          VIM_VERBOSE: 2
+        run: .github/scripts/compile-smoke.sh
