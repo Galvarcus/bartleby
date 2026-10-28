@@ -3,16 +3,21 @@ name: Windows portable MiKTeX trial
 ##############################################################################
 # A trial, started by hand, and nothing else reads it. The compile leg spends
 # 108 seconds installing MiKTeX, and a cache cannot replace that install
-# because a restored shared install needs state of the host that no entry
-# carries: that attempt is reverted twice, in bd65bf0 and ba5be70. The
-# portable edition keeps its configuration in its own tree, by its own page,
-# so an entry could carry a whole working MiKTeX.
+# while the install keeps state outside its own tree: that attempt is
+# reverted twice, in bd65bf0 and ba5be70. The portable edition keeps its
+# configuration in its own tree, by its own page, so an entry could carry a
+# whole working MiKTeX.
 #
-# Two questions decide it and neither is documented: whether the setup runs
-# unattended, and whether the engines run from the tree with nothing of the
-# host set up for them. This workflow answers both and then runs the compile
-# smoke tests against the tree, so one run says whether the design is worth
-# building. Delete this workflow once it has answered.
+# Run 40778862488 answered the first half with the one job this workflow
+# then held: the setup runs unattended, the programs land in
+# texmfs/install/miktex/bin/x64, the engines run from the tree, and the
+# compile smoke tests pass. The tree took 522MB warmed.
+#
+# This is the other half, and it is the half that decides the design. The
+# seed job makes a tree and saves it. The use job restores it and compiles
+# with it, installing no MiKTeX at all, so a pass means an entry can carry
+# a working TeX and a fail means the portable edition fails the same way
+# the shared install did. Delete this workflow once it has answered.
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
 ##############################################################################
 
@@ -28,15 +33,18 @@ on:
 permissions:
   contents: read
 
+env:
+  PORTABLE_DIR: C:/miktex-portable
+  PORTABLE_SET_DIR: C:/miktex-package-set
+  PORTABLE_SET: ${{ inputs.set }}
+
 jobs:
-  trial:
-    name: Compile with a portable MiKTeX
+  seed:
+    name: Make a portable MiKTeX and save it
     runs-on: windows-latest
     timeout-minutes: 45
-    env:
-      PORTABLE_DIR: C:/miktex-portable
-      PORTABLE_SET_DIR: C:/miktex-package-set
-      PORTABLE_SET: ${{ inputs.set }}
+    outputs:
+      key: ${{ steps.key.outputs.key }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -50,8 +58,19 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
-      # No install-miktex action here. Whether this step can stand in its
-      # place is the question.
+      # One definition of the key, which the use job reads as an output,
+      # so that the two jobs cannot disagree about the entry. It is a key
+      # of its own: the entry of the compile leg holds the packages and
+      # the formats of an installed MiKTeX, not a tree.
+      - name: Build the trial key
+        id: key
+        shell: bash
+        run: |
+          digest=$(sha256sum .github/scripts/make-portable-miktex.sh | cut -c1-16)
+          echo "key=windows-portable-trial-v1-$PORTABLE_SET-$digest" >> "$GITHUB_OUTPUT"
+
+      # No install-miktex action here, in either job. Whether this stands
+      # in its place is the question.
       - name: Set up a portable MiKTeX
         shell: bash
         run: .github/scripts/make-portable-miktex.sh
@@ -64,17 +83,60 @@ jobs:
         shell: bash
         run: .github/scripts/check-windows-tools.sh
 
-      # As the seeding workflow fills the shared install, so that the
-      # trial compiles with the packages and the formats in place.
+      # As the seeding workflow fills an installed MiKTeX. The engines
+      # build their formats here as well, so the tree is saved warm.
       - name: Fetch what the templates need
         shell: bash
         run: .github/scripts/warm-miktex.sh
 
-      # The size after the warm-up is what an entry would carry, and it
-      # decides whether a restore beats the install it would replace.
       - name: Say what the tree takes
         shell: bash
         run: du -sh "$PORTABLE_DIR"
+
+      - name: Save the tree
+        uses: actions/cache/save@v6.1.0
+        with:
+          key: ${{ steps.key.outputs.key }}
+          path: ${{ env.PORTABLE_DIR }}
+
+  use:
+    name: Compile from the restored tree
+    needs: seed
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7.0.1
+
+      - name: Install Vim
+        uses: ./.github/actions/install-vim
+
+      - name: Checkout Logger dependency
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: Galvarcus/Logger
+          path: deps/Logger
+
+      - name: Install pandoc and the DejaVu fonts
+        shell: pwsh
+        run: choco install pandoc dejavufonts --no-progress --yes
+
+      # A miss fails the job, because a compile that quietly installed a
+      # MiKTeX of its own would prove nothing.
+      - name: Restore the tree
+        uses: actions/cache/restore@v6.1.0
+        with:
+          key: ${{ needs.seed.outputs.key }}
+          path: ${{ env.PORTABLE_DIR }}
+          fail-on-cache-miss: true
+
+      - name: Use the restored tree
+        shell: bash
+        run: .github/scripts/use-portable-miktex.sh
+
+      - name: Check that Vim finds the tools
+        shell: bash
+        run: .github/scripts/check-windows-tools.sh
 
       - name: Run the TeX check
         shell: bash

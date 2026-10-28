@@ -93,13 +93,16 @@ fi
 echo "AutoInstall: $("$bin/initexmf.exe" --show-config-value='[MPM]AutoInstall')"
 
 # What the engines say when nothing of the host has been set up for them,
-# which is the question this trial exists to answer.
+# which is the question this trial exists to answer. The version comes
+# from the standard output alone, as check-windows-tools.sh takes it,
+# because MiKTeX writes a warning about elevated privileges to the error
+# output on every call and that would stand in for the version.
 for name in pdflatex xelatex; do
-  if said=$("$bin/$name.exe" --version 2>&1); then
+  if said=$("$bin/$name.exe" --version 2>/dev/null); then
     printf '%s runs: %s\n' "$name" "$(printf '%s\n' "$said" | head -1)"
   else
-    printf '%s\n' "$said"
-    echo "::error::$name does not run from the portable tree. Everything it said is above."
+    echo "::error::$name does not run from the portable tree. Everything it said follows."
+    "$bin/$name.exe" --version 2>&1 || true
     exit 1
   fi
 done
