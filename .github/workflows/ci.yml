@@ -106,6 +106,8 @@ jobs:
               - .github/scripts/compile-smoke.sh
               - .github/scripts/check-windows-tools.sh
               - .github/scripts/warm-miktex.sh
+              - .github/scripts/make-tex-repo.sh
+              - .github/scripts/use-tex-repo.sh
               - .github/scripts/latex-needs.vim
               - .github/workflows/ci.yml
               - .github/actions/**
@@ -317,6 +319,16 @@ jobs:
           key: ${{ steps.texkey.outputs.key }}
           path: ${{ steps.texkey.outputs.paths }}
           fail-on-cache-miss: true
+
+      # The entry carries the package database as well, so MiKTeX is told
+      # to read the packages from it. Everything a compile installs then
+      # comes from a folder of the runner.
+      - name: Read the packages from the entry
+        if: matrix.leg == 'compile'
+        shell: bash
+        env:
+          TEX_REPO: ${{ steps.texkey.outputs.repo }}
+        run: .github/scripts/use-tex-repo.sh
 
       # Bash, as the unit job, in the Git Bash of the runner, and VIM_EXE,
       # because the Git Bash holds a Vim of its own that comes first, see

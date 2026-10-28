@@ -4,7 +4,9 @@ name: Windows TeX cache
 # The packages and the format files that a compile on Windows needs take
 # over a hundred seconds to make, and every compile job paid for them. This
 # workflow makes them once and saves them as a cache entry that the Windows
-# compile leg of ci.yml restores.
+# compile leg of ci.yml restores. The entry also carries a local package
+# repository, so that a package install which a compile starts reads a
+# folder of the runner rather than a server that no job can answer.
 #
 # A cache entry that a run on the default branch writes is readable from
 # every branch, so the push and the schedule both aim at main. An entry that
@@ -22,6 +24,7 @@ on:
       - .github/actions/install-miktex/action.yml
       - .github/actions/miktex-cache-key/action.yml
       - .github/scripts/warm-miktex.sh
+      - .github/scripts/make-tex-repo.sh
       - .github/scripts/latex-needs.vim
       - autoload/bartleby/texcheck.vim
       - tools/latex/**
@@ -83,6 +86,16 @@ jobs:
         if: steps.found.outputs.cache-hit != 'true'
         shell: bash
         run: .github/scripts/warm-miktex.sh
+
+      # After the warm-up, which writes the list of what the templates
+      # name, and before the save, because the repository is part of the
+      # entry.
+      - name: Make the package repository
+        if: steps.found.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          TEX_REPO: ${{ steps.key.outputs.repo }}
+        run: .github/scripts/make-tex-repo.sh
 
       - name: Save the entry
         if: steps.found.outputs.cache-hit != 'true'

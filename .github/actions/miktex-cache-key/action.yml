@@ -1,8 +1,9 @@
 name: MiKTeX cache key
 description: >-
-  Answer with the key and the folders of the cache that holds what MiKTeX
-  needs for a compile, so that the workflow which writes the entry and the
-  jobs which read it cannot disagree about either.
+  Answer with the key, the folders, and the package repository of the cache
+  that holds what MiKTeX needs for a compile, so that the workflow which
+  writes the entry and the jobs which read it cannot disagree about any of
+  them.
 
 outputs:
   key:
@@ -11,6 +12,9 @@ outputs:
   paths:
     description: The folders that the entry holds, one to a line.
     value: ${{ steps.key.outputs.paths }}
+  repo:
+    description: The folder of the local package repository in the entry.
+    value: ${{ steps.key.outputs.repo }}
 
 runs:
   using: composite
@@ -22,12 +26,13 @@ runs:
     #
     # The files of the warm-up name it as well: the packages it fetches
     # come from the templates, read by texcheck.vim, so a new class or
-    # package has to make a new entry.
+    # package has to make a new entry. make-tex-repo.sh names it because
+    # it decides what the repository in the entry holds.
     - name: Build the key and the folders
       id: key
       shell: bash
       env:
-        PREFIX: windows-tex-v1
+        PREFIX: windows-tex-v2
       run: |
         version=$(initexmf --report 2>/dev/null | sed -n 's/^CurrentVersion: //p')
         if [ -z "$version" ]; then
@@ -36,20 +41,27 @@ runs:
         fi
         digest=$(cat \
           .github/scripts/warm-miktex.sh \
+          .github/scripts/make-tex-repo.sh \
           .github/scripts/latex-needs.vim \
           autoload/bartleby/texcheck.vim \
           tools/latex/*.tex | sha256sum | cut -c1-16)
         echo "key=$PREFIX-$version-$digest" >> "$GITHUB_OUTPUT"
 
-        # The two trees that hold what the warm-up makes: the packages it
+        # The three folders of the entry. The packages that the warm-up
         # fetches, under Roaming, and the format files the engines build,
         # under Local. Not Program Files, which is the install itself at
         # 469MB and 19000 files, where a restore can cost more than the
-        # install it would replace.
+        # install it would replace. And the local package repository, so
+        # that the package database travels with the packages: without it
+        # the first install of a compile goes to a server that a job
+        # cannot answer.
         home=${USERPROFILE//\\//}
+        repo=$home/bartleby-tex-repo
+        echo "repo=$repo" >> "$GITHUB_OUTPUT"
         {
           echo 'paths<<PATHS'
           echo "$home/AppData/Local/MiKTeX"
           echo "$home/AppData/Roaming/MiKTeX"
+          echo "$repo"
           echo 'PATHS'
         } >> "$GITHUB_OUTPUT"
