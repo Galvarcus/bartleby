@@ -21,22 +21,36 @@ set -u
 portable=${PORTABLE_DIR:?PORTABLE_DIR must name the folder of the tree.}
 mirror=${PORTABLE_SET_DIR:?PORTABLE_SET_DIR must name the folder of the package set.}
 set_name=${PORTABLE_SET:-basic}
-tool=https://miktex.org/download/win/miktexsetup-x64.zip
+setups=https://mirror.ctan.org/systems/win32/miktex/setup/windows-x64
+fallback=https://miktex.org/download/win/miktexsetup-x64.zip
+zip=setup-utility/miktexsetup.zip
 
 mkdir -p "$portable" "$mirror" setup-utility
 
+# A mirror of CTAN first, because miktex.org refused a runner for four
+# tries of twenty seconds each while CTAN answered, and the packages come
+# from a mirror anyway. The name of the utility carries a version and an
+# encoded plus sign, so the index is read for it rather than a name
+# written here.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
 echo "Fetching the setup utility"
-if ! curl -fsSL --retry 3 -o setup-utility/miktexsetup.zip "$tool"; then
-  echo "::error::$tool could not be fetched, so there is no setup utility to run."
+name=$(curl -fsSL --retry 2 "$setups/" |
+  grep -o 'miktexsetup-[^"]*-x64\.zip' | sort -u | tail -1)
+if [ -n "$name" ] && curl -fsSL --retry 3 -o "$zip" "$setups/$name"; then
+  echo "The utility came from $setups/$name"
+elif curl -fsSL --retry 3 -o "$zip" "$fallback"; then
+  echo "No mirror of CTAN answered, so the utility came from $fallback"
+else
+  echo "::error::Neither a mirror of CTAN nor $fallback holds a setup utility that can be fetched, so there is nothing to run."
   exit 1
 fi
 
 # The runner carries more than one program that reads a zip file and the
 # Git Bash carries none of them for certain, so take whichever answers.
 if command -v unzip >/dev/null 2>&1; then
-  unzip -q -o setup-utility/miktexsetup.zip -d setup-utility
+  unzip -q -o "$zip" -d setup-utility
 elif command -v 7z >/dev/null 2>&1; then
-  7z x -y -osetup-utility setup-utility/miktexsetup.zip >/dev/null
+  7z x -y -osetup-utility "$zip" >/dev/null
 else
   echo "::error::Neither unzip nor 7z is on the PATH, so the setup utility cannot be unpacked."
   exit 1
