@@ -1,19 +1,27 @@
 name: Windows TeX cache
 
 ##############################################################################
-# The packages and the format files that a compile on Windows needs take
-# over a hundred seconds to make, and every compile job paid for them. This
+# A compile on Windows needs a TeX distribution, its packages, and its format
+# files, and every compile job paid over two hundred seconds for them. This
 # workflow makes them once and saves them as a cache entry that the Windows
-# compile leg of ci.yml restores. The entry also carries a local package
-# repository, so that a package install which a compile starts reads a
-# folder of the runner rather than a server that no job can answer.
+# compile leg of ci.yml restores.
+#
+# The entry holds a portable MiKTeX. That edition keeps its configuration in
+# its own tree rather than in the registry of the host, by its own page, so a
+# restored tree runs with nothing of the runner set up for it: run
+# 40782054591 restored one and compiled both PDFs with no MiKTeX installed at
+# all. Caching an installed MiKTeX was tried and reverted twice, in bd65bf0
+# and ba5be70, because it kept state no entry could carry. The entry also
+# holds a local package repository, so that a package install which a compile
+# starts reads a folder of the runner rather than a server that no job can
+# answer.
 #
 # A cache entry that a run on the default branch writes is readable from
 # every branch, so the push and the schedule both aim at main. An entry that
 # nothing reads for seven days falls out, which is why the schedule runs
 # twice a week rather than weekly. A run started by hand writes an entry for
-# its own branch, which is how to seed a change to the install or the
-# templates before it reaches main.
+# its own branch, which is how to seed a change to the tree or the templates
+# before it reaches main.
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
 ##############################################################################
 
@@ -21,10 +29,10 @@ on:
   push:
     branches: [main]
     paths:
-      - .github/actions/install-miktex/action.yml
       - .github/actions/miktex-cache-key/action.yml
-      - .github/scripts/warm-miktex.sh
+      - .github/scripts/make-portable-miktex.sh
       - .github/scripts/make-tex-repo.sh
+      - .github/scripts/warm-miktex.sh
       - .github/scripts/latex-needs.vim
       - autoload/bartleby/texcheck.vim
       - tools/latex/**
@@ -40,7 +48,14 @@ jobs:
   cache:
     name: Make the Windows TeX cache
     runs-on: windows-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
+    env:
+      # The mirror of the package set, which no entry holds. A whole set
+      # is 251MB and the tree it makes is what matters. The set itself is
+      # named by the cache key action, which is the one place it is
+      # defined, because it decides both what the setup installs and what
+      # the entry is called.
+      PORTABLE_SET_DIR: C:/miktex-package-set
     steps:
       - name: Checkout
         uses: actions/checkout@v7.0.1
@@ -55,9 +70,6 @@ jobs:
         with:
           repository: Galvarcus/Logger
           path: deps/Logger
-
-      - name: Install MiKTeX
-        uses: ./.github/actions/install-miktex
 
       - name: Build the cache key
         id: key
@@ -82,6 +94,16 @@ jobs:
             echo "${{ steps.key.outputs.key }} is not saved. Making it."
           fi
 
+      # This step puts the programs of the tree on the PATH, so the two
+      # steps after it run the MiKTeX of the tree and no other.
+      - name: Set up a portable MiKTeX
+        if: steps.found.outputs.cache-hit != 'true'
+        shell: bash
+        env:
+          PORTABLE_DIR: ${{ steps.key.outputs.tree }}
+          PORTABLE_SET: ${{ steps.key.outputs.set }}
+        run: .github/scripts/make-portable-miktex.sh
+
       - name: Fetch what the templates need
         if: steps.found.outputs.cache-hit != 'true'
         shell: bash
@@ -96,6 +118,13 @@ jobs:
         env:
           TEX_REPO: ${{ steps.key.outputs.repo }}
         run: .github/scripts/make-tex-repo.sh
+
+      # What the entry will carry, which is the number that says whether a
+      # restore still beats the install it replaced.
+      - name: Say what the tree takes
+        if: steps.found.outputs.cache-hit != 'true'
+        shell: bash
+        run: du -sh "${{ steps.key.outputs.tree }}"
 
       - name: Save the entry
         if: steps.found.outputs.cache-hit != 'true'

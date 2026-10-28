@@ -11,8 +11,8 @@ name: CI
 #
 # The TeX check on MiKTeX runs on Windows, because MiKTeX is the one
 # distribution that installs a missing package while it compiles, and no
-# Linux job can prove what Bartleby does with it. That job installs MiKTeX
-# itself, see .github/actions/install-miktex.
+# Linux job can prove what Bartleby does with it. That job restores a
+# portable MiKTeX from the entry that windows-cache.yml writes.
 #
 # Vim is installed first in each job that needs it. The compile smoke test,
 # the cheat sheet converter tests, and the cheat sheet run in the CI image,
@@ -106,6 +106,8 @@ jobs:
               - .github/scripts/compile-smoke.sh
               - .github/scripts/check-windows-tools.sh
               - .github/scripts/warm-miktex.sh
+              - .github/scripts/make-portable-miktex.sh
+              - .github/scripts/use-portable-miktex.sh
               - .github/scripts/make-tex-repo.sh
               - .github/scripts/use-tex-repo.sh
               - .github/scripts/latex-needs.vim
@@ -280,45 +282,52 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
-      - name: Install MiKTeX
-        if: matrix.leg == 'compile'
-        uses: ./.github/actions/install-miktex
-
-      # MiKTeX brings the engines. The runner has neither pandoc nor the
-      # DejaVu Serif that the Book PDF asks of fontspec, which the CI image
-      # takes from fonts-dejavu-core, see .github/docker/Dockerfile. A TeX
-      # package cannot stand in for it, because XeTeX reads the fonts of
-      # the system.
+      # The runner has neither pandoc nor the DejaVu Serif that the Book
+      # PDF asks of fontspec, which the CI image takes from
+      # fonts-dejavu-core, see .github/docker/Dockerfile. A TeX package
+      # cannot stand in for the font, because XeTeX reads the fonts of the
+      # system, and no entry can carry one either, because a font is
+      # usable once it is registered and a cache holds files alone.
       - name: Install pandoc and the DejaVu fonts
         if: matrix.leg == 'compile'
         shell: pwsh
         run: choco install pandoc dejavufonts --no-progress --yes
 
-      # Before the fetch, so that a missing program fails in seconds rather
-      # than after it.
-      - name: Check that Vim finds the tools
-        if: matrix.leg == 'compile'
-        shell: bash
-        run: .github/scripts/check-windows-tools.sh
-
-      # The packages and the format files come from the entry that
-      # .github/workflows/windows-cache.yml writes, because making them
-      # takes over a hundred seconds in a job that spends three hundred.
-      # A miss fails the leg rather than quietly making them again: run
-      # that workflow by hand to seed this branch, or let its push on main
-      # seed every branch.
+      # MiKTeX comes from the entry that
+      # .github/workflows/windows-cache.yml writes, whole: a portable tree
+      # with its programs, its packages, and its format files. Installing
+      # it cost 108 seconds of every run and a restore costs 23. A miss
+      # fails the leg rather than quietly installing one: run that
+      # workflow by hand to seed this branch, or let its push on main seed
+      # every branch.
       - name: Build the cache key
         if: matrix.leg == 'compile'
         id: texkey
         uses: ./.github/actions/miktex-cache-key
 
-      - name: Restore what the templates need
+      - name: Restore MiKTeX
         if: matrix.leg == 'compile'
         uses: actions/cache/restore@v6.1.0
         with:
           key: ${{ steps.texkey.outputs.key }}
           path: ${{ steps.texkey.outputs.paths }}
           fail-on-cache-miss: true
+
+      - name: Use the restored MiKTeX
+        if: matrix.leg == 'compile'
+        shell: bash
+        env:
+          PORTABLE_DIR: ${{ steps.texkey.outputs.tree }}
+        run: .github/scripts/use-portable-miktex.sh
+
+      # After the restore, because nothing of MiKTeX is on the runner
+      # before it, and before the tests, so that a program which cannot
+      # run fails in seconds rather than after two timeouts of a minute
+      # each.
+      - name: Check that Vim finds the tools
+        if: matrix.leg == 'compile'
+        shell: bash
+        run: .github/scripts/check-windows-tools.sh
 
       # The entry carries the package database as well, so MiKTeX is told
       # to read the packages from it. Everything a compile installs then

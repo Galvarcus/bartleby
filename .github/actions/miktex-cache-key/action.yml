@@ -1,9 +1,14 @@
 name: MiKTeX cache key
 description: >-
-  Answer with the key, the folders, and the package repository of the cache
-  that holds what MiKTeX needs for a compile, so that the workflow which
-  writes the entry and the jobs which read it cannot disagree about any of
-  them.
+  Answer with the key, the folders, the portable tree, and the package
+  repository of the cache that holds the MiKTeX a compile needs, so that
+  the workflow which writes the entry and the jobs which read it cannot
+  disagree about any of them.
+
+inputs:
+  set:
+    description: The package set the tree is made from.
+    default: basic
 
 outputs:
   key:
@@ -12,56 +17,61 @@ outputs:
   paths:
     description: The folders that the entry holds, one to a line.
     value: ${{ steps.key.outputs.paths }}
+  tree:
+    description: The folder of the portable MiKTeX in the entry.
+    value: ${{ steps.key.outputs.tree }}
   repo:
     description: The folder of the local package repository in the entry.
     value: ${{ steps.key.outputs.repo }}
+  set:
+    description: The package set the tree is made from.
+    value: ${{ inputs.set }}
 
 runs:
   using: composite
   steps:
-    # The version of MiKTeX names the key, because a format file is built
-    # against one build of it. Without the version a newer MiKTeX would
-    # read a stale format rather than miss the entry, and fail in a way
-    # that looks nothing like the cause.
+    # The key names no version of MiKTeX, and it asks the runner for
+    # nothing: the leg that reads the entry has no MiKTeX at all before
+    # the restore, because the entry is the MiKTeX. The version was in
+    # the key while format files were cached without the engines that
+    # built them, where a newer engine would read a stale format. A whole
+    # tree carries engine and format together, so that cannot happen.
     #
-    # The files of the warm-up name it as well: the packages it fetches
-    # come from the templates, read by texcheck.vim, so a new class or
-    # package has to make a new entry. make-tex-repo.sh names it because
-    # it decides what the repository in the entry holds.
+    # The epoch is therefore the only thing that retires an entry, and it
+    # is deliberate: CI keeps the MiKTeX of the last seeding run until
+    # someone raises the epoch, which is determinism rather than a
+    # distribution that changes under a test. The files that decide what
+    # the entry holds name it as well, so a new class, package, or script
+    # makes a new entry on its own.
     - name: Build the key and the folders
       id: key
       shell: bash
       env:
-        PREFIX: windows-tex-v2
+        PREFIX: windows-miktex-v1
+        SET: ${{ inputs.set }}
       run: |
-        version=$(initexmf --report 2>/dev/null | sed -n 's/^CurrentVersion: //p')
-        if [ -z "$version" ]; then
-          echo "::error::initexmf reported no CurrentVersion, so the key can name no MiKTeX version. Is MiKTeX installed before this action?"
-          exit 1
-        fi
         digest=$(cat \
+          .github/scripts/make-portable-miktex.sh \
           .github/scripts/warm-miktex.sh \
           .github/scripts/make-tex-repo.sh \
           .github/scripts/latex-needs.vim \
           autoload/bartleby/texcheck.vim \
           tools/latex/*.tex | sha256sum | cut -c1-16)
-        echo "key=$PREFIX-$version-$digest" >> "$GITHUB_OUTPUT"
+        echo "key=$PREFIX-$SET-$digest" >> "$GITHUB_OUTPUT"
 
-        # The three folders of the entry. The packages that the warm-up
-        # fetches, under Roaming, and the format files the engines build,
-        # under Local. Not Program Files, which is the install itself at
-        # 469MB and 19000 files, where a restore can cost more than the
-        # install it would replace. And the local package repository, so
-        # that the package database travels with the packages: without it
-        # the first install of a compile goes to a server that a job
-        # cannot answer.
-        home=${USERPROFILE//\\//}
-        repo=$home/bartleby-tex-repo
-        echo "repo=$repo" >> "$GITHUB_OUTPUT"
+        # The two folders of the entry. The portable tree, which holds
+        # the programs, the packages, and the format files, and which
+        # keeps its configuration in itself rather than in the registry
+        # of the host, so a restore needs nothing of the runner. And the
+        # package repository, so that a package install which a compile
+        # starts reads a folder instead of a server.
+        tree=C:/miktex-portable
+        repo=C:/bartleby-tex-repo
         {
+          echo "tree=$tree"
+          echo "repo=$repo"
           echo 'paths<<PATHS'
-          echo "$home/AppData/Local/MiKTeX"
-          echo "$home/AppData/Roaming/MiKTeX"
+          echo "$tree"
           echo "$repo"
           echo 'PATHS'
         } >> "$GITHUB_OUTPUT"

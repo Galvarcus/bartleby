@@ -14,7 +14,7 @@
 #
 # A failure here is not an error. The work is an optimisation, and
 # AutoInstall stays on to catch whatever this misses, see
-# .github/actions/install-miktex.
+# .github/scripts/make-portable-miktex.sh, which sets it in the tree.
 
 set -u
 
