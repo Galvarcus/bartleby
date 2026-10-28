@@ -32,4 +32,26 @@ if [ ! -f tests/smoke_results.txt ]; then
 fi
 
 cat tests/smoke_results.txt
-grep -qx 'All smoke tests passed' tests/smoke_results.txt
+if grep -qx 'All smoke tests passed' tests/smoke_results.txt; then
+  exit 0
+fi
+
+# What the compile said, which no job has ever printed. A test reports
+# only that no PDF appeared within its minute, and the reason is in the
+# log that Bartleby writes for each run. The tests set a private HOME
+# under the temporary folder, so the logs are found there rather than at
+# a path this script could name.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
+temp=${TEMP:-${TMPDIR:-/tmp}}
+temp=${temp//\\//}
+logs=$(find "$temp" -path '*/.bartleby/logs/*' -type f 2>/dev/null | sort | tail -4)
+if [ -z "$logs" ]; then
+  echo "::warning::No log of Bartleby lies under $temp, so the compile said nothing that this script can read."
+else
+  for log in $logs; do
+    echo "--- $log"
+    cat "$log"
+    echo
+  done
+fi
+exit 1
