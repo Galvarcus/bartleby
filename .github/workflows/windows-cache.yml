@@ -83,6 +83,7 @@ jobs:
         if: steps.found.outputs.cache-hit != 'true'
         shell: bash
         run: .github/scripts/warm-miktex.sh
+        run: find . -name miktex-zzdb*.tar.lzma
 
       - name: Save the entry
         if: steps.found.outputs.cache-hit != 'true'
