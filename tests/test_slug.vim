@@ -31,9 +31,9 @@ def Test_a_separator_of_a_path_never_survives(): void
 enddef
 
 # A letter outside a to z is dropped rather than turned into its nearest
-# plain letter, so Uber and Ober give the same name and a title in a
-# script of its own gives none at all. layout.vim answers an empty slug
-# with untitled.
+# plain letter, so Über and Ober give the same slug and a title in a
+# script of its own gives none at all. Only the working files that pandoc
+# and the engines read are named this way, see Safe for the rest.
 def Test_a_letter_outside_ascii_is_dropped(): void
   assert_equal('caf-noir', SU.Slugify('Café Noir'))
   assert_equal('nicode-ber', SU.Slugify('Ünicode Über'))

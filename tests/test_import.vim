@@ -92,7 +92,7 @@ def Test_import_titles_a_document_from_the_file_name(): void
   assert_equal([], importer.skipped)
   assert_equal(['Scene 1', 'Arrival'], Titles(chapter))
   var doc = importer.added[0]
-  assert_equal('manuscript/chapter-1/arrival.md', doc.relPath)
+  assert_equal('manuscript/chapter-1/Arrival.md', doc.relPath)
   assert_equal(['The train was late.'], readfile(doc.AbsPath(project.BinderRoot())))
   # The source stays where it is.
   assert_true(filereadable(path))
@@ -108,8 +108,8 @@ def Test_import_keeps_the_order_of_the_paths(): void
   importer.Files(RowOf(project, chapter.id), paths)
 
   assert_equal(['Scene 1', 'One', 'Two', 'Three'], Titles(chapter))
-  assert_equal(['manuscript/chapter-1/one.md', 'manuscript/chapter-1/two.md',
-    'manuscript/chapter-1/three.md'],
+  assert_equal(['manuscript/chapter-1/One.md', 'manuscript/chapter-1/Two.md',
+    'manuscript/chapter-1/Three.md'],
     importer.added->mapnew((_, d) => d.relPath))
   CleanupSources()
   FI.CleanupProjectFiles(project)
@@ -144,7 +144,7 @@ def Test_import_gives_the_copy_the_extension_of_the_scrive(): void
   var chapter = project.ChildAt(1).ChildAt(0)
   var importer = IM.Importer.new(project)
   importer.Files(RowOf(project, chapter.id), [Source('Plain.txt'), Source('Other.markdown')])
-  assert_equal(['manuscript/chapter-1/plain.md', 'manuscript/chapter-1/other.md'],
+  assert_equal(['manuscript/chapter-1/Plain.md', 'manuscript/chapter-1/Other.md'],
     importer.added->mapnew((_, d) => d.relPath))
   FI.CleanupProjectFiles(project)
 
@@ -152,7 +152,7 @@ def Test_import_gives_the_copy_the_extension_of_the_scrive(): void
   var folder = play.ChildAt(0)
   var playImporter = IM.Importer.new(play)
   playImporter.Files(RowOf(play, folder.id), [Source('Scene.md'), Source('Open.fountain')])
-  assert_equal(['screenplay/scene.fountain', 'screenplay/open.fountain'],
+  assert_equal(['manuscript/Scene.fountain', 'manuscript/Open.fountain'],
     playImporter.added->mapnew((_, d) => d.relPath))
   CleanupSources()
   FI.CleanupProjectFiles(play)
@@ -215,7 +215,7 @@ def Test_two_sources_of_one_name_get_their_own_files(): void
   var importer = IM.Importer.new(project)
   importer.Files(RowOf(project, chapter.id), [first, second])
 
-  assert_equal(['manuscript/chapter-1/arrival.md', 'manuscript/chapter-1/arrival-2.md'],
+  assert_equal(['manuscript/chapter-1/Arrival.md', 'manuscript/chapter-1/Arrival-2.md'],
     importer.added->mapnew((_, d) => d.relPath))
   assert_equal(['Second.'],
     readfile(importer.added[1].AbsPath(project.BinderRoot())))
@@ -295,9 +295,9 @@ def Test_a_folder_import_keeps_its_tree(): void
   assert_equal('Novel', root.title)
   assert_equal(['Act One', 'Notes'], Titles(root))
   assert_equal(['Scene A', 'Scene B'], Titles(root.ChildAt(0)))
-  assert_equal(['manuscript/chapter-novel/act-one/scene-a.md',
-    'manuscript/chapter-novel/act-one/scene-b.md',
-    'manuscript/chapter-novel/notes.md'],
+  assert_equal(['manuscript/chapter-Novel/Act-One/Scene-A.md',
+    'manuscript/chapter-Novel/Act-One/Scene-B.md',
+    'manuscript/chapter-Novel/Notes.md'],
     importer.added->mapnew((_, d) => d.relPath))
   assert_equal(['A.'], readfile(importer.added[0].AbsPath(project.BinderRoot())))
   CleanupSources()

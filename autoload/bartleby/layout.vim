@@ -9,11 +9,13 @@ var is_loaded: bool = true
 # Plugin_Name: Bartleby
 # layout.vim: where the files of documents go on disk. A document lives in
 # the folders of its place in the Binder, from the top level down, as in
-# manuscript/part-1/chapter-2/arrival.md for the scene Arrival in Chapter 2
-# of Part 1. A folder is the slug of its title, after chapter or part for
-# those roles, and a document is the slug of its title. A title with no
-# letter or digit that a slug keeps becomes untitled. A path in use gets
-# -2, -3, and so on.
+# manuscript/part-1/chapter-2/Arrival.md for the scene Arrival in Chapter 2
+# of Part 1. A document, and a folder that the writer named, take the
+# title as it was typed, with a hyphen for every run of what a file
+# system forbids. A folder that every scrive has takes its role instead,
+# because its title comes from the locale. A chapter and a part take the
+# role before the title. A title that keeps nothing becomes untitled, and
+# a path in use gets -2, -3, and so on.
 #
 # New scrives, new documents, and new chapters get their paths from this
 # layout. Tidy moves the files of a scrive whose documents moved in the
@@ -33,28 +35,33 @@ import autoload 'bartleby/scrivenings.vim' as SV
 import autoload 'bartleby/path.vim' as PA
 import 'bartleby/variables/constants.vim' as CO
 
-const CHAPTER_PREFIX: string = 'chapter-'
-const PART_PREFIX: string = 'part-'
+# The folders that every scrive has. Each takes its role as its name,
+# because the titles come from the locale, so a German scrive had
+# vorspann and a Japanese one had untitled for all of them, and no
+# reader of a project or of the documentation could rely on a path.
+const PINNED: list<string> = [CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT,
+  CO.ROLE_CHARS, CO.ROLE_RESEARCH, CO.ROLE_BACK_MATTER, CO.ROLE_TRASH]
 
-# The name of a title that a slug leaves empty.
+# The name of a title that holds nothing a name can keep.
 const UNTITLED: string = 'untitled'
 
-# FUNCTION: Return the slug of title, or UNTITLED when the slug is empty.
+# FUNCTION: Return the name on disk of title, or UNTITLED when the title
+# keeps nothing.
 def SlugOf(title: string): string
-  var slug: string = SU.Slugify(title)
-  return slug ==# '' ? UNTITLED : slug
+  var name: string = SU.Safe(title)
+  return name ==# '' ? UNTITLED : name
 enddef
 
-# FUNCTION: Return the name on disk of folder: the slug of its title, after
-# chapter or part for those roles, so that Chapter 1 is chapter-1.
+# FUNCTION: Return the name on disk of folder: its role for a folder that
+# every scrive has, the role before the title for a chapter or a part, so
+# that chapter 1 is chapter-1, and the title alone for a folder that the
+# writer named.
 export def FolderSlug(folder: BI.BinderItem): string
-  var slug: string = SlugOf(folder.title)
-  if folder.structureRole ==# CO.ROLE_CHAPTER
-    return CHAPTER_PREFIX .. slug
-  elseif folder.structureRole ==# CO.ROLE_PART
-    return PART_PREFIX .. slug
+  var role: string = folder.structureRole
+  if role ==# CO.ROLE_CHAPTER || role ==# CO.ROLE_PART
+    return role .. SU.SEP .. SlugOf(folder.title)
   endif
-  return slug
+  return index(PINNED, role) < 0 ? SlugOf(folder.title) : role
 enddef
 
 # FUNCTION: Return the path, without -2 and so on, and without the

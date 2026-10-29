@@ -350,9 +350,9 @@ def Test_a_chapter_whose_title_repeats_takes_the_next_number(): void
   # The scrive holds the chapters 1 and 2 already, so the repeat is 3.
   var manuscript: BI.BinderItem = TopWithRole(project, CO.ROLE_MANUSCRIPT)
   assert_equal(['1', '2', 'Chapter', '3'], Titles(manuscript))
-  assert_equal('manuscript/chapter-chapter/scene.md',
+  assert_equal('manuscript/chapter-Chapter/Scene.md',
     manuscript.ChildAt(2).ChildAt(0).relPath)
-  assert_equal('manuscript/chapter-3/scene.md',
+  assert_equal('manuscript/chapter-3/Scene.md',
     manuscript.ChildAt(3).ChildAt(0).relPath)
   Cleanup()
   FI.CleanupProjectFiles(project)
@@ -371,7 +371,7 @@ def Test_the_export_fills_the_folder_of_each_role(): void
   var chapter: BI.BinderItem = manuscript.ChildAt(2)
   assert_equal(CO.ROLE_CHAPTER, chapter.structureRole)
   assert_equal(['Scene', 'Scene'], Titles(chapter))
-  assert_equal('manuscript/chapter-chapter/scene.md', chapter.ChildAt(0).relPath)
+  assert_equal('manuscript/chapter-Chapter/Scene.md', chapter.ChildAt(0).relPath)
   assert_equal(['Title Page'], Titles(TopWithRole(project, CO.ROLE_FRONT_MATTER)))
   assert_equal(['Joe'], Titles(TopWithRole(project, CO.ROLE_CHARS)))
   Cleanup()
