@@ -5,6 +5,18 @@
 " which a Vim9 script cannot export. See autoload/bartleby/progress.vim.
 " License: GNU GPL 3.0
 
+" Bartleby loads nothing before Vim 9.2 or under compatibility mode, see
+" plugin/bartleby.vim, so bartleby#progress#Status is not there to call.
+" Airline loads an extension it finds on the runtimepath whatever Vim is
+" running, and apply runs on every statusline redraw. Airline calls init
+" inside a try that catches E117, in both its loop over
+" g:airline_extensions and its glob over the runtimepath, so finishing
+" here costs one warning instead of an error on every redraw.
+" REFERENCE: https://github.com/Galvarcus/bartleby/issues/57
+if v:version < 902 || &cp
+  finish
+endif
+
 function! airline#extensions#bartleby#init(ext) abort
   call airline#parts#define_function('bartleby', 'bartleby#progress#Status')
   call a:ext.add_statusline_func('airline#extensions#bartleby#apply')
