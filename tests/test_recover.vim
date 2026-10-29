@@ -68,6 +68,22 @@ def Test_only_unlisted_documents_count(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+def Test_a_listed_document_stays_listed_when_its_file_changes_case(): void
+  var project = ProjectWithStrays()
+  var root: string = project.BinderRoot()
+  assert_equal(0, rename($'{root}/chapter-1/scene-01.md',
+    $'{root}/chapter-1/Scene-01.md'), 'the rename failed')
+  if &fileignorecase
+    assert_equal(['a-note.md', 'old/lost.md'], RC.UnlistedFiles(project))
+  else
+    # Another case names another file where Vim says nothing folds, so the
+    # one the Binder lists is gone and the new name is a stray.
+    assert_equal(['a-note.md', 'chapter-1/Scene-01.md', 'old/lost.md'],
+      RC.UnlistedFiles(project))
+  endif
+  FI.CleanupProjectFiles(project)
+enddef
+
 def Test_recover_adds_them_once_to_a_folder_before_the_trash(): void
   var project = ProjectWithStrays()
   assert_equal(2, RC.Recover(project))
@@ -142,6 +158,7 @@ enddef
 
 export def RunAll(): void
   Test_only_unlisted_documents_count()
+  Test_a_listed_document_stays_listed_when_its_file_changes_case()
   Test_recover_adds_them_once_to_a_folder_before_the_trash()
   Test_rebuild_takes_the_backup_and_recovers_the_rest()
   Test_rebuild_without_a_backup_starts_from_the_structural_folders()

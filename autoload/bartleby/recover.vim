@@ -39,10 +39,14 @@ export const DAMAGED_SUFFIX: string = '.damaged'
 # included.
 export def UnlistedFiles(project: PO.Project): list<string>
   var root: string = project.BinderRoot()
+  # Keyed by the one spelling of each path, because Rel answers with the
+  # case that a name has on disk while a scrive stores the case it wrote,
+  # and on a file system that folds case those two name one file.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/52
   var listed: dict<bool> = {}
   for row in T.Flatten(project)
     if row.item.IsDoc()
-      listed[row.item.relPath] = true
+      listed[PA.Canon($'{root}/{row.item.relPath}')] = true
     endif
   endfor
   var found: list<string> = []
@@ -52,7 +56,8 @@ export def UnlistedFiles(project: PO.Project): list<string>
     # Unix, but not on every system, so they are skipped here as well. An
     # empty answer means globpath gave a path outside the root, which is
     # nothing of this scrive.
-    if relPath ==# '' || relPath =~# '\(^\|/\)\.' || has_key(listed, relPath) || !filereadable(path)
+    if relPath ==# '' || relPath =~# '\(^\|/\)\.'
+        || has_key(listed, PA.Canon(path)) || !filereadable(path)
       continue
     endif
     found->add(relPath)
