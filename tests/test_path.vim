@@ -112,7 +112,15 @@ def Test_rel_cuts_the_part_below_the_root(): void
   endif
 enddef
 
+# Folded answers what this file system does with case, which is what a
+# path comparison asks. A test of the search for a free name asks the
+# other question, see test_layout.vim.
+def Test_folded_answers_for_this_file_system(): void
+  assert_equal(&fileignorecase ? 'über.md' : 'Über.md', PA.Folded('Über.md'))
+enddef
+
 export def RunAll(): void
+  Test_folded_answers_for_this_file_system()
   Test_canon_answers_one_absolute_path()
   Test_same_holds_for_two_spellings_of_one_file()
   Test_canon_unresolved_tells_a_link_from_what_it_points_at()

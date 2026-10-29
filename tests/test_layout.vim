@@ -220,10 +220,82 @@ def Test_an_open_document_opens_again_at_its_new_path(): void
   FI.CleanupProjectFiles(fx.project)
 enddef
 
+# FUNCTION: Return the paths that a tidy of project would move the
+# document with id to. The fixture gives its scenes the paths of an older
+# layout, so a plan of it always holds their moves too.
+def MovesFor(project: any, id: string): list<string>
+  return LY.Plan(project)
+    ->filter((_, m) => m.item.id ==# id)
+    ->mapnew((_, m) => m.to)
+enddef
+
+# Two titles that differ only in case are one file on Windows and on a
+# default macOS volume, so the second must not take the name of the
+# first, whatever this file system would allow.
+def Test_two_titles_that_differ_only_in_case_take_two_paths(): void
+  var fx = OldLayoutProject()
+  var chapter2 = fx.project.ChildAt(1).ChildAt(1)
+  var upper = BI.BinderItem.NewDocument('Über', '')
+  chapter2.AddChild(upper)
+  LY.Place(fx.project, upper)
+  var lower = BI.BinderItem.NewDocument('über', '')
+  chapter2.AddChild(lower)
+  LY.Place(fx.project, lower)
+  assert_equal('manuscript/chapter-2/Über.md', upper.relPath)
+  assert_equal('manuscript/chapter-2/über-2.md', lower.relPath)
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
+# A title longer than the cap of a name truncates, so two titles can
+# arrive at one name by truncation alone.
+def Test_two_long_titles_that_truncate_alike_take_two_paths(): void
+  var fx = OldLayoutProject()
+  var chapter2 = fx.project.ChildAt(1).ChildAt(1)
+  var first = BI.BinderItem.NewDocument(repeat('日', 90) .. 'A', '')
+  var second = BI.BinderItem.NewDocument(repeat('日', 90) .. 'B', '')
+  chapter2.AddChild(first)
+  chapter2.AddChild(second)
+  LY.Place(fx.project, first)
+  LY.Place(fx.project, second)
+  assert_notequal(first.relPath, second.relPath)
+  assert_true(second.relPath =~# '-2\.md$', $'{second.relPath} has no suffix')
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
+# A path that differs from the layout only in case is already following
+# it, so a tidy of a project written on another system moves nothing.
+def Test_tidy_plans_no_move_for_a_difference_of_case(): void
+  var fx = OldLayoutProject()
+  var scene = fx.project.ChildAt(1).ChildAt(0).ChildAt(0)
+  var want = MovesFor(fx.project, scene.id)[0]
+  scene.SetRelPath(toupper(want))
+  assert_equal([], MovesFor(fx.project, scene.id))
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
+# A file at the name the layout wants, that no document names, is still
+# never written over: the document moves beside it instead. An existing
+# project meets this as soon as a title gains its own letters back.
+def Test_tidy_spares_a_stranger_at_the_name_it_wants(): void
+  var fx = OldLayoutProject()
+  var scene = fx.project.ChildAt(1).ChildAt(0).ChildAt(0)
+  var want = MovesFor(fx.project, scene.id)[0]
+  mkdir(fnamemodify($'{fx.root}/{want}', ':h'), 'p')
+  writefile(['Someone else.'], $'{fx.root}/{want}')
+  assert_equal([substitute(want, '\.md$', '-2.md', '')],
+    MovesFor(fx.project, scene.id))
+  assert_equal(['Someone else.'], LinesOf($'{fx.root}/{want}'))
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
 export def RunAll(): void
   Test_a_role_folder_takes_its_role()
   Test_a_folder_the_writer_named_takes_its_title()
   Test_a_document_takes_the_title_the_writer_typed()
+  Test_two_titles_that_differ_only_in_case_take_two_paths()
+  Test_two_long_titles_that_truncate_alike_take_two_paths()
+  Test_tidy_plans_no_move_for_a_difference_of_case()
+  Test_tidy_spares_a_stranger_at_the_name_it_wants()
   Test_new_scrives_use_the_full_binder_path()
   Test_a_new_document_takes_the_path_of_its_place()
   Test_tidy_moves_the_files_and_their_metadata()

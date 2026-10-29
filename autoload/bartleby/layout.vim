@@ -71,6 +71,19 @@ def BasePath(folders: list<BI.BinderItem>, title: string): string
   return folders->mapnew((_, f) => FolderSlug(f))->add(SlugOf(title))->join('/')
 enddef
 
+# FUNCTION: Return the one key to hold a path under while the layout asks
+# whether it is already claimed. The case is folded whatever this system
+# does with it, because the project is what travels: two names that
+# differ only in case are two files here and one file on Windows or on a
+# default macOS volume, and the second would overwrite the first. The two
+# questions beside this one are different. A comparison of paths asks
+# what this file system does, and keeps PA.Canon. The test that tells a
+# file of this project from one the writer placed asks the same, and
+# keeps PA.Folded.
+def Key(relPath: string): string
+  return tolower(relPath)
+enddef
+
 # FUNCTION: Return the first of base, base-2, base-3, and so on, with ext,
 # that Taken does not report in use.
 def FreePath(base: string, ext: string, Taken: func(string): bool): string
@@ -86,8 +99,10 @@ enddef
 # FUNCTION: Return true when relPath is base with ext, or base with -2, -3,
 # and so on, and ext: a path that the layout could give.
 def FollowsLayout(relPath: string, base: string, ext: string): bool
-  return relPath ==# base .. ext
-    || relPath =~# CO.PAT_NOMAGIC_BOL .. escape(base, '\') .. '-\d\+' .. escape(ext, '\') .. '\$'
+  var key: string = Key(relPath)
+  return key ==# Key(base .. ext)
+    || key =~# CO.PAT_NOMAGIC_BOL .. escape(Key(base), '\') .. '-\d\+'
+      .. escape(Key(ext), '\') .. '\$'
 enddef
 
 # FUNCTION: Call Visit for each document in items, with the folders from
@@ -126,7 +141,7 @@ def UsedPaths(project: PO.Project, skip: dict<bool>): dict<bool>
   var used: dict<bool> = {}
   for row in T.Flatten(project)
     if row.item.IsDoc() && !has_key(skip, row.item.id)
-      used[row.item.relPath] = true
+      used[Key(row.item.relPath)] = true
     endif
   endfor
   return used
@@ -137,9 +152,10 @@ enddef
 export def AssignPaths(items: list<BI.BinderItem>, ext: string): void
   var used: dict<bool> = {}
   EachDoc(items, [], (doc, folders) => {
-    var relPath: string = FreePath(BasePath(folders, doc.title), ext, (p) => has_key(used, p))
+    var relPath: string = FreePath(BasePath(folders, doc.title), ext,
+      (p) => has_key(used, Key(p)))
     doc.SetRelPath(relPath)
-    used[relPath] = true
+    used[Key(relPath)] = true
   })
 enddef
 
@@ -164,9 +180,9 @@ export def Place(project: PO.Project, item: BI.BinderItem): void
   var root: string = project.BinderRoot()
   for [doc, folders] in docs
     var relPath: string = FreePath(BasePath(folders, doc.title), project.DocExt(),
-      (p) => has_key(used, p) || filereadable(root .. '/' .. p))
+      (p) => has_key(used, Key(p)) || filereadable(root .. '/' .. p))
     doc.SetRelPath(relPath)
-    used[relPath] = true
+    used[Key(relPath)] = true
   endfor
 enddef
 
@@ -182,11 +198,14 @@ export def Plan(project: PO.Project): list<dict<any>>
   EachDoc(project.items, [], (doc, folders) => {
     docs->add([doc, BasePath(folders, doc.title)])
   })
-  # The paths of these documents may be given anew. Those of the Trash stay.
+  # The paths of these documents may be given anew. Those of the Trash
+  # stay. current pairs with filereadable below to tell a file of this
+  # project from one the writer placed, so it asks what this file system
+  # does with case, not what any file system might do, see Key.
   var current: dict<bool> = {}
   var ids: dict<bool> = {}
   for [doc, _] in docs
-    current[doc.relPath] = true
+    current[PA.Folded(doc.relPath)] = true
     ids[doc.id] = true
   endfor
   var trashPaths: dict<bool> = UsedPaths(project, ids)
@@ -194,9 +213,9 @@ export def Plan(project: PO.Project): list<dict<any>>
   var assigned: dict<bool> = {}
   var kept: dict<bool> = {}
   for [doc, base] in docs
-    if FollowsLayout(doc.relPath, base, ext) && !has_key(assigned, doc.relPath)
-        && !has_key(trashPaths, doc.relPath)
-      assigned[doc.relPath] = true
+    if FollowsLayout(doc.relPath, base, ext) && !has_key(assigned, Key(doc.relPath))
+        && !has_key(trashPaths, Key(doc.relPath))
+      assigned[Key(doc.relPath)] = true
       kept[doc.id] = true
     endif
   endfor
@@ -205,9 +224,10 @@ export def Plan(project: PO.Project): list<dict<any>>
     if has_key(kept, doc.id)
       continue
     endif
-    var relPath: string = FreePath(base, ext, (p) => has_key(assigned, p) || has_key(trashPaths, p)
-      || (filereadable(root .. '/' .. p) && !has_key(current, p)))
-    assigned[relPath] = true
+    var relPath: string = FreePath(base, ext,
+      (p) => has_key(assigned, Key(p)) || has_key(trashPaths, Key(p))
+        || (filereadable(root .. '/' .. p) && !has_key(current, PA.Folded(p))))
+    assigned[Key(relPath)] = true
     moves->add({item: doc, from: doc.relPath, to: relPath})
   endfor
   return moves

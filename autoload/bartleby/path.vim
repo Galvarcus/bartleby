@@ -58,8 +58,9 @@ enddef
 # it. Vim answers that with fileignorecase, which options.txt gives as on
 # by default where case in file names is normally ignored, naming
 # MS-Windows and macOS. It is read on each call because the writer may set
-# it at any time.
-def Folded(text: string): string
+# it at any time. It is exported for layout.vim, which asks this question
+# of a name beside two others that it must not be confused with.
+export def Folded(text: string): string
   return &fileignorecase ? tolower(text) : text
 enddef
 
