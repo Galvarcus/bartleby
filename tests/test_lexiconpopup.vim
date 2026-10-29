@@ -133,8 +133,9 @@ def Test_the_help_lists_r_on_a_suggestion_only(): void
   Cleanup()
 enddef
 
-# FUNCTION: A thesaurus word that is not found shows suggestions, and then <CR>
-# looks one up. It does not replace, and there are no antonyms to toggle.
+# FUNCTION: A thesaurus word that is not found shows suggestions, and
+# then <CR> looks one up. It does not replace, and there are no antonyms
+# to toggle.
 def Test_the_thesaurus_help_for_a_word_not_found_describes_the_suggestions(): void
   var target = Target('murmurus')
   var shown = HelpText(Popup(CO.KIND_THESAURUS, target, 'murmurus', NOTFOUND))

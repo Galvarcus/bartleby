@@ -177,23 +177,27 @@ def inline_to_latex(text):
 
 @dataclasses.dataclass
 class Table:
-    title: str            # LaTeX
-    rows: list            # of (key, description), LaTeX
+    # Both hold LaTeX, and a row is a key with its description.
+    title: str
+    rows: list
     line: int = 0
     ident: int = 0
 
 
 @dataclasses.dataclass
 class Note:
-    text: str             # LaTeX
+    # LaTeX.
+    text: str
     ident: int = 0
 
 
 @dataclasses.dataclass
 class Document:
     title: str
-    intro: list           # of paragraphs, LaTeX
-    flows: list           # of lists of Table and Note. A flow starts a page.
+    # Paragraphs of LaTeX.
+    intro: list
+    # Each flow is a list of Table and Note, and starts a page.
+    flows: list
 
 
 def split_row(line):
@@ -217,7 +221,8 @@ def parse_markdown(text, name="cheatsheet.md"):
     title = None
     intro = []
     flows = [[]]
-    pending = None            # the title of the table that is expected
+    # The title of the table that is expected.
+    pending = None
     in_groups = False
     i = 0
     while i < len(lines):
@@ -328,9 +333,11 @@ def number_items(document):
 @dataclasses.dataclass
 class Piece:
     """A part of a table, or a note, in a column."""
-    kind: str             # "table" or "note"
+    # Either table or note.
+    kind: str
     ident: int
-    first: int = 0        # the rows [first, last) of a table
+    # The rows of a table, from first up to but not including last.
+    first: int = 0
     last: int = 0
     continued: bool = False
     height: float = 0.0

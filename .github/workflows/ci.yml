@@ -458,8 +458,8 @@ jobs:
       - name: Test the converter
         run: python3 -m unittest discover -s tools/wiki -p 'test_*.py'
 
-  # Node is on the runner, so nothing to install. The tests also check that the
-  # script and the issue templates agree.
+  # Node is on the runner, so nothing to install. The tests also check
+  # that the script and the issue templates agree.
   triage-tool:
     name: Issue triage script tests
     needs: changes
@@ -568,8 +568,9 @@ jobs:
         run: |
           set +e
 
-          # The exports of Bartleby only serve its own files, so an export that
-          # nothing uses is reported too. An older Ghostcode ignores the setting.
+          # The exports of Bartleby serve its own files alone, so an
+          # export that nothing uses is reported too. An older GhostCode
+          # ignores the setting.
           vim \
             -u NONE \
             -N \
@@ -637,8 +638,8 @@ jobs:
         uses: actions/upload-artifact@v7.0.2
         with:
           name: ghostcode-results
-          # The findings beside the log. Without a results file, when GhostCode
-          # could not run, the log still uploads.
+          # The findings beside the log. Without a results file, when
+          # GhostCode could not run, the log still uploads.
           path: |
             ghostcode*.log
             ghostcode_results.txt

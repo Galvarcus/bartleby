@@ -427,9 +427,9 @@ def OpenAt(project: PO.Project, doc: BI.BinderItem, heading: string): void
   endif
 enddef
 
-# FUNCTION: Offer to create a document titled title next to the document of
-# the current buffer, with the first template there, and open it. A link outside the documents of the
-# scrive has no place for one.
+# FUNCTION: Offer to create a document titled title next to the document
+# of the current buffer, with the first template there, and open it. A
+# link outside the documents of the scrive has no place for one.
 def OfferToCreate(project: PO.Project, title: string): void
   var here: BI.BinderItem = SV.DocHere(project)
   if here is null_object
