@@ -372,8 +372,12 @@ class BuildTest(unittest.TestCase):
     def test_a_build_is_the_same_every_time(self):
         os.environ["SOURCE_DATE_EPOCH"] = "1700000000"
         self.addCleanup(os.environ.pop, "SOURCE_DATE_EPOCH", None)
-        _, first = self.build(SMALL, "first")
-        _, second = self.build(SMALL, "second")
+        # One name, two folders. Some builds of xdvipdfmx derive the font
+        # subset tag from the name of the job, so two names give two PDFs
+        # whatever the content holds, and the question here is whether one
+        # build repeats.
+        _, first = self.build(SMALL, "card")
+        _, second = self.build(SMALL, "card")
         self.assertEqual(first.read_bytes(), second.read_bytes())
 
     @need_engine
