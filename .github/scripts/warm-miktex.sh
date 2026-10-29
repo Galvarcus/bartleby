@@ -34,10 +34,18 @@ if [ ! -f "$report" ]; then
   exit 0
 fi
 
+# The lookup is run for its effect, which is an install of whatever is
+# missing, so only its answer is printed. MiKTeX writes two lines of its
+# own to the error output on every call, one about elevated privileges and
+# one about never having checked for updates, which came to 26 lines that
+# said nothing about this job.
 while IFS= read -r name; do
   [ -z "$name" ] && continue
-  echo "Looking for $name"
-  kpsewhich "$name" || true
+  if found=$(kpsewhich "$name" 2>/dev/null); then
+    printf '%s is at %s\n' "$name" "$found"
+  else
+    printf '%s was not found, so nothing could be fetched for it in advance.\n' "$name"
+  fi
 done < "$report"
 
 # Run each engine on each class the templates use, so that the format is
