@@ -34,19 +34,24 @@ const TRAIL_PAT: string = '/\+$'
 # name, and turning it around would name another file.
 const BACKSLASH_IS_SEP: bool = exists('+shellslash') != 0
 
-# FUNCTION: Return path as one absolute path, with forward slashes, no
-# trailing slash, and its symbolic links resolved, keeping its case. Empty
-# for an empty path, because fnamemodify answers the current folder for
-# one, which is nobody's file.
-def Full(path: string): string
+# FUNCTION: Return path as one absolute path, with forward slashes and no
+# trailing slash, and the links in it left as they are, keeping its case.
+# Empty for an empty path, because fnamemodify answers the current folder
+# for one, which is nobody's file.
+def Spelled(path: string): string
   if path ==# ''
     return ''
   endif
-  var abs: string = resolve(fnamemodify(path, ':p'))
+  var abs: string = fnamemodify(path, ':p')
   if BACKSLASH_IS_SEP
     abs = substitute(abs, BACKSLASH_PAT, SEP, 'g')
   endif
   return substitute(abs, TRAIL_PAT, '', '')
+enddef
+
+# FUNCTION: Return path as Spelled does, with its symbolic links resolved.
+def Full(path: string): string
+  return path ==# '' ? '' : Spelled(resolve(fnamemodify(path, ':p')))
 enddef
 
 # FUNCTION: Return text with its case folded where the file system folds
@@ -71,6 +76,13 @@ enddef
 # dictionary by. Not for display and not for a file, see the header.
 export def Canon(path: string): string
   return Folded(Full(path))
+enddef
+
+# FUNCTION: Return the one spelling of path to compare by, with the links
+# in it left as they are. For a comparison that must tell a link from what
+# it points at, where resolving both sides would make them equal.
+export def CanonUnresolved(path: string): string
+  return Folded(Spelled(path))
 enddef
 
 # FUNCTION: Return true when a and b name one file. False when either is

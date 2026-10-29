@@ -517,9 +517,14 @@ export class Importer
         # that it does not always name that way, so a resolve that moves
         # the last part of the path is a link as well. The parent is
         # resolved too, because a link above the source, as /tmp is on
-        # macOS, must not make every folder under it look like one.
+        # macOS, must not make every folder under it look like one. The
+        # comparison goes through path.vim, since resolve answers with the
+        # separator and the case of the system and two spellings of one
+        # folder would read as a link, and the name on the right stays
+        # unresolved, which is the test itself.
         # REFERENCE: https://github.com/Galvarcus/bartleby/issues/50
-        if getftype(path) ==# 'link' || resolve(path) !=# $'{resolve(dir)}/{name}'
+        if getftype(path) ==# 'link'
+            || PA.Canon(path) !=# PA.CanonUnresolved($'{resolve(dir)}/{name}')
           this.skipped->add(path)
           continue
         endif

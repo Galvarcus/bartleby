@@ -45,6 +45,28 @@ def Test_same_holds_for_two_spellings_of_one_file(): void
   endif
 enddef
 
+def Test_canon_unresolved_tells_a_link_from_what_it_points_at(): void
+  var real: string = FI.TempPath()
+  mkdir(real, 'p')
+  var link: string = $'{real}-link'
+  if !FI.MakeLink(real, link)
+    echomsg 'SKIP: the system made no symbolic link'
+    delete(real, 'rf')
+    return
+  endif
+  assert_equal(PA.Canon(real), PA.Canon(link))
+  assert_notequal(PA.CanonUnresolved(link), PA.CanonUnresolved(real))
+  assert_equal(PA.Canon(real), PA.CanonUnresolved(real))
+  # The spelling is settled either way: no trailing slash, and the case
+  # folded where Vim says the file system folds it.
+  assert_equal(PA.CanonUnresolved(link), PA.CanonUnresolved($'{link}/'))
+  if &fileignorecase
+    assert_equal(PA.CanonUnresolved(link), PA.CanonUnresolved(toupper(link)))
+  endif
+  delete(link, 'rf')
+  delete(real, 'rf')
+enddef
+
 def Test_same_sees_through_a_symbolic_link(): void
   var real: string = tempname()
   mkdir(real, 'p')
@@ -93,6 +115,7 @@ enddef
 export def RunAll(): void
   Test_canon_answers_one_absolute_path()
   Test_same_holds_for_two_spellings_of_one_file()
+  Test_canon_unresolved_tells_a_link_from_what_it_points_at()
   Test_same_sees_through_a_symbolic_link()
   Test_under_takes_the_root_itself_and_what_lies_in_it()
   Test_rel_cuts_the_part_below_the_root()
