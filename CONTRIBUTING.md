@@ -106,6 +106,20 @@ Run these from the root of the repository, with Logger on the runtimepath as
 | Cheat sheet | `python3 tools/cheatsheet/build_cheatsheet.py --check` | it reports the file valid |
 | Cheat sheet tests | `python3 -m unittest discover -s tools/cheatsheet -p 'test_*.py'` | all tests pass |
 | Workflows | `actionlint .github/workflows/*.yml` | no findings |
+| GhostCode | `vim --cmd 'set rtp+=.,deps/Logger,<GhostCode>' -c 'let g:ghostcode_exports_are_api = 0' -c 'runtime plugin/ghostcode.vim' -c 'GhostCode .' -c 'copen'` | no finding is marked `[ghost]` |
+
+[GhostCode](https://github.com/Galvarcus/GhostCode) finds dead code, and CI
+runs it on every change to the plugin. It needs its own checkout, which
+`<GhostCode>` stands for above. The setting matters: the exports of Bartleby
+serve its own files, so without it an export that nothing uses goes
+unreported.
+
+Two things make a local run differ from the job, and both are in the
+quickfix list rather than in your code. `:GhostCode` takes one path and
+reads every file under it, so a `deps/Logger` inside the repository is read
+as well: give Logger by its own path for this check, or read only the
+findings in Bartleby's own files. And a file that git ignores is in your
+checkout and not in CI's.
 
 ## Tests
 
