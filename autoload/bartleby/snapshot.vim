@@ -86,7 +86,10 @@ export def List(project: PO.Project, doc: BI.BinderItem): list<Snap>
   if !isdirectory(dir)
     return []
   endif
-  var files: list<string> = sort(globpath(dir, '*.json', false, true))
+  # nosuf true: wildignore is about which files to offer a writer, and
+  # the snapshots of a document are not up for it.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/53
+  var files: list<string> = sort(globpath(dir, '*.json', true, true))
   return files->mapnew((_, f) => Snap.FromDict(PE.ReadJson(f)))
 enddef
 

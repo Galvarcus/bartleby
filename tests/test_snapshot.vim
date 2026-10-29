@@ -24,6 +24,21 @@ def ProjectAndScene(): list<any>
   return [project, scene]
 enddef
 
+def Test_a_snapshot_is_found_while_wildignore_names_its_extension(): void
+  var [project, scene] = ProjectAndScene()
+  SN.Take(project, scene, 'first')
+  var saved: string = &wildignore
+  # A writer who also edits code may well ignore JSON, and a snapshot of a
+  # document is a JSON file.
+  set wildignore+=*.json
+  try
+    assert_equal(1, len(SN.List(project, scene)))
+  finally
+    &wildignore = saved
+  endtry
+  FI.CleanupProjectFiles(project)
+enddef
+
 def Test_restore_reloads_the_document_in_its_window(): void
   var [project, scene] = ProjectAndScene()
   var path: string = scene.AbsPath(project.BinderRoot())
@@ -68,6 +83,7 @@ def Test_restore_leaves_the_window_of_another_buffer_alone(): void
 enddef
 
 export def RunAll(): void
+  Test_a_snapshot_is_found_while_wildignore_names_its_extension()
   Test_restore_reloads_the_document_in_its_window()
   Test_restore_leaves_the_window_of_another_buffer_alone()
 enddef

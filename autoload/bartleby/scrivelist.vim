@@ -58,7 +58,9 @@ export def CandidateDirs(root: string): list<string>
   if !isdirectory(root)
     return []
   endif
-  return globpath(root, '*' .. CO.SCRIVE_EXT, false, true)
+  # nosuf true, so that a wildignore of the writer cannot hide a scrive.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/53
+  return globpath(root, '*' .. CO.SCRIVE_EXT, true, true)
     ->filter((_, p) => isdirectory(p))
 enddef
 

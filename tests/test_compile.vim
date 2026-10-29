@@ -50,6 +50,21 @@ def AllDocIds(fx: dict<any>): list<string>
   return [fx.dedication.id, fx.scene1.id, fx.scene2.id, fx.acknowledgments.id]
 enddef
 
+def Test_a_target_is_listed_while_wildignore_names_its_extension(): void
+  var project = FI.BuildProject()
+  # FromDict, as the other tests build one: a class member is not
+  # writable from outside the class.
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft'}))
+  var saved: string = &wildignore
+  set wildignore+=*.json
+  try
+    assert_equal(['Draft'], C.ListTargets(project))
+  finally
+    &wildignore = saved
+  endtry
+  FI.CleanupProjectFiles(project)
+enddef
+
 def Test_concatenate_manuscript_full_structure(): void
   var fx = BuildProjectWithContent()
   var target = C.CompileTarget.FromDict({includedIds: AllDocIds(fx)})
@@ -244,6 +259,7 @@ export def RunAll(): void
   Test_a_cover_path_is_never_read_as_a_pattern()
   Test_a_missing_cover_image_stops_the_compile()
   Test_a_missing_cover_does_not_stop_a_format_without_one()
+  Test_a_target_is_listed_while_wildignore_names_its_extension()
   Test_concatenate_manuscript_full_structure()
   Test_concatenate_manuscript_respects_content_selection()
   Test_concatenate_manuscript_separator_appears_between_scenes_in_same_chapter()
