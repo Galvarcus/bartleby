@@ -197,16 +197,18 @@ metadata file, `<name>.meta.json`.
 Binder, as in `binder/manuscript/part-1/chapter-2/Arrival.md` for the
 scene Arrival in Chapter 2 of Part 1. A name keeps the title as you typed
 it, in any script, with a hyphen for every run of what a file system
-forbids. New scrives and new documents follow this layout. After you move documents in the Binder,
-`:BartlebyTidyFiles` moves their files to match, after a confirmation
+forbids. New scrives and new documents follow this layout. After you
+move documents in the Binder, `:BartlebyTidyFiles` moves their files to
+match, after a confirmation
 that says how many move. It stops when a document has unsaved changes,
 never writes over another file, and leaves the Trash as it is.
 
 **Structural folders** - Front Matter, Manuscript, Characters, and
 Research in every scrive, and Back Matter in a novel or a short story.
 Compile uses them. Each is named on disk for its role, `manuscript/` and
-`front-matter/`, in every language. You cannot rename, delete, or move them. `dd` on one
-moves its contents to the Trash, after a confirmation. Chapter and Part
+`front-matter/`, in every language. You cannot rename, delete, or move
+them. `dd` on one moves its contents to the Trash, after a
+confirmation. Chapter and Part
 folders inside Manuscript are also structural, but you can add, move,
 and delete them.
 

@@ -280,6 +280,12 @@ def Test_a_markdown_output_is_written_under_the_name_of_its_target(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+# FUNCTION: Return the first line of path, or an empty string when there
+# is no file to read.
+def FirstLine(path: string): string
+  return filereadable(path) ? get(readfile(path), 0, '') : ''
+enddef
+
 # The writer reads the name of the target, not the slug the engine was
 # given. Book HTML, because it needs pandoc alone and the rename is the
 # same code for every format that runs a job.
@@ -310,11 +316,14 @@ def Test_a_compiled_file_takes_the_accented_name_of_its_target(): void
     writefile([STALE], outputPath)
     C.Execute(fx.project, target)
     var waited: number = 0
-    while waited < MAX_WAIT_MS && readfile(outputPath)[0] ==# STALE
+    # Through filereadable, because Finish deletes the file it is about
+    # to rename onto, so a poll that lands in that window would end the
+    # suite with E484 rather than fail an assertion.
+    while waited < MAX_WAIT_MS && FirstLine(outputPath) ==# STALE
       execute $'sleep {POLL_INTERVAL_MS}m'
       waited += POLL_INTERVAL_MS
     endwhile
-    assert_notequal(STALE, readfile(outputPath)[0],
+    assert_notequal(STALE, FirstLine(outputPath),
       $'the second run left the first output within {MAX_WAIT_MS}ms')
     assert_equal(['Über-Draft.html'],
       glob(outDir .. '/*.html', true, true)->mapnew((_, f) => fnamemodify(f, ':t')),

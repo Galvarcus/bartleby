@@ -716,8 +716,12 @@ Each scrive is a folder under `~/Documents/Bartleby/`. In it:
 - `compile/` holds your compiled files.
 
 The folders in `binder/` follow the Binder. The scene Arrival in
-Chapter 2 of Part 1 is `binder/manuscript/part-1/chapter-2/arrival.md`.
-When you move scenes and chapters in the Binder, their files stay where
+Chapter 2 of Part 1 is `binder/manuscript/part-1/chapter-2/Arrival.md`.
+A file keeps the title you typed, in any script, with a hyphen for
+every run of what a file system forbids, so Café Noir is
+`Café-Noir.md`. The folders that every scrive has are named for what
+they are, `manuscript/` and `front-matter/`, in every language. When
+you move scenes and chapters in the Binder, their files stay where
 they are. To move the files to match, run `:BartlebyTidyFiles`, and
 press `y`. Save your changes first: a document with unsaved changes
 stops it. A scrive made before this layout can be tidied the same way.

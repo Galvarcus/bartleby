@@ -828,10 +828,6 @@ def PandocMetadataArgs(project: PO.Project): list<string>
   return args
 enddef
 
-# FUNCTION: Ask whether to open the compiled file, with yes as the
-# default. Markdown opens in a new tab, so that no scrive window is
-# replaced. Every other format opens in the system viewer with Vim's
-# dist#vim9#Open, the function behind :Open.
 # FUNCTION: Return the path that the output of a target belongs at: its
 # own folder, under the name the writer gave the target, with ext. The
 # engines compile to a slug, because a TeX engine is unreliable with a
@@ -863,6 +859,10 @@ def Finish(target: CompileTarget, outputPath: string, finalPath: string): void
   OfferToOpen(target, final)
 enddef
 
+# FUNCTION: Ask whether to open the compiled file, with yes as the
+# default. Markdown opens in a new tab, so that no scrive window is
+# replaced. Every other format opens in the system viewer with Vim's
+# dist#vim9#Open, the function behind :Open.
 def OfferToOpen(target: CompileTarget, outputPath: string): void
   log.Info(MK.Compiled(fnamemodify(outputPath, ":~")))
   DP.Confirm(MK.CompiledOpen(target.name), () => {
