@@ -48,7 +48,6 @@ export def ListScrives(): list<string>
     return []
   endif
   # nosuf true, so that a wildignore of the writer cannot hide a scrive.
-  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/53
   return globpath(root, '*' .. CO.SCRIVE_EXT, true, true)
     ->filter((_, p) => isdirectory(p))
     ->mapnew((_, p) => fnamemodify(p, ':t:r'))

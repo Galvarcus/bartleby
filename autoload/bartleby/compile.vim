@@ -175,7 +175,6 @@ export def ListTargets(project: PO.Project): list<string>
     return []
   endif
   # nosuf true, so that a wildignore of the writer cannot hide a target.
-  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/53
   return globpath(dir, FILE_JSON, true, true)
     ->mapnew((_, p) => CompileTarget.FromDict(PE.ReadJson(p)).name)
 enddef
@@ -1056,7 +1055,6 @@ def NewLogBase(project: PO.Project, target: CompileTarget): string
     .. '_' .. SU.Slugify(target.name) .. '_'
   if log_retention > 0
     # nosuf true, or a wildignore of the writer leaves the logs untrimmed.
-    # REFERENCE: https://github.com/Galvarcus/bartleby/issues/53
     var older: list<string> = sort(glob($'{logDir}/{prefix}[0-9]*.*', true, true))
     var excess: number = len(older) - (log_retention - 1)
     if excess > 0

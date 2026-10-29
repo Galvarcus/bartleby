@@ -886,7 +886,6 @@ export class InputPopup
     var f: dict<any> = this.fields[0]
     # The trailing space is for the cursor at the end of the text, as in
     # RenderMultiline.
-    # REFERENCE: https://github.com/Galvarcus/bartleby/issues/3
     var lines: list<string> = ['> ' .. f.value .. ' ']
     for i in range(f.maxVisible)
       var idx: number = f.scrollTop + i

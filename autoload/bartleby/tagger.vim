@@ -38,7 +38,6 @@ import 'bartleby/variables/constants.vim' as CO
 
 const SETTING_SPACY: string = 'spacy'
 const MODEL_KEY: string = 'spacy_model'
-# The script that the spacy tagger runs, under the plugin folder.
 const SPACY_SCRIPT: string = 'tools/pos/spacy_tagger.py'
 # The programs that run a Python 3 script, in the order to try. Windows
 # installs python.exe and the py launcher, and carries python3.exe only as

@@ -32,7 +32,6 @@ mkdir -p "$portable" "$mirror" setup-utility
 # from a mirror anyway. The name of the utility carries a version and an
 # encoded plus sign, so the index is read for it rather than a name
 # written here.
-# REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
 echo "Fetching the setup utility"
 name=$(curl -fsSL --retry 2 "$setups/" |
   grep -o 'miktexsetup-[^"]*-x64\.zip' | sort -u | tail -1)
