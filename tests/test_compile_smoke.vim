@@ -33,6 +33,9 @@ const TABLES_FILTER: string = expand('<sfile>:p:h:h') .. '/tools/pandoc/tables.l
 # other runs, so the compile is slow there rather than broken.
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/45
 const MAX_WAIT_MS: number = 180000
+
+# The content that a recompile must replace, see the rename test.
+const STALE: string = 'stale'
 const POLL_INTERVAL_MS: number = 500
 
 # FUNCTION: Wait for a file matching pattern in the output folder,
@@ -260,11 +263,73 @@ def Test_the_table_filter_keeps_the_width_with_rules(): void
   assert_match('\\\%(line\|column\)width - 4\\tabcolsep - 3\\arrayrulewidth', tex)
 enddef
 
+# The Markdown format writes its output itself, with no engine and no
+# job, so it is the one route to the rename that needs no program. It
+# lives here rather than in test_compile.vim because the offer to open
+# the output takes yes as its default, and the tab it opens would reach
+# the next suite of the harness as the file the writer is in.
+def Test_a_markdown_output_is_written_under_the_name_of_its_target(): void
+  var project = FI.BuildProject()
+  var target = C.CompileTarget.FromDict({
+    name: 'Über Draft', kind: 'Book', format: 'Markdown', includedIds: [],
+  })
+  C.Execute(project, target)
+  var outDir: string = project.scriveDir .. '/compile/output'
+  assert_equal(['Über-Draft.md'],
+    glob(outDir .. '/*.md', true, true)->mapnew((_, f) => fnamemodify(f, ':t')))
+  FI.CleanupProjectFiles(project)
+enddef
+
+# The writer reads the name of the target, not the slug the engine was
+# given. Book HTML, because it needs pandoc alone and the rename is the
+# same code for every format that runs a job.
+def Test_a_compiled_file_takes_the_accented_name_of_its_target(): void
+  if !executable('pandoc')
+    echom 'SKIP: pandoc not installed'
+    return
+  endif
+  var fx = BuildProjectWithContent()
+  var target = C.CompileTarget.FromDict({
+    name: 'Über Draft', kind: 'Book', format: 'HTML',
+    includedIds: [fx.scene1.id],
+  })
+  var outDir: string = fx.project.scriveDir .. '/compile/output'
+  C.Execute(fx.project, target)
+  var outputPath: string = WaitForOutput(fx.project, 'Über-Draft.html')
+  assert_true(outputPath !=# '',
+    $'no Über-Draft.html within {MAX_WAIT_MS}ms')
+  # One file, so the slug the engine was given is gone rather than left
+  # beside the name the writer reads.
+  assert_equal(['Über-Draft.html'],
+    glob(outDir .. '/*.html', true, true)->mapnew((_, f) => fnamemodify(f, ':t')))
+
+  # A recompile replaces its output, so the rename does too. The marker
+  # says which file the second run wrote: the log of a run cannot,
+  # because two HTML compiles in one second share its timestamp.
+  if outputPath !=# ''
+    writefile([STALE], outputPath)
+    C.Execute(fx.project, target)
+    var waited: number = 0
+    while waited < MAX_WAIT_MS && readfile(outputPath)[0] ==# STALE
+      execute $'sleep {POLL_INTERVAL_MS}m'
+      waited += POLL_INTERVAL_MS
+    endwhile
+    assert_notequal(STALE, readfile(outputPath)[0],
+      $'the second run left the first output within {MAX_WAIT_MS}ms')
+    assert_equal(['Über-Draft.html'],
+      glob(outDir .. '/*.html', true, true)->mapnew((_, f) => fnamemodify(f, ':t')),
+      'after the second run')
+  endif
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
 export def RunAll(): void
   Test_manuscript_pdf_compiles_to_a_real_nonempty_file()
   Test_book_pdf_compiles_to_a_real_nonempty_file()
   Test_pandoc_log_per_run_with_retention()
   Test_failure_writes_a_log_and_asks_to_open_it()
+  Test_a_markdown_output_is_written_under_the_name_of_its_target()
+  Test_a_compiled_file_takes_the_accented_name_of_its_target()
   Test_book_html_tables_get_the_settings()
   Test_the_table_filter_draws_lines_only_when_asked()
   Test_the_table_filter_styles_the_header()

@@ -50,6 +50,23 @@ def AllDocIds(fx: dict<any>): list<string>
   return [fx.dedication.id, fx.scene1.id, fx.scene2.id, fx.acknowledgments.id]
 enddef
 
+# The engines compile to a slug, because a TeX engine is unreliable with
+# a path outside ASCII, and the artifact is renamed once the run has
+# succeeded.
+def Test_an_output_path_takes_the_name_of_its_target(): void
+  assert_equal('/out/Über.pdf', C.FinalPath('/out/ber.pdf', 'Über', 'pdf'))
+  assert_equal('/out/日本語.epub',
+    C.FinalPath('/out/untitled.epub', '日本語', 'epub'))
+  # The extension is given, never read back: the extension of /out/.pdf
+  # is empty, and the name would end in the dot Windows forbids.
+  assert_equal('/out/日本語.pdf', C.FinalPath('/out/.pdf', '日本語', 'pdf'))
+  # A name the fold empties leaves the path as the engine wrote it.
+  assert_equal('/out/untitled.pdf', C.FinalPath('/out/untitled.pdf', '***', 'pdf'))
+  # A name that a file system reads as a device is guarded, as a
+  # document's name is.
+  assert_equal('/out/doc-Nul.pdf', C.FinalPath('/out/nul.pdf', 'Nul', 'pdf'))
+enddef
+
 # The slug of a name in a script of its own is empty, so the definition
 # was saved as .json, which the *.json glob never returned, and the
 # target vanished as soon as it was saved.
@@ -269,6 +286,7 @@ export def RunAll(): void
   Test_a_cover_path_is_never_read_as_a_pattern()
   Test_a_missing_cover_image_stops_the_compile()
   Test_a_missing_cover_does_not_stop_a_format_without_one()
+  Test_an_output_path_takes_the_name_of_its_target()
   Test_a_target_name_that_slugs_to_nothing_is_still_listed()
   Test_a_target_is_listed_while_wildignore_names_its_extension()
   Test_concatenate_manuscript_full_structure()

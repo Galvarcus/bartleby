@@ -832,6 +832,37 @@ enddef
 # default. Markdown opens in a new tab, so that no scrive window is
 # replaced. Every other format opens in the system viewer with Vim's
 # dist#vim9#Open, the function behind :Open.
+# FUNCTION: Return the path that the output of a target belongs at: its
+# own folder, under the name the writer gave the target, with ext. The
+# engines compile to a slug, because a TeX engine is unreliable with a
+# path outside ASCII, so the name is taken afterwards, by a rename.
+export def FinalPath(path: string, name: string, ext: string): string
+  var safe: string = SU.Safe(name)
+  return safe ==# '' ? path : $'{fnamemodify(path, ":h")}/{safe}.{ext}'
+enddef
+
+# FUNCTION: Give the output the name of its target, then offer to open
+# it. A rename that fails leaves the artifact where the engine wrote it
+# and offers that, because the compile itself succeeded.
+def Finish(target: CompileTarget, outputPath: string, finalPath: string): void
+  var final: string = finalPath
+  if final !=# outputPath
+    # A recompile overwrites its output, so the rename does too. The
+    # second test keeps a rename that only changes case from deleting the
+    # file it is about to move, where one name reaches both. It folds
+    # whatever this system does, because fileignorecase answers for the
+    # platform rather than for the volume.
+    if filereadable(final) && tolower(final) !=# tolower(outputPath)
+      delete(final)
+    endif
+    if rename(outputPath, final) != 0
+      log.Warn(MK.RenameFailed(outputPath, fnamemodify(final, ':t')))
+      final = outputPath
+    endif
+  endif
+  OfferToOpen(target, final)
+enddef
+
 def OfferToOpen(target: CompileTarget, outputPath: string): void
   log.Info(MK.Compiled(fnamemodify(outputPath, ":~")))
   DP.Confirm(MK.CompiledOpen(target.name), () => {
@@ -848,14 +879,14 @@ enddef
 # offer to open that log in a new tab. Pandoc writes its own log only on
 # success, so this failure log is the only record of what went wrong.
 def RunJob(label: string, cmd: list<string>, target: CompileTarget,
-    outputPath: string, logBase: string): void
+    outputPath: string, finalPath: string, logBase: string): void
   var errLines: list<string> = []
   log.Info(MK.Compiling(target.name, label))
   job_start(cmd, {
     err_cb: (_, line) => errLines->add(line),
     exit_cb: (_, status) => {
       if status ==# 0
-        OfferToOpen(target, outputPath)
+        Finish(target, outputPath, finalPath)
       else
         log.Error(MK.ExitedStatus(cmd[0], status, join(errLines, " | ")))
         OfferFailureLog(target, WriteFailureLog(logBase .. EXT_LOG, cmd, status, errLines))
@@ -899,7 +930,8 @@ def ExecuteScreenplay(project: PO.Project, target: CompileTarget): void
   var fountainPath: string = $'{outDir}/.{SlugName(target.name)}-src.fountain'
   writefile(ConcatenateDocs(project, target, ''), fountainPath)
   RunJob($'{target.kind}/{target.format}', [screenplain_bin, fountainPath, outputPath],
-    target, outputPath, NewLogBase(project, target))
+    target, outputPath, FinalPath(outputPath, target.name, ext),
+    NewLogBase(project, target))
 enddef
 
 def BuildDocLines(project: PO.Project, target: CompileTarget): list<string>
@@ -965,7 +997,7 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
 
   if target.format ==# FMT_MARKDOWN
     writefile(BuildDocLines(project, target), outputPath)
-    OfferToOpen(target, outputPath)
+    Finish(target, outputPath, FinalPath(outputPath, target.name, ext))
     return
   endif
 
@@ -1033,7 +1065,8 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   var logBase: string = NewLogBase(project, target)
   args->add($'--log={logBase}.json')
 
-  RunJob($'{target.kind}/{target.format}', [pandoc_bin] + args, target, outputPath, logBase)
+  RunJob($'{target.kind}/{target.format}', [pandoc_bin] + args, target, outputPath,
+    FinalPath(outputPath, target.name, ext), logBase)
 enddef
 
 # FUNCTION: Return the paper size for PDF: g:bartleby_compile_papersize

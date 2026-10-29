@@ -95,6 +95,10 @@ export def SkippingMissingFile(path: any): string
   return printf(IN.T("skipping missing file: %s"), path)
 enddef
 
+export def RenameFailed(path: any, name: any): string
+  return printf(IN.T("compiled %s, but it could not be renamed to %s"), path, name)
+enddef
+
 export def Compiled(path: any): string
   return printf(IN.T("compiled: %s"), path)
 enddef
