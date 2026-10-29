@@ -12,7 +12,8 @@ name: CI
 # The TeX check on MiKTeX runs on Windows, because MiKTeX is the one
 # distribution that installs a missing package while it compiles, and no
 # Linux job can prove what Bartleby does with it. That job restores a
-# portable MiKTeX from the entry that windows-cache.yml writes.
+# portable MiKTeX from the entry that the tex-cache job writes, by calling
+# windows-cache.yml in this same run.
 #
 # Vim is installed first in each job that needs it. The compile smoke test,
 # the cheat sheet converter tests, and the cheat sheet run in the CI image,
@@ -259,10 +260,30 @@ jobs:
   # Windows has no timeout to stop a second Vim that hangs, see Limit in
   # tests/fixtures.vim.
   ##########################################################################
+  # The entry that the compile leg restores, written in this run when it is
+  # not saved yet. It was a workflow of its own, started by the same push,
+  # and the leg lost that race three times: it read the key before the
+  # other run had saved it. A job that the leg needs cannot do that.
+  #
+  # It runs only when the compile leg does, and it stops after a lookup
+  # when the entry is already there, which costs about twenty seconds.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/46
+  tex-cache:
+    name: Windows TeX cache
+    needs: changes
+    if: contains(fromJSON(needs.changes.outputs.windows), 'compile')
+    uses: ./.github/workflows/windows-cache.yml
+
   windows:
     name: Windows (${{ matrix.leg }})
-    needs: changes
-    if: needs.changes.outputs.windows != '[]'
+    needs: [changes, tex-cache]
+    # !cancelled() rather than a plain condition, because tex-cache is
+    # skipped for a unit-only run and a skipped need would skip this job
+    # with it. A tex-cache that failed leaves the leg to fail at its
+    # restore, which says which key was missing.
+    if: >-
+      !cancelled()
+      && needs.changes.outputs.windows != '[]'
     runs-on: windows-latest
     timeout-minutes: 30
     strategy:
@@ -293,13 +314,12 @@ jobs:
         shell: pwsh
         run: choco install pandoc dejavufonts --no-progress --yes
 
-      # MiKTeX comes from the entry that
-      # .github/workflows/windows-cache.yml writes, whole: a portable tree
-      # with its programs, its packages, and its format files. Installing
-      # it cost 108 seconds of every run and a restore costs 23. A miss
-      # fails the leg rather than quietly installing one: run that
-      # workflow by hand to seed this branch, or let its push on main seed
-      # every branch.
+      # MiKTeX comes from the entry that the tex-cache job above writes,
+      # whole: a portable tree with its programs, its packages, and its
+      # format files. Installing it cost 108 seconds of every run and a
+      # restore costs 23. A miss fails the leg rather than quietly
+      # installing one, and a miss now means the job before this one could
+      # not write the entry, which its own log says.
       - name: Build the cache key
         if: matrix.leg == 'compile'
         id: texkey
@@ -509,6 +529,7 @@ jobs:
       - changes
       - unit
       - compile-smoke
+      - tex-cache
       - windows
       - tagger-smoke
       - wiki-tool
