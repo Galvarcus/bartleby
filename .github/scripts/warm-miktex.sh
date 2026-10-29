@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Make MiKTeX ready before the tests run. Each test allows 60 seconds for
-# a compile, see MAX_WAIT_MS in tests/test_compile_smoke.vim, and work
+# Make MiKTeX ready before the tests run. Each test allows a compile the
+# time that MAX_WAIT_MS gives it in tests/test_compile_smoke.vim, and work
 # inside that time fails the test as though the compile itself were
 # broken.
 #

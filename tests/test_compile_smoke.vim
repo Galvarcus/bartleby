@@ -25,7 +25,14 @@ import './fixtures.vim' as FI
 # The table filter, for the tests that run it by itself.
 const TABLES_FILTER: string = expand('<sfile>:p:h:h') .. '/tools/pandoc/tables.lua'
 
-const MAX_WAIT_MS: number = 60000
+# How long a test waits for a compile. A minute was not enough on a
+# Windows runner: the Manuscript PDF timed out in runs 40784691668 and
+# 40810002585 while the Book PDF compiled, no log of the run was written,
+# which Bartleby does only once a compile ends, and no engine or pandoc
+# message reported a fault. The same configuration passed both PDFs in
+# other runs, so the compile is slow there rather than broken.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/45
+const MAX_WAIT_MS: number = 180000
 const POLL_INTERVAL_MS: number = 500
 
 # FUNCTION: Wait for a file matching pattern in the output folder,
