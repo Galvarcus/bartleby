@@ -21,7 +21,7 @@ headings and adds the matching labels, so keep the layout the form produces.
 | Running the test suite | Vim 9.2.1172 or newer[^patch] |
 | Either | [Logger](https://github.com/Galvarcus/Logger) on the runtimepath |
 | The compile tests | Pandoc 3.x, `pdflatex`, `xelatex`, and the `sffms` and `ulem` packages |
-| The cheat sheet tests | `xelatex`, with the fonts TeX Gyre Heros and DejaVu Sans Mono[^fonts] |
+| The cheat sheet tests | `xelatex`, the fonts TeX Gyre Heros and DejaVu Sans Mono[^fonts], and `pdftotext` for three of them |
 
 ## Branches
 
