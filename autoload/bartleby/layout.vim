@@ -42,14 +42,11 @@ import 'bartleby/variables/constants.vim' as CO
 const PINNED: list<string> = [CO.ROLE_FRONT_MATTER, CO.ROLE_MANUSCRIPT,
   CO.ROLE_CHARS, CO.ROLE_RESEARCH, CO.ROLE_BACK_MATTER, CO.ROLE_TRASH]
 
-# The name of a title that holds nothing a name can keep.
-const UNTITLED: string = 'untitled'
-
 # FUNCTION: Return the name on disk of title, or UNTITLED when the title
 # keeps nothing.
 def SlugOf(title: string): string
   var name: string = SU.Safe(title)
-  return name ==# '' ? UNTITLED : name
+  return name ==# '' ? CO.UNTITLED : name
 enddef
 
 # FUNCTION: Return the name on disk of folder: its role for a folder that

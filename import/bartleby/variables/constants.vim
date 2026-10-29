@@ -149,6 +149,11 @@ export const FOUNTAIN_SCENE_HEADING_PAT: string =
 export const EXT_FOUNTAIN: string = '.fountain'
 export const PATH_BINDER: string = '/binder'
 
+# The name of a title, or of a compile target, that holds nothing a name
+# on disk can keep. It is stored on disk, so it has its own literal and
+# never derives from a display name.
+export const UNTITLED: string = 'untitled'
+
 # The extensions that an import accepts, lowercase, by scrive type. The
 # copy of an imported file takes the document extension of its scrive,
 # see import.vim.

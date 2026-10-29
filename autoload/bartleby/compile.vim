@@ -165,8 +165,17 @@ def TargetsDir(project: PO.Project): string
   return project.scriveDir .. PATH_COMPILE_TARGETS
 enddef
 
+# FUNCTION: Return the slug of a target's name, or UNTITLED when the slug
+# is empty. The engines read every path this names, so it stays ASCII,
+# and an empty slug made the definition of such a target .json, which the
+# glob that lists them never returned.
+def SlugName(name: string): string
+  var slug: string = SU.Slugify(name)
+  return slug ==# '' ? CO.UNTITLED : slug
+enddef
+
 def TargetPath(project: PO.Project, name: string): string
-  return TargetsDir(project) .. '/' .. SU.Slugify(name) .. EXT_JSON
+  return TargetsDir(project) .. '/' .. SlugName(name) .. EXT_JSON
 enddef
 
 export def ListTargets(project: PO.Project): list<string>
@@ -886,8 +895,8 @@ def ExecuteScreenplay(project: PO.Project, target: CompileTarget): void
     mkdir(outDir, 'p')
   endif
   var ext: string = get(SCREENPLAY_EXT, target.format, 'pdf')
-  var outputPath: string = $'{outDir}/{SU.Slugify(target.name)}.{ext}'
-  var fountainPath: string = $'{outDir}/.{SU.Slugify(target.name)}-src.fountain'
+  var outputPath: string = $'{outDir}/{SlugName(target.name)}.{ext}'
+  var fountainPath: string = $'{outDir}/.{SlugName(target.name)}-src.fountain'
   writefile(ConcatenateDocs(project, target, ''), fountainPath)
   RunJob($'{target.kind}/{target.format}', [screenplain_bin, fountainPath, outputPath],
     target, outputPath, NewLogBase(project, target))
@@ -952,7 +961,7 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
     mkdir(outDir, 'p')
   endif
   var ext: string = get(PANDOC_EXT, target.format, 'pdf')
-  var outputPath: string = $'{outDir}/{SU.Slugify(target.name)}.{ext}'
+  var outputPath: string = $'{outDir}/{SlugName(target.name)}.{ext}'
 
   if target.format ==# FMT_MARKDOWN
     writefile(BuildDocLines(project, target), outputPath)
@@ -965,7 +974,7 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
     return
   endif
 
-  var mdPath: string = $'{outDir}/.{SU.Slugify(target.name)}-src.md'
+  var mdPath: string = $'{outDir}/.{SlugName(target.name)}-src.md'
   var docLines: list<string> = BuildDocLines(project, target)
   writefile(docLines, mdPath)
 

@@ -50,6 +50,16 @@ def AllDocIds(fx: dict<any>): list<string>
   return [fx.dedication.id, fx.scene1.id, fx.scene2.id, fx.acknowledgments.id]
 enddef
 
+# The slug of a name in a script of its own is empty, so the definition
+# was saved as .json, which the *.json glob never returned, and the
+# target vanished as soon as it was saved.
+def Test_a_target_name_that_slugs_to_nothing_is_still_listed(): void
+  var project = FI.BuildProject()
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: '日本語'}))
+  assert_equal(['日本語'], C.ListTargets(project))
+  FI.CleanupProjectFiles(project)
+enddef
+
 def Test_a_target_is_listed_while_wildignore_names_its_extension(): void
   var project = FI.BuildProject()
   # FromDict, as the other tests build one: a class member is not
@@ -259,6 +269,7 @@ export def RunAll(): void
   Test_a_cover_path_is_never_read_as_a_pattern()
   Test_a_missing_cover_image_stops_the_compile()
   Test_a_missing_cover_does_not_stop_a_format_without_one()
+  Test_a_target_name_that_slugs_to_nothing_is_still_listed()
   Test_a_target_is_listed_while_wildignore_names_its_extension()
   Test_concatenate_manuscript_full_structure()
   Test_concatenate_manuscript_respects_content_selection()
