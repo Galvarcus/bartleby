@@ -69,6 +69,7 @@ import './test_profile.vim' as TPR
 import './test_spotlight_pos.vim' as TSP
 import './test_tty.vim' as TTY
 import './test_trash.vim' as TTR
+import './test_slug.vim' as TSG
 import './test_snapshot.vim' as TSN
 import './test_persist.vim' as TPE
 import './test_tagger.vim' as TG
@@ -120,6 +121,7 @@ var suites: list<func(): void> = [
   TSP.RunAll,
   TTY.RunAll,
   TTR.RunAll,
+  TSG.RunAll,
   TSN.RunAll,
   TPE.RunAll,
   TG.RunAll,
