@@ -581,7 +581,6 @@ jobs:
             -c 'let logger_log_dir="./"' \
             -c 'GhostCode .' \
             -c 'vim9cmd call writefile(getqflist()->mapnew((_, item) => printf("%s:%d:%d:%s", bufname(item.bufnr), item.lnum, item.col, item.text)), "ghostcode_results.txt")' \
-            -c 'vim9cmd call writefile([string(getqflist()->count((_, item) => item.text =~# "^\[ghost\]"))], "ghostcode_count.txt")' \
             -c 'qa!'
           vim_exit=$?
           echo "GHOSTCODE LOG:"
@@ -598,7 +597,11 @@ jobs:
             exit 1
           fi
 
-          ghost_count=$(cat ghostcode_count.txt)
+          # Counted from the results file with the pattern that the
+          # annotations below already use, because a Vim string reads
+          # "^\[ghost\]" as the character class ^[ghost] and the count was
+          # therefore always 0: the job could not fail on a finding.
+          ghost_count=$(grep -c ':\[ghost\]' ghostcode_results.txt || true)
 
           echo "GhostCode results:"
           cat ghostcode_results.txt || true
