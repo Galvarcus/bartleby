@@ -21,6 +21,7 @@ headings and adds the matching labels, so keep the layout the form produces.
 | Running the test suite | Vim 9.2.1172 or newer[^patch] |
 | Either | [Logger](https://github.com/Galvarcus/Logger) on the runtimepath |
 | The compile tests | Pandoc 3.x, `pdflatex`, `xelatex`, and the `sffms` and `ulem` packages |
+| The cheat sheet tests | `xelatex`, with the fonts TeX Gyre Heros and DejaVu Sans Mono[^fonts] |
 
 ## Branches
 
@@ -142,6 +143,12 @@ under its table.
 
 Bartleby is under the GNU General Public License 3.0. Your contribution goes
 under the same licence.
+
+[^fonts]: XeTeX finds a font by name through fontconfig, not through the
+file name database of TeX, so a `tex-gyre` installed as TeX files alone
+stays invisible and the build stops with `The font "TeX Gyre Heros" cannot
+be found`. Run `fc-list | grep Heros` to see whether the font is
+resolvable. `build_cheatsheet.py` names both fonts at the top.
 
 [^patch]: The harness refuses to run below that patch and says so. Use the
 latest [vim-appimage](https://github.com/vim/vim-appimage), or
