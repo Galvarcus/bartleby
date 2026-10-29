@@ -11,12 +11,46 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/persist.vim' as PE
+import './fixtures.vim' as FI
 
 # FUNCTION: Return a path for a JSON file in a new temporary directory.
 def NewPath(): string
   var dir: string = tempname()
   mkdir(dir, 'p')
   return dir .. '/data.json'
+enddef
+
+# FUNCTION: Return a new temporary folder and a folder two levels inside
+# it, both made. The folder comes from the fixtures, which answer with the
+# spelling that Vim uses elsewhere.
+def NewTree(): list<string>
+  var root: string = FI.TempPath()
+  var deep: string = $'{root}/chapter-1/scenes'
+  mkdir(deep, 'p')
+  return [root, deep]
+enddef
+
+def Test_an_empty_folder_goes_when_the_root_carries_a_trailing_slash(): void
+  var [root, deep] = NewTree()
+  PE.RemoveEmptyDirectories(deep, root .. '/')
+  assert_false(isdirectory(deep), 'the empty folder stayed')
+  assert_false(isdirectory(fnamemodify(deep, ':h')), 'the folder above it stayed')
+  assert_true(isdirectory(root), 'the root went')
+  delete(root, 'rf')
+enddef
+
+def Test_an_empty_folder_goes_when_the_root_is_spelled_in_another_case(): void
+  var [root, deep] = NewTree()
+  PE.RemoveEmptyDirectories(deep, toupper(root))
+  if &fileignorecase
+    assert_false(isdirectory(deep), 'the empty folder stayed')
+    assert_true(isdirectory(root), 'the root went')
+  else
+    # Another case names another folder where Vim says nothing folds, so
+    # the walk must not begin at all.
+    assert_true(isdirectory(deep), 'a folder outside the root went')
+  endif
+  delete(root, 'rf')
 enddef
 
 def Test_a_write_replaces_the_file_and_leaves_no_temporary_file(): void
@@ -64,6 +98,8 @@ def Test_a_missing_folder_is_made(): void
 enddef
 
 export def RunAll(): void
+  Test_an_empty_folder_goes_when_the_root_carries_a_trailing_slash()
+  Test_an_empty_folder_goes_when_the_root_is_spelled_in_another_case()
   Test_a_write_replaces_the_file_and_leaves_no_temporary_file()
   Test_a_backup_keeps_the_version_before_the_write()
   Test_no_backup_unless_asked()

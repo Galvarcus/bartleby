@@ -19,6 +19,7 @@ var is_loaded: bool = true
 
 import autoload 'bartleby/log.vim' as L
 import autoload 'bartleby/locale/data.vim' as MD
+import autoload 'bartleby/path.vim' as PA
 
 var log = L.New(expand('<sfile>:t'))
 
@@ -80,9 +81,15 @@ enddef
 
 # FUNCTION: Remove dir, and each folder above it, while it is empty, up to
 # root, which stays.
+#
+# path.vim answers both questions about the two paths, because a scrive
+# stores its root with forward slashes while Vim answers with the
+# separator of its own system, and either may be spelled in another case.
+# Compared as text, the walk never began.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/51
 export def RemoveEmptyDirectories(dir: string, root: string): void
   var current: string = dir
-  while current !=# root && stridx(current, root .. '/') == 0
+  while !PA.Same(current, root) && PA.Under(root, current)
       && isdirectory(current) && empty(readdir(current))
     delete(current, 'd')
     current = fnamemodify(current, ':h')
