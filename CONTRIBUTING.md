@@ -42,6 +42,7 @@ Prose for a longer account of the problem and the fix. No bullet points.
 
 fixes:   #NNNN
 related: #NNNN
+closes:  #NNNN
 
 Assisted-by: Name of the AI tool
 Signed-off-by: Your Name <you@example.com>
@@ -58,6 +59,8 @@ Signed-off-by: Your Name <you@example.com>
 - **`fixes:` names the issue the commit fixes**, and **`related:` names an
   issue that bears on it**, including one that caused it. Align the values and
   end them without a period. Both may appear more than once.
+- **`closes:` names the pull request the commit closes.** Write it only in a
+  commit that comes with one, and keep `fixes:` for an issue.
 - **`Assisted-by:` is required when an AI tool wrote any of the change.** Name
   the tool. `Co-authored-by:` names a person instead.
 - Keep each commit to one change.
