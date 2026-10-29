@@ -38,6 +38,15 @@ import 'bartleby/variables/constants.vim' as CO
 
 const SETTING_SPACY: string = 'spacy'
 const MODEL_KEY: string = 'spacy_model'
+# The script that the spacy tagger runs, under the plugin folder.
+const SPACY_SCRIPT: string = 'tools/pos/spacy_tagger.py'
+# The programs that run a Python 3 script, in the order to try. Windows
+# installs python.exe and the py launcher, and carries python3.exe only as
+# the alias of a Microsoft Store install, which the documentation of
+# Python names as a program that may not be there. That documentation
+# gives py as the way to choose a version.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/54
+const PYTHONS: list<list<string>> = [['python3'], ['python'], ['py', '-3']]
 const JOB_RUN: string = 'run'
 const IN_MODE_NL: string = 'nl'
 
@@ -58,6 +67,19 @@ var OnUpdateFn: func() = null_function
 
 const CACHE_LIMIT: number = 5000
 
+# FUNCTION: Return the first of cmds whose program exists, or an empty
+# list when none does. Each item is a program and its flags, so the flags
+# travel with the program that takes them. Exported for its own test,
+# which cannot ask Vim to forget a program that this system has.
+export def FirstRunnable(cmds: list<list<string>>): list<string>
+  for cmd in cmds
+    if !empty(cmd) && executable(cmd[0])
+      return cmd
+    endif
+  endfor
+  return []
+enddef
+
 # FUNCTION: Return the tagger command, or an empty list when none is set.
 export def Command(): list<string>
   var setting: any = get(g:, 'bartleby_spotlight_tagger', '')
@@ -71,7 +93,11 @@ export def Command(): list<string>
     if model ==# ''
       model = LA.Get(MODEL_KEY, '')
     endif
-    return model ==# '' ? [] : ['python3', $'{LA.PluginRoot()}/tools/pos/spacy_tagger.py', model]
+    var python: list<string> = FirstRunnable(PYTHONS)
+    if model ==# '' || empty(python)
+      return []
+    endif
+    return python + [$'{LA.PluginRoot()}/{SPACY_SCRIPT}', model]
   endif
   return []
 enddef
