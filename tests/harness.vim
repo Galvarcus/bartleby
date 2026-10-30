@@ -20,7 +20,9 @@ vim9script
 # Run it from the root of the Bartleby repository, because it writes
 # tests/results.txt relative to the current folder.
 #
-# The exit code is 0 on success and 1 on any failed assertion, with cquit.
+# The exit code is 0 on success and not 0 on any failed assertion, with
+# cquit. A workflow reads tests/results.txt rather than the code, because
+# Vim answers 2 for a run that reported failures of its own.
 # License: GNU GPL 3.0
 ##############################################################################
 # Tests contain UTF-8 text such as curly apostrophes. Without a UTF-8
@@ -55,6 +57,7 @@ endif
 execute 'source ' .. expand('<sfile>:h:h') .. '/plugin/bartleby.vim'
 
 import './fixtures.vim' as FI
+import './report.vim' as RE
 import './test_tree.vim' as TT
 import './test_mutate.vim' as TM
 import './test_document.vim' as TD
@@ -105,6 +108,9 @@ import './test_doctemplates.vim' as TDT
 import './test_lexicon.vim' as TL
 import './test_binder_directory.vim' as TBD
 import './test_autosave.vim' as TAU
+
+const RESULT: string = 'tests/results.txt'
+const PASS: string = 'All tests passed'
 
 var suites: list<func(): void> = [
   TT.RunAll,
@@ -163,23 +169,12 @@ var suites: list<func(): void> = [
 # above, see Step in fixtures.vim for why a file.
 var at: number = 0
 FI.Step('start')
-for RunSuite in suites
+for Suite in suites
   at += 1
   FI.Step($'suite {at} of {len(suites)}')
-  # A suite that throws, rather than failing an assertion, would end the
-  # whole run and leave no result file at all, so the error becomes a
-  # failure of its own and the suites after it still run. An assertion
-  # never throws, so a run with nothing to report is unchanged.
-  try
-    RunSuite()
-  catch
-    v:errors->add($'suite {at} threw {v:exception} at {v:throwpoint}')
-  endtry
+  RE.Run(Suite, $'suite {at}')
 endfor
 
-if len(v:errors) > 0
-  writefile(v:errors + [$'{len(v:errors)} assertion(s) failed'], 'tests/results.txt')
+if !RE.Report(RESULT, PASS)
   cquit 1
-else
-  writefile(['All tests passed'], 'tests/results.txt')
 endif

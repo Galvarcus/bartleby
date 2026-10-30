@@ -11,6 +11,10 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/tagger.vim' as TA
+import './report.vim' as RE
+
+const RESULT: string = 'tests/tagger_results.txt'
+const PASS: string = 'All tagger tests passed'
 
 const TEXT: string = "The door was opened by her.\nShe runs fast. The run was long."
 
@@ -62,10 +66,7 @@ def Test_real_tagger(): void
 enddef
 
 execute 'source ' .. expand('<sfile>:h') .. '/../plugin/bartleby.vim'
-Test_real_tagger()
-if len(v:errors) > 0
-  writefile(v:errors + [$'{len(v:errors)} assertion(s) failed'], 'tests/tagger_results.txt')
+RE.RunTests([Test_real_tagger])
+if !RE.Report(RESULT, PASS)
   cquit 1
-else
-  writefile(['All tagger tests passed'], 'tests/tagger_results.txt')
 endif

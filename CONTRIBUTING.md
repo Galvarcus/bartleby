@@ -126,7 +126,10 @@ checkout and not in CI's.
 
 A new test goes in `tests/test_<area>.vim` and is registered in
 `tests/harness.vim`. Each test file exports one `RunAll` function that calls
-its own test functions.
+its own test functions. A suite that runs as a script of its own, such as a
+smoke test, calls its tests and writes its result through `tests/report.vim`,
+so that a test which throws is one failure and the rest of the suite still
+runs.
 
 Prove that a test guards the change: break the change on purpose, confirm that
 a named test fails, then put it back.

@@ -19,8 +19,12 @@ vim9script
 ##############################################################################
 
 import autoload 'bartleby/texcheck.vim' as TX
+import './report.vim' as RE
 
 const LATEX: string = fnamemodify(expand('<script>'), ':p:h:h') .. '/tools/latex'
+const RESULT: string = 'tests/miktex_results.txt'
+const PASS: string = 'All MiKTeX tests passed'
+
 # A program that only MiKTeX has, see texcheck.vim.
 const MIKTEX_TOOL: string = 'initexmf'
 # The engines of a Manuscript PDF and of a Book PDF, see compile.vim.
@@ -60,16 +64,15 @@ def Test_miktex_leaves_the_classes_and_packages_unchecked(): void
 enddef
 
 export def RunAll(): void
-  Test_a_miktex_install_is_on_the_path()
-  Test_the_engines_of_a_pdf_are_installed()
-  Test_the_templates_name_what_they_need()
-  Test_miktex_leaves_the_classes_and_packages_unchecked()
+  RE.RunTests([
+    Test_a_miktex_install_is_on_the_path,
+    Test_the_engines_of_a_pdf_are_installed,
+    Test_the_templates_name_what_they_need,
+    Test_miktex_leaves_the_classes_and_packages_unchecked,
+  ])
 enddef
 
-RunAll()
-if len(v:errors) > 0
-  writefile(v:errors + [$'{len(v:errors)} assertion(s) failed'], 'tests/miktex_results.txt')
+RE.Run(RunAll, 'the MiKTeX suite')
+if !RE.Report(RESULT, PASS)
   cquit 1
-else
-  writefile(['All MiKTeX tests passed'], 'tests/miktex_results.txt')
 endif
