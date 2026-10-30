@@ -230,16 +230,16 @@ def ImportFacts(): dict<any>
     'facts.inner = manuscript.ChildAt(0).children->mapnew((_, i) => i.title)',
     'var binder = loaded.BinderRoot()',
     'facts.files = [',
-    '  filereadable(binder .. "/manuscript/chapter-novel/chapter-1/arrival.md"),',
-    '  filereadable(binder .. "/manuscript/chapter-novel/notes.md")]',
-    'facts.starterfile = filereadable(binder .. "/manuscript/chapter-1/scene.md")',
+    '  filereadable(binder .. "/manuscript/chapter-Novel/Chapter-1/Arrival.md"),',
+    '  filereadable(binder .. "/manuscript/chapter-Novel/Notes.md")]',
+    'facts.starterfile = filereadable(binder .. "/manuscript/chapter-1/Scene-1.md")',
     $'var nothing = S.CreateFrom("Nothing", "novel", "{bare}")',
     'facts.nothing_made = nothing isnot null_object ? 1 : 0',
     'facts.nothing_dir = isdirectory(S.ScrivePath("Nothing"))',
     'var starters = S.Create("Bare", "novel", false)',
     'facts.bare_tops = starters.items->mapnew((_, i) => i.title)',
     'facts.bare_manuscript = starters.ChildAt(1).ChildCount()',
-    'facts.bare_file = filereadable(starters.BinderRoot() .. "/manuscript/chapter-1/scene.md")',
+    'facts.bare_file = filereadable(starters.BinderRoot() .. "/manuscript/chapter-1/Scene-1.md")',
     $'writefile([json_encode(facts)], "{log}")',
     'qa!',
   ], script)
@@ -260,7 +260,10 @@ def Test_a_scrive_from_a_folder_holds_the_import(): void
   assert_equal(['Front Matter', 'Manuscript', 'Back Matter', 'Characters', 'Research', 'Trash'],
     get(facts, 'tops', []))
   # The imported folder is the only item of the Manuscript, with its own
-  # tree inside it.
+  # tree inside it. The paths that facts.files reads are spelled as the
+  # layout writes them, capitals included: a file system that folds case
+  # answers for a path in any case, so a wrong one passes on macOS and
+  # fails on a Linux runner.
   assert_equal(['Novel'], get(facts, 'manuscript', []))
   assert_equal(['Chapter 1', 'Notes'], get(facts, 'inner', []))
   assert_equal([1, 1], get(facts, 'files', []))
