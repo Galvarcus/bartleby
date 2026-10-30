@@ -122,6 +122,22 @@ def Test_a_name_that_names_a_device_in_superscript_is_guarded(): void
   assert_equal("COM\u2074", SU.Safe("COM\u2074"))
 enddef
 
+# A slug names a file too, so it takes the same cap as a name. Before
+# it did not, and a target of a very long name produced a file name the
+# system refused, so the target was never saved.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/61
+def Test_a_long_slug_is_capped(): void
+  assert_equal(200, strlen(SU.Slugify(repeat('a', 300))))
+  # Whole characters, which a slug can still hold more than one byte of:
+  # a combining mark rides along with the letter it follows.
+  var marked: string = SU.Slugify('a' .. repeat('e' .. nr2char(0x301), 150))
+  assert_equal(199, strlen(marked))
+  # The cut took the mark with its letter, rather than leaving one with
+  # no letter to sit on.
+  assert_notequal(nr2char(0x301), marked[-2 : ])
+  assert_equal(marked, SU.Slugify(marked), 'the capped slug moved again')
+enddef
+
 # A path component holds 255 bytes, and a title of three bytes to the
 # character reaches that in eighty-five characters.
 def Test_a_long_name_is_capped_on_a_character(): void
@@ -155,6 +171,7 @@ export def RunAll(): void
   Test_a_name_folds_a_separator_above_ascii()
   Test_a_name_that_names_a_device_never_stands_alone()
   Test_a_name_that_names_a_device_in_superscript_is_guarded()
+  Test_a_long_slug_is_capped()
   Test_a_long_name_is_capped_on_a_character()
   Test_a_name_is_unchanged_by_a_second_pass()
 enddef

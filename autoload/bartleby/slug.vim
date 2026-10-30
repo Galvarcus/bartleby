@@ -50,7 +50,7 @@ const DEVICE_PREFIX: string = 'doc-'
 # working files that pandoc and the engines read.
 export def Slugify(title: string): string
   var slug: string = substitute(tolower(title), '[^a-z0-9]\+', SEP, 'g')
-  return Guarded(substitute(slug, EDGE_PAT, '', 'g'))
+  return Guarded(substitute(Capped(slug), EDGE_PAT, '', 'g'))
 enddef
 
 # FUNCTION: Return the name on disk of a title the writer typed: its own
@@ -59,12 +59,22 @@ enddef
 export def Safe(title: string): string
   var name: string = substitute(title, SPACE_FOLD_PAT, SEP, 'g')
   name = substitute(name, ASCII_FOLD_PAT, SEP, 'g')
-  # Whole characters, so that no cut leaves half of one, and the edges
-  # are stripped after it, so that no cut leaves a trailing hyphen.
-  while strlen(name) > MAX_BYTES
-    name = strcharpart(name, 0, strchars(name, 1) - 1, 1)
+  return Guarded(substitute(Capped(name), EDGE_PAT, '', 'g'))
+enddef
+
+# FUNCTION: Return name within max bytes, cut on whole characters, so
+# that no cut leaves half of one or strands a combining mark. A caller
+# strips the edges after it, so that no cut leaves a trailing hyphen.
+# One character and its marks are one cut, so a name of a letter and
+# many marks can be cut to nothing, which a caller answers as it answers
+# a title that keeps nothing. The budget is an argument because a log
+# name holds two of these and a path component holds 255 bytes.
+export def Capped(name: string, max: number = MAX_BYTES): string
+  var out: string = name
+  while strlen(out) > max
+    out = strcharpart(out, 0, strchars(out, 1) - 1, 1)
   endwhile
-  return Guarded(substitute(name, EDGE_PAT, '', 'g'))
+  return out
 enddef
 
 # FUNCTION: Return name, or name behind DEVICE_PREFIX when it names a

@@ -56,6 +56,9 @@ const PATH_COMPILE_TARGETS: string = '/compile/targets'
 const EXT_JSON: string = '.json'
 # What job_status answers for a job that never started.
 const JOB_FAIL: string = 'fail'
+# What each of the two names in a log file name may take: 255 bytes for
+# the component, less the timestamp, the two separators and .json.
+const LOG_NAME_BYTES: number = 116
 const FILE_JSON: string = '*.json'
 const SPACING_DOUBLE: string = 'Double'
 const SPACING_SINGLE: string = 'Single'
@@ -285,10 +288,12 @@ export def LoadTarget(project: PO.Project, name: string): CompileTarget
 enddef
 
 # FUNCTION: Write target, over the definition of its own name when one is
-# stored, so that saving a name twice is an edit of that target.
-export def SaveTarget(project: PO.Project, target: CompileTarget): void
+# stored, so that saving a name twice is an edit of that target. Answers
+# whether it wrote, so that nothing compiles a target that is not on
+# disk. The reason a write failed is reported by persist.vim.
+export def SaveTarget(project: PO.Project, target: CompileTarget): bool
   var path: string = PathOf(project, target.name)
-  PE.WriteJson(path ==# '' ? FreeTargetPath(project, target.name) : path,
+  return PE.WriteJson(path ==# '' ? FreeTargetPath(project, target.name) : path,
     target.ToDict())
 enddef
 
@@ -495,17 +500,31 @@ enddef
 
 # FUNCTION: Remove the definition of the name that target was renamed
 # from, and save target over any definition of its own name.
+# FUNCTION: Save target, and remove the definition of the name it was
+# renamed from once it is written. In that order, because a delete that
+# ran first and a write that then failed, on a full disk, left the
+# writer with neither definition. The new one carries a suffixed stem
+# while both are on disk, which no reader of a definition minds.
 export def SaveOver(project: PO.Project, target: CompileTarget,
-    existing: CompileTarget): void
+    existing: CompileTarget): bool
+  if !SaveTarget(project, target)
+    return false
+  endif
   if existing isnot null_object && existing.name !=# target.name
     DeleteTarget(project, existing.name)
   endif
-  SaveTarget(project, target)
+  return true
 enddef
 
-def SaveAndRun(project: PO.Project, target: CompileTarget,
+# FUNCTION: Save target and compile it, and compile nothing that a save
+# did not write. Exported so that a test can reach the gate without
+# driving the popups of the wizard.
+export def SaveAndRun(project: PO.Project, target: CompileTarget,
     existing: CompileTarget): void
-  SaveOver(project, target, existing)
+  if !SaveOver(project, target, existing)
+    log.Error(MK.NotCompiled(target.name))
+    return
+  endif
   Execute(project, target)
 enddef
 
@@ -1062,13 +1081,22 @@ def WriteFailureLog(path: string, cmd: list<string>, status: number,
     MK.ExitStatus(status),
     '',
   ]
-  writefile(lines + (empty(errLines) ? [MK.NoErrOutput()] : errLines), path)
+  # Answers with nothing when it could not write, so that the offer to
+  # open the log is not made for a file that is not there. A throw here
+  # would leave the exit callback of the job, which nothing catches.
+  if writefile(lines + (empty(errLines) ? [MK.NoErrOutput()] : errLines),
+      path) != 0
+    return ''
+  endif
   return path
 enddef
 
 # FUNCTION: Ask whether to open the failure log, with yes as the default.
 # It opens in a new tab, so that no scrive window is replaced.
 def OfferFailureLog(target: CompileTarget, path: string): void
+  if path ==# ''
+    return
+  endif
   DP.Confirm(MK.CompilingFailedOpen(target.name), () => {
     execute 'tabedit ' .. fnameescape(path)
   }, true)
@@ -1248,13 +1276,27 @@ enddef
 # On failure, RunJob writes .log there with the error output. Keep the
 # newest g:bartleby_compile_log_retention logs per scrive and target,
 # this run included, and delete the rest. 0 keeps every log.
+# FUNCTION: Return what every log name of one target in one scrive
+# begins with. Both names are budgeted, because the component holds two
+# of them and a path component holds 255 bytes, which the timestamp and
+# the longest extension written beside it, .json, share. Unbudgeted, a
+# scrive of an ordinary name and a target at the cap gave a name the
+# system refused, so pandoc wrote no log at all and the compile failed
+# with nothing from Bartleby to say why. Taken apart from the name it
+# begins so that a test can measure it without trimming the writer's
+# own logs.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/61
+export def LogPrefix(scriveDir: string, work: string): string
+  return SU.Capped(SU.Slugify(fnamemodify(scriveDir, ':t:r')), LOG_NAME_BYTES)
+    .. '_' .. SU.Capped(work, LOG_NAME_BYTES) .. '_'
+enddef
+
 def NewLogBase(project: PO.Project, work: string): string
   var logDir: string = expand('~/.bartleby/logs')
   if !isdirectory(logDir)
     mkdir(logDir, 'p')
   endif
-  var prefix: string = SU.Slugify(fnamemodify(project.scriveDir, ':t:r'))
-    .. '_' .. work .. '_'
+  var prefix: string = LogPrefix(project.scriveDir, work)
   if log_retention > 0
     # nosuf true, or a wildignore of the writer leaves the logs untrimmed.
     var older: list<string> = sort(glob($'{logDir}/{prefix}[0-9]*.*', true, true))

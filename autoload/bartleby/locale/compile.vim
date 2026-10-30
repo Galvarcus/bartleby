@@ -105,6 +105,11 @@ export def ReplaceCompileTarget(name: any): string
     name)
 enddef
 
+export def NotCompiled(name: any): string
+  return printf(IN.T("\"%s\" was not compiled, because it was not saved"),
+    name)
+enddef
+
 export def KeptCompileTarget(name: any): string
   return printf(IN.T("kept \"%s\", so nothing was saved"), name)
 enddef

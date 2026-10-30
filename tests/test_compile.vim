@@ -166,6 +166,81 @@ def Test_an_unsaved_target_works_under_its_slug(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+# The slug of a very long name was longer than a path component holds,
+# so the definition was never written, and the wizard compiled a target
+# that had not been saved. The cap itself is pinned in test_slug.vim.
+def Test_a_target_of_a_very_long_name_is_saved(): void
+  var project = FI.BuildProject()
+  var name: string = repeat('Chapter ', 40)
+  assert_true(C.SaveTarget(project, C.CompileTarget.FromDict({
+    name: name, format: 'PDF'})))
+  assert_equal([name], C.ListTargets(project))
+  assert_equal('PDF', C.LoadTarget(project, name).format)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A save answers whether it wrote, so that nothing compiles a target
+# that is not on disk.
+def Test_a_save_answers_whether_it_wrote(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  var target = C.CompileTarget.FromDict({name: 'Draft'})
+  assert_true(C.SaveTarget(project, target))
+  mkdir(dir, 'p')
+  # Through filewritable rather than a save, because a guard that asks
+  # the function under test lets a broken one skip its own test.
+  if setfperm(dir, 'r-xr-xr-x') == 0 || filewritable(dir) == 2
+    setfperm(dir, 'rwxr-xr-x')
+    FI.CleanupProjectFiles(project)
+    return
+  endif
+  assert_false(C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Later'})))
+  setfperm(dir, 'rwxr-xr-x')
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A log name holds the scrive and the target, and a path component
+# holds 255 bytes. Unbudgeted, the two of them gave a name the system
+# refused, so pandoc wrote no log and the compile failed with nothing
+# from Bartleby to say why.
+def Test_a_log_prefix_leaves_room_for_the_stamp(): void
+  var prefix: string = C.LogPrefix($'/tmp/{repeat("Long ", 60)}.bartleby',
+    repeat('x', 300))
+  # The timestamp of a log name is 15 bytes, and the longest extension
+  # written beside it, .json, is 5.
+  assert_true(strlen(prefix) + 20 <= 255,
+    $'{strlen(prefix)} bytes leaves no room for the stamp')
+  # Both names still tell one scrive and one target from another.
+  assert_notequal(C.LogPrefix('/tmp/one.bartleby', 'draft'),
+    C.LogPrefix('/tmp/two.bartleby', 'draft'))
+  assert_notequal(C.LogPrefix('/tmp/one.bartleby', 'draft'),
+    C.LogPrefix('/tmp/one.bartleby', 'draft-2'))
+enddef
+
+# A save that failed must compile nothing, which is the complaint of
+# the issue: the wizard ran the engine on a target that was not on disk.
+def Test_a_failed_save_compiles_nothing(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  mkdir(dir, 'p')
+  # Through filewritable rather than a save, because a guard that asks
+  # the function under test lets a broken one skip its own test.
+  if setfperm(dir, 'r-xr-xr-x') == 0 || filewritable(dir) == 2
+    setfperm(dir, 'rwxr-xr-x')
+    FI.CleanupProjectFiles(project)
+    return
+  endif
+  var before: number = len(LM.History())
+  C.SaveAndRun(project, C.CompileTarget.FromDict({name: 'Doomed'}), null_object)
+  var said: list<string> = LM.History()[before : ]->mapnew((_, m) => string(m))
+  assert_equal(1, len(said->copy()->filter((_, l) => l =~# 'was not compiled')),
+    'the writer was not told the target had not been saved')
+  assert_equal([], said->copy()->filter((_, l) => l =~# 'compiling'),
+    'an engine was started for a target that was not saved')
+  setfperm(dir, 'rwxr-xr-x')
+  FI.CleanupProjectFiles(project)
+enddef
+
 # Saving a name that another target carries replaces that target, and
 # the wizard reads as additive when it renames one or makes a new one,
 # so the writer is asked before the settings of the other are gone.
@@ -590,6 +665,10 @@ export def RunAll(): void
   Test_a_missing_cover_image_stops_the_compile()
   Test_a_missing_cover_does_not_stop_a_format_without_one()
   Test_an_output_path_takes_the_name_of_its_target()
+  Test_a_target_of_a_very_long_name_is_saved()
+  Test_a_save_answers_whether_it_wrote()
+  Test_a_log_prefix_leaves_room_for_the_stamp()
+  Test_a_failed_save_compiles_nothing()
   Test_a_new_target_of_a_name_in_use_replaces_it()
   Test_a_save_over_another_target_leaves_one_of_the_name()
   Test_a_target_saved_under_its_own_name_replaces_nothing()
