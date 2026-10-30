@@ -285,6 +285,41 @@ def Test_a_rename_onto_the_name_of_another_target_replaces_it(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+# The order folds case, so a capital does not come before every small
+# letter, as a comparison by byte would have it.
+def Test_the_list_folds_case_in_its_order(): void
+  var project = FI.BuildProject()
+  for name in ['Zed', 'alpha']
+    C.SaveTarget(project, C.CompileTarget.FromDict({name: name}))
+  endfor
+  assert_equal(['alpha', 'Zed'], C.ListTargets(project))
+  FI.CleanupProjectFiles(project)
+enddef
+
+# The order of the definition files is not the order of the names, and
+# the list no longer follows it: the second of two names that reduce to
+# one slug goes to a suffixed file, which a glob returns first.
+def Test_the_list_does_not_follow_the_files(): void
+  var project = FI.BuildProject()
+  for name in ['中文', '日本語']
+    C.SaveTarget(project, C.CompileTarget.FromDict({name: name}))
+  endfor
+  assert_equal(['中文', '日本語'], C.ListTargets(project))
+  FI.CleanupProjectFiles(project)
+enddef
+
+# Two names that differ only in case are two targets, and a folded
+# comparison cannot tell them apart, so without an order of their own
+# they would keep the order of their files, which is the fault itself.
+def Test_two_names_of_one_folded_order_are_still_ordered(): void
+  var project = FI.BuildProject()
+  for name in ['Draft', 'draft']
+    C.SaveTarget(project, C.CompileTarget.FromDict({name: name}))
+  endfor
+  assert_equal(['Draft', 'draft'], C.ListTargets(project))
+  FI.CleanupProjectFiles(project)
+enddef
+
 # FUNCTION: Return how many warnings the log holds about two
 # definitions of one name, so that a test counts its own.
 def NameWarnings(): number
@@ -673,6 +708,9 @@ export def RunAll(): void
   Test_a_save_over_another_target_leaves_one_of_the_name()
   Test_a_target_saved_under_its_own_name_replaces_nothing()
   Test_a_rename_onto_the_name_of_another_target_replaces_it()
+  Test_the_list_folds_case_in_its_order()
+  Test_the_list_does_not_follow_the_files()
+  Test_two_names_of_one_folded_order_are_still_ordered()
   Test_two_definitions_of_one_name_are_listed_once()
   Test_a_delete_answers_whether_it_removed_anything()
   Test_the_second_definition_is_listed_once_the_first_goes()

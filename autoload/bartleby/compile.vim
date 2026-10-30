@@ -279,7 +279,18 @@ export def ListTargets(project: PO.Project): list<string>
     seen[name] = path
     names->add(name)
   endfor
-  return names
+  # A person reads this in the picker, and the order of the files is not
+  # one: the definition of a name whose slug is taken goes to a suffixed
+  # file, so the target saved second was listed first.
+  #
+  # Folded, because a file name is the slug of a name, so the order this
+  # replaces was already the order of the names with their case folded,
+  # and a comparison by byte would put every capital first. Sorted by
+  # byte before that, because a folded comparison is stable and so two
+  # names that differ only in case would keep the order of their files,
+  # which is the order this is here to stop depending on.
+  # REFERENCE: https://github.com/Galvarcus/bartleby/issues/62
+  return sort(sort(names), 'i')
 enddef
 
 export def LoadTarget(project: PO.Project, name: string): CompileTarget
