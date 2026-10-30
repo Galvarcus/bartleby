@@ -174,35 +174,77 @@ def SlugName(name: string): string
   return slug ==# '' ? CO.UNTITLED : slug
 enddef
 
-def TargetPath(project: PO.Project, name: string): string
-  return TargetsDir(project) .. '/' .. SlugName(name) .. EXT_JSON
-enddef
-
-export def ListTargets(project: PO.Project): list<string>
+def TargetFiles(project: PO.Project): list<string>
   var dir: string = TargetsDir(project)
   if !isdirectory(dir)
     return []
   endif
   # nosuf true, so that a wildignore of the writer cannot hide a target.
   return globpath(dir, FILE_JSON, true, true)
-    ->mapnew((_, p) => CompileTarget.FromDict(PE.ReadJson(p)).name)
+enddef
+
+def NameOf(path: string): string
+  return CompileTarget.FromDict(PE.ReadJson(path)).name
+enddef
+
+# FUNCTION: Return the path of the definition that carries name, or an
+# empty string when none does. A target is the name the writer gave it
+# and the file is only where its settings live, because two names reduce
+# to one slug often enough: every name in a script of its own reduces to
+# untitled, and the second save took the file of the first.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/58
+def PathOf(project: PO.Project, name: string): string
+  # A damaged definition decodes to an empty dictionary and so carries
+  # no name. Nothing it holds is a target.
+  if name ==# ''
+    return ''
+  endif
+  for path in TargetFiles(project)
+    if NameOf(path) ==# name
+      return path
+    endif
+  endfor
+  return ''
+enddef
+
+# FUNCTION: Return the first of <slug>.json, <slug>-2.json and so on
+# that nothing holds, for a name that no definition carries yet. Held
+# rather than readable, because a folder of that name holds it too, as
+# does a file that cannot be read.
+def FreeTargetPath(project: PO.Project, name: string): string
+  var base: string = TargetsDir(project) .. '/' .. SlugName(name)
+  var path: string = base .. EXT_JSON
+  var n: number = 2
+  while getftype(path) !=# ''
+    path = $'{base}-{n}{EXT_JSON}'
+    n += 1
+  endwhile
+  return path
+enddef
+
+export def ListTargets(project: PO.Project): list<string>
+  # A definition that carries no name is damaged, see PathOf, and a
+  # picker that offered it would offer a target that runs on nothing.
+  return TargetFiles(project)->mapnew((_, p) => NameOf(p))
+    ->filter((_, n) => n !=# '')
 enddef
 
 export def LoadTarget(project: PO.Project, name: string): CompileTarget
-  var path: string = TargetPath(project, name)
-  if !filereadable(path)
-    return null_object
-  endif
-  return CompileTarget.FromDict(PE.ReadJson(path))
+  var path: string = PathOf(project, name)
+  return path ==# '' ? null_object : CompileTarget.FromDict(PE.ReadJson(path))
 enddef
 
+# FUNCTION: Write target, over the definition of its own name when one is
+# stored, so that saving a name twice is an edit of that target.
 export def SaveTarget(project: PO.Project, target: CompileTarget): void
-  PE.WriteJson(TargetPath(project, target.name), target.ToDict())
+  var path: string = PathOf(project, target.name)
+  PE.WriteJson(path ==# '' ? FreeTargetPath(project, target.name) : path,
+    target.ToDict())
 enddef
 
 export def DeleteTarget(project: PO.Project, name: string): void
-  var path: string = TargetPath(project, name)
-  if filereadable(path)
+  var path: string = PathOf(project, name)
+  if path !=# ''
     delete(path)
   endif
 enddef

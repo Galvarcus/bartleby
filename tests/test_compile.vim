@@ -67,6 +67,128 @@ def Test_an_output_path_takes_the_name_of_its_target(): void
   assert_equal('/out/doc-Nul.pdf', C.FinalPath('/out/nul.pdf', 'Nul', 'pdf'))
 enddef
 
+# A target's identity is the name the writer gave it, and the file is
+# only where that name's settings live. Two names that reduce to one
+# slug once shared a file, so the second save destroyed the first.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/58
+def Test_two_target_names_of_one_slug_are_two_targets(): void
+  var project = FI.BuildProject()
+  C.SaveTarget(project, C.CompileTarget.FromDict({
+    name: '日本語', kind: 'Book', format: 'EPUB'}))
+  C.SaveTarget(project, C.CompileTarget.FromDict({
+    name: '中文', kind: 'Manuscript', format: 'PDF'}))
+  assert_equal(sort(['日本語', '中文']), sort(C.ListTargets(project)))
+  assert_equal('EPUB', C.LoadTarget(project, '日本語').format)
+  assert_equal('PDF', C.LoadTarget(project, '中文').format)
+  FI.CleanupProjectFiles(project)
+enddef
+
+def Test_a_name_outside_ascii_does_not_take_the_file_of_another(): void
+  var project = FI.BuildProject()
+  C.SaveTarget(project, C.CompileTarget.FromDict({
+    name: 'Über', kind: 'Book', format: 'EPUB'}))
+  C.SaveTarget(project, C.CompileTarget.FromDict({
+    name: 'ber', kind: 'Manuscript', format: 'PDF'}))
+  assert_equal(sort(['Über', 'ber']), sort(C.ListTargets(project)))
+  assert_equal('EPUB', C.LoadTarget(project, 'Über').format)
+  assert_equal('PDF', C.LoadTarget(project, 'ber').format)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# Two names that differ only in case are two targets, because a name is
+# the writer's own text and the picker shows both.
+def Test_two_target_names_that_differ_only_in_case_are_two_targets(): void
+  var project = FI.BuildProject()
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft', format: 'EPUB'}))
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'draft', format: 'PDF'}))
+  assert_equal(sort(['Draft', 'draft']), sort(C.ListTargets(project)))
+  assert_equal('EPUB', C.LoadTarget(project, 'Draft').format)
+  assert_equal('PDF', C.LoadTarget(project, 'draft').format)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# Saving a name that is already stored is an edit of that target, not a
+# second one beside it.
+def Test_saving_one_name_twice_edits_the_target(): void
+  var project = FI.BuildProject()
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft', kind: 'Book'}))
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft', kind: 'Manuscript'}))
+  assert_equal(['Draft'], C.ListTargets(project))
+  assert_equal('Manuscript', C.LoadTarget(project, 'Draft').kind)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# The target deleted is the one saved second, which does not hold the
+# plain slug path, so a delete that went by the slug would take the
+# first target's file and leave the named one listed.
+def Test_deleting_a_target_leaves_the_other_of_one_slug(): void
+  var project = FI.BuildProject()
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: '日本語'}))
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: '中文'}))
+  C.DeleteTarget(project, '中文')
+  assert_equal(['日本語'], C.ListTargets(project))
+  assert_true(C.LoadTarget(project, '中文') is null_object)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A damaged definition decodes to nothing, so it carries no name. It
+# must not reach the picker as a blank entry that Run would compile, as
+# it did when a definition was found by the slug of the name asked for.
+def Test_a_damaged_definition_is_no_target(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  mkdir(dir, 'p')
+  writefile(['{not json'], dir .. '/broken.json')
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft'}))
+  assert_equal(['Draft'], C.ListTargets(project))
+  assert_true(C.LoadTarget(project, '') is null_object)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A free path is one that nothing holds, not one that can be read: a
+# folder of that name holds it too, and a save that called it free wrote
+# nowhere.
+def Test_a_path_that_a_folder_holds_is_not_free(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  mkdir(dir .. '/draft.json', 'p')
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft', format: 'PDF'}))
+  assert_equal(['Draft'], C.ListTargets(project))
+  assert_equal('PDF', C.LoadTarget(project, 'Draft').format)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A scrive written before this change holds its definitions at the plain
+# slug of each name, which is where a target of one name still goes.
+def Test_a_definition_at_the_plain_slug_path_is_still_the_target(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  mkdir(dir, 'p')
+  writefile([json_encode({name: 'Legacy', kind: 'Book', format: 'EPUB'})],
+    dir .. '/legacy.json')
+  assert_equal('EPUB', C.LoadTarget(project, 'Legacy').format)
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Legacy', format: 'PDF'}))
+  assert_equal(['legacy.json'],
+    glob(dir .. '/*.json', true, true)->mapnew((_, f) => fnamemodify(f, ':t')))
+  assert_equal('PDF', C.LoadTarget(project, 'Legacy').format)
+  C.DeleteTarget(project, 'Legacy')
+  assert_equal([], C.ListTargets(project))
+  FI.CleanupProjectFiles(project)
+enddef
+
+# Renaming a target is a delete of the old name and a save of the new,
+# see the submit of the wizard, which must leave one file.
+def Test_renaming_a_target_leaves_no_file_at_the_old_name(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Old', format: 'EPUB'}))
+  C.DeleteTarget(project, 'Old')
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'New', format: 'PDF'}))
+  assert_equal(['New'], C.ListTargets(project))
+  assert_equal(1, len(glob(dir .. '/*.json', true, true)))
+  FI.CleanupProjectFiles(project)
+enddef
+
 # The slug of a name in a script of its own is empty, so the definition
 # was saved as .json, which the *.json glob never returned, and the
 # target vanished as soon as it was saved.
@@ -287,6 +409,15 @@ export def RunAll(): void
   Test_a_missing_cover_image_stops_the_compile()
   Test_a_missing_cover_does_not_stop_a_format_without_one()
   Test_an_output_path_takes_the_name_of_its_target()
+  Test_two_target_names_of_one_slug_are_two_targets()
+  Test_a_name_outside_ascii_does_not_take_the_file_of_another()
+  Test_two_target_names_that_differ_only_in_case_are_two_targets()
+  Test_saving_one_name_twice_edits_the_target()
+  Test_deleting_a_target_leaves_the_other_of_one_slug()
+  Test_a_damaged_definition_is_no_target()
+  Test_a_path_that_a_folder_holds_is_not_free()
+  Test_a_definition_at_the_plain_slug_path_is_still_the_target()
+  Test_renaming_a_target_leaves_no_file_at_the_old_name()
   Test_a_target_name_that_slugs_to_nothing_is_still_listed()
   Test_a_target_is_listed_while_wildignore_names_its_extension()
   Test_concatenate_manuscript_full_structure()
