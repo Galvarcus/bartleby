@@ -519,250 +519,254 @@ msgid "compiled %s, but it could not be renamed to %s"
 msgstr ""
 
 #: autoload/bartleby/locale/compile.vim:134
+msgid "two targets compile to %s, this one and \"%s\": keeping %s"
+msgstr ""
+
+#: autoload/bartleby/locale/compile.vim:139
 msgid "compiled: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:138
+#: autoload/bartleby/locale/compile.vim:143
 msgid "Compiled \"%s\". Open it?"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:142
+#: autoload/bartleby/locale/compile.vim:147
 msgid "\"%s\" is already compiling"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:146
+#: autoload/bartleby/locale/compile.vim:151
 msgid "compiling \"%s\" (%s)..."
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:150
+#: autoload/bartleby/locale/compile.vim:155
 msgid "%s exited with status %s: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:154
+#: autoload/bartleby/locale/compile.vim:159
 msgid "Command: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:158
+#: autoload/bartleby/locale/compile.vim:163
 msgid "Exit status: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:162
+#: autoload/bartleby/locale/compile.vim:167
 msgid "No error output."
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:166
+#: autoload/bartleby/locale/compile.vim:171
 msgid "Compiling \"%s\" failed. Open the log?"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:170
+#: autoload/bartleby/locale/compile.vim:175
 msgid "screenplain not found (%s) - install via pip, or set g:bartleby_compile_screenplain_bin"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:174
+#: autoload/bartleby/locale/compile.vim:179
 msgid "pandoc not found (%s) - install it or set g:bartleby_compile_pandoc_bin"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:178
+#: autoload/bartleby/locale/compile.vim:183
 msgid "%s not found - a PDF needs a TeX distribution, see Requirements in the README"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:182
+#: autoload/bartleby/locale/compile.vim:187
 msgid "a %s PDF needs TeX files that are not installed: %s - see Requirements in the README"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:186
+#: autoload/bartleby/locale/compile.vim:191
 msgid "cover image not found: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:190
+#: autoload/bartleby/locale/compile.vim:195
 msgid "unknown paper size \"%s\", using letter"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:194
+#: autoload/bartleby/locale/compile.vim:199
 msgid "target not found: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:198
+#: autoload/bartleby/locale/compile.vim:203
 msgid "\"%s\""
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:202
+#: autoload/bartleby/locale/compile.vim:207
 msgid "Run"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:206
+#: autoload/bartleby/locale/compile.vim:211
 msgid "Edit"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:210
+#: autoload/bartleby/locale/compile.vim:215
 msgid "Delete"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:214
+#: autoload/bartleby/locale/compile.vim:219
 msgid "+ New Target"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:222
+#: autoload/bartleby/locale/compile.vim:227
 msgid "missing language file: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:226
+#: autoload/bartleby/locale/compile.vim:231
 msgid "no language file for \"%s\", using English: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:230
+#: autoload/bartleby/locale/compile.vim:235
 msgid "cannot read language file: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:238
+#: autoload/bartleby/locale/compile.vim:243
 msgid "no %s reference \"%s\" for this language"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:242
+#: autoload/bartleby/locale/compile.vim:247
 msgid "%s lookups are off: set g:bartleby_%s_api_key or $%s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:246
+#: autoload/bartleby/locale/compile.vim:251
 msgid "%s lookups need curl, which was not found"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:250
+#: autoload/bartleby/locale/compile.vim:255
 msgid "no %s reference for this language"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:254
+#: autoload/bartleby/locale/compile.vim:259
 msgid "thesaurus"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:258
+#: autoload/bartleby/locale/compile.vim:263
 msgid "dictionary"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:262
+#: autoload/bartleby/locale/compile.vim:267
 msgid "exit code %s"
-msgstr ""
-
-#: autoload/bartleby/locale/compile.vim:266
-msgid "lookup failed: %s"
 msgstr ""
 
 #: autoload/bartleby/locale/compile.vim:27
 msgid "Book"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:270
+#: autoload/bartleby/locale/compile.vim:271
+msgid "lookup failed: %s"
+msgstr ""
+
+#: autoload/bartleby/locale/compile.vim:275
 msgid "could not start curl"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:274
+#: autoload/bartleby/locale/compile.vim:279
 msgid "ignoring unreadable lexicon cache: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:278
+#: autoload/bartleby/locale/compile.vim:283
 msgid "could not write lexicon cache: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:286
+#: autoload/bartleby/locale/compile.vim:291
 msgid "lookups are not available in Bartleby panes"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:290
+#: autoload/bartleby/locale/compile.vim:295
 msgid "no word under the cursor"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:294
+#: autoload/bartleby/locale/compile.vim:299
 msgid "nothing to look up"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:298
+#: autoload/bartleby/locale/compile.vim:303
 msgid "select text on one line only"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:302
+#: autoload/bartleby/locale/compile.vim:307
 msgid "the selection is empty"
-msgstr ""
-
-#: autoload/bartleby/locale/compile.vim:306
-msgid "Looking up \"%s\" ..."
 msgstr ""
 
 #: autoload/bartleby/locale/compile.vim:31
 msgid "Compile - Select Contents"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:310
+#: autoload/bartleby/locale/compile.vim:311
+msgid "Looking up \"%s\" ..."
+msgstr ""
+
+#: autoload/bartleby/locale/compile.vim:315
 msgid "No entry for \"%s\"."
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:314
+#: autoload/bartleby/locale/compile.vim:319
 msgid "Did you mean:"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:318
+#: autoload/bartleby/locale/compile.vim:323
 msgid "(no antonyms)"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:322
+#: autoload/bartleby/locale/compile.vim:327
 msgid "\"%s\" copied to the unnamed register"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:326
+#: autoload/bartleby/locale/compile.vim:331
 msgid "\"%s\" changed since the lookup - not replaced"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:330
+#: autoload/bartleby/locale/compile.vim:335
 msgid "this buffer cannot be changed"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:334
+#: autoload/bartleby/locale/compile.vim:339
 msgid "Next word"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:338
+#: autoload/bartleby/locale/compile.vim:343
 msgid "Scroll down"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:342
+#: autoload/bartleby/locale/compile.vim:347
 msgid "Previous word"
-msgstr ""
-
-#: autoload/bartleby/locale/compile.vim:346
-msgid "Scroll up"
 msgstr ""
 
 #: autoload/bartleby/locale/compile.vim:35
 msgid "Toggle inclusion (folders toggle all descendants)"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:350
+#: autoload/bartleby/locale/compile.vim:351
+msgid "Scroll up"
+msgstr ""
+
+#: autoload/bartleby/locale/compile.vim:355
 msgid "Copy the word"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:354
+#: autoload/bartleby/locale/compile.vim:359
 msgid "Replace the word in the text"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:358
+#: autoload/bartleby/locale/compile.vim:363
 msgid "Look up the selected suggestion"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:362
+#: autoload/bartleby/locale/compile.vim:367
 msgid "Toggle antonyms"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:366
+#: autoload/bartleby/locale/compile.vim:371
 msgid "Define the selected word"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:370
+#: autoload/bartleby/locale/compile.vim:375
 msgid "Lookup"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:378
+#: autoload/bartleby/locale/compile.vim:383
 msgid "the tagger command could not start: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:382
+#: autoload/bartleby/locale/compile.vim:387
 msgid "the part-of-speech tagger stopped: %s"
 msgstr ""
 
@@ -770,15 +774,15 @@ msgstr ""
 msgid "Confirm selection and continue"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:390
+#: autoload/bartleby/locale/compile.vim:395
 msgid "empty response from Merriam-Webster"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:394
+#: autoload/bartleby/locale/compile.vim:399
 msgid "Merriam-Webster: %s"
 msgstr ""
 
-#: autoload/bartleby/locale/compile.vim:398
+#: autoload/bartleby/locale/compile.vim:403
 msgid "unexpected response from Merriam-Webster"
 msgstr ""
 

@@ -196,6 +196,136 @@ def Test_the_room_for_a_name_falls_as_its_folder_grows(): void
     C.PathRoom($'/s/{repeat("x", 40)}/compile/targets'))
 enddef
 
+# A compiled file is named after its target, so two names that reach one
+# file shared one artifact: the compile of the second deleted the
+# finished file of the first and renamed its own over it. Neither takes
+# the name now, because nothing on disk says which target owns the file.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/64
+def Test_two_targets_of_one_artifact_name_keep_the_engine_path(): void
+  var project = FI.BuildProject()
+  var outDir: string = project.scriveDir .. '/compile/output'
+  var target = C.CompileTarget.FromDict({
+    name: 'Draft:1', kind: 'Book', format: 'HTML'})
+  C.SaveTarget(project, target)
+  var outputPath: string = $'{outDir}/{C.WorkName(project, target)}.html'
+  # Alone, it takes the name the writer typed.
+  assert_equal($'{outDir}/Draft-1.html',
+    C.ArtifactPath(project, target, outputPath, 'html'))
+  # Draft/1 reaches the same file on every file system, because Safe
+  # folds the separator and the colon alike.
+  C.SaveTarget(project, C.CompileTarget.FromDict({
+    name: 'Draft/1', kind: 'Book', format: 'HTML'}))
+  var before: number = len(LM.History())
+  assert_equal(outputPath, C.ArtifactPath(project, target, outputPath, 'html'))
+  # The file both targets want, then the other target, then the file
+  # kept, in that order, because the three read as one sentence. \C, so
+  # that an ignorecase of the writer cannot level the two file names.
+  var said: string = LM.History()[before :]
+    ->mapnew((_, m) => join(m.lines, ' '))->join(' ')
+  assert_match('\CDraft-1\.html.*"Draft/1".*draft-1\.html', said)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# Two names of one Safe form compile to two files when the targets
+# compile to different formats, so neither name is in question.
+def Test_two_names_of_one_form_in_two_formats_keep_their_names(): void
+  var project = FI.BuildProject()
+  var outDir: string = project.scriveDir .. '/compile/output'
+  var pdf = C.CompileTarget.FromDict({
+    name: 'Novel (final)', kind: 'Book', format: 'PDF'})
+  var epub = C.CompileTarget.FromDict({
+    name: 'Novel final', kind: 'Book', format: 'EPUB'})
+  C.SaveTarget(project, pdf)
+  C.SaveTarget(project, epub)
+  assert_equal($'{outDir}/Novel-final.pdf', C.ArtifactPath(project, pdf,
+    $'{outDir}/{C.WorkName(project, pdf)}.pdf', 'pdf'))
+  assert_equal($'{outDir}/Novel-final.epub', C.ArtifactPath(project, epub,
+    $'{outDir}/{C.WorkName(project, epub)}.epub', 'epub'))
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A name that is a slug already reaches the file that the engine of
+# another target writes, which is the stem of that target's definition.
+# A rename onto it takes the output of a run that may still be writing.
+def Test_the_working_file_of_another_target_is_not_taken(): void
+  var project = FI.BuildProject()
+  var outDir: string = project.scriveDir .. '/compile/output'
+  var upper = C.CompileTarget.FromDict({
+    name: 'Draft', kind: 'Book', format: 'HTML'})
+  var lower = C.CompileTarget.FromDict({
+    name: 'draft', kind: 'Book', format: 'HTML'})
+  C.SaveTarget(project, upper)
+  C.SaveTarget(project, lower)
+  var outputPath: string = $'{outDir}/{C.WorkName(project, lower)}.html'
+  var ignorecase: bool = &fileignorecase
+  try
+    # Where case folds, the two names are one file. Where it does not,
+    # draft.html is still the file that the engine of Draft writes.
+    &fileignorecase = false
+    assert_equal(outputPath, C.ArtifactPath(project, lower, outputPath, 'html'))
+  finally
+    &fileignorecase = ignorecase
+  endtry
+  FI.CleanupProjectFiles(project)
+enddef
+
+# Whether two names of one case reach one file is a question of the file
+# system, which fileignorecase answers, see Folded in path.vim.
+def Test_two_names_of_one_case_share_a_file_where_case_folds(): void
+  var project = FI.BuildProject()
+  var outDir: string = project.scriveDir .. '/compile/output'
+  var target = C.CompileTarget.FromDict({
+    name: 'DRAFT', kind: 'Book', format: 'HTML'})
+  C.SaveTarget(project, C.CompileTarget.FromDict({
+    name: 'Draft', kind: 'Book', format: 'HTML'}))
+  C.SaveTarget(project, target)
+  var outputPath: string = $'{outDir}/{C.WorkName(project, target)}.html'
+  var ignorecase: bool = &fileignorecase
+  try
+    &fileignorecase = true
+    assert_equal(outputPath, C.ArtifactPath(project, target, outputPath, 'html'))
+    &fileignorecase = false
+    assert_equal($'{outDir}/DRAFT.html',
+      C.ArtifactPath(project, target, outputPath, 'html'))
+  finally
+    &fileignorecase = ignorecase
+  endtry
+  FI.CleanupProjectFiles(project)
+enddef
+
+# Two names that differ only past what a name may hold reach one file
+# once the cap has cut them, the route that saving a very long target
+# opened.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/61
+def Test_two_long_names_that_the_cap_levels_keep_the_engine_path(): void
+  var project = FI.BuildProject()
+  var outDir: string = project.scriveDir .. '/compile/output'
+  var base: string = repeat('Chapter ', 40)
+  var target = C.CompileTarget.FromDict({
+    name: base .. 'Two', kind: 'Book', format: 'HTML'})
+  C.SaveTarget(project, C.CompileTarget.FromDict({
+    name: base .. 'One', kind: 'Book', format: 'HTML'}))
+  C.SaveTarget(project, target)
+  var outputPath: string = $'{outDir}/{C.WorkName(project, target)}.html'
+  assert_equal(outputPath, C.ArtifactPath(project, target, outputPath, 'html'))
+  FI.CleanupProjectFiles(project)
+enddef
+
+# The name of an artifact is budgeted against the path that holds it,
+# not against the limit of one component alone, as the name of a
+# definition is.
+def Test_an_artifact_name_is_budgeted_against_its_folder(): void
+  var dir: string = $'/s/{repeat("folder/", 120)}compile/output'
+  var room: number = C.OutputRoom(dir, 'epub')
+  var name: string = fnamemodify(
+    C.FinalPath($'{dir}/draft.epub', repeat('Chapter ', 40), 'epub'), ':t:r')
+  # With the measurements, because what fits is a question of where the
+  # scrive sits, and a runner's answer is not this machine's.
+  assert_true(strlen(name) <= max([room, 1]),
+    $'the folder is {strlen(dir)} bytes and leaves {room}, '
+      .. $'the name takes {strlen(name)}')
+enddef
+
 # A save answers whether it wrote, so that nothing compiles a target
 # that is not on disk.
 def Test_a_save_answers_whether_it_wrote(): void
@@ -719,6 +849,12 @@ export def RunAll(): void
   Test_an_output_path_takes_the_name_of_its_target()
   Test_a_target_of_a_very_long_name_is_saved()
   Test_the_room_for_a_name_falls_as_its_folder_grows()
+  Test_two_targets_of_one_artifact_name_keep_the_engine_path()
+  Test_two_names_of_one_case_share_a_file_where_case_folds()
+  Test_two_long_names_that_the_cap_levels_keep_the_engine_path()
+  Test_an_artifact_name_is_budgeted_against_its_folder()
+  Test_two_names_of_one_form_in_two_formats_keep_their_names()
+  Test_the_working_file_of_another_target_is_not_taken()
   Test_a_save_answers_whether_it_wrote()
   Test_a_log_prefix_leaves_room_for_the_stamp()
   Test_a_failed_save_compiles_nothing()

@@ -130,6 +130,11 @@ export def RenameFailed(path: any, name: any): string
   return printf(IN.T("compiled %s, but it could not be renamed to %s"), path, name)
 enddef
 
+export def ArtifactNameShared(artifact: any, other: any, kept: any): string
+  return printf(IN.T("two targets compile to %s, this one and \"%s\": keeping %s"),
+    artifact, other, kept)
+enddef
+
 export def Compiled(path: any): string
   return printf(IN.T("compiled: %s"), path)
 enddef

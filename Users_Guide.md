@@ -648,6 +648,16 @@ Press `Enter` to open it. A Markdown file opens in a new tab, and your
 scrive stays as it was in the first tab. A PDF, EPUB, or HTML file opens
 in the program your computer uses for that kind of file.
 
+Your compiled file keeps the name of the target, in `compile/`. Two
+targets can have names that reach one file, such as `Draft` and `DRAFT`
+on macOS and Windows, or `Draft: One` and `Draft/One` on any system.
+Bartleby then leaves each compiled file under the plain name it was
+compiled with, so that neither target replaces the other's file. The
+log names the file the two targets want, and the other target that
+wants it. A file already saved under that name stays as it is, and no
+later compile writes it. Rename one of the targets to get the typed
+name back.
+
 If the compile fails, Bartleby asks whether to open the error log.
 Press `Enter` to see it in a new tab. The log shows what went wrong,
 such as a font that is not installed.

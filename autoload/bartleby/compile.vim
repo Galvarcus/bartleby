@@ -35,6 +35,7 @@ import autoload 'bartleby/picker.vim' as PI
 import autoload 'bartleby/inputpopup.vim' as IP
 import autoload 'bartleby/profile.vim' as PR
 import autoload 'bartleby/slug.vim' as SU
+import autoload 'bartleby/path.vim' as PA
 import autoload 'bartleby/persist.vim' as PE
 import autoload 'bartleby/helppopup.vim' as H
 import autoload 'bartleby/dialog_popup.vim' as DP
@@ -69,6 +70,8 @@ const LOG_NAME_BYTES: number = 116
 # binds first, so this number only has to be past it.
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/61
 const MAX_PATH_BYTES: number = has('win32') ? 255 : 1023
+# The longest suffix that a name in use takes, see FreeTargetPath.
+const SUFFIX_ROOM: string = '-99'
 const FILE_JSON: string = '*.json'
 const SPACING_DOUBLE: string = 'Double'
 const SPACING_SINGLE: string = 'Single'
@@ -152,6 +155,9 @@ const KIND_FMTS: dict<list<string>> = {
 }
 const PANDOC_EXT: dict<string> = {PDF: 'pdf', HTML: 'html', EPUB: 'epub', Markdown: 'md'}
 const SCREENPLAY_EXT: dict<string> = {PDF: 'pdf', HTML: 'html', FDX: 'fdx'}
+# What a format of neither table compiles to, which only a damaged
+# definition carries.
+const EXT_DEFAULT: string = 'pdf'
 
 # CLASS: A saved compile preset: kind, format, font, cover image,
 # spacing, separator, and the included documents.
@@ -239,7 +245,7 @@ enddef
 # name of its target, which is stored inside the file, so a shorter file
 # name costs nothing but the look of it.
 export def PathRoom(dir: string): number
-  return MAX_PATH_BYTES - strlen($'{dir}/-99{EXT_JSON}{PE.TMP_SUFFIX}')
+  return MAX_PATH_BYTES - strlen($'{dir}/{SUFFIX_ROOM}{EXT_JSON}{PE.TMP_SUFFIX}')
 enddef
 
 # FUNCTION: Return the first of <slug>.json, <slug>-2.json and so on
@@ -1025,13 +1031,73 @@ def PandocMetadataArgs(project: PO.Project): list<string>
   return args
 enddef
 
+# FUNCTION: Return what the name of an artifact may take under dir with
+# ext. It reserves what PathRoom reserves, although an artifact takes no
+# suffix, because a budget computed to the byte against a limit that no
+# test on a writer's own system can reach has twice been wrong.
+export def OutputRoom(dir: string, ext: string): number
+  return MAX_PATH_BYTES
+    - strlen($'{dir}/{SUFFIX_ROOM}.{ext}{PE.TMP_SUFFIX}')
+enddef
+
+# FUNCTION: Return the extension of the file that target compiles to.
+def ExtOf(target: CompileTarget): string
+  return get(target.kind ==# KIND_SCREENPLAY ? SCREENPLAY_EXT : PANDOC_EXT,
+    target.format, EXT_DEFAULT)
+enddef
+
 # FUNCTION: Return the path that the output of a target belongs at: its
 # own folder, under the name the writer gave the target, with ext. The
 # engines compile to a slug, because a TeX engine is unreliable with a
-# path outside ASCII, so the name is taken afterwards, by a rename.
+# path outside ASCII, so the name is taken afterwards, by a rename. The
+# name is budgeted against the whole path, never to nothing, as the name
+# of a definition is.
 export def FinalPath(path: string, name: string, ext: string): string
-  var safe: string = SU.Safe(name)
-  return safe ==# '' ? path : $'{fnamemodify(path, ":h")}/{safe}.{ext}'
+  var dir: string = fnamemodify(path, ':h')
+  var safe: string = SU.Capped(SU.Safe(name), max([OutputRoom(dir, ext), 1]))
+  return safe ==# '' ? path : $'{dir}/{safe}.{ext}'
+enddef
+
+# FUNCTION: Return the path that the artifact of target belongs at: the
+# name the writer gave the target, or the path the engine wrote when the
+# name of another target reaches the same file. A volume holds one of
+# those two names at a time and nothing on disk says which target owns
+# the file, so neither takes it: the compile of one target deleted the
+# finished file of the other and renamed its own over it. The engine's
+# path holds one target alone, see WorkName.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/64
+export def ArtifactPath(project: PO.Project, target: CompileTarget,
+    outputPath: string, ext: string): string
+  var final: string = FinalPath(outputPath, target.name, ext)
+  if final ==# outputPath
+    return outputPath
+  endif
+  var tail: string = fnamemodify(final, ':t')
+  # What this file system does with the name, because the answer pairs
+  # with a real file, see Folded in path.vim.
+  var wanted: string = PA.Folded(tail)
+  for path in TargetFiles(project)
+    var other: CompileTarget = CompileTarget.FromDict(PE.ReadJson(path))
+    # A definition that carries no name is damaged, see PathOf, and a
+    # target is the name the writer gave it, so a second file of that
+    # name is the same target, see ListTargets. A target that compiles
+    # to another extension writes another file.
+    if other.name ==# '' || other.name ==# target.name || ExtOf(other) !=# ext
+      continue
+    endif
+    # The file that the other target takes, and the file that its engine
+    # writes, under the stem of its definition: a name that is a slug
+    # already reaches such a stem, and a rename onto a file that an
+    # engine is still writing loses the text of both targets.
+    var taken: string = fnamemodify(FinalPath(outputPath, other.name, ext), ':t')
+    var written: string = $'{fnamemodify(path, ":t:r")}.{ext}'
+    if PA.Folded(taken) ==# wanted || PA.Folded(written) ==# wanted
+      log.Warn(MK.ArtifactNameShared(tail, other.name,
+        fnamemodify(outputPath, ':t')))
+      return outputPath
+    endif
+  endfor
+  return final
 enddef
 
 # FUNCTION: Give the output the name of its target, then offer to open
@@ -1147,12 +1213,12 @@ def ExecuteScreenplay(project: PO.Project, target: CompileTarget,
   if !isdirectory(outDir)
     mkdir(outDir, 'p')
   endif
-  var ext: string = get(SCREENPLAY_EXT, target.format, 'pdf')
+  var ext: string = ExtOf(target)
   var outputPath: string = $'{outDir}/{work}.{ext}'
   var fountainPath: string = $'{outDir}/.{work}-src.fountain'
   writefile(ConcatenateDocs(project, target, ''), fountainPath)
   RunJob($'{target.kind}/{target.format}', [screenplain_bin, fountainPath, outputPath],
-    target, outputPath, FinalPath(outputPath, target.name, ext),
+    target, outputPath, ArtifactPath(project, target, outputPath, ext),
     NewLogBase(project, work), key)
 enddef
 
@@ -1215,12 +1281,12 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget,
   if !isdirectory(outDir)
     mkdir(outDir, 'p')
   endif
-  var ext: string = get(PANDOC_EXT, target.format, 'pdf')
+  var ext: string = ExtOf(target)
   var outputPath: string = $'{outDir}/{work}.{ext}'
 
   if target.format ==# FMT_MARKDOWN
     writefile(BuildDocLines(project, target), outputPath)
-    Finish(target, outputPath, FinalPath(outputPath, target.name, ext))
+    Finish(target, outputPath, ArtifactPath(project, target, outputPath, ext))
     return
   endif
 
@@ -1289,7 +1355,7 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget,
   args->add($'--log={logBase}.json')
 
   RunJob($'{target.kind}/{target.format}', [pandoc_bin] + args, target, outputPath,
-    FinalPath(outputPath, target.name, ext), logBase, key)
+    ArtifactPath(project, target, outputPath, ext), logBase, key)
 enddef
 
 # FUNCTION: Return the paper size for PDF: g:bartleby_compile_papersize

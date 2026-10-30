@@ -401,6 +401,42 @@ def FirstLine(path: string): string
   return filereadable(path) ? get(readfile(path), 0, '') : ''
 enddef
 
+# FUNCTION: Return the whole of path as one line, or an empty string
+# when there is no file to read: a read of a file that this fault
+# removes would throw, and this suite has no catch around its run.
+def Text(path: string): string
+  return filereadable(path) ? join(readfile(path), ' ') : ''
+enddef
+
+# A compiled file takes the name of its target, so two targets whose
+# names reach one file took one name: the compile of the second deleted
+# the finished file of the first. Markdown, because it writes its own
+# output with no engine, so each compile is done when Execute returns.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/64
+def Test_two_targets_of_one_artifact_name_keep_their_own_files(): void
+  var fx = BuildProjectWithContent()
+  var scene2 = fx.project.ChildAt(1).ChildAt(1).ChildAt(0)
+  FI.WriteDocContent(fx.project, scene2, ['The end was near.'])
+  var outDir: string = fx.project.scriveDir .. '/compile/output'
+  for [name, id] in [['Draft:1', fx.scene1.id], ['Draft/1', scene2.id]]
+    var target = C.CompileTarget.FromDict({
+      name: name, kind: 'Book', format: 'Markdown', includedIds: [id],
+    })
+    C.SaveTarget(fx.project, target)
+    C.Execute(fx.project, target)
+  endfor
+  # One file for each target: the first took the shared name while it was
+  # the only target of it, and the second, which cannot tell that file
+  # from one of its own, left it alone and kept the name of its
+  # definition.
+  assert_equal(['Draft-1.md', 'draft-1-2.md'],
+    glob(outDir .. '/*.md', true, true)
+      ->mapnew((_, f) => fnamemodify(f, ':t'))->sort())
+  assert_match('dark and stormy', Text($'{outDir}/Draft-1.md'))
+  assert_match('end was near', Text($'{outDir}/draft-1-2.md'))
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
 # The writer reads the name of the target, not the slug the engine was
 # given. Book HTML, because it needs pandoc alone and the rename is the
 # same code for every format that runs a job.
@@ -456,6 +492,7 @@ export def RunAll(): void
   Test_a_second_compile_of_one_target_waits_for_the_first()
   Test_a_rename_during_a_compile_cannot_take_its_working_files()
   Test_a_markdown_output_is_written_under_the_name_of_its_target()
+  Test_two_targets_of_one_artifact_name_keep_their_own_files()
   Test_a_compiled_file_takes_the_accented_name_of_its_target()
   Test_book_html_tables_get_the_settings()
   Test_the_table_filter_draws_lines_only_when_asked()
