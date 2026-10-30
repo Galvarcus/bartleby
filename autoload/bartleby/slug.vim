@@ -25,6 +25,9 @@ const ASCII_FOLD_PAT: string = '[\u0000-\u002f\u003a-\u0040\u005b-\u0060\u007b-\
 # name that holds one cannot be typed again.
 const SPACE_FOLD_PAT: string = '[\u00a0\u1680\u2000-\u200f\u2028-\u202f\u205f-\u2060\u3000\ufeff]\+'
 
+# The characters that a slug holds, and nothing else.
+const ASCII_ALNUM_PAT: string = '[a-z0-9]'
+
 const EDGE_PAT: string = '^-\+\|-\+$'
 
 # A path component holds 255 bytes on every file system of the past
@@ -47,9 +50,21 @@ const DEVICES: list<string> = ['con', 'prn', 'aux', 'nul']
 const DEVICE_PREFIX: string = 'doc-'
 
 # FUNCTION: Return the name a title reduces to, in ASCII alone, for the
-# working files that pandoc and the engines read.
+# working files that pandoc and the engines read. It folds one character
+# at a time, with whatever combining marks that character carries,
+# because a collection matches on the base character and takes the marks
+# along with it: the e of a decomposed accent passed the class that a to
+# z keeps, and the mark stayed in a name that must hold none. A byte
+# above ASCII here is a path that no TeX engine is reliable with, and a
+# name that one file system stores in the other spelling, which the glob
+# that trims the logs then does not match.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/65
 export def Slugify(title: string): string
-  var slug: string = substitute(tolower(title), '[^a-z0-9]\+', SEP, 'g')
+  var slug: string = substitute(tolower(title), '.',
+    (m) => strlen(m[0]) == 1 && m[0] =~# ASCII_ALNUM_PAT ? m[0] : SEP, 'g')
+  # Folding a character at a time leaves a run of hyphens where folding
+  # the whole run left one.
+  slug = substitute(slug, SEP .. '\+', SEP, 'g')
   return Guarded(substitute(Capped(slug), EDGE_PAT, '', 'g'))
 enddef
 

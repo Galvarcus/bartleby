@@ -40,12 +40,42 @@ def Test_a_letter_outside_ascii_is_dropped(): void
   assert_equal('', SU.Slugify('日本語'))
 enddef
 
+# An accent can be written as one character or as a letter and a
+# combining mark. A collection matches on the base character and takes
+# the marks with it, so the e of the second spelling passed the class
+# that a to z keeps and the mark stayed in the slug.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/65
+def Test_the_two_spellings_of_an_accent_give_one_slug(): void
+  var decomposed: string = 'Cafe' .. nr2char(0x301) .. ' Noir'
+  assert_equal('caf-noir', SU.Slugify(decomposed))
+  assert_equal(SU.Slugify('Café Noir'), SU.Slugify(decomposed))
+enddef
+
+# The slug names every working file of a compile, which a TeX engine
+# reads, and the prefix of the glob that trims the logs, so a byte above
+# ASCII in it is a path no engine is reliable with and a name that one
+# file system stores in the spelling the glob was not built from.
+def Test_no_mark_survives_into_a_slug(): void
+  for title in ['Cafe' .. nr2char(0x301), 'Shalom' .. nr2char(0x05B0),
+      'Hindi' .. nr2char(0x0902), 'A' .. nr2char(0x20DD),
+      'Cafe' .. nr2char(0x301) .. nr2char(0x327), nr2char(0x301) .. 'abc']
+    var slug: string = SU.Slugify(title)
+    # Bytes against characters, because a collection matches the base of
+    # a marked character and a pattern would pass on the very fault.
+    assert_equal(strchars(slug), strlen(slug),
+      $'the slug of {title} is [{slug}], of more bytes than characters')
+  endfor
+  # One slug in full, because the count above is also true of a fold
+  # that answered nothing at all.
+  assert_equal('shalo', SU.Slugify('Shalom' .. nr2char(0x05B0)))
+enddef
+
 # The layout asks for the name of a title whenever it lays a scrive out,
 # so a slug of a slug must be the same slug, or a document would move on
 # every pass.
 def Test_a_slug_is_unchanged_by_a_second_pass(): void
   for title in ['A Dark and Stormy Night', 'Chapter 1!', 'Nul', 'doc-nul',
-      'Café Noir', 'a/b\c', '  spaced  ', '***']
+      'Café Noir', 'Cafe' .. nr2char(0x301), 'a/b\c', '  spaced  ', '***']
     assert_equal(SU.Slugify(title), SU.Slugify(SU.Slugify(title)),
       $'the slug of {title} changed on a second pass')
   endfor
@@ -128,13 +158,14 @@ enddef
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/61
 def Test_a_long_slug_is_capped(): void
   assert_equal(200, strlen(SU.Slugify(repeat('a', 300))))
-  # Whole characters, which a slug can still hold more than one byte of:
-  # a combining mark rides along with the letter it follows.
-  var marked: string = SU.Slugify('a' .. repeat('e' .. nr2char(0x301), 150))
+  # A slug holds one byte to the character, however many marks the title
+  # carried, so a cap in bytes is a cap in characters as well. Here the
+  # cut lands on the hyphen of a folded letter, which the edge strip
+  # then takes, so the name is one byte under the cap.
+  var marked: string = SU.Slugify(repeat('a' .. 'e' .. nr2char(0x301), 200))
   assert_equal(199, strlen(marked))
-  # The cut took the mark with its letter, rather than leaving one with
-  # no letter to sit on.
-  assert_notequal(nr2char(0x301), marked[-2 : ])
+  assert_equal(strchars(marked), strlen(marked),
+    $'the slug [{marked}] holds a mark')
   assert_equal(marked, SU.Slugify(marked), 'the capped slug moved again')
 enddef
 
@@ -148,6 +179,12 @@ def Test_a_long_name_is_capped_on_a_character(): void
   assert_equal(long[0 : 2], name[0 : 2])
   # A cut that lands on a fold must not leave the name ending in one.
   assert_true(SU.Safe('a' .. repeat('-b', 200))[-1 : ] !=# SU.SEP)
+  # A name keeps its marks, so a cut must take one with the letter it
+  # sits on rather than strand it. The slug holds none to strand.
+  var marked: string = SU.Safe(repeat('e' .. nr2char(0x301), 100))
+  assert_equal(198, strlen(marked))
+  assert_equal(66, strchars(marked, 1))
+  assert_notequal(nr2char(0x301), marked[-2 : ])
 enddef
 
 def Test_a_name_is_unchanged_by_a_second_pass(): void
@@ -163,6 +200,8 @@ export def RunAll(): void
   Test_a_run_of_anything_else_becomes_one_hyphen()
   Test_a_separator_of_a_path_never_survives()
   Test_a_letter_outside_ascii_is_dropped()
+  Test_the_two_spellings_of_an_accent_give_one_slug()
+  Test_no_mark_survives_into_a_slug()
   Test_a_slug_is_unchanged_by_a_second_pass()
   Test_a_slug_that_names_a_device_never_stands_alone()
   Test_a_title_that_merely_holds_a_device_name_is_left_alone()
