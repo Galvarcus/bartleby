@@ -166,6 +166,108 @@ def Test_an_unsaved_target_works_under_its_slug(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+# FUNCTION: Return how many warnings the log holds about two
+# definitions of one name, so that a test counts its own.
+def NameWarnings(): number
+  return len(LM.History()
+    ->mapnew((_, m) => string(m))
+    ->filter((_, l) => l =~# 'two definitions'))
+enddef
+
+# Nothing in Bartleby writes a second definition of one name, but a sync
+# conflict copy or a restored file does, and then the name no longer
+# identifies one target: the list showed it twice and only the first was
+# reachable.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/63
+def Test_two_definitions_of_one_name_are_listed_once(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft', format: 'EPUB'}))
+  # As a sync client names a conflicted copy. Every separator one puts
+  # before its suffix sorts below the dot of .json, so the copy is the
+  # file the glob finds first and the writer acts on.
+  writefile([json_encode({name: 'Draft', format: 'PDF'})],
+    dir .. '/draft-copy.json')
+  var before: number = NameWarnings()
+  assert_equal(['Draft'], C.ListTargets(project))
+  assert_equal('PDF', C.LoadTarget(project, 'Draft').format)
+  var said: list<string> = LM.History()->mapnew((_, m) => string(m))
+    ->filter((_, l) => l =~# 'two files')
+  assert_equal(before + 1, len(said), 'the copy was not reported')
+  # The message names the file in use before the file left out, so that
+  # moving one is not a surprise.
+  assert_match('using draft-copy\.json, ignoring draft\.json', said[-1])
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A delete that removed nothing must not report that it did.
+def Test_a_delete_answers_whether_it_removed_anything(): void
+  var project = FI.BuildProject()
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft'}))
+  assert_true(C.DeleteTarget(project, 'Draft'))
+  assert_false(C.DeleteTarget(project, 'Draft'))
+  assert_false(C.DeleteTarget(project, 'Never saved'))
+  FI.CleanupProjectFiles(project)
+enddef
+
+# The second file is reachable again once the first is gone, so nothing
+# the writer holds is lost by leaving it out of the list.
+def Test_the_second_definition_is_listed_once_the_first_goes(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft', format: 'EPUB'}))
+  writefile(readfile(dir .. '/draft.json'), dir .. '/draft-copy.json')
+  delete(dir .. '/draft.json')
+  var before: number = NameWarnings()
+  assert_equal(['Draft'], C.ListTargets(project))
+  assert_equal('EPUB', C.LoadTarget(project, 'Draft').format)
+  assert_equal(before, NameWarnings(), 'one file was still reported as two')
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A name that two files carry survives the deletion of the one in use,
+# with the settings of the other, which is the fault the issue reports.
+# The writer is told rather than left to find it.
+def Test_deleting_one_of_two_files_of_a_name_says_it_is_still_in_use(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Draft', format: 'EPUB'}))
+  writefile([json_encode({name: 'Draft', format: 'PDF'})],
+    dir .. '/draft-copy.json')
+  var before: number = len(LM.History()
+    ->mapnew((_, m) => string(m))->filter((_, l) => l =~# 'still carries'))
+  assert_true(C.DeleteTarget(project, 'Draft'))
+  assert_equal(before + 1, len(LM.History()
+    ->mapnew((_, m) => string(m))->filter((_, l) => l =~# 'still carries')),
+    'the surviving file was not reported')
+  assert_equal(['Draft'], C.ListTargets(project))
+  assert_equal('EPUB', C.LoadTarget(project, 'Draft').format)
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A definition the writer cannot unlink is not a name nothing carried,
+# and the writer was told the target was not there either way.
+def Test_a_delete_that_cannot_remove_the_file_says_so(): void
+  var project = FI.BuildProject()
+  var dir: string = project.scriveDir .. '/compile/targets'
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Locked'}))
+  if setfperm(dir, 'r-xr-xr-x') == 0 || delete(dir .. '/locked.json') == 0
+    # A folder this writer can still write to, or one that cannot be
+    # made read-only, proves nothing here.
+    setfperm(dir, 'rwxr-xr-x')
+    FI.CleanupProjectFiles(project)
+    return
+  endif
+  var before: number = len(LM.History()
+    ->mapnew((_, m) => string(m))->filter((_, l) => l =~# 'could not delete'))
+  assert_false(C.DeleteTarget(project, 'Locked'))
+  assert_equal(before + 1, len(LM.History()
+    ->mapnew((_, m) => string(m))->filter((_, l) => l =~# 'could not delete')),
+    'the file that stayed was not reported')
+  setfperm(dir, 'rwxr-xr-x')
+  FI.CleanupProjectFiles(project)
+enddef
+
 # A damaged definition decodes to nothing, so it carries no name. It
 # must not reach the picker as a blank entry that Run would compile, as
 # it did when a definition was found by the slug of the name asked for.
@@ -444,6 +546,11 @@ export def RunAll(): void
   Test_a_missing_cover_image_stops_the_compile()
   Test_a_missing_cover_does_not_stop_a_format_without_one()
   Test_an_output_path_takes_the_name_of_its_target()
+  Test_two_definitions_of_one_name_are_listed_once()
+  Test_a_delete_answers_whether_it_removed_anything()
+  Test_the_second_definition_is_listed_once_the_first_goes()
+  Test_deleting_one_of_two_files_of_a_name_says_it_is_still_in_use()
+  Test_a_delete_that_cannot_remove_the_file_says_so()
   Test_two_target_names_of_one_slug_are_two_targets()
   Test_a_name_outside_ascii_does_not_take_the_file_of_another()
   Test_two_target_names_that_differ_only_in_case_are_two_targets()

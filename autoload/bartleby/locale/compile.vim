@@ -83,6 +83,23 @@ export def Single(): string
   return IN.T("Single")
 enddef
 
+export def TargetNameTwice(name: any, used: any, ignored: any): string
+  return printf(IN.T("the name \"%s\" is in two files: using %s, ignoring %s"),
+    name, used, ignored)
+enddef
+
+export def NothingToDelete(name: any): string
+  return printf(IN.T("no compile target is named \"%s\""), name)
+enddef
+
+export def DeleteFailed(path: any): string
+  return printf(IN.T("could not delete %s"), path)
+enddef
+
+export def NameStillInUse(name: any): string
+  return printf(IN.T("another file still carries the name \"%s\""), name)
+enddef
+
 export def DeleteCompileTarget(name: any): string
   return printf(IN.T("Delete compile target \"%s\"?"), name)
 enddef

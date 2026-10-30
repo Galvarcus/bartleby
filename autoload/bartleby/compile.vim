@@ -246,11 +246,37 @@ export def WorkName(project: PO.Project, target: CompileTarget): string
   return path ==# '' ? SlugName(target.name) : fnamemodify(path, ':t:r')
 enddef
 
+# FUNCTION: Return the name of every target of project, once each.
+# Nothing here writes a second definition of one name, but a conflicted
+# copy of a sync client or a file restored into the folder does, and then
+# the name no longer tells the two apart: the second is left out and
+# reported, so that the writer can move the file rather than meet a
+# target that cannot be opened or deleted.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/63
 export def ListTargets(project: PO.Project): list<string>
-  # A definition that carries no name is damaged, see PathOf, and a
-  # picker that offered it would offer a target that runs on nothing.
-  return TargetFiles(project)->mapnew((_, p) => NameOf(p))
-    ->filter((_, n) => n !=# '')
+  var names: list<string> = []
+  var seen: dict<string> = {}
+  for path in TargetFiles(project)
+    var name: string = NameOf(path)
+    # A definition that carries no name is damaged, see PathOf, and a
+    # picker that offered it would offer a target that runs on nothing.
+    if name ==# ''
+      continue
+    endif
+    if has_key(seen, name)
+      # Which file is in use, because the writer acts on that one and
+      # the glob decides it: every separator a sync client puts before
+      # its own suffix sorts below the dot of .json, so a conflicted
+      # copy wins over the file the writer made. By name alone, so that
+      # the line fits a screen and no hit-enter prompt covers the list.
+      log.Warn(MK.TargetNameTwice(name,
+        fnamemodify(seen[name], ':t'), fnamemodify(path, ':t')))
+      continue
+    endif
+    seen[name] = path
+    names->add(name)
+  endfor
+  return names
 enddef
 
 export def LoadTarget(project: PO.Project, name: string): CompileTarget
@@ -266,11 +292,27 @@ export def SaveTarget(project: PO.Project, target: CompileTarget): void
     target.ToDict())
 enddef
 
-export def DeleteTarget(project: PO.Project, name: string): void
+# FUNCTION: Remove the definition that carries name, and answer whether
+# it is gone, so that no caller reports a deletion that did not happen.
+# Each cause is reported here, where it is known: a caller of this cannot
+# tell a name nothing carried from a file it could not unlink, and the
+# writer who asked was told the target was not there either way.
+export def DeleteTarget(project: PO.Project, name: string): bool
   var path: string = PathOf(project, name)
-  if path !=# ''
-    delete(path)
+  if path ==# ''
+    log.Warn(MK.NothingToDelete(name))
+    return false
   endif
+  if delete(path) != 0
+    log.Error(MK.DeleteFailed(path))
+    return false
+  endif
+  # A name two files carried survives its own deletion, with the
+  # settings of the file that was left out of the list.
+  if PathOf(project, name) !=# ''
+    log.Warn(MK.NameStillInUse(name))
+  endif
+  return true
 enddef
 
 # Contents selection: a tree buffer with a checkbox per document. It is
@@ -517,8 +559,9 @@ enddef
 
 def DeleteTargetConfirm(project: PO.Project, target: CompileTarget): void
   DP.Confirm(MK.DeleteCompileTarget(target.name), () => {
-    DeleteTarget(project, target.name)
-    log.Info(MK.DeletedCompileTarget(target.name))
+    if DeleteTarget(project, target.name)
+      log.Info(MK.DeletedCompileTarget(target.name))
+    endif
   })
 enddef
 
