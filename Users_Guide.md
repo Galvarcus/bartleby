@@ -635,6 +635,11 @@ change your documents.
    `:BartlebyCompile`, pick the name, and choose Run. Choose Edit to
    change the settings, or Delete to remove the target.
 
+A compile runs while you keep writing. Running the same target again
+before it finishes does nothing, and the log says the target is already
+compiling, because the two runs would write over each other's files.
+Another target can compile at the same time.
+
 When the compile is done, Bartleby asks whether to open the result.
 Press `Enter` to open it. A Markdown file opens in a new tab, and your
 scrive stays as it was in the first tab. A PDF, EPUB, or HTML file opens

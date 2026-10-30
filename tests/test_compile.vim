@@ -131,6 +131,41 @@ def Test_deleting_a_target_leaves_the_other_of_one_slug(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+# The working files of a compile carry the stem of the target's
+# definition, which is unique per target, because every path built from
+# the slug of the name was shared by two targets that reduce alike: the
+# file the engine reads, the file it writes, and the prefix that the log
+# retention trims by.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/60
+def Test_two_targets_of_one_slug_work_under_different_names(): void
+  var project = FI.BuildProject()
+  var one = C.CompileTarget.FromDict({name: '日本語'})
+  var two = C.CompileTarget.FromDict({name: '中文'})
+  C.SaveTarget(project, one)
+  C.SaveTarget(project, two)
+  assert_notequal(C.WorkName(project, one), C.WorkName(project, two))
+  assert_true(C.WorkName(project, one) !=# '', 'the first works under no name')
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A target whose name nothing else reduces to keeps working under its
+# slug, so no path of an existing scrive moves.
+def Test_a_target_of_its_own_slug_works_under_it(): void
+  var project = FI.BuildProject()
+  var target = C.CompileTarget.FromDict({name: 'Draft'})
+  C.SaveTarget(project, target)
+  assert_equal('draft', C.WorkName(project, target))
+  FI.CleanupProjectFiles(project)
+enddef
+
+# A target that was never saved has no definition to take a stem from.
+def Test_an_unsaved_target_works_under_its_slug(): void
+  var project = FI.BuildProject()
+  assert_equal('draft',
+    C.WorkName(project, C.CompileTarget.FromDict({name: 'Draft'})))
+  FI.CleanupProjectFiles(project)
+enddef
+
 # A damaged definition decodes to nothing, so it carries no name. It
 # must not reach the picker as a blank entry that Run would compile, as
 # it did when a definition was found by the slug of the name asked for.
@@ -414,6 +449,9 @@ export def RunAll(): void
   Test_two_target_names_that_differ_only_in_case_are_two_targets()
   Test_saving_one_name_twice_edits_the_target()
   Test_deleting_a_target_leaves_the_other_of_one_slug()
+  Test_two_targets_of_one_slug_work_under_different_names()
+  Test_a_target_of_its_own_slug_works_under_it()
+  Test_an_unsaved_target_works_under_its_slug()
   Test_a_damaged_definition_is_no_target()
   Test_a_path_that_a_folder_holds_is_not_free()
   Test_a_definition_at_the_plain_slug_path_is_still_the_target()

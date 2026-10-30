@@ -107,6 +107,10 @@ export def CompiledOpen(name: any): string
   return printf(IN.T("Compiled \"%s\". Open it?"), name)
 enddef
 
+export def AlreadyCompiling(name: any): string
+  return printf(IN.T("\"%s\" is already compiling"), name)
+enddef
+
 export def Compiling(name: any, label: any): string
   return printf(IN.T("compiling \"%s\" (%s)..."), name, label)
 enddef

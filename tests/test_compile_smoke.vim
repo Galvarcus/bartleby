@@ -21,6 +21,7 @@ vim9script
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/project.vim' as PO
 import './fixtures.vim' as FI
+import 'Logger/messages.vim' as LM
 
 # The table filter, for the tests that run it by itself.
 const TABLES_FILTER: string = expand('<sfile>:p:h:h') .. '/tools/pandoc/tables.lua'
@@ -263,6 +264,120 @@ def Test_the_table_filter_keeps_the_width_with_rules(): void
   assert_match('\\\%(line\|column\)width - 4\\tabcolsep - 3\\arrayrulewidth', tex)
 enddef
 
+# FUNCTION: Return how many compiles the log says were refused, so that
+# a test can count its own rather than every suite's.
+def Refusals(): number
+  return len(LM.History()
+    ->mapnew((_, m) => string(m))
+    ->filter((_, l) => l =~# 'already compiling'))
+enddef
+
+# Two targets whose names reduce to one slug once shared every working
+# path of a compile: the file the engine reads, the file it writes, and
+# the prefix the log retention trims by. Each now works under the stem
+# of its own definition. The two run at once, which is the state the
+# issue reports.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/60
+def Test_two_targets_of_one_slug_keep_their_own_working_files(): void
+  if !executable('pandoc')
+    echom 'SKIP: pandoc not installed'
+    return
+  endif
+  var fx = BuildProjectWithContent()
+  var outDir: string = fx.project.scriveDir .. '/compile/output'
+  var names: list<string> = ['日本語', '中文']
+  var before: number = Refusals()
+  for name in names
+    var target = C.CompileTarget.FromDict({
+      name: name, kind: 'Book', format: 'HTML', includedIds: [fx.scene1.id],
+    })
+    C.SaveTarget(fx.project, target)
+    C.Execute(fx.project, target)
+  endfor
+  for name in names
+    assert_true(WaitForOutput(fx.project, name .. '.html') !=# '',
+      $'no {name}.html within {MAX_WAIT_MS}ms')
+  endfor
+  # Neither run was refused, so the two held different keys.
+  assert_equal(before, Refusals())
+  # One intermediate source per target, and one artifact each.
+  assert_equal(2, len(glob(outDir .. '/.*-src.md', true, true)),
+    'the two targets shared an intermediate source')
+  assert_equal(names->copy()->sort()->mapnew((_, n) => n .. '.html'),
+    glob(outDir .. '/*.html', true, true)
+      ->mapnew((_, f) => fnamemodify(f, ':t'))->sort())
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
+# A second run of one target would rewrite the file its engine is still
+# reading, so it is refused while the first runs, and allowed once that
+# run has ended.
+def Test_a_second_compile_of_one_target_waits_for_the_first(): void
+  if !executable('pandoc')
+    echom 'SKIP: pandoc not installed'
+    return
+  endif
+  var fx = BuildProjectWithContent()
+  var target = C.CompileTarget.FromDict({
+    name: 'Twice', kind: 'Book', format: 'HTML', includedIds: [fx.scene1.id],
+  })
+  C.SaveTarget(fx.project, target)
+  var before: number = Refusals()
+  C.Execute(fx.project, target)
+  C.Execute(fx.project, target)
+  assert_equal(before + 1, Refusals(), 'the second run was not refused once')
+  var outputPath: string = WaitForOutput(fx.project, 'Twice.html')
+  assert_true(outputPath !=# '', $'no Twice.html within {MAX_WAIT_MS}ms')
+
+  # The key is released when the job ends, or the target could never be
+  # compiled again in this session.
+  writefile([STALE], outputPath)
+  C.Execute(fx.project, target)
+  assert_equal(before + 1, Refusals(), 'the run after the first was refused')
+  var waited: number = 0
+  while waited < MAX_WAIT_MS && FirstLine(outputPath) ==# STALE
+    execute $'sleep {POLL_INTERVAL_MS}m'
+    waited += POLL_INTERVAL_MS
+  endwhile
+  assert_notequal(STALE, FirstLine(outputPath),
+    $'the second run wrote nothing within {MAX_WAIT_MS}ms')
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
+# A rename frees the stem of a target's definition, and the renamed
+# target takes it back, so the key of a running compile cannot be the
+# name of its target.
+def Test_a_rename_during_a_compile_cannot_take_its_working_files(): void
+  if !executable('pandoc')
+    echom 'SKIP: pandoc not installed'
+    return
+  endif
+  var fx = BuildProjectWithContent()
+  var one = C.CompileTarget.FromDict({
+    name: '日本語', kind: 'Book', format: 'HTML',
+    includedIds: [fx.scene1.id],
+  })
+  C.SaveTarget(fx.project, one)
+  var work: string = C.WorkName(fx.project, one)
+  var before: number = Refusals()
+  C.Execute(fx.project, one)
+  # The rename of the wizard: the old definition goes, the new one takes
+  # the path it freed.
+  C.DeleteTarget(fx.project, '日本語')
+  var two = C.CompileTarget.FromDict({
+    name: '中文', kind: 'Book', format: 'HTML',
+    includedIds: [fx.scene1.id],
+  })
+  C.SaveTarget(fx.project, two)
+  assert_equal(work, C.WorkName(fx.project, two),
+    'the renamed target did not take the stem back')
+  C.Execute(fx.project, two)
+  assert_equal(before + 1, Refusals(), 'the renamed target was not refused')
+  assert_true(WaitForOutput(fx.project, '日本語.html') !=# '',
+    $'the first run left no artifact within {MAX_WAIT_MS}ms')
+  FI.CleanupProjectFiles(fx.project)
+enddef
+
 # The Markdown format writes its output itself, with no engine and no
 # job, so it is the one route to the rename that needs no program. It
 # lives here rather than in test_compile.vim because the offer to open
@@ -337,6 +452,9 @@ export def RunAll(): void
   Test_book_pdf_compiles_to_a_real_nonempty_file()
   Test_pandoc_log_per_run_with_retention()
   Test_failure_writes_a_log_and_asks_to_open_it()
+  Test_two_targets_of_one_slug_keep_their_own_working_files()
+  Test_a_second_compile_of_one_target_waits_for_the_first()
+  Test_a_rename_during_a_compile_cannot_take_its_working_files()
   Test_a_markdown_output_is_written_under_the_name_of_its_target()
   Test_a_compiled_file_takes_the_accented_name_of_its_target()
   Test_book_html_tables_get_the_settings()

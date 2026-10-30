@@ -54,6 +54,8 @@ const FMT_FDX: string = 'FDX'
 const FMT_PDF: string = 'PDF'
 const PATH_COMPILE_TARGETS: string = '/compile/targets'
 const EXT_JSON: string = '.json'
+# What job_status answers for a job that never started.
+const JOB_FAIL: string = 'fail'
 const FILE_JSON: string = '*.json'
 const SPACING_DOUBLE: string = 'Double'
 const SPACING_SINGLE: string = 'Single'
@@ -112,6 +114,16 @@ var table_border: string = g:bartleby_compile_table_border
 var table_vlines: string = g:bartleby_compile_table_vlines
 var table_header: string = g:bartleby_compile_table_header
 var log_retention: number = g:bartleby_compile_log_retention
+
+# The compiles that are running, by the output folder and the work name
+# that all of their paths are built from, so that a second run cannot
+# start while the first is reading and writing the files the two would
+# share. The name of a target is the wrong key: a rename frees the stem
+# of its definition and the renamed target takes it back, and one name
+# in two scrives shares no path at all. A session that ends takes the
+# list with it.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/60
+var running: dict<bool> = {}
 
 const KIND_MANUSCRIPT: string = 'Manuscript'
 const KIND_BOOK: string = 'Book'
@@ -220,6 +232,18 @@ def FreeTargetPath(project: PO.Project, name: string): string
     n += 1
   endwhile
   return path
+enddef
+
+# FUNCTION: Return the name that the working files of a target carry:
+# the stem of its definition, which holds one target since #58, or the
+# slug of its name while it has none. It stays ASCII, because a TeX
+# engine is unreliable with a path outside ASCII, and it has to differ
+# between two targets whose names reduce to one slug, which every name
+# in a script of its own does.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/60
+export def WorkName(project: PO.Project, target: CompileTarget): string
+  var path: string = PathOf(project, target.name)
+  return path ==# '' ? SlugName(target.name) : fnamemodify(path, ':t:r')
 enddef
 
 export def ListTargets(project: PO.Project): list<string>
@@ -916,17 +940,26 @@ def OfferToOpen(target: CompileTarget, outputPath: string): void
   }, true)
 enddef
 
-# FUNCTION: Run a compile command. On success, offer to open the output.
-# On failure, write the command's error output to logBase .. '.log' and
+# FUNCTION: Take key out of the compiles that are running.
+def Ended(key: string): void
+  if has_key(running, key)
+    remove(running, key)
+  endif
+enddef
+
+# FUNCTION: Run a compile command, under key, which no other run may hold
+# while this one has it. On success, offer to open the output. On
+# failure, write the command's error output to logBase .. '.log' and
 # offer to open that log in a new tab. Pandoc writes its own log only on
 # success, so this failure log is the only record of what went wrong.
 def RunJob(label: string, cmd: list<string>, target: CompileTarget,
-    outputPath: string, finalPath: string, logBase: string): void
+    outputPath: string, finalPath: string, logBase: string, key: string): void
   var errLines: list<string> = []
   log.Info(MK.Compiling(target.name, label))
-  job_start(cmd, {
+  var job: job = job_start(cmd, {
     err_cb: (_, line) => errLines->add(line),
     exit_cb: (_, status) => {
+      Ended(key)
       if status ==# 0
         Finish(target, outputPath, finalPath)
       else
@@ -935,6 +968,12 @@ def RunJob(label: string, cmd: list<string>, target: CompileTarget,
       endif
     },
   })
+  # Held only once the job is running. A job that never started calls no
+  # exit callback, so a key set before this would stay and refuse every
+  # later compile of that target.
+  if job_status(job) !=# JOB_FAIL
+    running[key] = true
+  endif
 enddef
 
 # FUNCTION: Write a failed command, its exit status, and its error output
@@ -958,7 +997,8 @@ def OfferFailureLog(target: CompileTarget, path: string): void
   }, true)
 enddef
 
-def ExecuteScreenplay(project: PO.Project, target: CompileTarget): void
+def ExecuteScreenplay(project: PO.Project, target: CompileTarget,
+    work: string, key: string): void
   if !executable(screenplain_bin)
     log.Error(MK.ScreenplainNotFound(screenplain_bin))
     return
@@ -968,12 +1008,12 @@ def ExecuteScreenplay(project: PO.Project, target: CompileTarget): void
     mkdir(outDir, 'p')
   endif
   var ext: string = get(SCREENPLAY_EXT, target.format, 'pdf')
-  var outputPath: string = $'{outDir}/{SlugName(target.name)}.{ext}'
-  var fountainPath: string = $'{outDir}/.{SlugName(target.name)}-src.fountain'
+  var outputPath: string = $'{outDir}/{work}.{ext}'
+  var fountainPath: string = $'{outDir}/.{work}-src.fountain'
   writefile(ConcatenateDocs(project, target, ''), fountainPath)
   RunJob($'{target.kind}/{target.format}', [screenplain_bin, fountainPath, outputPath],
     target, outputPath, FinalPath(outputPath, target.name, ext),
-    NewLogBase(project, target))
+    NewLogBase(project, work), key)
 enddef
 
 def BuildDocLines(project: PO.Project, target: CompileTarget): list<string>
@@ -1022,7 +1062,8 @@ def TexReady(target: CompileTarget, docLines: list<string>, lang: string): bool
   return true
 enddef
 
-def ExecutePandoc(project: PO.Project, target: CompileTarget): void
+def ExecutePandoc(project: PO.Project, target: CompileTarget,
+    work: string, key: string): void
   var cover: string = UsesCover(target) ? CoverPath(target.coverImage) : ''
   # Check before Pandoc runs, which would fail on the missing file with a
   # less helpful message.
@@ -1035,7 +1076,7 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
     mkdir(outDir, 'p')
   endif
   var ext: string = get(PANDOC_EXT, target.format, 'pdf')
-  var outputPath: string = $'{outDir}/{SlugName(target.name)}.{ext}'
+  var outputPath: string = $'{outDir}/{work}.{ext}'
 
   if target.format ==# FMT_MARKDOWN
     writefile(BuildDocLines(project, target), outputPath)
@@ -1048,7 +1089,7 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
     return
   endif
 
-  var mdPath: string = $'{outDir}/.{SlugName(target.name)}-src.md'
+  var mdPath: string = $'{outDir}/.{work}-src.md'
   var docLines: list<string> = BuildDocLines(project, target)
   writefile(docLines, mdPath)
 
@@ -1104,11 +1145,11 @@ def ExecutePandoc(project: PO.Project, target: CompileTarget): void
   if target.format ==# FMT_PDF && !TexReady(target, docLines, lang)
     return
   endif
-  var logBase: string = NewLogBase(project, target)
+  var logBase: string = NewLogBase(project, work)
   args->add($'--log={logBase}.json')
 
   RunJob($'{target.kind}/{target.format}', [pandoc_bin] + args, target, outputPath,
-    FinalPath(outputPath, target.name, ext), logBase)
+    FinalPath(outputPath, target.name, ext), logBase, key)
 enddef
 
 # FUNCTION: Return the paper size for PDF: g:bartleby_compile_papersize
@@ -1130,13 +1171,13 @@ enddef
 # On failure, RunJob writes .log there with the error output. Keep the
 # newest g:bartleby_compile_log_retention logs per scrive and target,
 # this run included, and delete the rest. 0 keeps every log.
-def NewLogBase(project: PO.Project, target: CompileTarget): string
+def NewLogBase(project: PO.Project, work: string): string
   var logDir: string = expand('~/.bartleby/logs')
   if !isdirectory(logDir)
     mkdir(logDir, 'p')
   endif
   var prefix: string = SU.Slugify(fnamemodify(project.scriveDir, ':t:r'))
-    .. '_' .. SU.Slugify(target.name) .. '_'
+    .. '_' .. work .. '_'
   if log_retention > 0
     # nosuf true, or a wildignore of the writer leaves the logs untrimmed.
     var older: list<string> = sort(glob($'{logDir}/{prefix}[0-9]*.*', true, true))
@@ -1151,10 +1192,18 @@ def NewLogBase(project: PO.Project, target: CompileTarget): string
 enddef
 
 export def Execute(project: PO.Project, target: CompileTarget): void
+  var work: string = WorkName(project, target)
+  var key: string = $'{OutputDir(project)}/{work}'
+  # A second run under one key would rewrite the file its engine is
+  # still reading and write over the file that engine is producing.
+  if has_key(running, key)
+    log.Warn(MK.AlreadyCompiling(target.name))
+    return
+  endif
   if target.kind ==# KIND_SCREENPLAY
-    ExecuteScreenplay(project, target)
+    ExecuteScreenplay(project, target, work, key)
   else
-    ExecutePandoc(project, target)
+    ExecutePandoc(project, target, work, key)
   endif
 enddef
 
