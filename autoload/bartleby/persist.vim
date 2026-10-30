@@ -24,7 +24,10 @@ import autoload 'bartleby/path.vim' as PA
 var log = L.New(expand('<sfile>:t'))
 
 # The suffix of the file that a write fills before it replaces the file.
-const TMP_SUFFIX: string = '.tmp'
+# Exported because a caller that budgets a path against a limit must
+# count what a write appends to it, which is longer than the path the
+# write leaves behind.
+export const TMP_SUFFIX: string = '.tmp'
 # The suffix of the copy of a file before its last write, see WriteJson.
 export const BACKUP_SUFFIX: string = '.bak'
 

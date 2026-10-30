@@ -60,13 +60,15 @@ const JOB_FAIL: string = 'fail'
 # the component, less the timestamp, the two separators and .json.
 const LOG_NAME_BYTES: number = 116
 
-# What a whole path may hold. MS-Windows refuses one longer than this
+# What a whole path may hold. MS-Windows refuses one over 260 characters
 # unless the writer has turned long paths on, and the limit of a single
 # component does not catch it: a name inside that limit, under a folder
-# of ordinary depth, is still over this. Elsewhere the component is what
+# of ordinary depth, is still over this. The few bytes under 260 are
+# margin, because the name of a definition is not the name of its
+# target and a shorter one costs nothing. Elsewhere a component is what
 # binds first, so this number only has to be past it.
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/61
-const MAX_PATH_BYTES: number = has('win32') ? 259 : 1023
+const MAX_PATH_BYTES: number = has('win32') ? 255 : 1023
 const FILE_JSON: string = '*.json'
 const SPACING_DOUBLE: string = 'Double'
 const SPACING_SINGLE: string = 'Single'
@@ -231,12 +233,13 @@ def PathOf(project: PO.Project, name: string): string
 enddef
 
 # FUNCTION: Return what the name of a definition may take under dir: the
-# room the path leaves after the folder, the suffix a name in use takes
-# and the extension. The name of a definition is not the name of its
-# target, which is stored inside the file, so a shorter file name costs
-# nothing but the look of it.
+# room the path leaves after the folder, the suffix a name in use takes,
+# the extension, and what a write appends while it works, which is
+# longer than the path it leaves. The name of a definition is not the
+# name of its target, which is stored inside the file, so a shorter file
+# name costs nothing but the look of it.
 export def PathRoom(dir: string): number
-  return MAX_PATH_BYTES - strlen($'{dir}/-99{EXT_JSON}')
+  return MAX_PATH_BYTES - strlen($'{dir}/-99{EXT_JSON}{PE.TMP_SUFFIX}')
 enddef
 
 # FUNCTION: Return the first of <slug>.json, <slug>-2.json and so on

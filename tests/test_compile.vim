@@ -172,8 +172,12 @@ enddef
 def Test_a_target_of_a_very_long_name_is_saved(): void
   var project = FI.BuildProject()
   var name: string = repeat('Chapter ', 40)
+  var dir: string = project.scriveDir .. '/compile/targets'
+  # With the measurements, because what fits is a question of where the
+  # scrive sits, and a runner's answer is not this machine's.
   assert_true(C.SaveTarget(project, C.CompileTarget.FromDict({
-    name: name, format: 'PDF'})))
+    name: name, format: 'PDF'})),
+    $'the folder is {strlen(dir)} bytes and leaves {C.PathRoom(dir)}')
   assert_equal([name], C.ListTargets(project))
   assert_equal('PDF', C.LoadTarget(project, name).format)
   FI.CleanupProjectFiles(project)
