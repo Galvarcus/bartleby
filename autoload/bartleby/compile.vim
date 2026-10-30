@@ -483,10 +483,37 @@ def DefaultFont(kind: string): string
   return kind ==# KIND_BOOK ? book_font : manuscript_font
 enddef
 
+# FUNCTION: Return true when saving a target under name would replace
+# the definition of another target. A target saved under its own name is
+# an edit of itself, which replaces nothing.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/59
+export def Replaces(project: PO.Project, name: string,
+    existing: CompileTarget): bool
+  return (existing is null_object || existing.name !=# name)
+    && LoadTarget(project, name) isnot null_object
+enddef
+
+# FUNCTION: Remove the definition of the name that target was renamed
+# from, and save target over any definition of its own name.
+export def SaveOver(project: PO.Project, target: CompileTarget,
+    existing: CompileTarget): void
+  if existing isnot null_object && existing.name !=# target.name
+    DeleteTarget(project, existing.name)
+  endif
+  SaveTarget(project, target)
+enddef
+
+def SaveAndRun(project: PO.Project, target: CompileTarget,
+    existing: CompileTarget): void
+  SaveOver(project, target, existing)
+  Execute(project, target)
+enddef
+
 # FUNCTION: Show the settings form: name, font, cover image for Book, and
 # separator for all kinds except Screenplay. existing is null_object for a
 # new target. For an edited target, it fills every field, and a changed
-# name deletes the old target file.
+# name deletes the old definition once the question of a name another
+# target carries is answered.
 def FinishWizard(project: PO.Project, kind: string, format: string,
     doubleSpaced: bool, ids: list<string>, existing: CompileTarget): void
   var fields: list<list<string>> = [['name'], ['font']]
@@ -521,11 +548,18 @@ def FinishWizard(project: PO.Project, kind: string, format: string,
     v.separator = get(vals, 'separator', '* * *')
     v.includedIds = ids
     var target: CompileTarget = CompileTarget.FromDict(v)
-    if existing isnot null_object && existing.name !=# name
-      DeleteTarget(project, existing.name)
+    if Replaces(project, name, existing)
+      # What was kept, because Enter answers no here while every other
+      # step of the wizard takes Enter for the answer that goes on, so a
+      # writer may reach this without meaning to answer at all.
+      DP.Confirm(MK.ReplaceCompileTarget(name), () => {
+        SaveAndRun(project, target, existing)
+      }, false, () => {
+        log.Info(MK.KeptCompileTarget(name))
+      })
+      return
     endif
-    SaveTarget(project, target)
-    Execute(project, target)
+    SaveAndRun(project, target, existing)
   })
   form.Open()
 enddef

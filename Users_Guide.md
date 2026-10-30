@@ -633,7 +633,10 @@ change your documents.
    complete the path.
 4. **Name the target.** Bartleby saves your answers. Next time, run
    `:BartlebyCompile`, pick the name, and choose Run. Choose Edit to
-   change the settings, or Delete to remove the target.
+   change the settings, or Delete to remove the target. If another
+   target already has the name you typed, Bartleby asks before
+   replacing it. Press `y` to replace that target, or `n` to keep it,
+   which leaves your new settings unsaved.
 
 A compile runs while you keep writing. Running the same target again
 before it finishes does nothing, and the log says the target is already

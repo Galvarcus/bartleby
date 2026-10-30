@@ -100,6 +100,15 @@ export def NameStillInUse(name: any): string
   return printf(IN.T("another file still carries the name \"%s\""), name)
 enddef
 
+export def ReplaceCompileTarget(name: any): string
+  return printf(IN.T("Another compile target is named \"%s\". Replace it?"),
+    name)
+enddef
+
+export def KeptCompileTarget(name: any): string
+  return printf(IN.T("kept \"%s\", so nothing was saved"), name)
+enddef
+
 export def DeleteCompileTarget(name: any): string
   return printf(IN.T("Delete compile target \"%s\"?"), name)
 enddef

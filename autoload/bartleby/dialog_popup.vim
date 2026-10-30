@@ -34,9 +34,14 @@ const PROP_DEFAULT: string = 'BartlebyDialogDefault'
 const YES_KEYS: list<string> = ['y', 'Y']
 const NO_KEYS: list<string> = ['n', 'N', 'x', "\<Esc>", "\<C-c>"]
 
-# FUNCTION: Ask question in a popup and call OnYes when the answer is yes.
-# defaultYes sets the answer that Enter gives. Return the popup id.
-export def Confirm(question: string, OnYes: func(), defaultYes: bool = false): number
+# FUNCTION: Ask question in a popup and call OnYes when the answer is
+# yes, or OnNo when it is no. defaultYes sets the answer that Enter
+# gives. A caller passes OnNo when the writer should hear what was kept,
+# because Enter answers the question and a writer who takes Enter for
+# the step that confirms may not have meant to answer at all. A popup
+# closed by anything but an answer calls neither. Return the popup id.
+export def Confirm(question: string, OnYes: func(), defaultYes: bool = false,
+    OnNo: func() = null_function): number
   if empty(prop_type_get(PROP_DEFAULT))
     prop_type_add(PROP_DEFAULT, {highlight: 'PmenuSel'})
   endif
@@ -58,6 +63,8 @@ export def Confirm(question: string, OnYes: func(), defaultYes: bool = false): n
     callback: (_, result) => {
       if result == 1
         OnYes()
+      elseif result == 0 && OnNo != null_function
+        OnNo()
       endif
     },
   })

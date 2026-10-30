@@ -166,6 +166,50 @@ def Test_an_unsaved_target_works_under_its_slug(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+# Saving a name that another target carries replaces that target, and
+# the wizard reads as additive when it renames one or makes a new one,
+# so the writer is asked before the settings of the other are gone.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/59
+def Test_a_new_target_of_a_name_in_use_replaces_it(): void
+  var project = FI.BuildProject()
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Keep'}))
+  assert_true(C.Replaces(project, 'Keep', null_object))
+  assert_false(C.Replaces(project, 'Fresh', null_object))
+  FI.CleanupProjectFiles(project)
+enddef
+
+# The save that follows a yes: the renamed-from definition goes and the
+# replaced target's own file takes the new settings, so one target of
+# that name is left. Without the delete a rename would leave both.
+def Test_a_save_over_another_target_leaves_one_of_the_name(): void
+  var project = FI.BuildProject()
+  var old = C.CompileTarget.FromDict({name: 'Old', format: 'EPUB'})
+  C.SaveTarget(project, old)
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Keep', format: 'HTML'}))
+  C.SaveOver(project, C.CompileTarget.FromDict({name: 'Keep', format: 'PDF'}), old)
+  assert_equal(['Keep'], C.ListTargets(project))
+  assert_equal('PDF', C.LoadTarget(project, 'Keep').format)
+  FI.CleanupProjectFiles(project)
+enddef
+
+def Test_a_target_saved_under_its_own_name_replaces_nothing(): void
+  var project = FI.BuildProject()
+  var keep = C.CompileTarget.FromDict({name: 'Keep'})
+  C.SaveTarget(project, keep)
+  assert_false(C.Replaces(project, 'Keep', keep))
+  FI.CleanupProjectFiles(project)
+enddef
+
+def Test_a_rename_onto_the_name_of_another_target_replaces_it(): void
+  var project = FI.BuildProject()
+  var old = C.CompileTarget.FromDict({name: 'Old'})
+  C.SaveTarget(project, old)
+  C.SaveTarget(project, C.CompileTarget.FromDict({name: 'Keep'}))
+  assert_true(C.Replaces(project, 'Keep', old))
+  assert_false(C.Replaces(project, 'Fresh', old))
+  FI.CleanupProjectFiles(project)
+enddef
+
 # FUNCTION: Return how many warnings the log holds about two
 # definitions of one name, so that a test counts its own.
 def NameWarnings(): number
@@ -546,6 +590,10 @@ export def RunAll(): void
   Test_a_missing_cover_image_stops_the_compile()
   Test_a_missing_cover_does_not_stop_a_format_without_one()
   Test_an_output_path_takes_the_name_of_its_target()
+  Test_a_new_target_of_a_name_in_use_replaces_it()
+  Test_a_save_over_another_target_leaves_one_of_the_name()
+  Test_a_target_saved_under_its_own_name_replaces_nothing()
+  Test_a_rename_onto_the_name_of_another_target_replaces_it()
   Test_two_definitions_of_one_name_are_listed_once()
   Test_a_delete_answers_whether_it_removed_anything()
   Test_the_second_definition_is_listed_once_the_first_goes()
