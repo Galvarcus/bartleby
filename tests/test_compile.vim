@@ -179,6 +179,19 @@ def Test_a_target_of_a_very_long_name_is_saved(): void
   FI.CleanupProjectFiles(project)
 enddef
 
+# The name of a definition is budgeted against the path that holds it,
+# not only against the limit of one component: a name inside that limit,
+# under a folder of ordinary depth, is still a path MS-Windows refuses,
+# which is how the test above first failed there.
+def Test_the_room_for_a_name_falls_as_its_folder_grows(): void
+  var shallow: number = C.PathRoom('/s/compile/targets')
+  var deep: number = C.PathRoom($'/s/{repeat("folder/", 20)}compile/targets')
+  assert_true(deep < shallow, $'{deep} is no less than {shallow}')
+  # It falls by exactly what the folder gained, its separator included.
+  assert_equal(shallow - strlen($'{repeat("x", 40)}/'),
+    C.PathRoom($'/s/{repeat("x", 40)}/compile/targets'))
+enddef
+
 # A save answers whether it wrote, so that nothing compiles a target
 # that is not on disk.
 def Test_a_save_answers_whether_it_wrote(): void
@@ -701,6 +714,7 @@ export def RunAll(): void
   Test_a_missing_cover_does_not_stop_a_format_without_one()
   Test_an_output_path_takes_the_name_of_its_target()
   Test_a_target_of_a_very_long_name_is_saved()
+  Test_the_room_for_a_name_falls_as_its_folder_grows()
   Test_a_save_answers_whether_it_wrote()
   Test_a_log_prefix_leaves_room_for_the_stamp()
   Test_a_failed_save_compiles_nothing()

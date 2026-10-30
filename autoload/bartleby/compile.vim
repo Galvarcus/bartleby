@@ -59,6 +59,14 @@ const JOB_FAIL: string = 'fail'
 # What each of the two names in a log file name may take: 255 bytes for
 # the component, less the timestamp, the two separators and .json.
 const LOG_NAME_BYTES: number = 116
+
+# What a whole path may hold. MS-Windows refuses one longer than this
+# unless the writer has turned long paths on, and the limit of a single
+# component does not catch it: a name inside that limit, under a folder
+# of ordinary depth, is still over this. Elsewhere the component is what
+# binds first, so this number only has to be past it.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/61
+const MAX_PATH_BYTES: number = has('win32') ? 259 : 1023
 const FILE_JSON: string = '*.json'
 const SPACING_DOUBLE: string = 'Double'
 const SPACING_SINGLE: string = 'Single'
@@ -222,12 +230,25 @@ def PathOf(project: PO.Project, name: string): string
   return ''
 enddef
 
+# FUNCTION: Return what the name of a definition may take under dir: the
+# room the path leaves after the folder, the suffix a name in use takes
+# and the extension. The name of a definition is not the name of its
+# target, which is stored inside the file, so a shorter file name costs
+# nothing but the look of it.
+export def PathRoom(dir: string): number
+  return MAX_PATH_BYTES - strlen($'{dir}/-99{EXT_JSON}')
+enddef
+
 # FUNCTION: Return the first of <slug>.json, <slug>-2.json and so on
 # that nothing holds, for a name that no definition carries yet. Held
 # rather than readable, because a folder of that name holds it too, as
 # does a file that cannot be read.
 def FreeTargetPath(project: PO.Project, name: string): string
-  var base: string = TargetsDir(project) .. '/' .. SlugName(name)
+  var dir: string = TargetsDir(project)
+  # Within the room this path leaves, and never to nothing, because a
+  # definition named only .json is one that the glob cannot list.
+  var slug: string = SU.Capped(SlugName(name), max([PathRoom(dir), 1]))
+  var base: string = $'{dir}/{slug ==# "" ? CO.UNTITLED : slug}'
   var path: string = base .. EXT_JSON
   var n: number = 2
   while getftype(path) !=# ''
