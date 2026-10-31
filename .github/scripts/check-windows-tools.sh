@@ -23,6 +23,7 @@ set -u
 vim_exe=${VIM_EXE:-vim}
 tools='pandoc pdflatex xelatex'
 report=tests/tools_results.txt
+font_report=tests/font_results.txt
 
 rm -f "$report"
 
@@ -58,3 +59,50 @@ for tool in $tools; do
     exit 1
   fi
 done
+
+# The font the Book compiles ask for, which a leg that cannot resolve it
+# answers with two tests timing out after three minutes each. The family
+# is named once, in tests/fixtures.vim, and smoke-font.vim reads it there
+# for this check, so the suite and the check cannot ask for two fonts.
+#
+# The assertion is a compile, not a listing: the fc-list of the MiKTeX
+# tree reads a fontconfig cache that the cache entry can carry, so it
+# reports a font that this runner may not be able to use, and a probe of
+# four routes found the compile to be the only reliable answer.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/68
+rm -f "$font_report"
+
+"$vim_exe" -es -u NONE -N \
+  -c 'set rtp+=.,deps/Logger' \
+  -c 'source .github/scripts/smoke-font.vim' -c 'quit' || true
+
+if [ ! -f "$font_report" ]; then
+  echo "::error::Vim never wrote $font_report, so the font that the Book compiles ask for could not be read."
+  exit 1
+fi
+
+font=$(head -1 "$font_report" | tr -d '\r')
+if [ -z "$font" ]; then
+  echo "::error::$font_report holds no font family."
+  exit 1
+fi
+
+probe=$(mktemp -d)
+trap 'rm -rf "$probe"' EXIT
+cat > "$probe/font.tex" <<TEX
+\\documentclass{article}
+\\usepackage{fontspec}
+\\setmainfont{$font}
+\\begin{document}
+The engine resolved the font of this line.
+\\end{document}
+TEX
+
+if ( cd "$probe" && xelatex -interaction=nonstopmode -halt-on-error font.tex ) \
+  >"$probe/out" 2>&1 && [ -s "$probe/font.pdf" ]; then
+  echo "xelatex resolves $font"
+else
+  echo "::error::xelatex cannot resolve the font $font, which the Book compiles of the smoke suite ask for. Every PDF test of that suite would time out. What xelatex said follows."
+  cat "$probe/out"
+  exit 1
+fi

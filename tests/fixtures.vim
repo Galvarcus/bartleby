@@ -49,6 +49,13 @@ export def WriteDocContent(project: PO.Project, item: BI.BinderItem, lines: list
   writefile(lines, path)
 enddef
 
+# The font that the Book compiles of the smoke suite ask fontspec for.
+# It is exported because the compile leg of CI reads it as well, through
+# .github/scripts/smoke-font.vim: the leg asserts that the family is
+# usable before the suites run, and a family named twice could be
+# registered in one place and asked for in another.
+export const SMOKE_FONT: string = 'DejaVu Serif'
+
 # The file that Step appends to, under the folder that a run starts in.
 const PROGRESS: string = 'tests/progress.log'
 

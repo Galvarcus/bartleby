@@ -25,6 +25,9 @@ import 'Logger/messages.vim' as LM
 
 # The table filter, for the tests that run it by itself.
 const TABLES_FILTER: string = expand('<sfile>:p:h:h') .. '/tools/pandoc/tables.lua'
+# This file, read by the test of the one definition of the font. A Vim9
+# function cannot expand <sfile>, see E1245.
+const SUITE: string = expand('<sfile>:p')
 
 # How long a test waits for a compile. A minute was not enough on a
 # Windows runner: the Manuscript PDF timed out in runs 40784691668 and
@@ -93,6 +96,17 @@ def Test_manuscript_pdf_compiles_to_a_real_nonempty_file(): void
   assert_true(outputPath !=# '', 'Manuscript PDF did not appear within ' .. MAX_WAIT_MS .. 'ms')
 enddef
 
+# The family that the Book compiles with has one definition, in
+# fixtures.vim, because the compile leg of CI reads it too: a check that
+# names a font of its own would pass while the suite asked for another.
+def Test_the_font_of_the_fixture_has_one_definition(): void
+  assert_equal('DejaVu Serif', FI.SMOKE_FONT)
+  # No target of this suite names the family itself, so the check of the
+  # compile leg and the suite cannot ask for two different fonts.
+  assert_equal([], readfile(SUITE)
+    ->filter((_, l) => l =~# $"font: '{FI.SMOKE_FONT}'"))
+enddef
+
 def Test_book_pdf_compiles_to_a_real_nonempty_file(): void
   if !executable('pandoc') || !executable('xelatex')
     echom 'SKIP: pandoc/xelatex not installed'
@@ -101,7 +115,7 @@ def Test_book_pdf_compiles_to_a_real_nonempty_file(): void
   var fx = BuildProjectWithContent()
   defer Cleanup(fx.project)
   var target = C.CompileTarget.FromDict({
-    name: 'SmokeBook', kind: 'Book', format: 'PDF', font: 'DejaVu Serif',
+    name: 'SmokeBook', kind: 'Book', format: 'PDF', font: FI.SMOKE_FONT,
     includedIds: [fx.scene1.id],
   })
   C.Execute(fx.project, target)
@@ -495,6 +509,7 @@ enddef
 export def RunAll(): void
   RE.RunTests([
     Test_manuscript_pdf_compiles_to_a_real_nonempty_file,
+    Test_the_font_of_the_fixture_has_one_definition,
     Test_book_pdf_compiles_to_a_real_nonempty_file,
     Test_pandoc_log_per_run_with_retention,
     Test_failure_writes_a_log_and_asks_to_open_it,
