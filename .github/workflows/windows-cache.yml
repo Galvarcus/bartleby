@@ -48,6 +48,8 @@ on:
 
 permissions:
   contents: read
+  # To delete the entry that a rebuild replaces, see the step that does it.
+  actions: write
 
 jobs:
   cache:
@@ -90,6 +92,31 @@ jobs:
             fi
           else
             echo "${{ steps.key.outputs.key }} is not saved. Making it."
+          fi
+
+      # A cache entry is immutable: a save to a key that is already saved
+      # is refused, so a rebuild that only did the work again would throw
+      # it away and leave the old entry in place. The entry of this ref
+      # therefore goes first.
+      #
+      # Of this ref alone, because a lookup is answered by the entry of
+      # the default branch as well, and a save from a branch makes an
+      # entry of that branch rather than replacing the one on main. When
+      # there is nothing of this ref to delete, that is the case, and the
+      # rebuild saves an entry of its own.
+      - name: Delete the entry that a rebuild replaces
+        if: steps.found.outputs.cache-hit == 'true' && inputs.rebuild
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          KEY: ${{ steps.key.outputs.key }}
+        run: |
+          if gh api --method DELETE \
+            "repos/$GITHUB_REPOSITORY/actions/caches?key=$KEY&ref=$GITHUB_REF" \
+            >/dev/null 2>&1; then
+            echo "The entry of $GITHUB_REF is deleted, so this run can save over it."
+          else
+            echo "$GITHUB_REF has no entry of its own to delete, so the lookup was answered by another ref and this run saves an entry of its own."
           fi
 
       # The warm-up asks texcheck.vim which files the templates name, so it

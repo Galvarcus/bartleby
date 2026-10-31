@@ -278,6 +278,11 @@ jobs:
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.windows), 'compile')
     uses: ./.github/workflows/windows-cache.yml
+    # The called workflow deletes the entry that a rebuild replaces, which
+    # the token cannot do with the read permission of this file.
+    permissions:
+      contents: read
+      actions: write
     with:
       # A dispatch of this workflow can ask for a fresh entry, which is
       # the only way to replace one whose key has not moved: a save over
