@@ -1,0 +1,57 @@
+name: Install pandoc
+description: >-
+  Install the newest pandoc on a runner of Windows, from the releases of
+  pandoc itself, so that the compile leg installs it without a package
+  manager of the system. The runner has no pandoc of its own, and the
+  package manager it does have spent 84 seconds of every run on this and
+  fetched from a third service while the tests waited.
+
+  No version is named here. The spread of pandoc versions that CI covers
+  comes from the Linux legs, one of which takes whatever the distribution
+  ships, so the newest release is what this adds to it. The version it
+  resolved is printed, so that a release which breaks a compile names
+  itself in the log instead of reading as a flake.
+runs:
+  using: composite
+  steps:
+    # PowerShell, because the runner of Windows has neither jq nor unzip of
+    # its own, and Invoke-RestMethod reads the release by itself, as the
+    # install-vim action does for the same reason.
+    - name: Download and unpack pandoc
+      shell: pwsh
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $headers = @{Authorization = "Bearer $env:GITHUB_TOKEN"}
+        $release = Invoke-RestMethod -Headers $headers `
+          -Uri 'https://api.github.com/repos/jgm/pandoc/releases/latest'
+        $asset = $release.assets |
+          Where-Object {$_.name -match '^pandoc-[0-9.]+-windows-x86_64\.zip$'} |
+          Select-Object -First 1
+        if (-not $asset) {
+          Write-Output "::error::The pandoc release $($release.tag_name) holds no asset named pandoc-<version>-windows-x86_64.zip, which is what this action looks for."
+          exit 1
+        }
+        $zip = Join-Path $env:RUNNER_TEMP 'pandoc.zip'
+        $dir = Join-Path $env:RUNNER_TEMP 'pandoc'
+        Invoke-WebRequest -Headers $headers -Uri $asset.browser_download_url -OutFile $zip
+        Expand-Archive -Path $zip -DestinationPath $dir
+        # The zip holds pandoc.exe in a folder of its version, such as
+        # pandoc-3.13, which the next release renames.
+        $exe = Get-ChildItem -Path $dir -Recurse -Filter 'pandoc.exe' |
+          Select-Object -First 1
+        if (-not $exe) {
+          Write-Output "::error::$($asset.name) holds no pandoc.exe."
+          exit 1
+        }
+        Add-Content -Path $env:GITHUB_PATH -Value $exe.DirectoryName
+
+    # The version of the pandoc that answers, which is not always the one
+    # just unpacked: the Git Bash of a Windows runner has a PATH of its own,
+    # see the install-vim action.
+    - name: The pandoc version
+      shell: bash
+      run: |
+        command -v pandoc
+        pandoc --version | head -1

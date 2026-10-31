@@ -303,16 +303,23 @@ jobs:
           repository: Galvarcus/Logger
           path: deps/Logger
 
-      # The runner has neither pandoc nor the DejaVu Serif that the Book
-      # PDF asks of fontspec, which the CI image takes from
-      # fonts-dejavu-core, see .github/docker/Dockerfile. A TeX package
-      # cannot stand in for the font, because XeTeX reads the fonts of the
-      # system, and no entry can carry one either, because a font is
-      # usable once it is registered and a cache holds files alone.
-      - name: Install pandoc and the DejaVu fonts
+      # The runner has no pandoc of its own, and the action takes the
+      # newest release rather than a package of a manager of the system,
+      # which fetched from a third service while the tests waited.
+      - name: Install pandoc
+        if: matrix.leg == 'compile'
+        uses: ./.github/actions/install-pandoc
+
+      # The runner has none of the DejaVu Serif that the Book PDF asks of
+      # fontspec either, which the CI image takes from fonts-dejavu-core,
+      # see .github/docker/Dockerfile. A TeX package cannot stand in for
+      # the font, because XeTeX reads the fonts of the system, and no entry
+      # can carry one either, because a font is usable once it is
+      # registered and a cache holds files alone.
+      - name: Install the DejaVu fonts
         if: matrix.leg == 'compile'
         shell: pwsh
-        run: choco install pandoc dejavufonts --no-progress --yes
+        run: choco install dejavufonts --no-progress --yes
 
       # MiKTeX comes from the entry that the tex-cache job above writes,
       # whole: a portable tree with its programs, its packages, and its
