@@ -40,14 +40,19 @@ runs:
     # The epoch is therefore the only thing that retires an entry, and it
     # is deliberate: CI keeps the MiKTeX of the last seeding run until
     # someone raises the epoch, which is determinism rather than a
-    # distribution that changes under a test. The files that decide what
-    # the entry holds name it as well, so a new class, package, or script
-    # makes a new entry on its own.
+    # distribution that changes under a test. It went to v2 when the entry
+    # began carrying every package the templates reach rather than the
+    # ones they name, because none of the files below decides that and the
+    # lookup would have kept an entry with no closure in it.
+    # REFERENCE: https://github.com/Galvarcus/bartleby/issues/68
+    #
+    # The files that decide what the entry holds name it as well, so a new
+    # class, package, or script makes a new entry on its own.
     - name: Build the key and the folders
       id: key
       shell: bash
       env:
-        PREFIX: windows-miktex-v1
+        PREFIX: windows-miktex-v2
         SET: ${{ inputs.set }}
       run: |
         digest=$(cat \

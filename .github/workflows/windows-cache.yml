@@ -32,9 +32,19 @@ name: Windows TeX cache
 
 on:
   workflow_call:
+    inputs:
+      rebuild:
+        description: Save a fresh entry although one is already saved.
+        type: boolean
+        default: false
   schedule:
     - cron: '0 5 * * 1,4'
   workflow_dispatch:
+    inputs:
+      rebuild:
+        description: Save a fresh entry although one is already saved.
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -73,7 +83,11 @@ jobs:
         shell: bash
         run: |
           if [ "${{ steps.found.outputs.cache-hit }}" = true ]; then
-            echo "${{ steps.key.outputs.key }} is already saved. Nothing to do."
+            if [ "${{ inputs.rebuild }}" = true ]; then
+              echo "${{ steps.key.outputs.key }} is already saved, and a rebuild was asked for. Making it again."
+            else
+              echo "${{ steps.key.outputs.key }} is already saved. Nothing to do."
+            fi
           else
             echo "${{ steps.key.outputs.key }} is not saved. Making it."
           fi
@@ -83,20 +97,32 @@ jobs:
       # rather than at the top, because a run that finds the entry stops
       # after the lookup above.
       - name: Install Vim
-        if: steps.found.outputs.cache-hit != 'true'
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
         uses: ./.github/actions/install-vim
 
       - name: Checkout Logger dependency
-        if: steps.found.outputs.cache-hit != 'true'
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
         uses: actions/checkout@v7.0.1
         with:
           repository: Galvarcus/Logger
           path: deps/Logger
 
+      # A Bartleby compile runs pandoc first and the Book PDF asks
+      # fontspec for a family of the system, so the closure below needs
+      # both. They are the same two actions the compile leg of ci.yml
+      # uses.
+      - name: Install pandoc
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
+        uses: ./.github/actions/install-pandoc
+
+      - name: Install the DejaVu fonts
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
+        uses: ./.github/actions/install-fonts
+
       # This step puts the programs of the tree on the PATH, so the two
       # steps after it run the MiKTeX of the tree and no other.
       - name: Set up a portable MiKTeX
-        if: steps.found.outputs.cache-hit != 'true'
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
         shell: bash
         env:
           PORTABLE_DIR: ${{ steps.key.outputs.tree }}
@@ -104,15 +130,26 @@ jobs:
         run: .github/scripts/make-portable-miktex.sh
 
       - name: Fetch what the templates need
-        if: steps.found.outputs.cache-hit != 'true'
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
         shell: bash
         run: .github/scripts/warm-miktex.sh
 
-      # After the warm-up, which writes the list of what the templates
-      # name, and before the save, because the repository is part of the
-      # entry.
+      # The closure: what the templates reach, rather than what they name.
+      # mpm documents no way to ask what a package requires, so the only
+      # way to earn it is to compile the documents here, where the
+      # installer is on and the network answers. The leg that restores the
+      # entry has no installer, so a package this misses fails it.
+      # REFERENCE: https://github.com/Galvarcus/bartleby/issues/68
+      - name: Compile what the smoke tests compile
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
+        shell: bash
+        run: .github/scripts/make-tex-closure.sh
+
+      # After the warm-up and the closure, which together decide what the
+      # tree holds, and before the save, because the repository is part of
+      # the entry.
       - name: Make the package repository
-        if: steps.found.outputs.cache-hit != 'true'
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
         shell: bash
         env:
           TEX_REPO: ${{ steps.key.outputs.repo }}
@@ -121,12 +158,12 @@ jobs:
       # What the entry will carry, which is the number that says whether a
       # restore still beats the install it replaced.
       - name: Say what the tree takes
-        if: steps.found.outputs.cache-hit != 'true'
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
         shell: bash
         run: du -sh "${{ steps.key.outputs.tree }}"
 
       - name: Save the entry
-        if: steps.found.outputs.cache-hit != 'true'
+        if: steps.found.outputs.cache-hit != 'true' || inputs.rebuild
         uses: actions/cache/save@v6.1.0
         with:
           key: ${{ steps.key.outputs.key }}

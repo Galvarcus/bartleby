@@ -28,6 +28,11 @@ on:
       - Development
   pull_request:
   workflow_dispatch:
+    inputs:
+      rebuild:
+        description: Rebuild the Windows TeX cache entry, although one is saved.
+        type: boolean
+        default: false
 permissions:
   contents: read
 # A new push waits for the run before it, because the jobs that commit must
@@ -273,6 +278,11 @@ jobs:
     needs: changes
     if: contains(fromJSON(needs.changes.outputs.windows), 'compile')
     uses: ./.github/workflows/windows-cache.yml
+    with:
+      # A dispatch of this workflow can ask for a fresh entry, which is
+      # the only way to replace one whose key has not moved: a save over
+      # a key that exists is refused.
+      rebuild: ${{ inputs.rebuild == true }}
 
   windows:
     name: Windows (${{ matrix.leg }})
