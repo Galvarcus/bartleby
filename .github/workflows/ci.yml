@@ -347,6 +347,16 @@ jobs:
           PORTABLE_DIR: ${{ steps.texkey.outputs.tree }}
         run: .github/scripts/use-portable-miktex.sh
 
+      # Before the tests, so that a tree whose installer cannot be turned
+      # off fails here rather than during a compile, and before the tools
+      # check, which is the slower of the two.
+      - name: Turn the installer off
+        if: matrix.leg == 'compile'
+        shell: bash
+        env:
+          PORTABLE_DIR: ${{ steps.texkey.outputs.tree }}
+        run: .github/scripts/no-installer.sh
+
       # After the restore, because nothing of MiKTeX is on the runner
       # before it, and before the tests, so that a program which cannot
       # run fails in seconds rather than after two timeouts of a minute
