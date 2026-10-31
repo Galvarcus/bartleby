@@ -315,11 +315,11 @@ jobs:
       # see .github/docker/Dockerfile. A TeX package cannot stand in for
       # the font, because XeTeX reads the fonts of the system, and no entry
       # can carry one either, because a font is usable once it is
-      # registered and a cache holds files alone.
+      # registered and a cache holds files alone. The action registers it,
+      # which a probe found is the only route that XeTeX honours.
       - name: Install the DejaVu fonts
         if: matrix.leg == 'compile'
-        shell: pwsh
-        run: choco install dejavufonts --no-progress --yes
+        uses: ./.github/actions/install-fonts
 
       # MiKTeX comes from the entry that the tex-cache job above writes,
       # whole: a portable tree with its programs, its packages, and its

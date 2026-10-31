@@ -1,0 +1,58 @@
+name: Install the DejaVu fonts
+description: >-
+  Register the newest DejaVu release with a runner of Windows, so that the
+  Book PDF of the compile smoke tests finds the family that fontspec asks
+  for. The CI image takes the same family from a package of the
+  distribution, see .github/docker/Dockerfile.
+
+  Registration is the only route that works. A probe of four routes, run
+  41176388605, found that the XeTeX of MiKTeX resolves the family when the
+  files are copied to the font folder of the system and named in the
+  registry, and does not resolve it from a folder named by OSFONTDIR or
+  from the fonts folder of the MiKTeX tree, with the file name database
+  refreshed. The MiKTeX manual documents none of this: its page for local
+  fonts serves the site home page, and OSFONTDIR appears nowhere in it.
+
+  No version is named here, and the version it resolved is printed, as the
+  install-pandoc action does.
+runs:
+  using: composite
+  steps:
+    - name: Download and register the fonts
+      shell: pwsh
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      run: |
+        $ErrorActionPreference = 'Stop'
+        $headers = @{Authorization = "Bearer $env:GITHUB_TOKEN"}
+        $release = Invoke-RestMethod -Headers $headers `
+          -Uri 'https://api.github.com/repos/dejavu-fonts/dejavu-fonts/releases/latest'
+        $asset = $release.assets |
+          Where-Object {$_.name -match '^dejavu-fonts-ttf-[0-9.]+\.zip$'} |
+          Select-Object -First 1
+        if (-not $asset) {
+          Write-Output "::error::The DejaVu release $($release.tag_name) holds no asset named dejavu-fonts-ttf-<version>.zip, which is what this action looks for."
+          exit 1
+        }
+        $zip = Join-Path $env:RUNNER_TEMP 'dejavu.zip'
+        $dir = Join-Path $env:RUNNER_TEMP 'dejavu'
+        Invoke-WebRequest -Headers $headers -Uri $asset.browser_download_url -OutFile $zip
+        Expand-Archive -Path $zip -DestinationPath $dir
+        # The zip holds the files under a folder of its version, which the
+        # next release renames.
+        $files = Get-ChildItem -Path $dir -Recurse -Filter '*.ttf'
+        if (-not $files) {
+          Write-Output "::error::$($asset.name) holds no .ttf file."
+          exit 1
+        }
+        # A font is usable once the system knows it, which is the folder
+        # and the registry value together. The runner is elevated and
+        # thrown away after the job, so both are available and neither
+        # outlives the run.
+        $key = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Fonts'
+        foreach ($file in $files) {
+          Copy-Item -Path $file.FullName -Destination "$env:WINDIR\Fonts" -Force
+          New-ItemProperty -Path $key -Name "$($file.BaseName) (TrueType)" `
+            -Value $file.Name -PropertyType String -Force | Out-Null
+        }
+        Write-Output "DejaVu $($release.tag_name): registered $($files.Count) files."
