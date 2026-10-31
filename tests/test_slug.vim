@@ -187,6 +187,47 @@ def Test_a_long_name_is_capped_on_a_character(): void
   assert_notequal(nr2char(0x301), marked[-2 : ])
 enddef
 
+# A caller with less room than the cap passes it, rather than cutting
+# the name this returns: a cut after the guards undoes them, so three
+# bytes of room gave Nul, the device, from Nullify.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/67
+def Test_a_budgeted_cut_onto_a_device_name_is_guarded(): void
+  assert_equal('doc-Nul', SU.Safe('Nullify', 3))
+  assert_equal('doc-Com1', SU.Safe('Com1x', 4))
+  assert_equal('doc-nul', SU.Slugify('Nullify', 3))
+  assert_equal('doc-com1', SU.Slugify('Com1x', 4))
+enddef
+
+# A caller's room never raises the cap. A shallow folder leaves more
+# room than a component holds, and a budget of that room gave a name of
+# 320 bytes, which the save then refused.
+def Test_a_budget_over_the_cap_leaves_the_cap(): void
+  assert_equal(200, strlen(SU.Slugify(repeat('a', 300), 900)))
+  assert_equal(200, strlen(SU.Safe(repeat('a', 300), 900)))
+enddef
+
+# A budget under zero is met by nothing, so the cut ends on the empty
+# name rather than running for ever. Without that, this test hangs Vim
+# rather than failing.
+def Test_a_budget_under_zero_keeps_nothing(): void
+  assert_equal('', SU.Capped('abc', -1))
+  assert_equal('', SU.Safe('abc', -1))
+  assert_equal('', SU.Slugify('abc', -1))
+enddef
+
+def Test_a_budgeted_cut_leaves_no_separator_at_an_edge(): void
+  assert_equal('ab', SU.Safe('ab-cd', 3))
+  assert_equal('ab', SU.Slugify('ab cd', 3))
+enddef
+
+def Test_a_budgeted_cut_lands_on_a_whole_character(): void
+  # Café takes five bytes, so a budget of four keeps three letters.
+  assert_equal('Caf', SU.Safe('Café Noir', 4))
+  var wide: string = SU.Safe(repeat('日', 10), 4)
+  assert_equal(3, strlen(wide))
+  assert_equal(1, strchars(wide))
+enddef
+
 def Test_a_name_is_unchanged_by_a_second_pass(): void
   for title in ['Über', 'Café Noir', '日本語', 'Nul', 'doc-Nul',
       'a/b\c', '  spaced  ', '***', repeat('日', 100)]
@@ -212,5 +253,10 @@ export def RunAll(): void
   Test_a_name_that_names_a_device_in_superscript_is_guarded()
   Test_a_long_slug_is_capped()
   Test_a_long_name_is_capped_on_a_character()
+  Test_a_budgeted_cut_onto_a_device_name_is_guarded()
+  Test_a_budget_over_the_cap_leaves_the_cap()
+  Test_a_budget_under_zero_keeps_nothing()
+  Test_a_budgeted_cut_leaves_no_separator_at_an_edge()
+  Test_a_budgeted_cut_lands_on_a_whole_character()
   Test_a_name_is_unchanged_by_a_second_pass()
 enddef

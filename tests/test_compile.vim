@@ -13,6 +13,8 @@ vim9script
 import autoload 'bartleby/compile.vim' as C
 import autoload 'bartleby/path.vim' as PA
 import autoload 'bartleby/binderitem.vim' as BI
+import autoload 'bartleby/project.vim' as PO
+import autoload 'bartleby/slug.vim' as SU
 import './fixtures.vim' as FI
 import 'Logger/messages.vim' as LM
 import './test_texcheck.vim' as TTX
@@ -326,6 +328,58 @@ def Test_an_artifact_name_is_budgeted_against_its_folder(): void
       .. $'the name takes {strlen(name)}')
 enddef
 
+# The room an artifact leaves is passed to the name, never applied to
+# the name afterwards: a cut after the edge strip and the device guard
+# undoes them, and doc-Nul is four bytes over the room, which the
+# margin of the path budget covers.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/67
+def Test_an_artifact_name_cut_to_its_room_keeps_its_guards(): void
+  var ext: string = 'pdf'
+  # A folder that leaves three bytes, whichever limit the system has:
+  # the room falls by every byte the folder gains.
+  var dir: string = '/s' .. repeat('x', C.OutputRoom('/s', ext) - 3)
+  assert_equal(3, C.OutputRoom(dir, ext))
+  assert_equal('doc-Nul', fnamemodify(
+    C.FinalPath($'{dir}/nullify.{ext}', 'Nullify', ext), ':t:r'))
+  assert_equal('ab', fnamemodify(
+    C.FinalPath($'{dir}/ab-cd.{ext}', 'ab-cd', ext), ':t:r'))
+enddef
+
+# The definition of a target is named through the same one cut, which
+# is where the issue was reported: a target named Nullify under a
+# folder that left three bytes took nul.json, the MS-Windows device.
+# The room has to leave the prefix of the guard as well, or the write
+# of the guarded name is the one that fails.
+def Test_a_definition_cut_to_its_room_keeps_its_guard(): void
+  # Resolved, because the temporary folder of macOS is a symlink and
+  # the path the system measures is the one it points at, eight bytes
+  # longer than the one a budget counts here.
+  var root: string = resolve(tempname())
+  var left: number = C.PathRoom($'{root}/compile/targets') - 3
+  # A folder of that root leaves more than three bytes on any system
+  # these tests run on, and asking the limit rather than the save keeps
+  # a broken budget from skipping its own test.
+  assert_true(left >= 2, $'{root} leaves {left} bytes to pad')
+  var scriveDir: string = root
+  while left > 101
+    scriveDir ..= '/' .. repeat('x', 100)
+    left -= 101
+  endwhile
+  scriveDir ..= '/' .. repeat('x', left - 1)
+  var dir: string = $'{scriveDir}/compile/targets'
+  mkdir(dir, 'p')
+  assert_equal(3, C.PathRoom(dir))
+  var project = PO.Project.new(scriveDir)
+  # With the measurements, because what fits is a question of where the
+  # scrive sits, and a runner's answer is not this machine's.
+  assert_true(C.SaveTarget(project, C.CompileTarget.FromDict({
+    name: 'Nullify', format: 'PDF'})),
+    $'the folder is {strlen(dir)} bytes and leaves {C.PathRoom(dir)}')
+  assert_equal(['doc-nul'], globpath(dir, '*.json', true, true)
+    ->mapnew((_, f) => fnamemodify(f, ':t:r')))
+  delete(root, 'rf')
+enddef
+
 # A save answers whether it wrote, so that nothing compiles a target
 # that is not on disk.
 def Test_a_save_answers_whether_it_wrote(): void
@@ -357,6 +411,14 @@ def Test_a_log_prefix_leaves_room_for_the_stamp(): void
   # written beside it, .json, is 5.
   assert_true(strlen(prefix) + 20 <= 255,
     $'{strlen(prefix)} bytes leaves no room for the stamp')
+  # Neither name ends in the separator that a cut can land on, because
+  # both are cut where the edges are stripped. Each title is one whose
+  # cut lands on a fold.
+  var work: string = C.LogPrefix('/tmp/one.bartleby', repeat('a-', 100))
+  assert_notequal(SU.SEP, split(work, '_')[1][-1 : ])
+  var folded: string = repeat('abc ', 100)
+  var scrive: string = C.LogPrefix($'/tmp/{folded}.bartleby', 'x')
+  assert_notequal(SU.SEP, split(scrive, '_')[0][-1 : ])
   # Both names still tell one scrive and one target from another.
   assert_notequal(C.LogPrefix('/tmp/one.bartleby', 'draft'),
     C.LogPrefix('/tmp/two.bartleby', 'draft'))
@@ -853,8 +915,10 @@ export def RunAll(): void
   Test_two_names_of_one_case_share_a_file_where_case_folds()
   Test_two_long_names_that_the_cap_levels_keep_the_engine_path()
   Test_an_artifact_name_is_budgeted_against_its_folder()
+  Test_an_artifact_name_cut_to_its_room_keeps_its_guards()
   Test_two_names_of_one_form_in_two_formats_keep_their_names()
   Test_the_working_file_of_another_target_is_not_taken()
+  Test_a_definition_cut_to_its_room_keeps_its_guard()
   Test_a_save_answers_whether_it_wrote()
   Test_a_log_prefix_leaves_room_for_the_stamp()
   Test_a_failed_save_compiles_nothing()

@@ -200,9 +200,9 @@ enddef
 # is empty. The engines read every path this names, so it stays ASCII,
 # and an empty slug made the definition of such a target .json, which the
 # glob that lists them never returned.
-def SlugName(name: string): string
-  var slug: string = SU.Slugify(name)
-  return slug ==# '' ? CO.UNTITLED : slug
+def SlugName(name: string, max: number = SU.MAX_BYTES): string
+  var slug: string = SU.Slugify(name, max)
+  return slug ==# '' ? SU.Capped(CO.UNTITLED, max) : slug
 enddef
 
 def TargetFiles(project: PO.Project): list<string>
@@ -243,9 +243,14 @@ enddef
 # the extension, and what a write appends while it works, which is
 # longer than the path it leaves. The name of a definition is not the
 # name of its target, which is stored inside the file, so a shorter file
-# name costs nothing but the look of it.
+# name costs nothing but the look of it. The prefix of the device guard
+# is reserved as well, because a name cut to the last bytes of the room
+# can be a device name and the guard then takes four bytes more, which
+# this limit leaves over on MS-Windows alone: elsewhere it is the limit
+# the system enforces, and the write of a guarded name failed on it.
 export def PathRoom(dir: string): number
-  return MAX_PATH_BYTES - strlen($'{dir}/{SUFFIX_ROOM}{EXT_JSON}{PE.TMP_SUFFIX}')
+  return MAX_PATH_BYTES - strlen(
+    $'{dir}/{SU.DEVICE_PREFIX}{SUFFIX_ROOM}{EXT_JSON}{PE.TMP_SUFFIX}')
 enddef
 
 # FUNCTION: Return the first of <slug>.json, <slug>-2.json and so on
@@ -256,8 +261,8 @@ def FreeTargetPath(project: PO.Project, name: string): string
   var dir: string = TargetsDir(project)
   # Within the room this path leaves, and never to nothing, because a
   # definition named only .json is one that the glob cannot list.
-  var slug: string = SU.Capped(SlugName(name), max([PathRoom(dir), 1]))
-  var base: string = $'{dir}/{slug ==# "" ? CO.UNTITLED : slug}'
+  var slug: string = SlugName(name, max([PathRoom(dir), 1]))
+  var base: string = $'{dir}/{slug}'
   var path: string = base .. EXT_JSON
   var n: number = 2
   while getftype(path) !=# ''
@@ -1037,7 +1042,7 @@ enddef
 # test on a writer's own system can reach has twice been wrong.
 export def OutputRoom(dir: string, ext: string): number
   return MAX_PATH_BYTES
-    - strlen($'{dir}/{SUFFIX_ROOM}.{ext}{PE.TMP_SUFFIX}')
+    - strlen($'{dir}/{SU.DEVICE_PREFIX}{SUFFIX_ROOM}.{ext}{PE.TMP_SUFFIX}')
 enddef
 
 # FUNCTION: Return the extension of the file that target compiles to.
@@ -1054,7 +1059,7 @@ enddef
 # of a definition is.
 export def FinalPath(path: string, name: string, ext: string): string
   var dir: string = fnamemodify(path, ':h')
-  var safe: string = SU.Capped(SU.Safe(name), max([OutputRoom(dir, ext), 1]))
+  var safe: string = SU.Safe(name, max([OutputRoom(dir, ext), 1]))
   return safe ==# '' ? path : $'{dir}/{safe}.{ext}'
 enddef
 
@@ -1388,8 +1393,8 @@ enddef
 # own logs.
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/61
 export def LogPrefix(scriveDir: string, work: string): string
-  return SU.Capped(SU.Slugify(fnamemodify(scriveDir, ':t:r')), LOG_NAME_BYTES)
-    .. '_' .. SU.Capped(work, LOG_NAME_BYTES) .. '_'
+  return SU.Slugify(fnamemodify(scriveDir, ':t:r'), LOG_NAME_BYTES)
+    .. '_' .. SU.Safe(work, LOG_NAME_BYTES) .. '_'
 enddef
 
 def NewLogBase(project: PO.Project, work: string): string

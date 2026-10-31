@@ -34,7 +34,7 @@ const EDGE_PAT: string = '^-\+\|-\+$'
 # decade, and a title of three bytes to the character fills one in
 # eighty-five. What the cap leaves over takes the longest role prefix, a
 # -NN for a name already in use, and an extension.
-const MAX_BYTES: number = 200
+export const MAX_BYTES: number = 200
 
 # The names that Windows reserves for devices. It answers with the device
 # whatever extension follows, so nul.md is the NUL device rather than a
@@ -47,7 +47,7 @@ const DEVICES: list<string> = ['con', 'prn', 'aux', 'nul']
   + range(1, 9)->mapnew((_, n) => $'lpt{n}')
   + ["com\u00b9", "com\u00b2", "com\u00b3"]
   + ["lpt\u00b9", "lpt\u00b2", "lpt\u00b3"]
-const DEVICE_PREFIX: string = 'doc-'
+export const DEVICE_PREFIX: string = 'doc-'
 
 # FUNCTION: Return the name a title reduces to, in ASCII alone, for the
 # working files that pandoc and the engines read. It folds one character
@@ -59,26 +59,32 @@ const DEVICE_PREFIX: string = 'doc-'
 # name that one file system stores in the other spelling, which the glob
 # that trims the logs then does not match.
 # REFERENCE: https://github.com/Galvarcus/bartleby/issues/65
-export def Slugify(title: string): string
+# The budget is an argument because a caller that cut the name after
+# this one cut away the edge strip and the device guard below: three
+# bytes of room gave Nul, the MS-Windows device, from Nullify. The
+# guard may take the name back over the budget, which the margin that
+# a path budget keeps covers.
+# REFERENCE: https://github.com/Galvarcus/bartleby/issues/67
+export def Slugify(title: string, max: number = MAX_BYTES): string
   var slug: string = substitute(tolower(title), '.',
     (m) => strlen(m[0]) == 1 && m[0] =~# ASCII_ALNUM_PAT ? m[0] : SEP, 'g')
   # Folding a character at a time leaves a run of hyphens where folding
   # the whole run left one.
   slug = substitute(slug, SEP .. '\+', SEP, 'g')
-  return Guarded(substitute(Capped(slug), EDGE_PAT, '', 'g'))
+  return Guarded(Cut(slug, max))
 enddef
 
 # FUNCTION: Return the name on disk of a title the writer typed: its own
 # letters, in any script, with its case, and a hyphen for every run of
-# what a file system forbids.
-export def Safe(title: string): string
+# what a file system forbids. It takes a budget as Slugify does.
+export def Safe(title: string, max: number = MAX_BYTES): string
   var name: string = substitute(title, SPACE_FOLD_PAT, SEP, 'g')
   name = substitute(name, ASCII_FOLD_PAT, SEP, 'g')
-  return Guarded(substitute(Capped(name), EDGE_PAT, '', 'g'))
+  return Guarded(Cut(name, max))
 enddef
 
 # FUNCTION: Return name within max bytes, cut on whole characters, so
-# that no cut leaves half of one or strands a combining mark. A caller
+# that no cut leaves half of one or strands a combining mark. Cut
 # strips the edges after it, so that no cut leaves a trailing hyphen.
 # One character and its marks are one cut, so a name of a letter and
 # many marks can be cut to nothing, which a caller answers as it answers
@@ -86,10 +92,21 @@ enddef
 # name holds two of these and a path component holds 255 bytes.
 export def Capped(name: string, max: number = MAX_BYTES): string
   var out: string = name
-  while strlen(out) > max
+  # An empty name ends it, because a budget under zero is met by nothing
+  # and the cut of an empty string is an empty string.
+  while strlen(out) > max && out !=# ''
     out = strcharpart(out, 0, strchars(out, 1) - 1, 1)
   endwhile
   return out
+enddef
+
+# FUNCTION: Return name within max bytes and within MAX_BYTES, with no
+# separator left at either edge by the cut. The room a caller has never
+# raises the cap, because a path component holds 255 bytes however much
+# room the rest of the path leaves, and a name of 319 bytes under a
+# folder with room to spare is one that no file system writes.
+def Cut(name: string, max: number): string
+  return substitute(Capped(name, min([max, MAX_BYTES])), EDGE_PAT, '', 'g')
 enddef
 
 # FUNCTION: Return name, or name behind DEVICE_PREFIX when it names a
