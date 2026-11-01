@@ -604,17 +604,39 @@ jobs:
       - name: Install Vim
         uses: ./.github/actions/install-vim
 
+      # GhostCode analyses with a binary now, and the plugin is a front
+      # end that runs it. A clone carries no binary, so the release is
+      # fetched beside it. GHOSTCODE_VERSION pins which one, because an
+      # analyzer that changes under this job changes what the job
+      # reports.
       - name: Install GhostCode
+        env:
+          GHOSTCODE_VERSION: v0.1.0
         run: |
+          set -euo pipefail
+
           mkdir -p "$RUNNER_TEMP/vim/pack/ghostcode/start"
 
           git clone --depth 1 \
             https://github.com/Galvarcus/Logger.git \
             "$RUNNER_TEMP/vim/pack/ghostcode/start/Logger"
 
-          git clone --depth 1 \
+          git clone --depth 1 --branch "$GHOSTCODE_VERSION" \
             https://github.com/Galvarcus/GhostCode.git \
             "$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode"
+
+          asset=ghostcode-x86_64-unknown-linux-gnu
+          base=https://github.com/Galvarcus/GhostCode/releases/download/$GHOSTCODE_VERSION
+
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$asset" "$base/$asset"
+          curl -fsSL --retry 3 -o "$RUNNER_TEMP/$asset.sha256" "$base/$asset.sha256"
+
+          # The checksum file names the asset as it was built, so the
+          # check runs where the file sits.
+          ( cd "$RUNNER_TEMP" && shasum -a 256 -c "$asset.sha256" )
+
+          install -m 755 "$RUNNER_TEMP/$asset" "$RUNNER_TEMP/ghostcode"
+          "$RUNNER_TEMP/ghostcode" --version
 
       - name: Run GhostCode
         id: ghostcode
@@ -630,6 +652,7 @@ jobs:
             -es \
             --cmd "set rtp+=$RUNNER_TEMP/vim/pack/ghostcode/start/Logger,$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode" \
             -c 'runtime plugin/ghostcode.vim' \
+            -c "let g:ghostcode_bin = '$RUNNER_TEMP/ghostcode'" \
             -c 'let g:ghostcode_exports_are_api = 0' \
             -c 'let logger_log_file=1' \
             -c 'let logger_log_dir="./"' \
