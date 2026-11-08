@@ -606,14 +606,23 @@ jobs:
 
       # GhostCode analyses with a binary now, and the plugin is a front
       # end that runs it. A clone carries no binary, so the release is
-      # fetched beside it. GHOSTCODE_VERSION pins which one, because an
-      # analyzer that changes under this job changes what the job
-      # reports.
+      # fetched beside it. The newest release is what runs, so a finding
+      # that a newer analyzer reports reaches Bartleby as soon as it is
+      # released.
       - name: Install GhostCode
         env:
-          GHOSTCODE_VERSION: latest
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+
+          # The plugin and the binary must come from one release, and no
+          # tag is named latest, so the name of the newest one is read
+          # once and used for both. The name is printed, so that a
+          # release which changes what the job reports names itself in
+          # the log.
+          version=$(gh api repos/Galvarcus/GhostCode/releases/latest \
+            --jq .tag_name)
+          echo "GhostCode release: $version"
 
           mkdir -p "$RUNNER_TEMP/vim/pack/ghostcode/start"
 
@@ -621,12 +630,12 @@ jobs:
             https://github.com/Galvarcus/Logger.git \
             "$RUNNER_TEMP/vim/pack/ghostcode/start/Logger"
 
-          git clone --depth 1 --branch "$GHOSTCODE_VERSION" \
+          git clone --depth 1 --branch "$version" \
             https://github.com/Galvarcus/GhostCode.git \
             "$RUNNER_TEMP/vim/pack/ghostcode/start/GhostCode"
 
           asset=ghostcode-x86_64-unknown-linux-gnu
-          base=https://github.com/Galvarcus/GhostCode/releases/download/$GHOSTCODE_VERSION
+          base=https://github.com/Galvarcus/GhostCode/releases/download/$version
 
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/$asset" "$base/$asset"
           curl -fsSL --retry 3 -o "$RUNNER_TEMP/$asset.sha256" "$base/$asset.sha256"
