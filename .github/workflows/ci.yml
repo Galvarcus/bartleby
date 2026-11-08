@@ -611,7 +611,7 @@ jobs:
       # reports.
       - name: Install GhostCode
         env:
-          GHOSTCODE_VERSION: v0.1.0
+          GHOSTCODE_VERSION: latest
         run: |
           set -euo pipefail
 
